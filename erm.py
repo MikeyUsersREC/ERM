@@ -2628,7 +2628,7 @@ async def clockedin(ctx):
 		if shift['guild'] == ctx.guild.id:
 			member = discord.utils.get(ctx.guild.members, id = shift['_id'])
 			if member:
-				embed.add_field(name = member.name, value = str(datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None) - datetime.datetime.now().replace(tzinfo = None)).split('.')[0], inline = False)
+				embed.add_field(name = member.name, value = str(datetime.datetime.now().replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None)).split('.')[0], inline = False)
 
 	await ctx.send(embed = embed)
 
