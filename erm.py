@@ -2602,4 +2602,70 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 			if role in member.roles:
 				await member.remove_roles(role)
 
+# clockedin, to get all the members of a specific guild currently on duty
+@bot.hybrid_command(name = 'clockedin', description = 'Get all members of the server currently on shift.', aliases = ['on-duty'])
+@app_commands.default_permissions(manage_messages = True)
+async def clockedin(ctx):
+	
+	try:
+		configItem = await bot.settings.find_by_id(ctx.guild.id)
+	except:
+		return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
+
+	
+	shift_channel = discord.utils.get(ctx.guild.channels, id = configItem['shift_management']['channel'])
+
+	if shift_channel is None:
+		return await ctx.send('Shift management channel not found.')
+
+	embed = discord.Embed(title = 'Currently on shift', color = generate_random())
+	try:
+		embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
+	except:
+		pass
+
+	for shift in await bot.shifts.get_all():
+		if shift['guild'] == ctx.guild.id:
+			member = discord.utils.get(ctx.guild.members, id = shift['member'])
+			if member:
+				embed.add_field(name = member.name, value = str(datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None) - datetime.datetime.now().replace(tzinfo = None)).split('.')[0], inline = False)
+
+	await ctx.send(embed = embed)
+
+# staff info command, to get total seconds worked on a specific member
+@bot.hybrid_command(name = 'staff-info', description = 'Get the total seconds worked on a specific member.', aliases = ['staff-stats'])
+@app_commands.default_permissions(manage_messages = True)
+async def staff_info(ctx, member: discord.Member):
+	
+	try:
+		configItem = await bot.settings.find_by_id(ctx.guild.id)
+	except:
+		return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
+
+	
+	shift_channel = discord.utils.get(ctx.guild.channels, id = configItem['shift_management']['channel'])
+
+	if shift_channel is None:
+		return await ctx.send('Shift management channel not found.')
+
+	embed = discord.Embed(title = f'{member.name}\'s total time worked', color = generate_random())
+	try:
+		embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
+	except:
+		pass
+
+	if not await bot.shift_storage.find_by_id(member.id):
+		await ctx.send(f'{member.name} has not worked on any shifts.')
+		return
+
+	total_seconds = 0
+	for shift in await bot.shift_storage.find_by_id(member.id)['shifts']:
+		if shift['guild'] == ctx.guild.id:
+			total_seconds += int(shift['totalSeconds'])
+
+	embed.add_field(name = 'Total Time', value = str(datetime.timedelta(seconds = total_seconds)).split('.')[0], inline = False)
+
+	await ctx.send(embed = embed)
+
+
 bot.run(bot_token)
