@@ -42,6 +42,25 @@ bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = d
 bot.is_synced = False
 enviroment = config('ENVIROMENT', default='development')
 
+def td_format(td_object):
+    seconds = int(td_object.total_seconds())
+    periods = [
+        ('year',        60*60*24*365),
+        ('month',       60*60*24*30),
+        ('day',         60*60*24),
+        ('hour',        60*60),
+        ('minute',      60),
+        ('second',      1)
+    ]
+
+    strings=[]
+    for period_name, period_seconds in periods:
+        if seconds >= period_seconds:
+            period_value , seconds = divmod(seconds, period_seconds)
+            has_s = 's' if period_value > 1 else ''
+            strings.append("%s %s%s" % (period_value, period_name, has_s))
+
+    return ", ".join(strings)
 
 @bot.event
 async def on_ready():
@@ -1988,7 +2007,8 @@ async def dutyoff(ctx):
 
 	embed.add_field(
 		name = "Elapsed Time",
-		value = str(ctx.message.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None)).split('.')[0]
+		value = td_format(ctx.message.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp'])), 
+		inline = False
 	)
 	
 	time_delta = ctx.message.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None)
@@ -2628,7 +2648,7 @@ async def clockedin(ctx):
 		if shift['guild'] == ctx.guild.id:
 			member = discord.utils.get(ctx.guild.members, id = shift['_id'])
 			if member:
-				embed.add_field(name = member.name, value = str(datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None) - datetime.datetime.now().replace(tzinfo = None)).split('.')[0], inline = False)
+				embed.add_field(name = member.name, value = td_format(ctx.message.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp'])), inline = False)
 
 	await ctx.send(embed = embed)
 
@@ -2663,7 +2683,7 @@ async def staff_info(ctx, member: discord.Member):
 		if shift['guild'] == ctx.guild.id:
 			total_seconds += int(shift['totalSeconds'])
 
-	embed.add_field(name = 'Total Time', value = str(datetime.timedelta(seconds = total_seconds)).split('.')[0], inline = False)
+	embed.add_field(name = 'Total Time', value = td_format(datetime.timedelta(seconds = total_seconds)), inline = False)
 
 	await ctx.send(embed = embed)
 
