@@ -2626,7 +2626,7 @@ async def clockedin(ctx):
 
 	for shift in await bot.shifts.get_all():
 		if shift['guild'] == ctx.guild.id:
-			member = discord.utils.get(ctx.guild.members, id = shift['member'])
+			member = discord.utils.get(ctx.guild.members, id = shift['_id'])
 			if member:
 				embed.add_field(name = member.name, value = str(datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None) - datetime.datetime.now().replace(tzinfo = None)).split('.')[0], inline = False)
 
@@ -2659,7 +2659,7 @@ async def staff_info(ctx, member: discord.Member):
 		return
 
 	total_seconds = 0
-	for shift in await bot.shift_storage.find_by_id(member.id)['shifts']:
+	for shift in (await bot.shift_storage.find_by_id(member.id))['shifts']:
 		if shift['guild'] == ctx.guild.id:
 			total_seconds += int(shift['totalSeconds'])
 
