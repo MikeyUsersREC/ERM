@@ -211,31 +211,32 @@ async def change_status():
 		await bot.change_presence(status = discord.Status.online, activity=discord.Game(name=chosen))
 
 
-# # on command error, missing argument
-# @bot.event
-# async def on_command_error(ctx, error):
-# 	if isinstance(error, commands.MissingRequiredArgument):
-# 		await ctx.send('You are missing a required argument!')
-# 	elif isinstance(error, commands.CommandNotFound):
-# 		await ctx.send('That command does not exist!')
-# 	elif isinstance(error, commands.MissingPermissions):
-# 		await ctx.send('You do not have permission to use that command!')
-# 	elif isinstance(error, commands.BotMissingPermissions):
-# 		await ctx.send('I do not have permission to use that command!')
-# 	elif isinstance(error, commands.CheckFailure):
-# 		await ctx.send('You do not have permission to use that command!')
-# 	elif isinstance(error, commands.CommandOnCooldown):
-# 		await ctx.send('You are on cooldown!')
-# 	elif isinstance(error, commands.CommandInvokeError):
-# 		await ctx.send('There was an error with that command!')
-# 	elif isinstance(error, commands.BadArgument):
-# 		await ctx.send('That is not a valid argument!')
-# 	elif isinstance(error, commands.CommandError):
-# 		await ctx.send('There was an error with that command!')
-# 	elif isinstance(error, commands.UserInputError):
-# 		await ctx.send('There was an error with that command!')
-# 	else:
-# 		raise error
+# on command error, missing argument
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.MissingRequiredArgument):
+		await ctx.send('You are missing a required argument!')
+	elif isinstance(error, commands.CommandNotFound):
+		await ctx.send('That command does not exist!')
+	elif isinstance(error, commands.MissingPermissions):
+		await ctx.send('You do not have permission to use that command!')
+	elif isinstance(error, commands.BotMissingPermissions):
+		await ctx.send('I do not have permission to use that command!')
+	elif isinstance(error, commands.CheckFailure):
+		await ctx.send('You do not have permission to use that command!')
+	elif isinstance(error, commands.CommandOnCooldown):
+		await ctx.send('You are on cooldown!')
+	elif isinstance(error, commands.CommandInvokeError):
+		await ctx.send('There was an error with that command!')
+	elif isinstance(error, commands.BadArgument):
+		await ctx.send('That is not a valid argument!')
+	elif isinstance(error, commands.CommandError):
+		await ctx.send('There was an error with that command!')
+	elif isinstance(error, commands.UserInputError):
+		await ctx.send('There was an error with that command!')
+	else:
+		await ctx.send(error)
+		raise error
 
 @bot.event
 async def on_guild_join(guild: discord.Guild):
@@ -2235,7 +2236,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 	with_app_command = True,
 )
 async def rarequest(ctx, time, *, reason):
-
+ 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:	
 		return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
