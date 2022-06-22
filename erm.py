@@ -245,6 +245,13 @@ async def update_bot_status():
 		pings = last_embed.fields[2]
 		timestamp.value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
 		pings.value = str(int(pings.value) + 1)
+
+		last_embed.fields.clear()
+		last_embed.add_field(name = 'Last ping', value = timestamp.value)
+		last_embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
+		last_embed.add_field(name = 'Pings', value = pings.value)
+		last_embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
+
 		print([field.value for field in last_embed.fields])
 		await last_message.edit(embed=last_embed)
 		print('edited last message')
