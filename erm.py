@@ -67,7 +67,7 @@ async def on_ready():
 	await bot.wait_until_ready()
 	print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
 	change_status.start()
-
+	update_bot_status.start()
 	bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
 	bot.db = bot.mongo["erm"]
 	bot.warnings = Document(bot.db, "warnings")
@@ -238,30 +238,32 @@ async def update_bot_status():
 # on command error, missing argument
 @bot.event
 async def on_command_error(ctx, error):
-	if isinstance(error, commands.MissingRequiredArgument):
-		await ctx.send('You are missing a required argument!')
-	elif isinstance(error, commands.CommandNotFound):
-		await ctx.send('That command does not exist!')
-	elif isinstance(error, commands.MissingPermissions):
-		await ctx.send('You do not have permission to use that command!')
-	elif isinstance(error, commands.BotMissingPermissions):
-		await ctx.send('I do not have permission to use that command!')
-	elif isinstance(error, commands.CheckFailure):
-		await ctx.send('You do not have permission to use that command!')
-	elif isinstance(error, commands.CommandOnCooldown):
-		await ctx.send('You are on cooldown!')
-	elif isinstance(error, commands.CommandInvokeError):
-		await ctx.send('There was an error with that command!')
-	elif isinstance(error, commands.BadArgument):
-		await ctx.send('That is not a valid argument!')
-	elif isinstance(error, commands.CommandError):
-		await ctx.send('There was an error with that command!')
-	elif isinstance(error, commands.UserInputError):
-		await ctx.send('There was an error with that command!')
-	else:
-		await ctx.send(error)
+	try:
+		if isinstance(error, commands.MissingRequiredArgument):
+			await ctx.send('You are missing a required argument!')
+		elif isinstance(error, commands.CommandNotFound):
+			await ctx.send('That command does not exist!')
+		elif isinstance(error, commands.MissingPermissions):
+			await ctx.send('You do not have permission to use that command!')
+		elif isinstance(error, commands.BotMissingPermissions):
+			await ctx.send('I do not have permission to use that command!')
+		elif isinstance(error, commands.CheckFailure):
+			await ctx.send('You do not have permission to use that command!')
+		elif isinstance(error, commands.CommandOnCooldown):
+			await ctx.send('You are on cooldown!')
+		elif isinstance(error, commands.CommandInvokeError):
+			await ctx.send('There was an error with that command!')
+		elif isinstance(error, commands.BadArgument):
+			await ctx.send('That is not a valid argument!')
+		elif isinstance(error, commands.CommandError):
+			await ctx.send('There was an error with that command!')
+		elif isinstance(error, commands.UserInputError):
+			await ctx.send('There was an error with that command!')
+		else:
+			await ctx.send(error)
+			raise error
+	except:
 		raise error
-
 @bot.event
 async def on_guild_join(guild: discord.Guild):
 	print(f'{bot.user.name} has been added to a new server!')
