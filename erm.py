@@ -243,9 +243,10 @@ async def update_bot_status():
 		last_embed = last_message.embeds[0]
 		pings = None
 
-		for index, field in enumerate(last_embed.fields):
+		for field in last_embed.fields:
 			if field.name == 'Pings':
 				pings = int(field.value)
+
 		embed = discord.Embed(
 			title = 'Bot Status',
 			color = discord.Color.red()
@@ -256,9 +257,8 @@ async def update_bot_status():
 		embed.add_field(name = 'Pings', value = str(pings))
 		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
-		print([field.value for field in last_embed.fields])
-		await last_message.edit(embed=last_embed)
-		print('edited last message')
+		print([field.value for field in embed.fields])
+		await last_message.edit(embed=embed)
 
 @bot.event
 async def on_command_error(ctx, error):
