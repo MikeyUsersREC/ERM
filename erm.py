@@ -245,7 +245,8 @@ async def update_bot_status():
 		last_embed.fields[2].value = str(int(last_embed.fields[2].value) + 1)
 
 		await last_message.edit(embed=last_embed)
-# on command error, missing argument
+		print('edited last message')
+
 @bot.event
 async def on_command_error(ctx, error):
 	try:
