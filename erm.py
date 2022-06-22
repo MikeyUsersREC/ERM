@@ -246,13 +246,15 @@ async def update_bot_status():
 		for index, field in enumerate(last_embed.fields):
 			if field.name == 'Pings':
 				pings = int(field.value)
-			last_embed.remove_field(index)
-
-		last_embed.fields.clear()
-		last_embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
-		last_embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
-		last_embed.add_field(name = 'Pings', value = str(pings))
-		last_embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
+		embed = discord.Embed(
+			title = 'Bot Status',
+			color = discord.Color.red()
+		)
+		embed.set_thumbnail(url = bot.user.avatar.url)
+		embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
+		embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
+		embed.add_field(name = 'Pings', value = str(pings))
+		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
 		print([field.value for field in last_embed.fields])
 		await last_message.edit(embed=last_embed)
