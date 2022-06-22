@@ -37,7 +37,7 @@ class Setup(discord.ui.View):
 
     @discord.ui.button(label='Shift Management', style=discord.ButtonStyle.blurple)
     async def shift_management(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.author.id:
+        if interaction.user.id != self.user_id:
             return
         await interaction.response.defer()
         self.value = 'shift management'

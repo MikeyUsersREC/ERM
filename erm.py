@@ -248,7 +248,7 @@ async def update_bot_status():
 
 		for index, _ in enumerate(last_embed.fields):
 			last_embed.remove_field(index)
-			
+
 		last_embed.add_field(name = 'Last ping', value = timestamp.value)
 		last_embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
 		last_embed.add_field(name = 'Pings', value = pings.value)
@@ -302,11 +302,11 @@ async def on_guild_join(guild: discord.Guild):
 
 	try:
 		await guild.system_channel.send(
-			'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008 or at the support server below. Other than that, have a good day! :wave:\n\n'    
+			'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008 or at the support server below. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'    
 		)
 	except:
 		await guild.owner.send(
-				'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:'    
+				'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'    
 		)
 	finally:
 		print('Server has been sent welcome sequence.')
