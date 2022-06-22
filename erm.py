@@ -17,7 +17,7 @@ from menus import Setup, YesNoMenu
 from utils.mongo import Document
 from roblox import client
 from discord import app_commands
-
+import logging
 
 sentry_sdk.init(
 	"https://4ba6c01215c74866b823883bbcf18442@o968027.ingest.sentry.io/5919400",
@@ -41,6 +41,13 @@ async def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = discord.Intents.all(), help_command=None)
 bot.is_synced = False
 enviroment = config('ENVIROMENT', default='development')
+
+# setting up logging
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 def td_format(td_object):
     seconds = int(td_object.total_seconds())
@@ -220,7 +227,7 @@ async def update_bot_status():
 	async for message in channel.history(limit=1):
 		last_message = message
 	# get last message content
-	if last_message = None:
+	if last_message == None:
 		embed = discord.Embed(
 			title = 'Bot Status',
 			color = discord.Color.red()
@@ -264,8 +271,14 @@ async def on_command_error(ctx, error):
 		else:
 			await ctx.send(error)
 			raise error
-	except:
-		raise error
+	except Exception as e:
+		print(e)
+	finally:
+		sentry_sdk.capture_exception(error)
+		print((ctx.channel.name, error))
+		bot.error_list.append(f'{str(error)}')
+		index = bot.error_list.index(f'{str(error)}')
+
 @bot.event
 async def on_guild_join(guild: discord.Guild):
 	print(f'{bot.user.name} has been added to a new server!')
