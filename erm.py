@@ -241,8 +241,10 @@ async def update_bot_status():
 		await channel.send(embed = embed)
 	else:
 		last_embed = last_message.embeds[0]
-		last_embed.fields[0].value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
-		last_embed.fields[2].value = str(int(last_embed.fields[2].value) + 1)
+		timestamp = last_embed.fields[0]
+		pings = last_embed.fields[2]
+		timestamp.value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
+		pings.value = str(int(pings.value) + 1)
 		print([field.value for field in last_embed.fields])
 		await last_message.edit(embed=last_embed)
 		print('edited last message')
