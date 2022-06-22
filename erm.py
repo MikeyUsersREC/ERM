@@ -82,9 +82,9 @@ async def on_ready():
 	bot.shifts = Document(bot.db, "shifts")
 	bot.shift_storage = Document(bot.db, "shift_storage")
 	bot.staff_members = Document(bot.db, "staff_members")
-
+	bot.error_list = []
 	print('Connected to MongoDB!')
-
+	
 	await bot.load_extension('jishaku')
 	if not bot.is_synced: #check if slash commands have been synced 
 		bot.tree.copy_global_to(guild=discord.Object(id =868508693442990113))
