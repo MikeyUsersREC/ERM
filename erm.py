@@ -246,7 +246,9 @@ async def update_bot_status():
 		timestamp.value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
 		pings.value = str(int(pings.value) + 1)
 
-		last_embed.fields.clear()
+		for index, _ in enumerate(last_embed.fields):
+			last_embed.remove_field(index)
+			
 		last_embed.add_field(name = 'Last ping', value = timestamp.value)
 		last_embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
 		last_embed.add_field(name = 'Pings', value = pings.value)
