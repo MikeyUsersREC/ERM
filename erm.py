@@ -216,10 +216,11 @@ async def update_bot_status():
 	# get channel from bot
 	channel = bot.get_channel(988082136542236733)
 	# get last message from channel
-	last_message = await channel.history(limit=1)
-	last_message = last_message.flatten()
+	last_message = None
+	async for message in channel.history(limit=1):
+		last_message = message
 	# get last message content
-	if len(last_message) == 0:
+	if last_message = None:
 		embed = discord.Embed(
 			title = 'Bot Status',
 			color = discord.Color.red()
@@ -231,7 +232,7 @@ async def update_bot_status():
 
 		await channel.send(embed = embed)
 	else:
-		last_embed = last_message[0].embeds[0]
+		last_embed = last_message.embeds[0]
 		last_embed_fields = last_embed.fields
 		last_embed_fields[0].value = f'<t:{datetime.datetime.now().timestamp()}:R>'
 
