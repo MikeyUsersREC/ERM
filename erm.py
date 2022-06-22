@@ -216,7 +216,8 @@ async def update_bot_status():
 	# get channel from bot
 	channel = bot.get_channel(988082136542236733)
 	# get last message from channel
-	last_message = await channel.history(limit=1).flatten()
+	last_message = await channel.history(limit=1)
+	last_message = last_message.flatten()
 	# get last message content
 	if len(last_message) == 0:
 		embed = discord.Embed(
