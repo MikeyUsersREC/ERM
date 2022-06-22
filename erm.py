@@ -233,9 +233,9 @@ async def update_bot_status():
 			color = discord.Color.red()
 		)
 		embed.set_thumbnail(url = bot.user.avatar.url)
-		embed.add_field(name = 'Last ping', value = f'<t:{datetime.datetime.now().timestamp()}:R>')
+		embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
 		embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
-		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}')
+		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
 		await channel.send(embed = embed)
 	else:
