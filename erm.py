@@ -241,9 +241,9 @@ async def update_bot_status():
 	else:
 		last_embed = last_message.embeds[0]
 		last_embed_fields = last_embed.fields
-		last_embed_fields[0].value = f'<t:{datetime.datetime.now().timestamp()}:R>'
+		last_embed_fields[0].value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
 
-		await channel.send(embed=last_embed)
+		await last_message.edit(embed=last_embed)
 # on command error, missing argument
 @bot.event
 async def on_command_error(ctx, error):
