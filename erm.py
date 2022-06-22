@@ -242,6 +242,7 @@ async def update_bot_status():
 		last_embed = last_message.embeds[0]
 		last_embed_fields = last_embed.fields
 		last_embed_fields[0].value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
+		last_embed.fields = last_embed_fields
 
 		await last_message.edit(embed=last_embed)
 # on command error, missing argument
