@@ -210,7 +210,31 @@ async def change_status():
 	else:
 		await bot.change_presence(status = discord.Status.online, activity=discord.Game(name=chosen))
 
+# status change discord.ext.tasks
+@tasks.loop(seconds=30)
+async def update_bot_status():
+	# get channel from bot
+	channel = bot.get_channel(988082136542236733)
+	# get last message from channel
+	last_message = await channel.history(limit=1).flatten()
+	# get last message content
+	if len(last_message) == 0:
+		embed = discord.Embed(
+			title = 'Bot Status',
+			color = discord.Color.red()
+		)
+		embed.set_thumbnail(url = bot.user.avatar.url)
+		embed.add_field(name = 'Last ping', value = f'<t:{datetime.datetime.now().timestamp()}:R>')
+		embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
+		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}')
 
+		await channel.send(embed = embed)
+	else:
+		last_embed = last_message[0].embeds[0]
+		last_embed_fields = last_embed.fields
+		last_embed_fields[0].value = f'<t:{datetime.datetime.now().timestamp()}:R>'
+
+		await channel.send(embed.embed)
 # on command error, missing argument
 @bot.event
 async def on_command_error(ctx, error):
@@ -816,6 +840,7 @@ async def changeconfig(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def warn(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
@@ -936,6 +961,7 @@ async def warn(ctx, user, *, reason):
 	with_app_command = True, 
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def kick(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
@@ -1059,6 +1085,7 @@ async def kick(ctx, user, *, reason):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def ban(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
@@ -1183,6 +1210,7 @@ async def ban(ctx, user, *, reason):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def mlog(ctx, *, message):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1220,6 +1248,7 @@ async def mlog(ctx, *, message):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def tempban(ctx, user, time: str, *, reason):
 	reason = ''.join(reason)
 
@@ -1699,6 +1728,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 	with_app_command = True, 
 )
 @discord.ext.commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def removewarning(ctx, id: str):
 
 	try:
@@ -1873,6 +1903,7 @@ async def duty(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def dutyon(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1947,6 +1978,7 @@ async def dutyon(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def dutyoff(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -2067,6 +2099,7 @@ async def dutyoff(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def dutytime(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -2132,6 +2165,7 @@ async def dutytime(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
+@app_commands.default_permissions(manage_messages = True)
 async def dutyvoid(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
