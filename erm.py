@@ -241,17 +241,16 @@ async def update_bot_status():
 		await channel.send(embed = embed)
 	else:
 		last_embed = last_message.embeds[0]
-		timestamp = last_embed.fields[0]
-		pings = last_embed.fields[2]
-		timestamp.value = f'<t:{int(datetime.datetime.now().timestamp())}:R>'
-		pings.value = str(int(pings.value) + 1)
+		pings = None
 
-		for index, _ in enumerate(last_embed.fields):
+		for index, field in enumerate(last_embed.fields):
+			if field.name == 'Pings':
+				pings = int(field.value)
 			last_embed.remove_field(index)
 
-		last_embed.add_field(name = 'Last ping', value = timestamp.value)
+		last_embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
 		last_embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
-		last_embed.add_field(name = 'Pings', value = pings.value)
+		last_embed.add_field(name = 'Pings', value = str(pings))
 		last_embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
 		print([field.value for field in last_embed.fields])
