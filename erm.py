@@ -19,8 +19,10 @@ from roblox import client
 from discord import app_commands
 import logging
 
+sentry_url = config('SENTRY_URL')
+
 sentry_sdk.init(
-	"https://4ba6c01215c74866b823883bbcf18442@o968027.ingest.sentry.io/5919400",
+	sentry_url,
 	traces_sample_rate=1.0
 )
 
@@ -2096,24 +2098,38 @@ async def dutyoff(ctx):
 
 		})
 	else:			
-		await bot.shift_storage.update_by_id(
-			{
-				'_id': ctx.author.id,
-				'shifts': [ (await bot.shift_storage.find_by_id(ctx.author.id))['shifts'] ].append(
-					
-					{
-					'name': ctx.author.name,
-					'startTimestamp': shift['startTimestamp'],
-					'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
-					'totalSeconds': time_delta.total_seconds(),
-					'guild': ctx.guild.id
-					}
+		if "shifts" in await bot.shift_storage.find_by_id(ctx.author.id):
+			await bot.shift_storage.update_by_id(
+				{
+					'_id': ctx.author.id,
+					'shifts': [ (await bot.shift_storage.find_by_id(ctx.author.id))['shifts'] ].append(
+						
+						{
+						'name': ctx.author.name,
+						'startTimestamp': shift['startTimestamp'],
+						'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
+						'totalSeconds': time_delta.total_seconds(),
+						'guild': ctx.guild.id
+						}
 
-				),
-				'totalSeconds': sum([ ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'][i]['totalSeconds'] for i in range(len( ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'])) ])
-			}
-		)	
-		
+					),
+					'totalSeconds': sum([ ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'][i]['totalSeconds'] for i in range(len( ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'])) ])
+				}
+			)	
+		else:
+			await bot.shift_storage.insert({
+				'_id': ctx.author.id,
+				'shifts': [
+					{
+						'name': ctx.author.name,
+						'startTimestamp': shift['startTimestamp'],
+						'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
+						'totalSeconds': time_delta.total_seconds(),
+						'guild': ctx.guild.id
+					}],
+				'totalSeconds': time_delta.total_seconds()
+
+			})
 			
 
 	await bot.shifts.delete_by_id(ctx.author.id)		
