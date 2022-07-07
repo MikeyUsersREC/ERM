@@ -2099,37 +2099,39 @@ async def dutyoff(ctx):
 		})
 	else:			
 		if "shifts" in await bot.shift_storage.find_by_id(ctx.author.id):
-			await bot.shift_storage.update_by_id(
-				{
-					'_id': ctx.author.id,
-					'shifts': [ (await bot.shift_storage.find_by_id(ctx.author.id))['shifts'] ].append(
-						
-						{
-						'name': ctx.author.name,
-						'startTimestamp': shift['startTimestamp'],
-						'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
-						'totalSeconds': time_delta.total_seconds(),
-						'guild': ctx.guild.id
-						}
+			if not None in dict(await bot.shift_storage.find_by_id(ctx.author.id)).values():
 
-					),
-					'totalSeconds': sum([ ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'][i]['totalSeconds'] for i in range(len( ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'])) ])
-				}
-			)	
-		else:
-			await bot.shift_storage.insert({
-				'_id': ctx.author.id,
-				'shifts': [
+				await bot.shift_storage.update_by_id(
 					{
-						'name': ctx.author.name,
-						'startTimestamp': shift['startTimestamp'],
-						'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
-						'totalSeconds': time_delta.total_seconds(),
-						'guild': ctx.guild.id
-					}],
-				'totalSeconds': time_delta.total_seconds()
+						'_id': ctx.author.id,
+						'shifts': [ (await bot.shift_storage.find_by_id(ctx.author.id))['shifts'] ].append(
+							
+							{
+							'name': ctx.author.name,
+							'startTimestamp': shift['startTimestamp'],
+							'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
+							'totalSeconds': time_delta.total_seconds(),
+							'guild': ctx.guild.id
+							}
 
-			})
+						),
+						'totalSeconds': sum([ ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'][i]['totalSeconds'] for i in range(len( ( await bot.shift_storage.find_by_id(ctx.author.id) )['shifts'])) ])
+					}
+				)	
+			else:
+				await bot.shift_storage.insert({
+					'_id': ctx.author.id,
+					'shifts': [
+						{
+							'name': ctx.author.name,
+							'startTimestamp': shift['startTimestamp'],
+							'endTimestamp': ctx.message.created_at.replace(tzinfo = None).timestamp(),
+							'totalSeconds': time_delta.total_seconds(),
+							'guild': ctx.guild.id
+						}],
+					'totalSeconds': time_delta.total_seconds()
+
+				})
 			
 
 	await bot.shifts.delete_by_id(ctx.author.id)		
