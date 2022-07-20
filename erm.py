@@ -17,7 +17,6 @@ from menus import Setup, YesNoMenu
 from utils.mongo import Document
 from roblox import client
 from discord import app_commands
-import logging
 
 sentry_url = config('SENTRY_URL')
 
@@ -43,13 +42,6 @@ async def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = discord.Intents.all(), help_command=None)
 bot.is_synced = False
 enviroment = config('ENVIROMENT', default='development')
-
-# setting up logging
-logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
 
 def td_format(td_object):
     seconds = int(td_object.total_seconds())
