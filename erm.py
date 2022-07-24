@@ -254,6 +254,28 @@ async def update_bot_status():
 		print([field.value for field in embed.fields])
 		await last_message.edit(embed=embed)
 
+
+@tasks.loop(days=1)
+async def GDPR():
+	# if the date in each warning is more than 30 days ago, redact the staff's username and tag
+	# using mongodb (warnings)
+	# get all warnings
+	warnings = await bot.warnings.get_all()
+	# iterate through each warning, to check the date via the time variable stored in "d/m/y h:m:s"
+	for userentry in warnings:
+		for warning in userentry['warnings']:
+			date = datetime.datetime.strptime(warning['date'], '%d/%m/%Y %H:%M:%S')
+			now = datetime.datetime.now()
+			diff = now - date
+			diff_days = diff.days
+			if diff_days > 30:
+				# get the staff's id
+				if type(warning['Moderator']) == list:
+					warning['Moderator'][0] = "[redacted ~ GDPR]"
+				else:
+					warning['Moderator'] = "[redacted ~ GDPR]"
+
+				await bot.warnings.update_by_id(userentry)
 @bot.event
 async def on_command_error(ctx, error):
 	try:
