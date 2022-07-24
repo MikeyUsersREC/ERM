@@ -69,6 +69,7 @@ async def on_ready():
 	print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
 	change_status.start()
 	update_bot_status.start()
+	GDPR.start()
 	bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
 	bot.db = bot.mongo["erm"]
 	bot.warnings = Document(bot.db, "warnings")
@@ -255,7 +256,7 @@ async def update_bot_status():
 		await last_message.edit(embed=embed)
 
 
-@tasks.loop(days=1)
+@tasks.loop(hours=24)
 async def GDPR():
 	# if the date in each warning is more than 30 days ago, redact the staff's username and tag
 	# using mongodb (warnings)
