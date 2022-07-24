@@ -265,7 +265,7 @@ async def GDPR():
 	# iterate through each warning, to check the date via the time variable stored in "d/m/y h:m:s"
 	for userentry in warnings:
 		for warning in userentry['warnings']:
-			date = datetime.datetime.strptime(warning['time'], '%d/%m/%Y %H:%M:%S')
+			date = datetime.datetime.strptime(warning['Time'], '%d/%m/%Y %H:%M:%S')
 			now = datetime.datetime.now()
 			diff = now - date
 			diff_days = diff.days
