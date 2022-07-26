@@ -39,7 +39,11 @@ async def get_prefix(bot, message):
 	return commands.when_mentioned_or(prefix)(bot, message)
 
 
-bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = discord.Intents.all(), help_command=None)
+intents = discord.Intents.default()
+intents.messages = True
+intents.members = True
+
+bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = intents, help_command=None)
 bot.is_synced = False
 enviroment = config('ENVIROMENT', default='development')
 
