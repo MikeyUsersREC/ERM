@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<!-- Font Awesome -->
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+		<!-- Google Fonts -->
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+		<!-- Bootstrap core CSS -->
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+		<!-- Material Design Bootstrap -->
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<style>
+body {
+	background: linear-gradient(to top right, #454d55, rgb(0, 0, 0)) no-repeat center center fixed;;
+	background-size: full;
+}
+.avatar {
+	margin-top: auto;
+	margin-bottom: auto;
+	margin: 8%;
+}
+.margin {
+	margin-top: auto;
+	margin-bottom: auto;
+	margin: 8%;
+}
+img {
+	border-radius: 50%;
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.863)
+}
+
+.nav-item {
+	font-weight: 400;
+	margin-top: auto;
+	margin-bottom: auto;
+	margin-left: 20px;
+	font-family: "Roboto", sans-serif;
+}
+
+
+.guild-name {
+	margin-top: 15px;
+}
+
+.missing-pfp {
+	height: 128px;
+	width: 128px
+}
+
+.container {
+    grid-template-columns: repeat(4, 1fr);
+    display: grid;
+}
+
+.guild {
+	margin-top: 25px;
+	margin-bottom: 30px;
+}
+
+@media only screen and (max-width: 1080px) {
+	.container {
+		grid-template-columns: repeat(1, 1fr);
+    	display: grid;
+	}
+}
+
+.btn {
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+}
+</style>
+		<!-- Bootstrap CSS -->
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+		<title>Emergency Response Management | Discord Bots</title>
+	</head>
+	<body>
+		<!-- Image and text -->
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+			<div class="container-fluid">
+			  <a class="navbar-brand" href="#">
+				<img src="https://cdn.discordapp.com/avatars/978662093408591912/925649975fe85dca0dc45a70935b12fa.webp?size=128" width="45" height="45" class="d-inline-block align-top" alt="" loading="lazy">					
+			  </a>
+			  <button class="navbar-toggler" type="button" data-mdb-toggle="collapse"
+				data-mdb-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+				aria-label="Toggle navigation">
+				<i class="fas fa-bars"></i>
+			  </button>
+			  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+				  <li class="nav-item">
+					<a class="nav-link" href="#">About</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="https://discord.com/api/oauth2/authorize?client_id=978662093408591912&permissions=8&scope=bot">Invite</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="https://discord.gg/5pMmJEYazQ">Support</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="/login">Dashboard</a>
+				  </li>
+				</ul>
+			  </div>
+			</div>
+		  </nav>
+	<div class="avatar">
+	<center>
+	<img src={{user.avatar_url}}></center></div>
+	<div class="margin">
+	<center>
+        <h2>Welcome {{user.name}}!</h2>
+        <h6>You have successfully logged in!</h6>
+	</center>
+	</div>
+	<section class="container">
+		{% for guild in guilds %}
+		<div class="text-center guild">
+			<a href="/dashboard/{{guild.id}}">
+				{% if guild.icon_url is not none %}
+				<img src="{{guild.icon_url}}" class="{{guild.class_color}}">
+				{% else %}
+				<img src="https://cdn.discordapp.com/embed/avatars/0.png?size=32" class="{{guild.class_color}} missing-pfp">
+				{% endif %}
+			</a>
+			<br>
+			<h6 class="guild-name">{{guild.name}}</h6>
+		</div>
+		{% endfor %}
+	</section>
+
+		<!-- Optional JavaScript -->
+		<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+		<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+		<!-- JQuery -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<!-- Bootstrap tooltips -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+		<!-- Bootstrap core JavaScript -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/js/bootstrap.min.js"></script>
+		<!-- MDB core JavaScript -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+	</body>
+</html>

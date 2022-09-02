@@ -1,9 +1,13 @@
 import datetime
+from io import BytesIO
+import io
 import json
 from pprint import pprint
 import random
 from tempfile import TemporaryFile
-from discord.ext import commands, tasks
+import time
+import traceback
+from discord.ext import commands, tasks, ipc
 import discord
 from decouple import config
 import motor.motor_asyncio
@@ -13,10 +17,15 @@ from snowflake import SnowflakeGenerator
 import snowflake
 import DiscordUtils 
 import sentry_sdk
-from menus import Setup, YesNoMenu 
+from sentry_sdk import capture_exception, push_scope
+from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu 
 from utils.mongo import Document
-from roblox import client
+from roblox import client as roblox
 from discord import app_commands
+from zuid import ZUID
+from utils.timestamp import td_format
+import logging
+
 
 sentry_url = config('SENTRY_URL')
 
@@ -24,6 +33,9 @@ sentry_sdk.init(
 	sentry_url,
 	traces_sample_rate=1.0
 )
+
+discord.utils.setup_logging()
+
 
 async def get_prefix(bot, message):
 
@@ -43,76 +55,72 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+
+
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = intents, help_command=None)
 bot.is_synced = False
-enviroment = config('ENVIROMENT', default='development')
+enviroment = config('ENVIROMENT', default='DEVELOPMENT')
 
-def td_format(td_object):
-    seconds = int(td_object.total_seconds())
-    periods = [
-        ('year',        60*60*24*365),
-        ('month',       60*60*24*30),
-        ('day',         60*60*24),
-        ('hour',        60*60),
-        ('minute',      60),
-        ('second',      1)
-    ]
-
-    strings=[]
-    for period_name, period_seconds in periods:
-        if seconds >= period_seconds:
-            period_value , seconds = divmod(seconds, period_seconds)
-            has_s = 's' if period_value > 1 else ''
-            strings.append("%s %s%s" % (period_value, period_name, has_s))
-
-    return ", ".join(strings)
 
 @bot.event
 async def on_ready():
+	
 	await bot.wait_until_ready()
-	print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
+
+	# load IPC extension
+	await bot.load_extension('utils.routes')
+	logging.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
+	global startTime
+	startTime = time.time()
 	change_status.start()
 	update_bot_status.start()
 	GDPR.start()
 	bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
-	bot.db = bot.mongo["erm"]
+	if enviroment == 'DEVELOPMENT':
+		bot.db = bot.mongo['beta']
+	elif enviroment == "PRODUCTION":
+		bot.db = bot.mongo["erm"]
+	else:
+		raise Exception("Invalid enviroment")
+	
+	bot.start_time = time.time()
 	bot.warnings = Document(bot.db, "warnings")
 	bot.settings = Document(bot.db, "settings")
 	bot.shifts = Document(bot.db, "shifts")
+	bot.errors = Document(bot.db, "errors")
 	bot.shift_storage = Document(bot.db, "shift_storage")
 	bot.staff_members = Document(bot.db, "staff_members")
 	bot.error_list = []
-	print('Connected to MongoDB!')
+	logging.info('Connected to MongoDB!')
 	
 	await bot.load_extension('jishaku')
 	if not bot.is_synced: #check if slash commands have been synced 
-		bot.tree.copy_global_to(guild=discord.Object(id =868508693442990113))
+		bot.tree.copy_global_to(guild=discord.Object(id =987798554972143728))
 		for item in bot.tree._get_all_commands():
-			print(item.name)
-		if enviroment == 'development':
-			await bot.tree.sync(guild=discord.Object(id =868508693442990113))
+			logging.info(item.name)
+		if enviroment == 'DEVELOPMENT':
+			await bot.tree.sync(guild=discord.Object(id =987798554972143728))
 		else:
 			await bot.tree.sync() #guild specific: leave blank if global (global registration can take 1-24 hours)
 		bot.is_synced = True
-	
 
-client = client.Client()
+client = roblox.Client()
 
 async def warning_json_to_mongo(jsonName: str, guildId: int):
 	f = None
 	with open(f'{jsonName}', 'r') as f:
-		print(f)
+		logging.info(f)
 		f = json.load(f)
 
-	print(f)
+	logging.info(f)
 
 	for key, value in f.items():
 		structure = {
 			'_id': key.lower(),
 			'warnings': []
 		}
-		print([key, value])
-		print(key.lower())
+		logging.info([key, value])
+		logging.info(key.lower())
 
 		if await bot.warnings.find_by_id(key.lower()):
 			data = await bot.warnings.find_by_id(key.lower())
@@ -125,7 +133,7 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
 			item['Guild'] = guildId
 			structure['warnings'].append(item)
 
-		pprint(structure)
+		logging.info(structure)
 
 		if await bot.warnings.find_by_id(key.lower()) == None:
 			await bot.warnings.insert(structure)
@@ -158,7 +166,12 @@ bot.colors = {
 }
 bot.color_list = [c for c in bot.colors.values()]
 
-def generate_random() -> discord.Color:
+async def generate_random(ctx) -> discord.Color:
+	if await bot.settings.find_by_id(ctx.guild.id):
+		settings = await bot.settings.find_by_id(ctx.guild.id)
+		if settings['customisation']['color'] != "":
+			return settings['customisation']['color']
+
 	RandomNumber = random.randint(0, len(bot.color_list) - 1)
 	return bot.color_list[RandomNumber]
 
@@ -166,9 +179,19 @@ bot.generate_random = generate_random
 
 
 # include environment variables
-bot_token = config('BOT_TOKEN')
+if enviroment == "PRODUCTION":
+	bot_token = config('PRODUCTION_BOT_TOKEN')
+	logging.info('Using production token...')
+elif enviroment == "DEVELOPMENT":
+	bot_token = config('DEVELOPMENT_BOT_TOKEN')
+	logging.info('Using development token...')
+else:
+	raise Exception("Invalid enviroment")
 mongo_url = config('MONGO_URL')
+github_token = config('GITHUB_TOKEN')
 generator = SnowflakeGenerator(192)
+error_gen = ZUID(prefix="error_", length=10)
+
 
 async def requestResponse(ctx, question):
 	await ctx.send(question)
@@ -184,7 +207,6 @@ async def requestResponse(ctx, question):
 async def change_status():
 	mcl = [guild.member_count for guild in bot.guilds]
 	member_count = sum(mcl)
-
 
 	status = [
 		'Emergency Response: Liberty County',
@@ -203,7 +225,8 @@ async def change_status():
 		'[W] PRC on Twitch',
 		'[L] \'Created by Mikey!\'',
 		'[L] \'not officially endorsed by PRC\'',
-		'[L] \'not affiliated with PRC\''
+		'[L] \'not affiliated with PRC\'',
+		"[N] Version [R]"
 	]
 
 	chosen = random.choice(status)
@@ -213,51 +236,63 @@ async def change_status():
 		await bot.change_presence(status = discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name=chosen[4:]))
 	elif chosen.startswith('[C] '):
 		await bot.change_presence(status = discord.Status.online, activity=discord.Activity(type=discord.ActivityType.custom, name=chosen[4:]))
+	elif chosen.startswith('[N] '):
+		request = requests.get('https://api.github.com/repos/mikeyusersrec/erm/commits', headers = {
+			"Accept": "application/vnd.github+json",
+			"Authorization": f"Bearer {github_token}"
+		})
+		requestjson = request.json()
+		requestResponse = requestjson[0]['sha'][:7]
+		chosen = chosen.replace('[R]', requestResponse)
+		chosen = chosen[4:]
+		await bot.change_presence(status = discord.Status.online, activity=discord.Game(name=chosen))
 	else:
 		await bot.change_presence(status = discord.Status.online, activity=discord.Game(name=chosen))
 
 # status change discord.ext.tasks
 @tasks.loop(seconds=30)
 async def update_bot_status():
-	# get channel from bot
-	channel = bot.get_channel(988082136542236733)
-	# get last message from channel
-	last_message = None
-	async for message in channel.history(limit=1):
-		last_message = message
-	# get last message content
-	if last_message == None:
-		embed = discord.Embed(
-			title = 'Bot Status',
-			color = discord.Color.red()
-		)
-		embed.set_thumbnail(url = bot.user.avatar.url)
-		embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
-		embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
-		embed.add_field(name = 'Pings', value = '1')
-		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
+	try:
+		# get channel from bot
+		channel = bot.get_channel(988082136542236733)
+		# get last message from channel
+		last_message = None
+		async for message in channel.history(limit=1):
+			last_message = message
+		# get last message content
+		if last_message == None:
+			embed = discord.Embed(
+				title = 'Bot Status',
+				color = discord.Color.red()
+			)
+			embed.set_thumbnail(url = bot.user.avatar.url)
+			embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
+			embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
+			embed.add_field(name = 'Pings', value = '1')
+			embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
-		await channel.send(embed = embed)
-	else:
-		last_embed = last_message.embeds[0]
-		pings = None
+			await channel.send(embed = embed)
+		else:
+			last_embed = last_message.embeds[0]
+			pings = None
 
-		for field in last_embed.fields:
-			if field.name == 'Pings':
-				pings = int(field.value)
+			for field in last_embed.fields:
+				if field.name == 'Pings':
+					pings = int(field.value)
 
-		embed = discord.Embed(
-			title = 'Bot Status',
-			color = discord.Color.red()
-		)
-		embed.set_thumbnail(url = bot.user.avatar.url)
-		embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
-		embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
-		embed.add_field(name = 'Pings', value = str(pings + 1))
-		embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
+			embed = discord.Embed(
+				title = 'Bot Status',
+				color = discord.Color.red()
+			)
+			embed.set_thumbnail(url = bot.user.avatar.url)
+			embed.add_field(name = 'Last ping', value = f'<t:{int(datetime.datetime.now().timestamp())}:R>')
+			embed.add_field(name = 'Status', value = '<:online:989218581764014161> Online')
+			embed.add_field(name = 'Pings', value = str(pings + 1))
+			embed.add_field(name = 'Note', value = f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id = 635119023918415874).mention}', inline = False)
 
-		print([field.value for field in embed.fields])
-		await last_message.edit(embed=embed)
+			await last_message.edit(embed=embed)
+	except:
+		logging.info('Failing updating the status.')
 
 
 @tasks.loop(hours=24)
@@ -269,59 +304,59 @@ async def GDPR():
 	# iterate through each warning, to check the date via the time variable stored in "d/m/y h:m:s"
 	for userentry in warnings:
 		for warning in userentry['warnings']:
-			date = datetime.datetime.strptime(warning['Time'], '%m/%d/%Y, %H:%M:%S')
-			now = datetime.datetime.now()
-			diff = now - date
-			diff_days = diff.days
-			if diff_days > 30:
-				# get the staff's id
-				if type(warning['Moderator']) == list:
-					warning['Moderator'][0] = "[redacted ~ GDPR]"
-				else:
-					warning['Moderator'] = "[redacted ~ GDPR]"
+			try:
+				date = datetime.datetime.strptime(warning['Time'], '%m/%d/%Y, %H:%M:%S')
+				now = datetime.datetime.now()
+				diff = now - date
+				diff_days = diff.days
+				if diff_days > 30:
+					# get the staff's id
+					if type(warning['Moderator']) == list:
+						warning['Moderator'][0] = "[redacted ~ GDPR]"
+					else:
+						warning['Moderator'] = "[redacted ~ GDPR]"
 
-				await bot.warnings.update_by_id(userentry)
+						await bot.warnings.update_by_id(userentry)
+			except:
+				pass
 @bot.event
 async def on_command_error(ctx, error):
-	try:
-		if isinstance(error, commands.MissingRequiredArgument):
-			await ctx.send('You are missing a required argument!')
-		elif isinstance(error, commands.CommandNotFound):
-			await ctx.send('That command does not exist!')
-		elif isinstance(error, commands.MissingPermissions):
-			await ctx.send('You do not have permission to use that command!')
-		elif isinstance(error, commands.BotMissingPermissions):
-			await ctx.send('I do not have permission to use that command!')
-		elif isinstance(error, commands.CheckFailure):
-			await ctx.send('You do not have permission to use that command!')
-		elif isinstance(error, commands.CommandOnCooldown):
-			await ctx.send('You are on cooldown!')
-		elif isinstance(error, commands.CommandInvokeError):
-			await ctx.send('There was an error with that command!')
-		elif isinstance(error, commands.BadArgument):
-			await ctx.send('That is not a valid argument!')
-		elif isinstance(error, commands.CommandError):
-			await ctx.send('There was an error with that command!')
-		elif isinstance(error, commands.UserInputError):
-			await ctx.send('There was an error with that command!')
-		else:
-			await ctx.send(error)
-			raise error
-	except Exception as e:
-		print(e)
-	finally:
-		sentry_sdk.capture_exception(error)
-		print((ctx.channel.name, error))
-		bot.error_list.append(f'{str(error)}')
-		index = bot.error_list.index(f'{str(error)}')
 
+	error_id = error_gen()
+
+	try:
+		embed = discord.Embed(
+			title = 'Error',
+			color = discord.Color.red()
+		)
+
+		embed.add_field(name = 'Explanation', value = "An error has occured whilst running this command. To gain more information about this error and how to prevent it, please contact us in our support server and provide the error ID below.")
+		embed.add_field(name = "Error", value = str(error))
+		embed.add_field(name = 'Error ID', value = f"`{error_id}`", inline = False)
+		embed.add_field(name = "Support Server", value = "[Click here](https://discord.gg/5pMmJEYazQ)", inline = True)
+		
+		await ctx.send(embed = embed)
+	except Exception as e:
+		logging.info(e)
+	finally:
+		with push_scope() as scope:
+			scope.set_tag('error_id', error_id)
+			scope.level = 'error'
+			await bot.errors.insert({
+				"_id": error_id,
+				"error": str(error),
+				"time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+				"channel": ctx.channel.id,
+				"guild": ctx.guild.id
+			})
+			sentry_sdk.capture_exception(error)
 @bot.event
 async def on_guild_join(guild: discord.Guild):
-	print(f'{bot.user.name} has been added to a new server!')
-	print('List of servers the bot is in: ')
+	logging.info(f'{bot.user.name} has been added to a new server!')
+	logging.info('List of servers the bot is in: ')
 
 	for guild in bot.guilds:
-		print(f'  - {guild.name}')
+		logging.info(f'  - {guild.name}')
 
 	try:
 		await guild.system_channel.send(
@@ -332,11 +367,12 @@ async def on_guild_join(guild: discord.Guild):
 				'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'    
 		)
 	finally:
-		print('Server has been sent welcome sequence.')
+		logging.info('Server has been sent welcome sequence.')
 	
 
 @bot.event
 async def on_message(message: discord.Message):
+	bypass_role = None
 
 	if message.author == bot.user:
 		return
@@ -354,19 +390,33 @@ async def on_message(message: discord.Message):
 		await bot.process_commands(message)
 		return
 
+	if "bypass_role" in dataset['antiping'].keys():
+		bypass_role = dataset['antiping']['bypass_role']
+
 	if dataset['antiping']['enabled'] == False or dataset['antiping']['role'] == None:
 		await bot.process_commands(message)
 		return
 	
+	bypass_role = discord.utils.get(message.guild.roles, id = bypass_role)
 	AntipingRole = discord.utils.get(message.guild.roles, id = dataset['antiping']['role'])
+
+	if AntipingRole == None:
+		await bot.process_commands(message)
+		return
+
+	if bypass_role != None:
+		if bypass_role in message.author.roles:
+			await bot.process_commands(message)
+			return
 
 	for mention in message.mentions:
 		isStaffPermitted = False
-		print(isStaffPermitted)
+		logging.info(isStaffPermitted)
 
 		if mention.bot:
 			await bot.process_commands(message)
 			return
+
 
 		if mention == message.author:
 			await bot.process_commands(message)
@@ -413,7 +463,7 @@ async def on_message(message: discord.Message):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def setup(ctx):
 	## Setup sequence;
 	## 1. What features do you want enabled?
@@ -434,6 +484,7 @@ async def setup(ctx):
 		'antiping': {
 			'enabled': False,
 			'role': None,
+			"role_bypass": "None"
 		},
 
 		'staff_management': {
@@ -510,7 +561,7 @@ async def setup(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def quicksetup(ctx, featuresenabled = 'default', staffmanagementchannel: discord.TextChannel = None, punishmentschannel: discord.TextChannel = None, shiftmanagementchannel: discord.TextChannel = None):
 	## Setup sequence;
 	## 1. What features do you want enabled?
@@ -531,6 +582,7 @@ async def quicksetup(ctx, featuresenabled = 'default', staffmanagementchannel: d
 		'antiping': {
 			'enabled': False,
 			'role': None,
+			"role_bypass": "None"
 		},
 
 		'staff_management': {
@@ -552,11 +604,17 @@ async def quicksetup(ctx, featuresenabled = 'default', staffmanagementchannel: d
 			'brand_name': 'Emergency Response Management',
 			'thumbnail_url': '',
 			'footer_text': 'Staff Logging Systems',
-			'ban_channel': None
+			'ban_channel': None,
+			"server_code": None
 		}
 	}
 
+	view = YesNoMenu(ctx.author.id)
+	await ctx.send('Are you sure you want to run this comamnd? If you have any settings saved with ERM, they will be reset to factory default.', view = view)
+	await view.wait()
 
+	if view.value != True:
+		return await ctx.send('Cancelled.')
 
 	if featuresenabled == 'all' or featuresenabled == 'default':
 		settingContents['staff_management']['enabled'] = True
@@ -597,6 +655,8 @@ async def quicksetup(ctx, featuresenabled = 'default', staffmanagementchannel: d
 @bot.hybrid_group(
 	name = 'config'
 )
+@commands.has_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def config(ctx, option: str = None):
 	if option == None:
 		option = 'view'
@@ -611,7 +671,7 @@ async def config(ctx, option: str = None):
 		embed = discord.Embed(
 			title='Server Configuration',
 			description='Here are the current settings for this server.',
-			color=generate_random()
+			color=await generate_random(ctx)
 		)
 		embed.add_field(name='Verification', value='Enabled: {}\nRole: {}'.format(settingContents['verification']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['verification']['role']).mention if settingContents['verification']['role'] else 'None'), inline = False)
 		embed.add_field(name='Anti-ping', value='Enabled: {}\nRole: {}'.format(settingContents['antiping']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None'), inline = False)
@@ -739,7 +799,7 @@ async def config(ctx, option: str = None):
 	description = 'View the current configuration of the server.'
 )
 @commands.has_permissions(manage_guild = True)
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def viewconfig(ctx):
 
 	if not await bot.settings.find_by_id(ctx.guild.id):
@@ -751,14 +811,69 @@ async def viewconfig(ctx):
 	embed = discord.Embed(
 		title='Server Configuration',
 		description='Here are the current settings for this server.',
-		color=generate_random()
+		color=await generate_random(ctx)
 	)
-	embed.add_field(name='Verification', value='Enabled: {}\nRole: {}'.format(settingContents['verification']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['verification']['role']).mention if settingContents['verification']['role'] else 'None'), inline = False)
-	embed.add_field(name='Anti-ping', value='Enabled: {}\nRole: {}'.format(settingContents['antiping']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None'), inline = False)
-	embed.add_field(name='Staff Management', value='Enabled: {}\nChannel: {}'.format(settingContents['staff_management']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['staff_management']['channel']).mention if settingContents['staff_management']['channel'] else 'None'), inline = False)
-	embed.add_field(name='Punishments', value='Enabled: {}\nChannel: {}'.format(settingContents['punishments']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['punishments']['channel']).mention if settingContents['punishments']['channel'] else 'None'), inline = False)
-	embed.add_field(name='Shift Management', value='Enabled: {}\nChannel: {}'.format(settingContents['shift_management']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['shift_management']['channel']).mention if settingContents['shift_management']['channel'] else 'None'), inline = False)
-	embed.add_field(name='Customisation', value='Color: {}\nPrefix: `{}`\nBrand Name: {}\nThumbnail URL: {}\nFooter Text: {}\nBan Channel: {}'.format(settingContents['customisation']['color'], settingContents['customisation']['prefix'], settingContents['customisation']['brand_name'], settingContents['customisation']['thumbnail_url'], settingContents['customisation']['footer_text'], discord.utils.get(ctx.guild.channels, id = settingContents['staff_management']['channel']).mention if settingContents['customisation']['ban_channel'] else 'None'), inline = False)
+	embed.add_field(
+		name='Verification', 
+		value='Enabled: {}\nRole: {}'
+			.format(
+				settingContents['verification']['enabled'],
+				discord.utils.get(ctx.guild.roles, settingContents['verification']['role']).mention if settingContents['verification']['role'] else 'None'
+			),
+		inline = False
+	)
+	
+	embed.add_field(
+		name='Anti-ping', 
+		value='Enabled: {}\nRole: {}\nBypass Role: {}'
+			.format(
+				settingContents['antiping']['enabled'],
+				discord.utils.get(ctx.guild.roles, settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None',
+				(settingContents['antiping']['role_bypass'] if "role_bypass" in settingContents['antiping'].keys() else "None")
+			),
+		inline = False
+	)
+		
+	embed.add_field(
+		name='Staff Management',
+		 value='Enabled: {}\nChannel: {}'
+		 	.format(
+				settingContents['staff_management']['enabled'],
+				discord.utils.get(ctx.guild.channels, id = settingContents['staff_management']['channel']).mention if settingContents['staff_management']['channel'] else 'None'
+			),
+		 inline = False
+	)
+	embed.add_field(
+		name='Punishments',
+		 value='Enabled: {}\nChannel: {}'
+		 	.format(
+				settingContents['punishments']['enabled'],
+				discord.utils.get(ctx.guild.channels, id = settingContents['punishments']['channel']).mention if settingContents['punishments']['channel'] else 'None'
+			),
+		inline = False
+	)
+	embed.add_field(
+		name='Shift Management',
+		value='Enabled: {}\nChannel: {}'
+			.format(
+				settingContents['shift_management']['enabled'],
+				discord.utils.get(ctx.guild.channels, id = settingContents['shift_management']['channel']).mention if settingContents['shift_management']['channel'] else 'None'
+			),
+		inline = False
+	)
+	embed.add_field(
+		name='Customisation',
+		value='Color: {}\nPrefix: `{}`\nBrand Name: {}\nThumbnail URL: {}\nFooter Text: {}\nBan Channel: {}'
+			.format(
+				settingContents['customisation']['color'],
+				settingContents['customisation']['prefix'],
+				settingContents['customisation']['brand_name'],
+				settingContents['customisation']['thumbnail_url'],
+				settingContents['customisation']['footer_text'],
+				discord.utils.get(ctx.guild.channels, id = settingContents['customisation']['ban_channel']).mention if settingContents['customisation']['ban_channel'] else 'None'
+			),
+		inline = False
+	)
 	
 	for field in embed.fields:
 		field.inline = False
@@ -770,7 +885,7 @@ async def viewconfig(ctx):
 	description = 'Change the configuration of the server.'
 )
 @commands.has_permissions(manage_guild = True)
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def changeconfig(ctx):
 
 	if not await bot.settings.find_by_id(ctx.guild.id):
@@ -779,11 +894,19 @@ async def changeconfig(ctx):
 	
 	settingContents = await bot.settings.find_by_id(ctx.guild.id)
 
-	category = await requestResponse(ctx, 'Please pick one of the options. `verification`, `antiping`, `staff_management`, `punishments`, `shift_management`, `customisation`.')
-	category = category.content
+	# category = await requestResponse(ctx, 'Please pick one of the options. `verification`, `antiping`, `staff_management`, `punishments`, `shift_management`, `customisation`.')
+	category = SettingsSelectMenu(ctx.author.id)
+	
+	await ctx.send('Please select which category you would like to modify.', view = category)
+	await category.wait()
+	category = category.value
+
 	if category == 'verification':
-		question = 'What do you want to do with verification? `enable`, `disable`, `role`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What do you want to do with verification?'
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "role"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'enable':
 			settingContents['verification']['enabled'] = True
 		elif content == 'disable':
@@ -795,8 +918,11 @@ async def changeconfig(ctx):
 		else:
 			return await ctx.send('Please pick one of the options. `enable`, `disable`, `role`. Please run this command again with correct parameters.')
 	elif category == 'antiping':
-		question = 'What do you want to do with anti-ping? `enable`, `disable`, `role`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What do you want to do with antiping?'
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "role", "bypass_role"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'enable':
 			settingContents['antiping']['enabled'] = True
 		elif content == 'disable':
@@ -805,11 +931,18 @@ async def changeconfig(ctx):
 			content = (await requestResponse(ctx, 'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
 			convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
 			settingContents['antiping']['role'] = convertedContent.id
+		elif content == "bypass_role" or content == "bypass" or content == "bypass-role":
+			content = (await requestResponse(ctx, 'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
+			convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
+			settingContents['antiping']['role_bypass'] = convertedContent.id
 		else:
-			return await ctx.send('Please pick one of the options. `enable`, `disable`, `role`. Please run this command again with correct parameters.')
+			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'staff_management':
-		question = 'What do you want to do with staff management? `enable`, `disable`, `channel`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What do you want to do with staff management?'
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'enable':
 			settingContents['staff_management']['enabled'] = True
 		elif content == 'disable':
@@ -819,10 +952,13 @@ async def changeconfig(ctx):
 			convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
 			settingContents['staff_management']['channel'] = convertedContent.id
 		else:
-			return await ctx.send('Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.')
+			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'punishments':
-		question = 'What do you want to do with punishments? `enable`, `disable`, `channel`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What do you want to do with punishments?'
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "ban_channel"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'enable':
 			settingContents['punishments']['enabled'] = True
 		elif content == 'disable':
@@ -831,12 +967,18 @@ async def changeconfig(ctx):
 			content = (await requestResponse(ctx, 'What channel do you want to use for punishments? (e.g. `#punishments`)')).content
 			convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
 			settingContents['punishments']['channel'] = convertedContent.id
+		elif content == 'ban_channel':
+			content = (await requestResponse(ctx, 'What channel do you want to use for banning? (e.g. `#bans`)')).content
+			convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
+			settingContents['customisation']['ban_channel'] = convertedContent.id
 		else:
-			return await ctx.send('Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.')
-		await ctx.send('Successfully set punishments to `{}`.'.format(content))
+			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'shift_management':
-		question = 'What do you want to do with shift management? `enable`, `disable`, `channel`, `role`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What do you want to do with shift management?'
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'enable':
 			settingContents['shift_management']['enabled'] = True
 		elif content == 'disable':
@@ -853,8 +995,11 @@ async def changeconfig(ctx):
 			return await ctx.send('Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.')
 	elif category == 'customisation':
 		# color, prefix, brand name, thumbnail url, footer text, ban channel
-		question = 'What do you want to do with customisation? `color`, `prefix`, `brand_name`, `thumbnail_url`, `footer_text`, `ban_channel`'
-		content = (await requestResponse(ctx, question)).content
+		question = 'What would you like to customize?'
+		customselect = CustomSelectMenu(ctx.author.id, ["color", "prefix", "brand_name", "thumbnail_url", "footer_text", "server_code"])
+		await ctx.send(question, view = customselect)
+		await customselect.wait()
+		content = customselect.value
 		if content == 'color':
 			content = (await requestResponse(ctx, 'What color do you want to use for the server? (e.g. `#00FF00`)')).content
 			convertedContent = await discord.ext.commands.ColourConverter().convert(ctx, content)
@@ -875,14 +1020,39 @@ async def changeconfig(ctx):
 			content = (await requestResponse(ctx, 'What channel do you want to use for banning? (e.g. `#bans`)')).content
 			convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
 			settingContents['customisation']['ban_channel'] = convertedContent.id
+		elif content == 'server_code':
+			content = (await requestResponse(ctx, 'What server code do you use for your ER:LC server?')).content
+			settingContents['customisation']['server_code'] = content
 		else:
 			return await ctx.send('You did not pick any of the options. Please run this command again with correct parameters.')
 	else:
-		return await ctx.send('You did not pick one of the options. `anti-ping`, `staff_management`, `punishments`, `shift_management`, `customisation`. Please run this command again with correct parameters.')
+			return await ctx.send('You did not pick any of the options. Please run this command again with correct parameters.')
 	
 	await bot.settings.update_by_id(settingContents)
-	await ctx.send('Successfully set {} to `{}`.'.format(category, content))
+	await ctx.send('Successfully set.')
 
+
+# support server invite command
+@bot.command(name='support', aliases=['support-server'], description = "Information about the ERM Support Server [Utility]")
+async def support_server(ctx):
+	# using an embed
+	embed = discord.Embed(title='Support Server', description='Join the support server to get help with the bot!', color=await generate_random(ctx))
+	embed.add_field(name='Support Server', value='[Click here](https://discord.gg/5pMmJEYazQ)', inline=False)
+	await ctx.send(embed = embed)
+
+# uptime command
+# * Finally works, basic and uses the bot on_ready event
+@bot.command(name='uptime', description = "Shows the uptime of the bot [Utility]")
+async def uptime(ctx):
+	# using an embed
+	current_time = time.time()
+	difference = int(round(current_time - bot.start_time))
+	text = datetime.timedelta(seconds=difference)
+	embed = discord.Embed(color = await generate_random(ctx))
+	embed.add_field(name = 'Started at', value = f"<t:{int(bot.start_time)}>")
+	embed.add_field(name = 'Uptime', value = td_format(text))
+	embed.set_footer(text = "Information | Emergency Response Management", icon_url = bot.user.avatar.url)
+	await ctx.send(embed = embed)
 
 @bot.hybrid_command(
 	name = "warn",
@@ -893,13 +1063,15 @@ async def changeconfig(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def warn(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
+		if not oldRequestJSON['success']:
+			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
 		requestJson = request.json()
@@ -916,7 +1088,7 @@ async def warn(ctx, user, *, reason):
 	for dataItem in data:
 		Embed = discord.Embed(
 			title = dataItem['name'],
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 		
 		Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(dataItem['id'])
@@ -943,8 +1115,8 @@ async def warn(ctx, user, *, reason):
 	except discord.errors.NotFound:
 		return await ctx.reply('Successfully cancelled.')
 	
-	print(EmbedMsg)
-	print(EmbedMsg.embeds)
+	logging.info(EmbedMsg)
+	logging.info(EmbedMsg.embeds)
 
 	user = EmbedMsg.embeds[0].title
 
@@ -976,7 +1148,7 @@ async def warn(ctx, user, *, reason):
 	if not configItem['punishments']['enabled']:
 		return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
 	
-	embed = discord.Embed(title = user, color = generate_random())
+	embed = discord.Embed(title = user, color = await generate_random(ctx))
 	embed.set_thumbnail(url = EmbedMsg.embeds[0].thumbnail.url)
 	try:
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -1014,13 +1186,15 @@ async def warn(ctx, user, *, reason):
 	with_app_command = True, 
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def kick(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
+		if not oldRequestJSON['success']:
+			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
 		requestJson = request.json()
@@ -1037,7 +1211,7 @@ async def kick(ctx, user, *, reason):
 	for dataItem in data:
 		Embed = discord.Embed(
 			title = dataItem['name'],
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 		
 		Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(dataItem['id'])
@@ -1064,8 +1238,8 @@ async def kick(ctx, user, *, reason):
 	except discord.errors.NotFound:
 		return await ctx.reply('Successfully cancelled.')
 	
-	print(EmbedMsg)
-	print(EmbedMsg.embeds)
+	logging.info(EmbedMsg)
+	logging.info(EmbedMsg.embeds)
 
 	user = EmbedMsg.embeds[0].title
 
@@ -1099,7 +1273,7 @@ async def kick(ctx, user, *, reason):
 	if not configItem['punishments']['enabled']:
 		return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
 	
-	embed = discord.Embed(title = user, color = generate_random())
+	embed = discord.Embed(title = user, color = await generate_random(ctx))
 	embed.set_thumbnail(url = EmbedMsg.embeds[0].thumbnail.url)
 	try:
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -1138,13 +1312,15 @@ async def kick(ctx, user, *, reason):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def ban(ctx, user, *, reason):
 
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
+		if not oldRequestJSON['success']:
+			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
 		requestJson = request.json()
@@ -1161,7 +1337,7 @@ async def ban(ctx, user, *, reason):
 	for dataItem in data:
 		Embed = discord.Embed(
 			title = dataItem['name'],
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 		
 		Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(dataItem['id'])
@@ -1188,8 +1364,8 @@ async def ban(ctx, user, *, reason):
 	except discord.errors.NotFound:
 		return await ctx.reply('Successfully cancelled.')
 	
-	print(EmbedMsg)
-	print(EmbedMsg.embeds)
+	logging.info(EmbedMsg)
+	logging.info(EmbedMsg.embeds)
 
 	user = EmbedMsg.embeds[0].title
 
@@ -1223,7 +1399,7 @@ async def ban(ctx, user, *, reason):
 	if not configItem['punishments']['enabled']:
 		return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
 	
-	embed = discord.Embed(title = user, color = generate_random())
+	embed = discord.Embed(title = user, color = await generate_random(ctx))
 	embed.set_thumbnail(url = EmbedMsg.embeds[0].thumbnail.url)
 	try:
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -1263,7 +1439,7 @@ async def ban(ctx, user, *, reason):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def mlog(ctx, *, message):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1273,7 +1449,7 @@ async def mlog(ctx, *, message):
 	if not configItem['staff_management']['enabled']:
 		return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
 	
-	embed = discord.Embed(title = 'In-game message', color = generate_random())
+	embed = discord.Embed(title = 'In-game message', color = await generate_random(ctx))
 	try:
 		embed.set_thumbnail(url = ctx.author.avatar.url)
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -1301,7 +1477,7 @@ async def mlog(ctx, *, message):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def tempban(ctx, user, time: str, *, reason):
 	reason = ''.join(reason)
 
@@ -1337,6 +1513,8 @@ async def tempban(ctx, user, time: str, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
+		if not oldRequestJSON['success']:
+			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
 		requestJson = request.json()
@@ -1353,7 +1531,7 @@ async def tempban(ctx, user, time: str, *, reason):
 	for dataItem in data:
 		Embed = discord.Embed(
 			title = dataItem['name'],
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 		
 		Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(dataItem['id'])
@@ -1380,8 +1558,8 @@ async def tempban(ctx, user, time: str, *, reason):
 	except discord.errors.NotFound:
 		return await ctx.reply('Successfully cancelled.')
 	
-	print(EmbedMsg)
-	print(EmbedMsg.embeds)
+	logging.info(EmbedMsg)
+	logging.info(EmbedMsg.embeds)
 
 	user = EmbedMsg.embeds[0].title
 
@@ -1416,7 +1594,7 @@ async def tempban(ctx, user, time: str, *, reason):
 	if not configItem['punishments']['enabled']:
 		return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
 	
-	embed = discord.Embed(title = user, color = generate_random())
+	embed = discord.Embed(title = user, color = await generate_random(ctx))
 	embed.set_thumbnail(url = EmbedMsg.embeds[0].thumbnail.url)
 	try:
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -1452,7 +1630,7 @@ async def tempban(ctx, user, time: str, *, reason):
 	name = "search",
 	aliases = ["s"],
 	description = "Searches for a user in the warning database. [Search]",
-	usage = "[user]",
+	usage = "<user>",
 	with_app_command = True,
 )
 async def search(ctx, *, query):
@@ -1469,43 +1647,77 @@ async def search(ctx, *, query):
 		'NotManyGroups': '- 🚧 This user has less than 5 groups.'
 	}
 	
-	print(query)
+	logging.info(query)
 	query = query.split('.')
 	query = query[0]
 		
-	print(query)
+	logging.info(query)
 	RESULTS = []
 
 	
 	dataset = await bot.warnings.find_by_id(query.lower())
 	if dataset:
-		print(dataset)
-		print(dataset['warnings'][0])
+		logging.info(dataset)
+		logging.info(dataset['warnings'][0])
 		
 		dataset['warnings'][0]['name'] = query.lower()
 		RESULTS.append(dataset['warnings'])
 
-	if len(RESULTS) == 0 or len(RESULTS) > 1:
-		return await ctx.send('No results match your query.')
+	if len(RESULTS) == 0:
+		User = await client.get_user_by_username(query)
+		if not User:
+			return await ctx.send('No user matches your query.')
+		triggered_alerts = []
+
+		if User.is_banned:
+			triggered_alerts.append('IsBanned')
+		if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+			triggered_alerts.append('AccountAge')
+		if not User:
+			triggered_alerts.append('UserDoesNotExist')
+		if len(User.description) < 10:
+			triggered_alerts.append('NoDescription')
+		if any(x in User.name for x in ['alt', 'alternative', 'account']):
+			triggered_alerts.append('SuspiciousUsername')
+		if await User.get_friend_count() <= 30:
+			triggered_alerts.append('NotManyFriends')
+		if len(await User.get_group_roles()) <= 5:
+			triggered_alerts.append('NotManyGroups')
+
+		if len(triggered_alerts) == 0:
+			triggered_alerts.append('NoAlerts')		
+
+		embed1 = discord.Embed(title = query, color = await generate_random(ctx))
+		embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
+		embed1.add_field(name = 'Username', value = embed1.title, inline = False)
+		embed1.add_field(name = 'Punishments', value = f'0', inline = False)
+		string = "\n".join([ alerts[i] for i in triggered_alerts ])
+		embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
+		embed1.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
+		await ctx.send(embed = embed1)
+
+	if len(RESULTS) > 1:
+		return await ctx.send('More than one result match your query. If this is unexpected, join the [support server](https://discord.gg/5pMmJEYazQ) and contact a Support Team member.')
+	
 	if len(RESULTS) == 1:
 		
 			message = ctx.message
 
-			embed1 = discord.Embed(title = RESULTS[0][0]['name'], color = generate_random())
-			embed2 = discord.Embed(title = RESULTS[0][0]['name'], color = generate_random())
+			embed1 = discord.Embed(title = RESULTS[0][0]['name'], color = await generate_random(ctx))
+			embed2 = discord.Embed(title = RESULTS[0][0]['name'], color = await generate_random(ctx))
 
 			result_var = None
-			print(message.content.lower())
+			logging.info(message.content.lower())
 
 			for result in RESULTS:
 				if result[0]['name'] == RESULTS[0][0]['name']:
-					print(result)
-					print(result[0]['name'])
+					logging.info(result)
+					logging.info(result[0]['name'])
 					result_var = RESULTS[0]
 			
 			result = result_var
 			
-			print(result)
+			logging.info(result)
 
 			triggered_alerts = []
 
@@ -1540,62 +1752,69 @@ async def search(ctx, *, query):
 			if configItem is None:	
 				return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
 
-
-
 			if not configItem['punishments']['enabled']:
-				return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')
+				return await ctx.send('This server has punishments disabled. Please run `>config change` to enable punishments.')		
 
+			embeds = []
+			embeds.append(embed1)
+			embeds.append(embed2)
 
-			embed2.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
-			embed1.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
-			try:
-				embed2.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
-				embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
-				embed1.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
-				embed2.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
-			except:
-				pass
-			embed1.add_field(name = 'Username', value = embed1.title, inline = False)
-			embed1.add_field(name = 'Punishments', value = f'{len(listOfPerGuild)}', inline = False)
+			embeds[0].add_field(name = 'Username', value = embed1.title, inline = False)
+			embeds[0].add_field(name = 'Punishments', value = f'{len(result)}', inline = False)
 	
 			string = "\n".join([ alerts[i] for i in triggered_alerts ])
 
-			embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
-
-
+			embeds[0].add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
 			
 			del result[0]['name']
 			
-			for action in result:
+			for index, action in enumerate(result):
 				if action['Guild'] == ctx.guild.id:
-
 					if isinstance(action['Moderator'], list):
 						user = discord.utils.get(ctx.guild.members, id = action['Moderator'][1])
 						if user:
 							action['Moderator'] = user.mention
 					if 'Until' in action.keys():
-						embed2.add_field(
-							name = action['Type'],
-							value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}",
-							inline = False
-						)
+						if len(embeds[-1].fields) <= 25:
+							embeds[-1].add_field(
+								name = action['Type'],
+								value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}",
+								inline = False
+							)
+						else:
+							embeds.append(discord.Embed(title = embeds[0].title, color = await generate_random(ctx)))
+							embeds[-1].add_field(
+								name = action['Type'],
+								value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}",
+								inline = False
+							)
 					else:
-						embed2.add_field(
-							name = action['Type'],
-							value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nID: {action['id']}",
-							inline = False
-						)
-				
-			paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
+						if len(embeds[-1].fields) <= 25:
+							embeds[-1].add_field(
+								name = action['Type'],
+								value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nID: {action['id']}",
+								inline = False
+							)
+						else:
+							embeds.append(discord.Embed(title = embeds[0].title, color = await generate_random(ctx)))
+							embeds[-1].add_field(
+								name = action['Type'],
+								value = f"Reason: {action['Reason']}\nModerator: {action['Moderator']}\nTime: {action['Time']}\nID: {action['id']}",
+								inline = False
+							)
 
+			for embed in embeds:
+				embed.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
+				embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
+				embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
+
+
+			paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
 			paginator.add_reaction('⏪', "back")
 			paginator.add_reaction('🗑️', 'lock')
 			paginator.add_reaction('⏩', "next")
+			await paginator.run(embeds)
 
-			if len(embed2.fields) > 0:
-				await paginator.run([embed1, embed2])
-			else:
-				await ctx.send(embed = embed1)
 
 
 
@@ -1609,9 +1828,9 @@ async def search(ctx, *, query):
 # 				if item not in applicable_data:
 # 					applicable_data.append(item)
 
-# 	print(applicable_data)
+# 	logging.info(applicable_data)
 # 	applicable_data = [x['_id'] for x in applicable_data if x['_id'].lower().startswith(current.lower())]
-# 	print(applicable_data)
+# 	logging.info(applicable_data)
 
 # 	choices = []
 # 	for item in applicable_data:
@@ -1624,7 +1843,7 @@ async def search(ctx, *, query):
 	name = "globalsearch",
 	aliases = ["gs"],
 	description = "Searches for a user in the warning database. This will show warnings from all servers. [Search]",
-	usage = "[user]",
+	usage = "<user>",
 	with_app_command = True,
 )
 async def globalsearch(ctx, *, query):
@@ -1641,42 +1860,76 @@ async def globalsearch(ctx, *, query):
 		'NotManyGroups': '- 🚧 This user has less than 5 groups.'
 	}
 	
-	print(query)
+	logging.info(query)
 	query = query.split('.')
 	query = query[0]
 		
-	print(query)
+	logging.info(query)
 	RESULTS = []
 	
 	dataset = await bot.warnings.find_by_id(query.lower())
 	if dataset:
-		print(dataset)
-		print(dataset['warnings'][0])
+		logging.info(dataset)
+		logging.info(dataset['warnings'][0])
 		
 		dataset['warnings'][0]['name'] = query.lower()
 		RESULTS.append(dataset['warnings'])
  
-	if len(RESULTS) == 0 or len(RESULTS) > 1:
-		return await ctx.send('No results match your query.')
+	if len(RESULTS) == 0:
+		User = await client.get_user_by_username(query)
+		if not User:
+			return await ctx.send('No user matches your query.')
+		triggered_alerts = []
+
+		if User.is_banned:
+			triggered_alerts.append('IsBanned')
+		if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+			triggered_alerts.append('AccountAge')
+		if not User:
+			triggered_alerts.append('UserDoesNotExist')
+		if len(User.description) < 10:
+			triggered_alerts.append('NoDescription')
+		if any(x in User.name for x in ['alt', 'alternative', 'account']):
+			triggered_alerts.append('SuspiciousUsername')
+		if await User.get_friend_count() <= 30:
+			triggered_alerts.append('NotManyFriends')
+		if len(await User.get_group_roles()) <= 5:
+			triggered_alerts.append('NotManyGroups')
+
+		if len(triggered_alerts) == 0:
+			triggered_alerts.append('NoAlerts')		
+
+		embed1 = discord.Embed(title = query, color = await generate_random(ctx))
+		embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
+		embed1.add_field(name = 'Username', value = embed1.title, inline = False)
+		embed1.add_field(name = 'Punishments', value = f'0', inline = False)
+		string = "\n".join([ alerts[i] for i in triggered_alerts ])
+		embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
+		embed1.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
+		await ctx.send(embed = embed1)
+	
+	if len(RESULTS) > 1:
+		return await ctx.send('More than one result match your query. If this is unexpected, join the [support server](https://discord.gg/5pMmJEYazQ) and contact a Support Team member.')
+	
 	if len(RESULTS) == 1:
 		
 			message = ctx.message
 
-			embed1 = discord.Embed(title = RESULTS[0][0]['name'], color = generate_random())
-			embed2 = discord.Embed(title = RESULTS[0][0]['name'], color = generate_random())
+			embed1 = discord.Embed(title = RESULTS[0][0]['name'], color = await generate_random(ctx))
+			embed2 = discord.Embed(title = RESULTS[0][0]['name'], color = await generate_random(ctx))
 
 			result_var = None
-			print(message.content.lower())
+			logging.info(message.content.lower())
 
 			for result in RESULTS:
 				if result[0]['name'] == RESULTS[0][0]['name']:
-					print(result)
-					print(result[0]['name'])
+					logging.info(result)
+					logging.info(result[0]['name'])
 					result_var = RESULTS[0]
 			
 			result = result_var
 			
-			print(result)
+			logging.info(result)
 
 			triggered_alerts = []
 
@@ -1706,52 +1959,61 @@ async def globalsearch(ctx, *, query):
 			if configItem is None:	
 				return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
 
+			embeds = []
+			embeds.append(embed1)
+			embeds.append(embed2)
 
-
-
-
-			embed2.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
-			embed1.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
-			try:
-				embed2.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
-				embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
-				embed1.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
-				embed2.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
-			except:
-				pass
-			embed1.add_field(name = 'Username', value = embed1.title, inline = False)
-			embed1.add_field(name = 'Punishments', value = f'{len(result)}', inline = False)
+			embeds[0].add_field(name = 'Username', value = embed1.title, inline = False)
+			embeds[0].add_field(name = 'Punishments', value = f'{len(result)}', inline = False)
 	
 			string = "\n".join([ alerts[i] for i in triggered_alerts ])
 
-			embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
-
-
+			embeds[0].add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
 			
 			del result[0]['name']
 			
-			for action in result:
-
+			for index, action in enumerate(result):
+				logging.info(index)
 				if 'Until' in action.keys():
-					embed2.add_field(
-						name = action['Type'],
-						value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}\nGuild: {action['Guild']}",
-						inline = False
-					)
+					if len(embeds[-1].fields) <= 25:
+						embeds[-1].add_field(
+							name = action['Type'],
+							value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}\nGuild: {action['Guild']}",
+							inline = False
+						)
+					else:
+						embeds.append(discord.Embed(title = embeds[0].title, color = await generate_random(ctx)))
+						embeds[-1].add_field(
+							name = action['Type'],
+							value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nUntil: <t:{action['Until']}>\nID: {action['id']}\nGuild: {action['Guild']}",
+							inline = False
+						)
 				else:
-					embed2.add_field(
-						name = action['Type'],
-						value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nID: {action['id']}\nGuild: {action['Guild']}",
-						inline = False
-					)
-				
-			paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
+					if len(embeds[-1].fields) <= 25:
+						embeds[-1].add_field(
+							name = action['Type'],
+							value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nID: {action['id']}\nGuild: {action['Guild']}",
+							inline = False
+						)
+					else:
+						embeds.append(discord.Embed(title = embeds[0].title, color = await generate_random(ctx)))
+						embeds[-1].add_field(
+							name = action['Type'],
+							value = f"Reason: {action['Reason']}\nTime: {action['Time']}\nID: {action['id']}\nGuild: {action['Guild']}",
+							inline = False
+						)
 
+			for embed in embeds:
+				embed.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
+				embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
+				embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
+
+
+			paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
 			paginator.add_reaction('⏪', "back")
 			paginator.add_reaction('🗑️', 'lock')
 			paginator.add_reaction('⏩', "next")
-
-			await paginator.run([embed1, embed2])
+			await paginator.run(embeds)
 
 @globalsearch.autocomplete('query')
 async def autocomplete_callback(interaction: discord.Interaction, current: str):
@@ -1761,9 +2023,9 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 		if item not in applicable_data:
 			applicable_data.append(item)
 
-	print(applicable_data)
+	logging.info(applicable_data)
 	applicable_data = [x['_id'] for x in applicable_data if x['_id'].lower().startswith(current.lower())]
-	print(applicable_data)
+	logging.info(applicable_data)
 
 	choices = []
 	for item in applicable_data:
@@ -1781,7 +2043,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 	with_app_command = True, 
 )
 @discord.ext.commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def removewarning(ctx, id: str):
 
 	try:
@@ -1847,7 +2109,7 @@ async def help(ctx, *, command = None):
 		embed = discord.Embed(
 			title = 'Help | {}'.format(configItem['customisation']['brand_name']),
 			description = 'Use `>help <command>` to get more information about a command.',
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 
 
@@ -1882,11 +2144,11 @@ async def help(ctx, *, command = None):
 				commands.append(command)
 
 		for category in categories:
-			print(category)
+			logging.info(category)
 			string = '\n'.join([ f'**{configItem["customisation"]["prefix"]}{command.name}** | {command.description.split("[")[0]}' for command in commands if command.category == category ])
 
 
-			print(len(string))
+			logging.info(len(string))
 			if len(string) < 1024:
 				embed.add_field(
 					name = category,
@@ -1916,7 +2178,7 @@ async def help(ctx, *, command = None):
 		embed = discord.Embed(
 			title = 'Help | {}'.format(command.name),
 			description = command.description.split('[')[0],
-			color = generate_random()
+			color = await generate_random(ctx)
 		)
 
 	try:
@@ -1956,7 +2218,7 @@ async def duty(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def dutyon(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1979,7 +2241,7 @@ async def dutyon(ctx):
 
 	embed = discord.Embed(
 		title = ctx.author.name,
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2031,7 +2293,7 @@ async def dutyon(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def dutyoff(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -2069,7 +2331,7 @@ async def dutyoff(ctx):
 
 	embed = discord.Embed(
 		title = ctx.author.name,
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2168,7 +2430,7 @@ async def dutyoff(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def dutytime(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -2205,7 +2467,7 @@ async def dutytime(ctx):
 
 	embed = discord.Embed(
 		title = ctx.author.name,
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2234,7 +2496,7 @@ async def dutytime(ctx):
 	with_app_command = True,
 )
 @commands.has_permissions(manage_messages = True)
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def dutyvoid(ctx):
 
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -2267,10 +2529,16 @@ async def dutyvoid(ctx):
 	if global_check == 1:
 		shift = await bot.shifts.find_by_id(ctx.author.id)
 
+	view = YesNoMenu(ctx.author.id)
+	await ctx.send('Are you sure you would like to void your shift? This is **irreversible** and will remove your shift from the database forever.', view = view)
+	await view.wait()
+
+	if view.value == False:
+		return await ctx.send('Cancelled.')
 
 	embed = discord.Embed(
 		title = ctx.author.name,
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2295,7 +2563,7 @@ async def dutyvoid(ctx):
 
 	await ctx.send('`VOID`: Shift has been cancelled successfully.', embed = embed)
 	
-	embed = discord.Embed(title = ctx.author.name, color = generate_random())
+	embed = discord.Embed(title = ctx.author.name, color = await generate_random(ctx))
 	try:
 		embed.set_thumbnail(url = ctx.author.avatar.url)
 		embed.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
@@ -2373,7 +2641,7 @@ async def rarequest(ctx, time, *, reason):
 
 	Embed = discord.Embed(
 		title = "Reduced Activity",
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2454,7 +2722,7 @@ async def loarequest(ctx, time, *, reason):
 
 	Embed = discord.Embed(
 		title = "Leave of Absence",
-		color = generate_random()
+		color = await generate_random(ctx)
 	)
 
 	try:
@@ -2495,7 +2763,7 @@ async def loarequest(ctx, time, *, reason):
 
 # context menus
 @bot.tree.context_menu(name = 'Force end shift')
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def force_end_shift(interaction: discord.Interaction, member: discord.Member):
 
 	try:
@@ -2527,7 +2795,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 	elif view.value == True:
 		time_delta = interaction.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None)
 
-		embed = discord.Embed(title = member.name, color = generate_random())
+		embed = discord.Embed(title = member.name, color = await generate_random(interaction))
 		try:
 			embed.set_thumbnail(url = member.avatar.url)
 			embed.set_author(name = member.name, icon_url = member.avatar.url)
@@ -2555,7 +2823,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
 			})
 		else:			
-			print((await bot.shift_storage.find_by_id(member.id))['shifts'])
+			logging.info((await bot.shift_storage.find_by_id(member.id))['shifts'])
 			await bot.shift_storage.update_by_id(
 				{
 					'_id': member.id,
@@ -2575,7 +2843,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 			)	
 			
 				
-		pprint(await bot.warnings.find_by_id(member.id))
+		logging.info(await bot.warnings.find_by_id(member.id))
 		await bot.shifts.delete_by_id(member.id)		
 		await shift_channel.send(embed = embed)
 
@@ -2587,7 +2855,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 				await member.remove_roles(role)
 
 @bot.tree.context_menu(name = 'Force start shift')
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def force_start_shift(interaction: discord.Interaction, member: discord.Member):
 
 	try:
@@ -2616,7 +2884,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 		return await interaction.response.send_message('Timed out.', ephemeral=True)
 	elif view.value == True:
 
-		embed = discord.Embed(title = member.name, color = generate_random())
+		embed = discord.Embed(title = member.name, color = await generate_random(interaction))
 		try:
 			embed.set_thumbnail(url = member.avatar.url)
 			embed.set_author(name = member.name, icon_url = member.avatar.url)
@@ -2645,7 +2913,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 				await member.add_roles(role)
 
 @bot.tree.context_menu(name = 'Get shift time')
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def get_shift_time(interaction: discord.Interaction, member: discord.Member):
 
 	try:
@@ -2671,7 +2939,7 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
 
 # context menus
 @bot.tree.context_menu(name = 'Void shift')
-@app_commands.default_permissions(manage_guild = True)
+@app_commands.checks.has_permissions(manage_guild = True)
 async def force_end_shift(interaction: discord.Interaction, member: discord.Member):
 
 	try:
@@ -2702,7 +2970,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 		return await interaction.response.send_message('Timed out.', ephemeral=True)
 	elif view.value == True:
 
-		embed = discord.Embed(title = member.name, color = generate_random())
+		embed = discord.Embed(title = member.name, color = generate_random(interaction))
 		try:
 			embed.set_thumbnail(url = member.avatar.url)
 			embed.set_author(name = member.name, icon_url = member.avatar.url)
@@ -2715,7 +2983,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 		embed.add_field(name = "Elapsed Time", value = str(interaction.created_at.replace(tzinfo = None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo = None)).split('.')[0])
 			
 				
-		pprint(await bot.warnings.find_by_id(member.id))
+		logging.info(await bot.warnings.find_by_id(member.id))
 		await bot.shifts.delete_by_id(member.id)		
 		await shift_channel.send(embed = embed)
 
@@ -2728,7 +2996,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
 # clockedin, to get all the members of a specific guild currently on duty
 @bot.hybrid_command(name = 'clockedin', description = 'Get all members of the server currently on shift.', aliases = ['on-duty'])
-@app_commands.default_permissions(manage_messages = True)
+@app_commands.checks.has_permissions(manage_messages = True)
 async def clockedin(ctx):
 	
 	try:
@@ -2742,7 +3010,7 @@ async def clockedin(ctx):
 	if shift_channel is None:
 		return await ctx.send('Shift management channel not found.')
 
-	embed = discord.Embed(title = 'Currently on shift', color = generate_random())
+	embed = discord.Embed(title = 'Currently on shift', color = await generate_random(ctx))
 	try:
 		embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
 	except:
@@ -2756,11 +3024,15 @@ async def clockedin(ctx):
 
 	await ctx.send(embed = embed)
 
+
+
 # staff info command, to get total seconds worked on a specific member
-@bot.hybrid_command(name = 'staff-info', description = 'Get the total seconds worked on a specific member.', aliases = ['staff-stats'])
-@app_commands.default_permissions(manage_messages = True)
-async def staff_info(ctx, member: discord.Member):
-	
+@duty.command(name = 'info', description = 'Get the total seconds worked on a specific member. [Shift Management]', aliases = ['staff-stats'])
+@app_commands.checks.has_permissions(manage_messages = True)
+async def staff_info(ctx, member: discord.Member = None):
+	if member == None:
+		member = ctx.author
+
 	try:
 		configItem = await bot.settings.find_by_id(ctx.guild.id)
 	except:
@@ -2772,7 +3044,7 @@ async def staff_info(ctx, member: discord.Member):
 	if shift_channel is None:
 		return await ctx.send('Shift management channel not found.')
 
-	embed = discord.Embed(title = f'{member.name}\'s total time worked', color = generate_random())
+	embed = discord.Embed(title = f'{member.name}\'s total time worked', color = await generate_random(ctx))
 	try:
 		embed.set_footer(icon_url = ctx.guild.icon.url, text = "{} | {}".format(configItem['customisation']['brand_name'], configItem['customisation']['footer_text']))
 	except:
@@ -2791,5 +3063,49 @@ async def staff_info(ctx, member: discord.Member):
 
 	await ctx.send(embed = embed)
 
+@duty.command(name = 'leaderboard', description = 'Get the total time worked for the whole of the staff team. [Shift Management]', aliases = ['shift-lb'])
+@app_commands.checks.has_permissions(manage_messages = True)
+async def shift_leaderboard(ctx):
+	try:
+		configItem = await bot.settings.find_by_id(ctx.guild.id)
+	except:
+		return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
+	# if not await bot.shift_storage.find_by_id(member.id):
+	# 	await ctx.send(f'{member.name} has not worked on any shifts.')
+	# 	return
 
+	all_staff = [{"id": None, "total_seconds": 0}]
+
+	for document in await bot.shift_storage.get_all():
+		total_seconds = 0
+		if "shifts" in document.keys():		
+			for shift in document['shifts']:
+				if shift['guild'] == ctx.guild.id:
+					total_seconds += int(shift['totalSeconds'])
+					if document['_id'] not in [item['id'] for item in all_staff]:
+						all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+					else:
+						for item in all_staff:
+							if item['id'] == document['_id']:
+								item['total_seconds'] = item['total_seconds'] + total_seconds
+	if len(all_staff) == 0:
+		return await ctx.send('No shifts were made in your server.')
+	for item in all_staff:
+		if item['id'] == None:
+			all_staff.remove(item)
+
+	sorted_staff = sorted(all_staff, key = lambda x: x['total_seconds'], reverse = True)
+	
+	buffer = None
+	for i in sorted_staff:
+		member = discord.utils.get(ctx.guild.members, id = i['id'])
+		if member:
+			if buffer == None:
+				buffer = "%s - %s" % (member.name, td_format(datetime.timedelta(seconds = i['total_seconds'])))
+			else:
+				buffer = buffer + "\n%s - %s" % (member.name, td_format(datetime.timedelta(seconds = i['total_seconds'])))
+
+	bbytes = buffer.encode('utf-8')
+	await ctx.send(file = discord.File(fp = BytesIO(bbytes), filename = 'shift_leaderboard.txt'))
+	
 bot.run(bot_token)
