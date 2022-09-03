@@ -36,6 +36,10 @@ sentry_sdk.init(
 
 discord.utils.setup_logging()
 
+def removesuffix(input_string, suffix):
+	if suffix and input_string.endswith(suffix):
+		return input_string[:-len(suffix)]
+	return input_string
 
 async def get_prefix(bot, message):
 
@@ -1507,15 +1511,15 @@ async def tempban(ctx, user, time: str, *, reason):
 			reason.pop()
 
 	if time.endswith('s'):
-		time = int(time.removesuffix('s'))
+		time = int(removesuffix(time, 's'))
 	elif time.endswith('m'):
-		time = int(time.removesuffix('m')) * 60
+		time = int(removesuffix(time, 'm')) * 60
 	elif time.endswith('h'):
-		time = int(time.removesuffix('h')) * 60 * 60
+		time = int(removesuffix(time, 'h')) * 60 * 60
 	elif time.endswith('d'):
-		time = int(time.removesuffix('d')) * 60 * 60 * 24
+		time = int(removesuffix(time, 'd')) * 60 * 60 * 24
 	elif time.endswith('w'):
-		time = int(time.removesuffix('w')) * 60 * 60 * 24 * 7
+		time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
 
 	startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
 	endTimestamp = int(startTimestamp + time)
@@ -2611,15 +2615,15 @@ async def dutyvoid(ctx):
 
 @duty.autocomplete('setting')
 async def autocomplete_callback(interaction: discord.Interaction, current: str):
-    # Do stuff with the "current" parameter, e.g. querying it search results...
+	# Do stuff with the "current" parameter, e.g. querying it search results...
 
-    # Then return a list of app_commands.Choice
-    return [
-        app_commands.Choice(name='Go on duty', value='on'),
+	# Then return a list of app_commands.Choice
+	return [
+		app_commands.Choice(name='Go on duty', value='on'),
 		app_commands.Choice(name = 'Go off duty', value = 'off'),
 		app_commands.Choice(name = 'Estimate time', value = 'time'),
 		app_commands.Choice(name = 'Cancel shift', value = 'cancel'),
-    ]
+	]
 
 
 
@@ -2650,15 +2654,15 @@ async def rarequest(ctx, time, *, reason):
 			reason.pop()
 
 	if time.endswith('s'):
-		time = int(time.removesuffix('s'))
+		time = int(removesuffix(time, 's'))
 	elif time.endswith('m'):
-		time = int(time.removesuffix('m')) * 60
+		time = int(removesuffix(time, 'm')) * 60
 	elif time.endswith('h'):
-		time = int(time.removesuffix('h')) * 60 * 60
+		time = int(removesuffix(time, 'h')) * 60 * 60
 	elif time.endswith('d'):
-		time = int(time.removesuffix('d')) * 60 * 60 * 24
+		time = int(removesuffix(time, 'd')) * 60 * 60 * 24
 	elif time.endswith('w'):
-		time = int(time.removesuffix('w')) * 60 * 60 * 24 * 7
+		time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
 
 	startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
 	endTimestamp = int(startTimestamp + time)
@@ -2731,15 +2735,15 @@ async def loarequest(ctx, time, *, reason):
 			reason.pop()
 
 	if time.endswith('s'):
-		time = int(time.removesuffix('s'))
+		time = int(removesuffix(time, 's'))
 	elif time.endswith('m'):
-		time = int(time.removesuffix('m')) * 60
+		time = int(removesuffix(time, 'm')) * 60
 	elif time.endswith('h'):
-		time = int(time.removesuffix('h')) * 60 * 60
+		time = int(removesuffix(time, 'h')) * 60 * 60
 	elif time.endswith('d'):
-		time = int(time.removesuffix('d')) * 60 * 60 * 24
+		time = int(removesuffix(time, 'd')) * 60 * 60 * 24
 	elif time.endswith('w'):
-		time = int(time.removesuffix('w')) * 60 * 60 * 24 * 7
+		time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
 
 	startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
 	endTimestamp = int(startTimestamp + time)
