@@ -141,6 +141,19 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
 			await bot.warnings.update(structure)
 
 
+staff_members = {
+	"i_imikey": "Bot Developer",
+	"kiper4k": "Support Team",
+	"younger6nhl": "Support Team",
+	"mbrinkley": "Senior Support",
+	"ruru0303": "Support Team",
+	"myles_cbcb1421": "Support Team"
+}
+
+def staff_field(embed, query):
+	embed.add_field(name="Flags", value=f"<:erm:1001323537023389817>  **ERM Staff Member** ({staff_members[query.lower()]})", inline = False)
+	return embed
+
 bot.warning_json_to_mongo = warning_json_to_mongo
 
 bot.colors = {
@@ -673,8 +686,8 @@ async def config(ctx, option: str = None):
 			description='Here are the current settings for this server.',
 			color=await generate_random(ctx)
 		)
-		embed.add_field(name='Verification', value='Enabled: {}\nRole: {}'.format(settingContents['verification']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['verification']['role']).mention if settingContents['verification']['role'] else 'None'), inline = False)
-		embed.add_field(name='Anti-ping', value='Enabled: {}\nRole: {}'.format(settingContents['antiping']['enabled'], discord.utils.get(ctx.guild.roles, settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None'), inline = False)
+		embed.add_field(name='Verification', value='Enabled: {}\nRole: {}'.format(settingContents['verification']['enabled'], discord.utils.get(ctx.guild.roles, id = settingContents['verification']['role']).mention if settingContents['verification']['role'] else 'None'), inline = False)
+		embed.add_field(name='Anti-ping', value='Enabled: {}\nRole: {}\nBypass Role: {}'.format(settingContents['antiping']['enabled'], discord.utils.get(ctx.guild.roles, id = settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None', (discord.utils.get(ctx.guild.roles, id = settingContents['antiping']['role_bypass']) if "role_bypass" in settingContents['antiping'].keys() else "None")), inline = False)
 		embed.add_field(name='Staff Management', value='Enabled: {}\nChannel: {}'.format(settingContents['staff_management']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['staff_management']['channel']).mention if settingContents['staff_management']['channel'] else 'None'), inline = False)
 		embed.add_field(name='Punishments', value='Enabled: {}\nChannel: {}'.format(settingContents['punishments']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['punishments']['channel']).mention if settingContents['punishments']['channel'] else 'None'), inline = False)
 		embed.add_field(name='Shift Management', value='Enabled: {}\nChannel: {}'.format(settingContents['shift_management']['enabled'], discord.utils.get(ctx.guild.channels, id = settingContents['shift_management']['channel']).mention if settingContents['shift_management']['channel'] else 'None'), inline = False)
@@ -828,8 +841,8 @@ async def viewconfig(ctx):
 		value='Enabled: {}\nRole: {}\nBypass Role: {}'
 			.format(
 				settingContents['antiping']['enabled'],
-				discord.utils.get(ctx.guild.roles, settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None',
-				(settingContents['antiping']['role_bypass'] if "role_bypass" in settingContents['antiping'].keys() else "None")
+				discord.utils.get(ctx.guild.roles, id = settingContents['antiping']['role']).mention if settingContents['antiping']['role'] else 'None',
+				(discord.utils.get(ctx.guild.roles, id = settingContents['antiping']['role_bypass']) if "role_bypass" in settingContents['antiping'].keys() else "None")
 			),
 		inline = False
 	)
@@ -1635,6 +1648,8 @@ async def tempban(ctx, user, time: str, *, reason):
 )
 async def search(ctx, *, query):
 
+
+
 	alerts = {
 		'NoAlerts': '+ ✅ No alerts found for this account!',
 		'AccountAge': '- ⚠️ The account age of the user is less than 100 days.',
@@ -1690,8 +1705,11 @@ async def search(ctx, *, query):
 		embed1 = discord.Embed(title = query, color = await generate_random(ctx))
 		embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
 		embed1.add_field(name = 'Username', value = embed1.title, inline = False)
+		if query.lower() in staff_members.keys():
+			staff_field(embed1, query.lower())
 		embed1.add_field(name = 'Punishments', value = f'0', inline = False)
 		string = "\n".join([ alerts[i] for i in triggered_alerts ])
+		
 		embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
 		embed1.set_thumbnail(url = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(User.id))
 		await ctx.send(embed = embed1)
@@ -1760,15 +1778,16 @@ async def search(ctx, *, query):
 			embeds.append(embed2)
 
 			embeds[0].add_field(name = 'Username', value = embed1.title, inline = False)
-			embeds[0].add_field(name = 'Punishments', value = f'{len(result)}', inline = False)
-	
+			embeds[0].add_field(name = 'Punishments', value = f'{len(listOfPerGuild)}', inline = False)
+			if embed1.title in staff_members.keys():
+				staff_field(embeds[0], embed1.title)
 			string = "\n".join([ alerts[i] for i in triggered_alerts ])
 
 			embeds[0].add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
 			
 			del result[0]['name']
 			
-			for index, action in enumerate(result):
+			for action in result:
 				if action['Guild'] == ctx.guild.id:
 					if isinstance(action['Moderator'], list):
 						user = discord.utils.get(ctx.guild.members, id = action['Moderator'][1])
@@ -1848,6 +1867,7 @@ async def search(ctx, *, query):
 )
 async def globalsearch(ctx, *, query):
 
+
 	alerts = {
 		'NoAlerts': '+ ✅ No alerts found for this account!',
 		'AccountAge': '- ⚠️ The account age of the user is less than 100 days.',
@@ -1902,6 +1922,8 @@ async def globalsearch(ctx, *, query):
 		embed1 = discord.Embed(title = query, color = await generate_random(ctx))
 		embed1.set_author(name = ctx.author.name, icon_url = ctx.author.avatar.url)
 		embed1.add_field(name = 'Username', value = embed1.title, inline = False)
+		if query.lower() in staff_members.keys():
+			staff_field(embed1, query.lower())
 		embed1.add_field(name = 'Punishments', value = f'0', inline = False)
 		string = "\n".join([ alerts[i] for i in triggered_alerts ])
 		embed1.add_field(name = 'Alerts', value = f'```diff\n{string}\n```', inline = False)
@@ -1964,6 +1986,8 @@ async def globalsearch(ctx, *, query):
 			embeds.append(embed2)
 
 			embeds[0].add_field(name = 'Username', value = embed1.title, inline = False)
+			if embed1.title in staff_members.keys():
+				staff_field(embed1, embed1.title)
 			embeds[0].add_field(name = 'Punishments', value = f'{len(result)}', inline = False)
 	
 			string = "\n".join([ alerts[i] for i in triggered_alerts ])
@@ -3056,8 +3080,9 @@ async def staff_info(ctx, member: discord.Member = None):
 
 	total_seconds = 0
 	for shift in (await bot.shift_storage.find_by_id(member.id))['shifts']:
-		if shift['guild'] == ctx.guild.id:
-			total_seconds += int(shift['totalSeconds'])
+		if isinstance(shift, list):
+			if shift['guild'] == ctx.guild.id:
+				total_seconds += int(shift['totalSeconds'])
 
 	embed.add_field(name = 'Total Time', value = td_format(datetime.timedelta(seconds = total_seconds)), inline = False)
 
@@ -3080,14 +3105,15 @@ async def shift_leaderboard(ctx):
 		total_seconds = 0
 		if "shifts" in document.keys():		
 			for shift in document['shifts']:
-				if shift['guild'] == ctx.guild.id:
-					total_seconds += int(shift['totalSeconds'])
-					if document['_id'] not in [item['id'] for item in all_staff]:
-						all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-					else:
-						for item in all_staff:
-							if item['id'] == document['_id']:
-								item['total_seconds'] = item['total_seconds'] + total_seconds
+				if isinstance(shift, list):
+					if shift['guild'] == ctx.guild.id:
+						total_seconds += int(shift['totalSeconds'])
+						if document['_id'] not in [item['id'] for item in all_staff]:
+							all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+						else:
+							for item in all_staff:
+								if item['id'] == document['_id']:
+									item['total_seconds'] = item['total_seconds'] + total_seconds
 	if len(all_staff) == 0:
 		return await ctx.send('No shifts were made in your server.')
 	for item in all_staff:
