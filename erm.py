@@ -3080,12 +3080,14 @@ async def staff_info(ctx, member: discord.Member = None):
 
 	total_seconds = 0
 	for shift in (await bot.shift_storage.find_by_id(member.id))['shifts']:
-		if isinstance(shift, list):
+		if isinstance(shift, dict):
 			if shift['guild'] == ctx.guild.id:
 				total_seconds += int(shift['totalSeconds'])
 
-	embed.add_field(name = 'Total Time', value = td_format(datetime.timedelta(seconds = total_seconds)), inline = False)
-
+	if td_format(datetime.timedelta(seconds = total_seconds)) not in ["", None]:
+		embed.add_field(name = 'Total Time', value = td_format(datetime.timedelta(seconds = total_seconds)), inline = False)
+	else:
+		embed.add_field(name = "Total Time", value = "No shifts found", inline = False)
 	await ctx.send(embed = embed)
 
 @duty.command(name = 'leaderboard', description = 'Get the total time worked for the whole of the staff team. [Shift Management]', aliases = ['shift-lb'])
@@ -3103,17 +3105,18 @@ async def shift_leaderboard(ctx):
 
 	for document in await bot.shift_storage.get_all():
 		total_seconds = 0
-		if "shifts" in document.keys():		
-			for shift in document['shifts']:
-				if isinstance(shift, list):
-					if shift['guild'] == ctx.guild.id:
-						total_seconds += int(shift['totalSeconds'])
-						if document['_id'] not in [item['id'] for item in all_staff]:
-							all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-						else:
-							for item in all_staff:
-								if item['id'] == document['_id']:
-									item['total_seconds'] = item['total_seconds'] + total_seconds
+		if "shifts" in document.keys():
+			if isinstance(document['shifts'], list):		
+				for shift in document['shifts']:
+					if isinstance(shift, dict):
+						if shift['guild'] == ctx.guild.id:
+							total_seconds += int(shift['totalSeconds'])
+							if document['_id'] not in [item['id'] for item in all_staff]:
+								all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+							else:
+								for item in all_staff:
+									if item['id'] == document['_id']:
+										item['total_seconds'] = item['total_seconds'] + total_seconds
 	if len(all_staff) == 0:
 		return await ctx.send('No shifts were made in your server.')
 	for item in all_staff:
