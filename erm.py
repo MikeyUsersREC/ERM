@@ -59,7 +59,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = intents, help_command=None)
 bot.is_synced = False
-enviroment = config('ENVIROMENT', default='DEVELOPMENT')
+enviroment = config('ENVIRONMENT', default='DEVELOPMENT')
 
 
 @bot.event
