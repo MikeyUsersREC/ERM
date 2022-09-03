@@ -2400,7 +2400,7 @@ async def dutyoff(ctx):
 					}
 				)	
 			else:
-				await bot.shift_storage.insert({
+				await bot.shift_storage.update_by_id({
 					'_id': ctx.author.id,
 					'shifts': [
 						{
