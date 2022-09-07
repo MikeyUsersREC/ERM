@@ -1,8 +1,6 @@
 import datetime
 from io import BytesIO
-import io
 import json
-from pprint import pprint
 import random
 from tempfile import TemporaryFile
 import time
@@ -61,7 +59,7 @@ intents.members = True
 
 
 
-bot = commands.Bot(command_prefix=get_prefix, case_insensitive=True, intents = intents, help_command=None)
+bot = commands.AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, intents = intents, help_command=None)
 bot.is_synced = False
 enviroment = config('ENVIRONMENT', default='DEVELOPMENT')
 
@@ -72,41 +70,44 @@ async def on_ready():
 	await bot.wait_until_ready()
 
 	# load IPC extension
-	await bot.load_extension('utils.routes')
-	logging.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
-	global startTime
-	startTime = time.time()
-	change_status.start()
-	update_bot_status.start()
-	GDPR.start()
-	bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
-	if enviroment == 'DEVELOPMENT':
-		bot.db = bot.mongo['beta']
-	elif enviroment == "PRODUCTION":
-		bot.db = bot.mongo["erm"]
-	else:
-		raise Exception("Invalid enviroment")
-	
-	bot.start_time = time.time()
-	bot.warnings = Document(bot.db, "warnings")
-	bot.settings = Document(bot.db, "settings")
-	bot.shifts = Document(bot.db, "shifts")
-	bot.errors = Document(bot.db, "errors")
-	bot.shift_storage = Document(bot.db, "shift_storage")
-	bot.staff_members = Document(bot.db, "staff_members")
-	bot.error_list = []
-	logging.info('Connected to MongoDB!')
-	
-	await bot.load_extension('jishaku')
-	if not bot.is_synced: #check if slash commands have been synced 
-		bot.tree.copy_global_to(guild=discord.Object(id =987798554972143728))
-		for item in bot.tree._get_all_commands():
-			logging.info(item.name)
+	try:
+		await bot.load_extension('utils.routes')
+		logging.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
+		global startTime
+		startTime = time.time()
+		change_status.start()
+		update_bot_status.start()
+		GDPR.start()
+		bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
 		if enviroment == 'DEVELOPMENT':
-			await bot.tree.sync(guild=discord.Object(id =987798554972143728))
+			bot.db = bot.mongo['beta']
+		elif enviroment == "PRODUCTION":
+			bot.db = bot.mongo["erm"]
 		else:
-			await bot.tree.sync() #guild specific: leave blank if global (global registration can take 1-24 hours)
-		bot.is_synced = True
+			raise Exception("Invalid enviroment")
+		
+		bot.start_time = time.time()
+		bot.warnings = Document(bot.db, "warnings")
+		bot.settings = Document(bot.db, "settings")
+		bot.shifts = Document(bot.db, "shifts")
+		bot.errors = Document(bot.db, "errors")
+		bot.shift_storage = Document(bot.db, "shift_storage")
+		bot.staff_members = Document(bot.db, "staff_members")
+		bot.error_list = []
+		logging.info('Connected to MongoDB!')
+		
+		await bot.load_extension('jishaku')
+		if not bot.is_synced: #check if slash commands have been synced 
+			bot.tree.copy_global_to(guild=discord.Object(id =987798554972143728))
+			for item in bot.tree._get_all_commands():
+				logging.info(item.name)
+			if enviroment == 'DEVELOPMENT':
+				await bot.tree.sync(guild=discord.Object(id =987798554972143728))
+			else:
+				await bot.tree.sync() #guild specific: leave blank if global (global registration can take 1-24 hours)
+			bot.is_synced = True
+	except commands.errors.ExtensionAlreadyLoaded:
+		logging.info('Already loaded extensions + bot. (Sharded)')
 
 client = roblox.Client()
 
@@ -1087,8 +1088,9 @@ async def warn(ctx, user, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
-		if not oldRequestJSON['success']:
-			return await ctx.send('User does not exist.')
+		if 'success' in oldRequestJSON.keys():
+			if not oldRequestJSON['success']:
+				return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
 		requestJson = request.json()
@@ -1733,14 +1735,11 @@ async def search(ctx, *, query):
 
 			for result in RESULTS:
 				if result[0]['name'] == RESULTS[0][0]['name']:
-					logging.info(result)
-					logging.info(result[0]['name'])
+
 					result_var = RESULTS[0]
 			
 			result = result_var
 			
-			logging.info(result)
-
 			triggered_alerts = []
 
 			User = await client.get_user_by_username(result[0]['name'], expand=True, exclude_banned_users=False)
@@ -1945,18 +1944,12 @@ async def globalsearch(ctx, *, query):
 			embed2 = discord.Embed(title = RESULTS[0][0]['name'], color = await generate_random(ctx))
 
 			result_var = None
-			logging.info(message.content.lower())
 
 			for result in RESULTS:
 				if result[0]['name'] == RESULTS[0][0]['name']:
-					logging.info(result)
-					logging.info(result[0]['name'])
 					result_var = RESULTS[0]
 			
 			result = result_var
-			
-			logging.info(result)
-
 			triggered_alerts = []
 
 			User = await client.get_user_by_username(result[0]['name'], expand=True, exclude_banned_users=False)
@@ -2722,8 +2715,10 @@ async def loarequest(ctx, time, *, reason):
 		return await ctx.send('The server has not been set up yet. Please run `>setup` to set up the server.')
 
 
-
-	timeObj = list(reason)[-1]
+	try:
+		timeObj = reason.split(' ')[-1]
+	except:
+		timeObj = ""
 	reason = list(reason)
 
 	if not time.endswith( ('h', 'm', 's', 'd', 'w') ):
