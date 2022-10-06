@@ -1,5 +1,3 @@
 .env
 run.bat
 __pycache__
-venv
-.idea
