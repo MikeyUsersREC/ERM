@@ -3405,7 +3405,7 @@ async def clearmember(ctx, member: discord.Member = None):
 	if view.value is False:
 		return await ctx.send('Successfully cancelled.')
 
-	document = await bot.shift_storage.find_by_id()
+	document = await bot.shift_storage.find_by_id(member.id)
 	if "shifts" in document.keys():
 		if isinstance(document['shifts'], list):
 			for shift in document['shifts']:
