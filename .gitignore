@@ -1,3 +1,5 @@
 .env
 run.bat
 __pycache__
+.idea
+requirements.txt
