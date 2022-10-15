@@ -113,6 +113,19 @@ async def on_ready():
 
 client = roblox.Client()
 
+def is_staff():
+	async def predicate(ctx):
+		guild_settings = await bot.settings.find_by_id(ctx.guild.id)
+		if guild_settings:
+			if 'role' in guild_settings['staff_management'].keys():
+				if guild_settings['staff_management']['role'] != "":
+					if guild_settings['staff_management']['role'] in [role.id for role in ctx.author.roles]:
+						return True
+		if ctx.author.guild_permissions.manage_messages:
+			return True
+
+		return False
+	return commands.check(predicate)
 
 async def warning_json_to_mongo(jsonName: str, guildId: int):
 	f = None
@@ -501,8 +514,7 @@ async def on_message(message: discord.Message):
 	aliases=['setupbot'],
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def setup(ctx):
 
 	settingContents = {
@@ -594,8 +606,7 @@ async def setup(ctx):
 	aliases=['qsetup'],
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: discord.TextChannel = None,
 					 punishmentschannel: discord.TextChannel = None,
 					 shiftmanagementchannel: discord.TextChannel = None):
@@ -1141,7 +1152,7 @@ async def changeconfig(ctx):
 			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'staff_management':
 		question = 'What do you want to do with staff management?'
-		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel"])
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role"])
 		await ctx.send(question, view=customselect)
 		await customselect.wait()
 		content = customselect.value
@@ -1154,6 +1165,11 @@ async def changeconfig(ctx):
 											 'What channel do you want to use for staff management? (e.g. `#staff-management`)')).content
 			convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
 			settingContents['staff_management']['channel'] = convertedContent.id
+		elif content == 'role':
+			content = (
+				await requestResponse(ctx, 'What role do you want to use as a staff role? (e.g. `@Staff`\n**Note:** All members you want to be able to run advanced permission commands (punishments, staff management, shift management) must have this role.')).content
+			convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
+			settingContents['staff_management']['role'] = convertedContent.id
 		else:
 			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'punishments':
@@ -1282,8 +1298,7 @@ async def uptime(ctx):
 	brief="Warns a user.",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def warn(ctx, user, *, reason):
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
@@ -1410,8 +1425,7 @@ async def warn(ctx, user, *, reason):
 	brief="Kicks a user.",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def kick(ctx, user, *, reason):
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
@@ -1537,8 +1551,7 @@ async def kick(ctx, user, *, reason):
 	brief="Bans a user.",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def ban(ctx, user, *, reason):
 	request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
 	if request.status_code != 200:
@@ -1666,8 +1679,7 @@ async def ban(ctx, user, *, reason):
 	usage="<message>",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def mlog(ctx, *, message):
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:
@@ -1704,8 +1716,7 @@ async def mlog(ctx, *, message):
 	description="Tempbans a user. [Punishments]",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def tempban(ctx, user, time: str, *, reason):
 	reason = ''.join(reason)
 
@@ -2420,13 +2431,13 @@ async def help(ctx, *, command=None):
 			color=await generate_random(ctx)
 		)
 
-	try:
-		embed.set_thumbnail(url=ctx.author.avatar.url)
-		embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
-		embed.set_footer(icon_url=get_guild_icon(ctx.guild), text="{} | {}".format(configItem['customisation']['footer_text'],
-																			configItem['customisation']['brand_name']))
-	except:
-		pass
+		try:
+			embed.set_thumbnail(url=ctx.author.avatar.url)
+			embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+			embed.set_footer(icon_url=get_guild_icon(ctx.guild), text="{} | {}".format(configItem['customisation']['footer_text'],
+																				configItem['customisation']['brand_name']))
+		except:
+			pass
 
 		embed.add_field(
 			name='Usage',
@@ -2456,8 +2467,7 @@ async def duty(ctx):
 	description="Allows for you to clock in. [Shift Management]",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def dutyon(ctx):
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:
@@ -2530,8 +2540,7 @@ async def dutyon(ctx):
 	description="Allows for you to clock out. [Shift Management]",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def dutyoff(ctx):
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:
@@ -2670,8 +2679,7 @@ async def dutyoff(ctx):
 	description="Allows for you to check your shift time. [Shift Management]",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def dutytime(ctx):
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:
@@ -2738,8 +2746,7 @@ async def dutytime(ctx):
 	description="Allows for you to void your shift. [Shift Management]",
 	with_app_command=True,
 )
-@commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def dutyvoid(ctx):
 	configItem = await bot.settings.find_by_id(ctx.guild.id)
 	if configItem is None:
