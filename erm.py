@@ -65,7 +65,10 @@ bot = commands.AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, 
 bot.is_synced = False
 environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
-
+@bot.before_invoke
+async def DeferInteraction(ctx):
+	if isinstance(ctx, discord.Interaction):
+		await ctx.defer()
 @bot.event
 async def on_ready():
 	await bot.wait_until_ready()
@@ -93,7 +96,6 @@ async def on_ready():
 		bot.shifts = Document(bot.db, "shifts")
 		bot.errors = Document(bot.db, "errors")
 		bot.shift_storage = Document(bot.db, "shift_storage")
-		bot.staff_members = Document(bot.db, "staff_members")
 		bot.error_list = []
 		logging.info('Connected to MongoDB!')
 
@@ -162,20 +164,20 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
 			await bot.warnings.update(structure)
 
 
-staff_members = {
+bot.staff_members = {
 	"i_imikey": "Bot Developer",
 	"kiper4k": "Support Team",
-	"younger6nhl": "Support Team",
-	"mbrinkley": "Senior Support",
+	"mbrinkley": "Lead Support",
 	"ruru0303": "Support Team",
 	"myles_cbcb1421": "Support Team",
-	"TheOneAndOnly_5567": "Manager"
+	"theoneandonly_5567": "Manager",
+	"l0st_nations": "Junior Support"
 }
 
 
 async def staff_field(embed, query):
 	embed.add_field(name="Flags",
-					value=f"<:erm:1001323537023389817>  **ERM Staff Member** ({staff_members[query.lower()]})",
+					value=f"<:erm:1001323537023389817>  **ERM Staff Member** ({bot.staff_members[query.lower()]})",
 					inline=False)
 	return embed
 
@@ -369,10 +371,11 @@ async def GDPR():
 				pass
 
 
-# noinspection PyDunderSlots
 @bot.event
 async def on_command_error(ctx, error):
 	error_id = error_gen()
+	if isinstance(error, commands.CommandNotFound):
+		return
 
 	try:
 		embed = discord.Embed(
@@ -420,6 +423,8 @@ async def on_guild_join(guild: discord.Guild):
 			'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'
 		)
 	finally:
+		channel = bot.get_channel(1033021466381398086)
+		await channel.send(f'{bot.user.name} is now in **{len(bot.guilds)} servers**.')
 		logging.info('Server has been sent welcome sequence.')
 
 
@@ -2292,8 +2297,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 	usage='<user> <warning id>',
 	with_app_command=True,
 )
-@discord.ext.commands.has_permissions(manage_messages=True)
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def removewarning(ctx, id: str):
 	try:
 		id = int(id)
@@ -3268,7 +3272,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 # clockedin, to get all the members of a specific guild currently on duty
 @bot.hybrid_command(name='clockedin', description='Get all members of the server currently on shift.',
 					aliases=['on-duty'])
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def clockedin(ctx):
 	try:
 		configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -3301,7 +3305,7 @@ async def clockedin(ctx):
 # staff info command, to get total seconds worked on a specific member
 @duty.command(name='info', description='Get the total seconds worked on a specific member. [Shift Management]',
 			  aliases=['staff-stats'])
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def staff_info(ctx, member: discord.Member = None):
 	if member == None:
 		member = ctx.author
@@ -3343,7 +3347,7 @@ async def staff_info(ctx, member: discord.Member = None):
 @duty.command(name='leaderboard',
 			  description='Get the total time worked for the whole of the staff team. [Shift Management]',
 			  aliases=['shift-lb'])
-@app_commands.checks.has_permissions(manage_messages=True)
+@is_staff()
 async def shift_leaderboard(ctx):
 	try:
 		configItem = await bot.settings.find_by_id(ctx.guild.id)
