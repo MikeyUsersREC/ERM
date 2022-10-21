@@ -1936,7 +1936,7 @@ async def search(ctx, *, query):
 		embed1 = discord.Embed(title=query, color=await generate_random(ctx))
 		embed1.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
 		embed1.add_field(name='Username', value=embed1.title, inline=False)
-		if query.lower() in staff_members.keys():
+		if query.lower() in bot.staff_members.keys():
 			await staff_field(embed1, query.lower())
 		embed1.add_field(name='Punishments', value=f'0', inline=False)
 		string = "\n".join([alerts[i] for i in triggered_alerts])
@@ -2010,7 +2010,7 @@ async def search(ctx, *, query):
 
 		embeds[0].add_field(name='Username', value=embed1.title, inline=False)
 		embeds[0].add_field(name='Punishments', value=f'{len(listOfPerGuild)}', inline=False)
-		if embed1.title in staff_members.keys():
+		if embed1.title in bot.staff_members.keys():
 			await staff_field(embeds[0], embed1.title)
 		string = "\n".join([alerts[i] for i in triggered_alerts])
 
@@ -2152,7 +2152,7 @@ async def globalsearch(ctx, *, query):
 		embed1 = discord.Embed(title=query, color=await generate_random(ctx))
 		embed1.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
 		embed1.add_field(name='Username', value=embed1.title, inline=False)
-		if query.lower() in staff_members.keys():
+		if query.lower() in bot.staff_members.keys():
 			await staff_field(embed1, query.lower())
 		embed1.add_field(name='Punishments', value=f'0', inline=False)
 		string = "\n".join([alerts[i] for i in triggered_alerts])
@@ -2213,7 +2213,7 @@ async def globalsearch(ctx, *, query):
 		embeds.append(embed2)
 
 		embeds[0].add_field(name='Username', value=embed1.title, inline=False)
-		if embed1.title in staff_members.keys():
+		if embed1.title in bot.staff_members.keys():
 			await staff_field(embed1, embed1.title)
 		embeds[0].add_field(name='Punishments', value=f'{len(result)}', inline=False)
 
