@@ -1544,7 +1544,7 @@ async def kick(ctx, user, *, reason):
 		dataset['warnings'].append(singular_warning_item)
 		await bot.warnings.update_by_id(dataset)
 
-	await ctx.reply(f'{user} has been warned successfully.')
+	await ctx.reply(f'{user} has been kicked successfully.')
 	await channel.send(embed=embed)
 
 
@@ -1673,7 +1673,7 @@ async def ban(ctx, user, *, reason):
 		dataset['warnings'].append(singular_warning_item)
 		await bot.warnings.update_by_id(dataset)
 
-	await ctx.reply(f'{user} has been warned successfully.')
+	await ctx.reply(f'{user} has been banned successfully.')
 	await channel.send(embed=embed)
 
 
@@ -1870,7 +1870,7 @@ async def tempban(ctx, user, time: str, *, reason):
 		dataset['warnings'].append(singular_warning_item)
 		await bot.warnings.update_by_id(dataset)
 
-	await ctx.reply(f'{user} has been warned successfully.')
+	await ctx.reply(f'{user} has been tempbanned successfully.')
 	await channel.send(embed=embed)
 
 
