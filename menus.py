@@ -60,6 +60,7 @@ class YesNoMenu(discord.ui.View):
 		for item in self.children:
 			item.disabled = True
 		self.value = True
+		await interaction.edit_original_response(content = 'Successfully registered your response.', view=self)
 		self.stop()
 
 	# This one is similar to the confirmation button except sets the inner value to `False`
@@ -71,6 +72,7 @@ class YesNoMenu(discord.ui.View):
 		for item in self.children:
 			item.disabled = True
 		self.value = False
+		await interaction.send_message('Successfully registered your response.', ephemeral=True)
 		self.stop()
 
 class Dropdown(discord.ui.Select):

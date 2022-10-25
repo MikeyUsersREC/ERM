@@ -125,7 +125,19 @@ def is_staff():
 						return True
 		if ctx.author.guild_permissions.manage_messages:
 			return True
+		return False
+	return commands.check(predicate)
 
+def is_management():
+	async def predicate(ctx):
+		guild_settings = await bot.settings.find_by_id(ctx.guild.id)
+		if guild_settings:
+			if 'management_role' in guild_settings['staff_management'].keys():
+				if guild_settings['staff_management']['management_role'] != "":
+					if guild_settings['staff_management']['management_role'] in [role.id for role in ctx.author.roles]:
+						return True
+		if ctx.author.guild_permissions.manage_guild:
+			return True
 		return False
 	return commands.check(predicate)
 
@@ -711,8 +723,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
 @bot.hybrid_group(
 	name='config'
 )
-@commands.has_permissions(manage_guild=True)
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def config(ctx, option: str = None):
 	if option == None:
 		option = 'view'
@@ -971,8 +982,7 @@ async def config(ctx, option: str = None):
 	name='view',
 	description='View the current configuration of the server.'
 )
-@commands.has_permissions(manage_guild=True)
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def viewconfig(ctx):
 	if not await bot.settings.find_by_id(ctx.guild.id):
 		await ctx.send('This server has not yet been set up. Please run `>setup` to set it up.')
@@ -1099,8 +1109,7 @@ async def viewconfig(ctx):
 	name='change',
 	description='Change the configuration of the server.'
 )
-@commands.has_permissions(manage_guild=True)
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def changeconfig(ctx):
 	if not await bot.settings.find_by_id(ctx.guild.id):
 		await ctx.send('This server has not yet been set up. Please run `>setup` to set it up.')
@@ -1157,7 +1166,7 @@ async def changeconfig(ctx):
 			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'staff_management':
 		question = 'What do you want to do with staff management?'
-		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role"])
+		customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role", "management_role"])
 		await ctx.send(question, view=customselect)
 		await customselect.wait()
 		content = customselect.value
@@ -1175,6 +1184,12 @@ async def changeconfig(ctx):
 				await requestResponse(ctx, 'What role do you want to use as a staff role? (e.g. `@Staff`\n**Note:** All members you want to be able to run advanced permission commands (punishments, staff management, shift management) must have this role.')).content
 			convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
 			settingContents['staff_management']['role'] = convertedContent.id
+		elif content == 'management_role':
+			content = (
+				await requestResponse(ctx,
+									  'What role do you want to use as a management role? (e.g. `@Community Management`\n**Note:** All members you want to be able to run **elevated** permission commands (removing warnings, setting up he bot, shift management, configurations) must have this role.')).content
+			convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
+			settingContents['staff_management']['management_role'] = convertedContent.id
 		else:
 			return await ctx.send('You have not selected one of the options. Please run this command again.')
 	elif category == 'punishments':
@@ -1309,8 +1324,7 @@ async def warn(ctx, user, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
-		if 'success' in oldRequestJSON.keys():
-			if not oldRequestJSON['success']:
+		if not oldRequest.status_code == 200:
 				return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
@@ -1436,7 +1450,7 @@ async def kick(ctx, user, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
-		if not oldRequestJSON['success']:
+		if not oldRequest.status_code == 200:
 			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
@@ -1562,7 +1576,7 @@ async def ban(ctx, user, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
-		if not oldRequestJSON['success']:
+		if not oldRequest.status_code == 200:
 			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
@@ -1757,7 +1771,7 @@ async def tempban(ctx, user, time: str, *, reason):
 	if request.status_code != 200:
 		oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
 		oldRequestJSON = oldRequest.json()
-		if not oldRequestJSON['success']:
+		if not oldRequest.status_code == 200:
 			return await ctx.send('User does not exist.')
 		Id = oldRequestJSON['Id']
 		request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
@@ -1852,6 +1866,7 @@ async def tempban(ctx, user, time: str, *, reason):
 	embed.add_field(name="Moderator", value=ctx.author.name, inline=False)
 	embed.add_field(name="Violator", value=EmbedMsg.embeds[0].title, inline=False)
 	embed.add_field(name="Type", value="Temporary Ban", inline=False)
+	embed.add_field(name="Until", value=f"<t:{singular_warning_item['Until']}>", inline=False)
 	embed.add_field(name="Reason", value=reason, inline=False)
 
 	if not configItem['customisation']['ban_channel'] == None:
@@ -3021,7 +3036,7 @@ async def loarequest(ctx, time, *, reason):
 
 # context menus
 @bot.tree.context_menu(name='Force end shift')
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def force_end_shift(interaction: discord.Interaction, member: discord.Member):
 	try:
 		configItem = await bot.settings.find_by_id(interaction.guild.id)
@@ -3119,7 +3134,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
 
 @bot.tree.context_menu(name='Force start shift')
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def force_start_shift(interaction: discord.Interaction, member: discord.Member):
 	try:
 		configItem = await bot.settings.find_by_id(interaction.guild.id)
@@ -3180,7 +3195,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 
 
 @bot.tree.context_menu(name='Get shift time')
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def get_shift_time(interaction: discord.Interaction, member: discord.Member):
 	try:
 		configItem = await bot.settings.find_by_id(interaction.guild.id)
@@ -3203,13 +3218,13 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
 		return await interaction.response.send_message('This member is not currently on shift.', ephemeral=True)
 
 	await interaction.response.send_message(
-		f'{member.mention} has been on-shift for `{str(datetime.datetime.now() - datetime.datetime.fromtimestamp(shift["startTimestamp"])).split(".")[0]}`.',
+		f'{member.mention} has been on-shift for `{td_format(datetime.datetime.now() - datetime.datetime.fromtimestamp(shift["startTimestamp"])).split(".")[0]}`.',
 		ephemeral=True)
 
 
 # context menus
 @bot.tree.context_menu(name='Void shift')
-@app_commands.checks.has_permissions(manage_guild=True)
+@is_management()
 async def force_end_shift(interaction: discord.Interaction, member: discord.Member):
 	try:
 		configItem = await bot.settings.find_by_id(interaction.guild.id)
@@ -3398,7 +3413,7 @@ async def shift_leaderboard(ctx):
 @duty.command(name='clear',
 			  description='Clears all of a member\'s shift data. [Shift Management]',
 			  aliases=['shift-cl'])
-@app_commands.checks.has_permissions(administrator=True)
+@is_management()
 async def clearmember(ctx, member: discord.Member = None):
 	if member is None:
 		member = ctx.author
@@ -3431,7 +3446,7 @@ async def clearmember(ctx, member: discord.Member = None):
 @duty.command(name='clearall',
 			  description='Clears all of the shift data. [Shift Management]',
 			  aliases=['shift-cla'])
-@app_commands.checks.has_permissions(administrator=True)
+@is_management()
 async def clearall(ctx):
 	try:
 		configItem = await bot.settings.find_by_id(ctx.guild.id)
