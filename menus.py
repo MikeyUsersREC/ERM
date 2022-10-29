@@ -158,6 +158,102 @@ class YesNoMenu(discord.ui.View):
         await interaction.edit_original_response(view=self)
         self.stop()
 
+class LOAMenu(discord.ui.View):
+    def __init__(self, bot, roles, loa_role, user_id):
+        super().__init__()
+        self.value = None
+        self.bot = bot
+        if isinstance(roles, list):
+            self.roles = roles
+        elif isinstance(roles, int):
+            self.roles = [roles]
+        self.loa_role = loa_role
+        self.user_id = user_id
+
+
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for role in self.roles:
+            if role in [role.id for role in interaction.user.roles]:
+                await interaction.response.defer()
+                for item in self.children:
+                    item.disabled = True
+                    if item.label == 'Deny':
+                        self.children.remove(item)
+                    if item.label == "Accept":
+                        item.name = "Accepted"
+
+
+                s_loa = None
+                for loa in await self.bot.loas.get_all():
+                    if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
+                        s_loa = loa
+
+                try:
+                    s_loa['accepted'] = True
+                    guild = self.bot.get_guild(s_loa['guild_id'])
+                    user = guild.get_member(s_loa['user_id'])
+                    success = discord.Embed(
+                        title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
+                        description=f"<:ArrowRightW:1035023450592514048> {interaction.user.mention} has accepted your {s_loa['type']} request.",
+                        color=0x71c15f
+                    )
+                    await user.send(embed=success)
+                    await self.bot.loas.update_by_id(s_loa)
+                    role = discord.utils.get(interaction.guild.roles, id=self.loa_role)
+                    await user.add_roles(role)
+                except Exception as e:
+                    raise Exception(e)
+                    pass
+                self.value = True
+                await interaction.edit_original_response(view=self)
+                self.stop()
+                continue
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for role in self.roles:
+            if role in [role.id for role in interaction.user.roles]:
+                await interaction.response.defer()
+                for item in self.children:
+                    item.disabled = True
+                    if item.label == 'Accept':
+                        self.children.remove(item)
+                    if item.label == "Deny":
+                        item.name = "Denied"
+
+                s_loa = None
+                for loa in await self.bot.loas.get_all():
+                    if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
+                        s_loa = loa
+
+                try:
+                    s_loa['denied'] = True
+                    guild = self.bot.get_guild(s_loa['guild_id'])
+                    user = guild.get_member(s_loa['user_id'])
+                    success = discord.Embed(
+                        title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
+                        description=f"<:ArrowRightW:1035023450592514048>{interaction.user.mention} has denied your {s_loa['type']} request.",
+                        color=0xff3c3c
+                    )
+                    await user.send(embed=success)
+                    await self.bot.loas.update_by_id(s_loa)
+                    role = discord.utils.get(interaction.guild.roles, id=self.loa_role)
+                    await user.add_roles(role)
+                except Exception as e:
+                    raise Exception(e)
+                    pass
+                self.value = True
+                await interaction.edit_original_response(view=self)
+                self.stop()
+                continue
+
+
 
 class RemoveWarning(discord.ui.View):
     def __init__(self, user_id):

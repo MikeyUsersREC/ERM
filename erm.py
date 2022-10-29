@@ -13,7 +13,7 @@ from snowflake import SnowflakeGenerator
 import DiscordUtils
 import sentry_sdk
 from sentry_sdk import capture_exception, push_scope
-from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning
+from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu
 from utils.mongo import Document
 from roblox import client as roblox
 from discord import app_commands
@@ -85,6 +85,7 @@ async def on_ready():
         change_status.start()
         update_bot_status.start()
         GDPR.start()
+        check_loa.start()
         bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
         if environment == 'DEVELOPMENT':
             bot.db = bot.mongo['beta']
@@ -99,6 +100,7 @@ async def on_ready():
         bot.shifts = Document(bot.db, "shifts")
         bot.errors = Document(bot.db, "errors")
         bot.shift_storage = Document(bot.db, "shift_storage")
+        bot.loas = Document(bot.db, "leave_of_absences")
         bot.error_list = []
         logging.info('Connected to MongoDB!')
 
@@ -407,6 +409,33 @@ async def GDPR():
                 pass
 
 
+@tasks.loop(minutes=1)
+async def check_loa():
+    loas = bot.loas
+
+    for loaObject in await loas.get_all():
+        if datetime.datetime.now(tz=None).timestamp() > loaObject['expiry'] and loaObject["expired"] == False:
+            loaObject['expired'] = True
+            print(loaObject)
+            await bot.loas.update_by_id(loaObject)
+            guild = bot.get_guild(loaObject['guild_id'])
+            embed = discord.Embed(
+                title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
+                description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
+                color=0x2E3136
+            )
+            member = guild.get_member(loaObject['user_id'])
+            settings = await bot.settings.find_by_id(guild.id)
+            role = None
+            if settings is not None:
+                if "loa_role" in settings['staff_management']:
+                    role = guild.get_role(settings['staff_management']['loa_role'])
+            if role is not None:
+                if role in member.roles:
+                    await member.remove_roles(role)
+            await member.send(embed=embed)
+
+
 @bot.event
 async def on_command_error(ctx, error):
     error_id = error_gen()
@@ -654,6 +683,45 @@ async def setup(ctx):
             convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
         settingContents['staff_management']['management_role'] = [role.id for role in convertedContent]
 
+        view = YesNoMenu(ctx.author.id)
+        question = 'Do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?'
+        embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
+        await ctx.send(embed=embed, view=view)
+        await view.wait()
+        if view.value is not None:
+            if view.value:
+                content = (await requestResponse(ctx,
+                                                 'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
+
+                if ',' in content:
+                    convertedContent = []
+                    for role in content.split(','):
+                        role = role.strip()
+                        convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+                else:
+                    convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+
+                settingContents['staff_management']['loa_role'] = [role.id for role in convertedContent]
+
+        view = YesNoMenu(ctx.author.id)
+        question = 'Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?'
+        embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
+        await ctx.send(embed=embed, view=view)
+        await view.wait()
+        if view.value is not None:
+            if view.value:
+                content = (await requestResponse(ctx,
+                                                 'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
+
+                if ',' in content:
+                    convertedContent = []
+                    for role in content.split(','):
+                        role = role.strip()
+                        convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+                else:
+                    convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+
+                settingContents['staff_management']['ra_role'] = [role.id for role in convertedContent]
     if settingContents['punishments']['enabled']:
         content = (await requestResponse(ctx, 'What channel do you want to use for punishments?')).content
         convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
@@ -671,7 +739,8 @@ async def setup(ctx):
         await view.wait()
         if view.value is not None:
             if view.value:
-                content = (await requestResponse(ctx, 'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
+                content = (await requestResponse(ctx,
+                                                 'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
 
                 if ',' in content:
                     convertedContent = []
@@ -1009,6 +1078,16 @@ async def viewconfig(ctx):
     except:
         kick_channel = 'None'
 
+    try:
+        loa_role = ctx.guild.get_channel(settingContents['staff_management']['loa_role']).mention
+    except:
+        loa_role = 'None'
+
+    try:
+        ra_role = ctx.guild.get_channel(settingContents['staff_management']['ra_role']).mention
+    except:
+        ra_role = 'None'
+
     embed = discord.Embed(
         title='<:support:1035269007655321680> Server Configuration',
         description=f'<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:',
@@ -1037,12 +1116,14 @@ async def viewconfig(ctx):
 
     embed.add_field(
         name='<:staff:1035308057007230976> Staff Management',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Staff Role:** {}\n<:ArrowRightW:1035023450592514048>**Management Role:** {}'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Staff Role:** {}\n<:ArrowRightW:1035023450592514048>**Management Role:** {}\n<:ArrowRightW:1035023450592514048>**LOA Role:** {}\n<:ArrowRightW:1035023450592514048>**RA Role:** {}'
         .format(
             settingContents['staff_management']['enabled'],
             staff_management_channel,
             staff_role,
-            management_role
+            management_role,
+            loa_role,
+            ra_role
         ),
         inline=False
     )
@@ -1093,7 +1174,7 @@ async def viewconfig(ctx):
 @is_management()
 async def changeconfig(ctx):
     if not await bot.settings.find_by_id(ctx.guild.id):
-        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     settingContents = await bot.settings.find_by_id(ctx.guild.id)
 
@@ -1146,7 +1227,9 @@ async def changeconfig(ctx):
             return await invisEmbed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'staff_management':
         question = 'What do you want to do with staff management?'
-        customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role", "management_role"])
+        customselect = CustomSelectMenu(ctx.author.id,
+                                        ["enable", "disable", "channel", "role", "management_role", "loa_role",
+                                         "ra_role"])
         await invisEmbed(ctx, question, view=customselect)
         await customselect.wait()
         content = customselect.value
@@ -1171,6 +1254,18 @@ async def changeconfig(ctx):
                                       'What role do you want to use as a management role? (e.g. `@Community Management`\n**Note:** All members you want to be able to run **elevated** permission commands (removing warnings, setting up he bot, shift management, configurations) must have this role.')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
             settingContents['staff_management']['management_role'] = convertedContent.id
+        elif content == 'loa_role':
+            content = (
+                await requestResponse(ctx,
+                                      'What role do you want to use as a LOA role? (e.g. `@LOA`)')).content
+            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
+            settingContents['staff_management']['loa_role'] = convertedContent.id
+        elif content == 'ra_role':
+            content = (
+                await requestResponse(ctx,
+                                      'What role do you want to use as a RA role? (e.g. `@RA`)')).content
+            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
+            settingContents['staff_management']['ra_role'] = convertedContent.id
         else:
             return await invisEmbed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'punishments':
@@ -2096,7 +2191,8 @@ async def search(ctx, *, query):
         embed1.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
         if query.lower() in bot.staff_members.keys():
             await staff_field(embed1, query.lower())
-        embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments', value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
+        embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
+                         value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
         string = "\n".join([alerts[i] for i in triggered_alerts])
 
         embed1.add_field(name='<:WarningIcon:1035258528149033090> Alerts', value=f'{string}', inline=False)
@@ -2422,24 +2518,25 @@ async def globalsearch(ctx, *, query):
         await paginator.run(embeds)
 
 
-@globalsearch.autocomplete('query')
-async def autocomplete_callback(interaction: discord.Interaction, current: str):
-    datasets = await bot.warnings.get_all()
-    applicable_data = []
-    for item in datasets:
-        if item not in applicable_data:
-            applicable_data.append(item)
-
-    logging.info(applicable_data)
-    applicable_data = [x['_id'] for x in applicable_data if x['_id'].lower().startswith(current.lower())]
-    logging.info(applicable_data)
-
-    choices = []
-    for item in applicable_data:
-        if len(choices) >= 25:
-            break
-        choices.append(app_commands.Choice(name=item, value=item))
-    return choices
+#
+# @globalsearch.autocomplete('query')
+# async def autocomplete_callback(interaction: discord.Interaction, current: str):
+#     datasets = await bot.warnings.get_all()
+#     applicable_data = []
+#     for item in datasets:
+#         if item not in applicable_data:
+#             applicable_data.append(item)
+#
+#     logging.info(applicable_data)
+#     applicable_data = [x['_id'] for x in applicable_data if x['_id'].lower().startswith(current.lower())]
+#     logging.info(applicable_data)
+#
+#     choices = []
+#     for item in applicable_data:
+#         if len(choices) >= 25:
+#             break
+#         choices.append(app_commands.Choice(name=item, value=item))
+#     return choices
 
 
 @bot.hybrid_command(
@@ -2546,7 +2643,19 @@ async def help(ctx, *, command=None):
                     continue
 
             if isinstance(command, discord.ext.commands.core.Group):
-                continue
+                for cmd in command.walk_commands():
+                    if cmd.hidden:
+                        continue
+                    if cmd.parent is not None:
+                        continue
+                    print(cmd)
+                    print(cmd.name)
+                    try:
+                        cmd.category = command.description.split('[')[1].replace('[', '').replace(']', '')
+                    except:
+                        cmd.category = 'Miscellaneous'
+                    cmd.name = f"{command.name} {cmd.name}"
+                    commands.append(cmd)
 
             if command.category not in categories:
                 categories.append(command.category)
@@ -3007,99 +3116,19 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
     ]
 
 
-@bot.hybrid_command(
-    name='reducedactivity',
-    aliases=['rarq', 'rrq', 'ra'],
-    description='File a Reduced Activity request [Staff Management]',
-    with_app_command=True,
-)
-async def rarequest(ctx, time, *, reason):
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
 
-    try:
-        timeObj = reason.split(' ')[-1]
-    except:
-        timeObj = ""
-    reason = list(reason)
-
-    if not time.endswith(('h', 'm', 's', 'd', 'w')):
-        reason.insert(0, time)
-        if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
-            return await invisEmbed(ctx,
-                                    'A time must be provided at the start or at the end of the command. Example: `>ra 12h Going to walk my shark` / `>ra Mopping the ceiling 12h`')
-        else:
-            time = timeObj
-            reason.pop()
-
-    if time.endswith('s'):
-        time = int(removesuffix(time, 's'))
-    elif time.endswith('m'):
-        time = int(removesuffix(time, 'm')) * 60
-    elif time.endswith('h'):
-        time = int(removesuffix(time, 'h')) * 60 * 60
-    elif time.endswith('d'):
-        time = int(removesuffix(time, 'd')) * 60 * 60 * 24
-    elif time.endswith('w'):
-        time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
-
-    startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
-    endTimestamp = int(startTimestamp + time)
-
-    Embed = discord.Embed(
-        title="Reduced Activity",
-        color=0x2E3136
-    )
-
-    try:
-        Embed.set_thumbnail(url=ctx.author.avatar.url)
-        Embed.set_footer(text="Staff Logging Module")
-
-    except:
-        pass
-    Embed.add_field(
-        name="<:staff:1035308057007230976> Staff Member",
-        value=f"<:ArrowRight:1035003246445596774>{ctx.author.name}",
-        inline=False
-    )
-
-    Embed.add_field(
-        name="<:Resume:1035269012445216858> Start",
-        value=f'<:ArrowRight:1035003246445596774><t:{int(startTimestamp)}>',
-        inline=False
-    )
-
-    Embed.add_field(
-        name="<:Pause:1035308061679689859> End",
-        value=f'<:ArrowRight:1035003246445596774><t:{int(endTimestamp)}>',
-        inline=False
-    )
-
-    reason = ''.join(reason)
-
-    Embed.add_field(
-        name='<:QMark:1035308059532202104> Reason',
-        value=f'<:ArrowRight:1035003246445596774>{reason}',
-        inline=False
-    )
-
-    channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
-    await channel.send(embed=Embed)
-
-    successEmbed = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> Sent RA Request",
-        description="<:ArrowRight:1035003246445596774> I've sent your RA request to a Management member of this server.",
-        color=0x71c15f
-    )
-    await ctx.send(embed=successEmbed)
-
-
-@bot.hybrid_command(
-    name='leaveofabsence',
-    aliases=['loarq', 'lorq', 'loa'],
+@bot.hybrid_group(
+    name='loa',
     description='File a Leave of Absence request [Staff Management]',
     with_app_command=True,
+)
+async def loa(ctx, time, *, reason):
+    pass
+
+@loa.command(
+    name='request',
+    description='File a Leave of Absence request [Staff Management]',
+    with_app_command=True
 )
 async def loarequest(ctx, time, *, reason):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -3116,7 +3145,7 @@ async def loarequest(ctx, time, *, reason):
         reason.insert(0, time)
         if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
             return await invisEmbed(ctx,
-                                    'A time must be provided at the start or at the end of the command. Example: `>loa 12h Going to walk my shark` / `>loa Mopping the ceiling 12h`')
+                                    'A time must be provided at the start or at the end of the command. Example: `/loa 12h Going to walk my shark` / `/loa Mopping the ceiling 12h`')
         else:
             time = timeObj
             reason.pop()
@@ -3172,8 +3201,29 @@ async def loarequest(ctx, time, *, reason):
         inline=False
     )
 
+    settings = await bot.settings.find_by_id(ctx.guild.id)
+    try:
+        management_role = settings['staff_management']['management_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The management role has not been set up yet. Please run `/setup` to set up the server.")
+    try:
+        loa_role = settings['staff_management']['loa_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The LOA role has not been set up yet. Please run `/config change` to add the LOA role.")
+
+    view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
+
     channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
-    await channel.send(embed=Embed)
+    msg = await channel.send(embed=Embed, view=view)
+
+    example_schema = {"_id": f"{ctx.author.id}_{ctx.guild.id}_{int(startTimestamp)}_{int(endTimestamp)}",
+                      "user_id": ctx.author.id, "guild_id": ctx.guild.id, "message_id": msg.id, "type": "LoA",
+                      "expiry": int(endTimestamp),
+                      "expired": False, "accepted": False, "denied": False, "reason": ''.join(reason)}
+
+    await bot.loas.insert(example_schema)
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Sent LoA Request",
@@ -3181,6 +3231,229 @@ async def loarequest(ctx, time, *, reason):
         color=0x71c15f
     )
     await ctx.send(embed=successEmbed)
+
+@loa.command(
+    name='void',
+    description='Cancel a Leave of Absence request [Staff Management]',
+    with_app_command=True
+)
+@is_management()
+async def loavoid(ctx, user: discord.Member = None):
+    if user == None:
+        user = ctx.author
+
+    configItem = await bot.settings.find_by_id(ctx.guild.id)
+    if configItem is None:
+        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+    try:
+        loa_role = configItem['staff_management']['loa_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The LOA role has not been set up yet. Please run `/config change` to add the LOA role.")
+
+    loa = None
+    for l in await bot.loas.get_all():
+        if l['user_id'] == user.id and l['guild_id'] == ctx.guild.id and l['type'] == "LoA" and l['expired'] == False:
+            loa = l
+            break
+
+    embed = discord.Embed(
+        description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s LoA?**\n**End date:** <t:{loa["expiry"]}>',
+        color=0x2E3136)
+    embed.set_footer(text="Staff Management Module")
+    view = YesNoMenu(ctx.author.id)
+    await ctx.send(embed=embed, view=view)
+    await view.wait()
+    print(view.value)
+    if view.value == True:
+        await bot.loas.delete_by_id(loa['_id'])
+        await invisEmbed(ctx, f'**{user.display_name}\'s** LoA has been voided.')
+        success = discord.Embed(
+            title=f"<:ErrorIcon:1035000018165321808> {loa['type']} Voided",
+            description=f"<:ArrowRightW:1035023450592514048>{ctx.author.mention} has voided your {loa['type']}.",
+            color=0xff3c3c
+        )
+        success.set_footer(text="Staff Management Module")
+        try:
+            await ctx.guild.get_member(loa['user_id']).send(embed=success)
+            if loa_role in [role.id for role in user.roles]:
+                await user.remove_roles(discord.utils.get(ctx.guild.roles, id=loa_role))
+        except:
+            await invisEmbed(ctx, 'Could not remove the LOA role from the user.')
+
+    else:
+        return await invisEmbed(ctx, 'Cancelled.')
+
+
+@bot.hybrid_group(
+    name='ra',
+    description='File a Leave of Absence request [Staff Management]',
+    with_app_command=True,
+)
+async def ra(ctx, time, *, reason):
+    pass
+
+@ra.command(
+    name='request',
+    description='File a Reduced Activity request [Staff Management]',
+    with_app_command=True
+)
+async def loarequest(ctx, time, *, reason):
+    configItem = await bot.settings.find_by_id(ctx.guild.id)
+    if configItem is None:
+        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+
+    try:
+        timeObj = reason.split(' ')[-1]
+    except:
+        timeObj = ""
+    reason = list(reason)
+
+    if not time.endswith(('h', 'm', 's', 'd', 'w')):
+        reason.insert(0, time)
+        if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
+            return await invisEmbed(ctx,
+                                    'A time must be provided at the start or at the end of the command. Example: `/ra 12h Going to walk my shark` / `/ra Mopping the ceiling 12h`')
+        else:
+            time = timeObj
+            reason.pop()
+
+    if time.endswith('s'):
+        time = int(removesuffix(time, 's'))
+    elif time.endswith('m'):
+        time = int(removesuffix(time, 'm')) * 60
+    elif time.endswith('h'):
+        time = int(removesuffix(time, 'h')) * 60 * 60
+    elif time.endswith('d'):
+        time = int(removesuffix(time, 'd')) * 60 * 60 * 24
+    elif time.endswith('w'):
+        time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+
+    startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
+    endTimestamp = int(startTimestamp + time)
+
+    Embed = discord.Embed(
+        title="Reduced Activity",
+        color=0x2E3136
+    )
+
+    try:
+        Embed.set_thumbnail(url=ctx.author.avatar.url)
+        Embed.set_footer(text="Staff Logging Module")
+
+    except:
+        pass
+    Embed.add_field(
+        name="<:staff:1035308057007230976> Staff Member",
+        value=f"<:ArrowRight:1035003246445596774>{ctx.author.name}",
+        inline=False
+    )
+
+    Embed.add_field(
+        name="<:Resume:1035269012445216858> Start",
+        value=f'<:ArrowRight:1035003246445596774><t:{int(startTimestamp)}>',
+        inline=False
+    )
+
+    Embed.add_field(
+        name="<:Pause:1035308061679689859> End",
+        value=f'<:ArrowRight:1035003246445596774><t:{int(endTimestamp)}>',
+        inline=False
+    )
+
+    reason = ''.join(reason)
+
+    Embed.add_field(
+        name='<:QMark:1035308059532202104> Reason',
+        value=f'<:ArrowRight:1035003246445596774>{reason}',
+        inline=False
+    )
+
+    settings = await bot.settings.find_by_id(ctx.guild.id)
+    try:
+        management_role = settings['staff_management']['management_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The management role has not been set up yet. Please run `/setup` to set up the server.")
+    try:
+        loa_role = settings['staff_management']['ra_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The LOA role has not been set up yet. Please run `/config change` to add the LOA role.")
+
+    view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
+
+    channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
+    msg = await channel.send(embed=Embed, view=view)
+
+    example_schema = {"_id": f"{ctx.author.id}_{ctx.guild.id}_{int(startTimestamp)}_{int(endTimestamp)}",
+                      "user_id": ctx.author.id, "guild_id": ctx.guild.id, "message_id": msg.id, "type": "RA",
+                      "expiry": int(endTimestamp),
+                      "expired": False, "accepted": False, "denied": False, "reason": ''.join(reason)}
+
+    await bot.loas.insert(example_schema)
+
+    successEmbed = discord.Embed(
+        title="<:CheckIcon:1035018951043842088> Sent RA Request",
+        description="<:ArrowRight:1035003246445596774> I've sent your LoA request to a Management member of this server.",
+        color=0x71c15f
+    )
+    await ctx.send(embed=successEmbed)
+
+@ra.command(
+    name='void',
+    description='Cancel a Leave of Absence request [Staff Management]',
+    with_app_command=True
+)
+@is_management()
+async def loavoid(ctx, user: discord.Member = None):
+    if user == None:
+        user = ctx.author
+
+    configItem = await bot.settings.find_by_id(ctx.guild.id)
+    if configItem is None:
+        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+    try:
+        ra_role = configItem['staff_management']['ra_role']
+    except:
+        return await invisEmbed(ctx,
+                                "The RA role has not been set up yet. Please run `/config change` to add the RA role.")
+
+    ra = None
+    for l in await bot.loas.get_all():
+        if l['user_id'] == user.id and l['guild_id'] == ctx.guild.id and l['type'] == "RA" and l['expired'] == False:
+            ra = l
+            break
+
+    embed = discord.Embed(
+        description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s LoA?**\n**End date:** <t:{ra["expiry"]}>',
+        color=0x2E3136)
+    embed.set_footer(text="Staff Management Module")
+    view = YesNoMenu(ctx.author.id)
+    await ctx.send(embed=embed, view=view)
+    await view.wait()
+    print(view.value)
+    if view.value == True:
+        await bot.loas.delete_by_id(ra['_id'])
+        await invisEmbed(ctx, f'**{user.display_name}\'s** LoA has been voided.')
+        success = discord.Embed(
+            title=f"<:ErrorIcon:1035000018165321808> {ra['type']} Voided",
+            description=f"<:ArrowRightW:1035023450592514048>{ctx.author.mention} has voided your {ra['type']}.",
+            color=0xff3c3c
+        )
+        success.set_footer(text="Staff Management Module")
+        try:
+            await ctx.guild.get_member(loa['user_id']).send(embed=success)
+            if ra_role in [role.id for role in user.roles]:
+                await user.remove_roles(discord.utils.get(ctx.guild.roles, id=ra_role))
+        except:
+            await invisEmbed(ctx, 'Could not remove the RA role from the user.')
+
+    else:
+        return await invisEmbed(ctx, 'Cancelled.')
+
 
 
 # context menus
