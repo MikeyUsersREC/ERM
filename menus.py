@@ -158,6 +158,60 @@ class YesNoMenu(discord.ui.View):
         await interaction.edit_original_response(view=self)
         self.stop()
 
+
+class ShiftModify(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Add time (+)', style=discord.ButtonStyle.green)
+    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "add"
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='Remove time (-)', style=discord.ButtonStyle.danger)
+    async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "remove"
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    @discord.ui.button(label='End shift', style=discord.ButtonStyle.danger)
+    async def end(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "end"
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    @discord.ui.button(label='Void shift', style=discord.ButtonStyle.danger)
+    async def void(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "void"
+        await interaction.edit_original_response(view=self)
+        self.stop()
 class LOAMenu(discord.ui.View):
     def __init__(self, bot, roles, loa_role, user_id):
         super().__init__()
@@ -300,7 +354,51 @@ class RemoveWarning(discord.ui.View):
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
+class RemoveWarning(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
 
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = True
+
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Removed BOLO",
+            description="<:ArrowRightW:1035023450592514048>I've successfully removed the BOLO from the user.",
+            color=0x71c15f
+        )
+
+        await interaction.edit_original_response(embed=success, view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = False
+
+        success = discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRightW:1035023450592514048>The BOLO has not been removed from the user.",
+            color=0xff3c3c
+        )
+
+        await interaction.edit_original_response(embed=success, view=self)
+        self.stop()
 
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
