@@ -259,9 +259,9 @@ class LOAMenu(discord.ui.View):
                     await user.send(embed=success)
                     await self.bot.loas.update_by_id(s_loa)
                     role = discord.utils.get(interaction.guild.roles, id=self.loa_role)
-                    await user.add_roles(role)
-                except Exception as e:
-                    raise Exception(e)
+                    if role is not None:
+                        await user.add_roles(role)
+                except:
                     pass
                 self.value = True
                 await interaction.edit_original_response(view=self)

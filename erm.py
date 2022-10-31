@@ -60,8 +60,17 @@ async def get_prefix(bot, message):
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.voice_states = True
 
-bot = commands.AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
+class AutoShardedBot(commands.AutoShardedBot):
+    async def is_owner(self, user: discord.User):
+        if user.id in [459374864067723275]:  # Implement your own conditions here
+            return True
+
+        # Else fall back to the original
+        return await super().is_owner(user)
+
+bot = AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
 bot.is_synced = False
 environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
@@ -199,7 +208,8 @@ bot.staff_members = {
     "myles_cbcb1421": "Support Team",
     "theoneandonly_5567": "Manager",
     "l0st_nations": "Junior Support",
-    "royalcrests": "Developer"
+    "royalcrests": "Developer",
+    "quiverze": "Junior Support"
 }
 
 
@@ -1517,12 +1527,26 @@ async def warn(ctx, user, *, reason):
         return await invisEmbed(ctx,
                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
 
+    item = None
     if not await bot.warnings.find_by_id(user.lower()):
+        item = await bot.warnings.find_by_id(user.lower())
         await bot.warnings.insert(default_warning_item)
     else:
         dataset = await bot.warnings.find_by_id(user.lower())
         dataset['warnings'].append(singular_warning_item)
         await bot.warnings.update_by_id(dataset)
+
+    view = YesNoMenu(ctx.author.id)
+    if item is not None:
+        for warning in item['warnings']:
+            if warning['Guild'] == ctx.guild.id:
+                if warning['Type'] == "BOLO":
+                    await invisEmbed(ctx, 'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?', view = view)
+                    await view.wait()
+                    if view.value is True:
+                        continue
+                    else:
+                        return await invisEmbed(ctx, 'Successfully cancelled.')
 
     success = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Warning Logged",
@@ -4433,6 +4457,7 @@ async def shift_leaderboard(ctx):
                                         item['total_seconds'] = item['total_seconds'] + total_seconds
             else:
                 all_staff.append({'id': document['_id'], "total_seconds": int(document['totalSeconds'])})
+
     if len(all_staff) == 0:
         return await invisEmbed(ctx, 'No shifts were made in your server.')
     for item in all_staff:
