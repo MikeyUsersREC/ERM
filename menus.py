@@ -212,6 +212,8 @@ class ShiftModify(discord.ui.View):
         self.value = "void"
         await interaction.edit_original_response(view=self)
         self.stop()
+
+
 class LOAMenu(discord.ui.View):
     def __init__(self, bot, roles, loa_role, user_id):
         super().__init__()
@@ -223,8 +225,6 @@ class LOAMenu(discord.ui.View):
             self.roles = [roles]
         self.loa_role = loa_role
         self.user_id = user_id
-
-
 
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.
@@ -239,8 +239,7 @@ class LOAMenu(discord.ui.View):
                     if item.label == 'Deny':
                         self.children.remove(item)
                     if item.label == "Accept":
-                        item.name = "Accepted"
-
+                        item.label = "Accepted"
 
                 s_loa = None
                 for loa in await self.bot.loas.get_all():
@@ -279,7 +278,7 @@ class LOAMenu(discord.ui.View):
                     if item.label == 'Accept':
                         self.children.remove(item)
                     if item.label == "Deny":
-                        item.name = "Denied"
+                        item.label = "Denied"
 
                 s_loa = None
                 for loa in await self.bot.loas.get_all():
@@ -308,6 +307,31 @@ class LOAMenu(discord.ui.View):
                 continue
 
 
+class AddReminder(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+    @discord.ui.button(label='Create a reminder', style=discord.ButtonStyle.green)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        await interaction.edit_original_response(view=self)
+        self.value = "create"
+        self.stop()
+
+class RemoveReminder(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+    @discord.ui.button(label="Delete a reminder", style=discord.ButtonStyle.danger)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        await interaction.edit_original_response(view=self)
+        self.value = "delete"
+        self.stop()
 
 class RemoveWarning(discord.ui.View):
     def __init__(self, user_id):
@@ -354,6 +378,8 @@ class RemoveWarning(discord.ui.View):
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
+
+
 class RemoveWarning(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
@@ -399,6 +425,7 @@ class RemoveWarning(discord.ui.View):
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
+
 
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):

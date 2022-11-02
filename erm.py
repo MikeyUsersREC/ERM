@@ -10,10 +10,12 @@ import motor.motor_asyncio
 import pytz
 import requests
 from snowflake import SnowflakeGenerator
+from snowflake import SnowflakeGenerator
 import DiscordUtils
 import sentry_sdk
 from sentry_sdk import capture_exception, push_scope
-from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify
+from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
+    AddReminder, RemoveReminder
 from utils.mongo import Document
 from roblox import client as roblox
 from discord import app_commands
@@ -62,6 +64,7 @@ intents.message_content = True
 intents.members = True
 intents.voice_states = True
 
+
 class AutoShardedBot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [459374864067723275]:  # Implement your own conditions here
@@ -69,6 +72,7 @@ class AutoShardedBot(commands.AutoShardedBot):
 
         # Else fall back to the original
         return await super().is_owner(user)
+
 
 bot = AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
 bot.is_synced = False
@@ -95,6 +99,7 @@ async def on_ready():
         update_bot_status.start()
         GDPR.start()
         check_loa.start()
+        check_reminders.start()
         bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
         if environment == 'DEVELOPMENT':
             bot.db = bot.mongo['beta']
@@ -110,6 +115,7 @@ async def on_ready():
         bot.errors = Document(bot.db, "errors")
         bot.shift_storage = Document(bot.db, "shift_storage")
         bot.loas = Document(bot.db, "leave_of_absences")
+        bot.reminders = Document(bot.db, "reminders")
         bot.error_list = []
         logging.info('Connected to MongoDB!')
 
@@ -313,6 +319,7 @@ async def change_status():
     chosen = chosen[4:]
     await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=chosen))
 
+
 # status change discord.ext.tasks
 @tasks.loop(seconds=30)
 async def update_bot_status():
@@ -390,6 +397,38 @@ async def GDPR():
 
 
 @tasks.loop(minutes=1)
+async def check_reminders():
+    for guildObj in await bot.reminders.get_all():
+        for item in guildObj['reminders']:
+            dT = datetime.datetime.now()
+            interval = item['interval']
+            full = None
+            num = None
+
+            tD = dT + datetime.timedelta(seconds=interval)
+
+            if tD.timestamp() - item['lastTriggered'] >= interval:
+                guild = bot.get_guild(int(guildObj['_id']))
+                channel = guild.get_channel(int(item['channel']))
+                roles = []
+                try:
+                    for role in item['role']:
+                        roles.append(guild.get_role(int(role)).mention)
+                except:
+                    roles = [""]
+
+                embed = discord.Embed(
+                    title="<:Clock:1035308064305332224> Notification",
+                    description=f"{item['message']}",
+                    color=0x2E3136
+                )
+                lastTriggered = tD.timestamp()
+                item['lastTriggered'] = lastTriggered
+                await bot.reminders.update_by_id(guildObj)
+                await channel.send(" ".join(roles), embed=embed)
+
+
+@tasks.loop(minutes=1)
 async def check_loa():
     loas = bot.loas
 
@@ -411,12 +450,13 @@ async def check_loa():
                 if "loa_role" in settings['staff_management']:
                     try:
                         if isinstance(settings['staff_management']['loa_role'], int):
-                            roles = [ discord.utils.get(guild.roles, id=settings['staff_management']['loa_role']) ]
+                            roles = [discord.utils.get(guild.roles, id=settings['staff_management']['loa_role'])]
                         elif isinstance(settings['staff_management']['loa_role'], list):
-                            roles = [ discord.utils.get(guild.roles, id=role) for role in settings['staff_management']['loa_role'] ]
+                            roles = [discord.utils.get(guild.roles, id=role) for role in
+                                     settings['staff_management']['loa_role']]
                     except:
                         pass
-            if roles is not [ None ]:
+            if roles is not [None]:
                 for role in roles:
                     if role in member.roles:
                         await member.remove_roles(role)
@@ -921,14 +961,24 @@ async def config(ctx):
     except:
         kick_channel = 'None'
 
+    try:
+        loa_role = ctx.guild.get_role(settingContents['staff_management']['loa_role']).mention
+    except:
+        loa_role = 'None'
+
+    try:
+        ra_role = ctx.guild.get_role(settingContents['staff_management']['ra_role']).mention
+    except:
+        ra_role = 'None'
+
     embed = discord.Embed(
-        title='Server Configuration',
-        description='Here are the current settings for this server.',
+        title='<:support:1035269007655321680> Server Configuration',
+        description=f'<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:',
         color=await generate_random(ctx)
     )
     embed.add_field(
-        name='Verification',
-        value='Enabled: {}\nRole: {}'
+        name='<:SettingIcon:1035353776460152892>Verification',
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
         .format(
             settingContents['verification']['enabled'],
             verification_role
@@ -937,8 +987,8 @@ async def config(ctx):
     )
 
     embed.add_field(
-        name='Anti-ping',
-        value='Enabled: {}\nRole: {}\nBypass Role: {}'
+        name='<:MessageIcon:1035321236793860116> Anti-ping',
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}'
         .format(
             settingContents['antiping']['enabled'],
             antiping_role,
@@ -948,19 +998,21 @@ async def config(ctx):
     )
 
     embed.add_field(
-        name='Staff Management',
-        value='Enabled: {}\nChannel: {}\nStaff Role: {}\nManagement Role: {}'
+        name='<:staff:1035308057007230976> Staff Management',
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Staff Role:** {}\n<:ArrowRightW:1035023450592514048>**Management Role:** {}\n<:ArrowRightW:1035023450592514048>**LOA Role:** {}\n<:ArrowRightW:1035023450592514048>**RA Role:** {}'
         .format(
             settingContents['staff_management']['enabled'],
             staff_management_channel,
             staff_role,
-            management_role
+            management_role,
+            loa_role,
+            ra_role
         ),
         inline=False
     )
     embed.add_field(
-        name='Punishments',
-        value='Enabled: {}\nChannel: {}'
+        name='<:MalletWhite:1035258530422341672> Punishments',
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}'
         .format(
             settingContents['punishments']['enabled'],
             punishments_channel
@@ -968,8 +1020,8 @@ async def config(ctx):
         inline=False
     )
     embed.add_field(
-        name='Shift Management',
-        value='Enabled: {}\nChannel: {}\nRole: {}'
+        name='<:Search:1035353785184288788> Shift Management',
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
         .format(
             settingContents['shift_management']['enabled'],
             shift_management_channel,
@@ -978,8 +1030,8 @@ async def config(ctx):
         inline=False
     )
     embed.add_field(
-        name='Customisation',
-        value='Color: {}\nPrefix: `{}`\nBrand Name: {}\nThumbnail URL: {}\nFooter Text: {}\nBan Channel: {}\nKick Channel: {}'
+        name='<:FlagIcon:1035258525955395664> Customisation',
+        value='<:ArrowRightW:1035023450592514048>**Color:** {}\n<:ArrowRightW:1035023450592514048>**Prefix:** `{}`\n<:ArrowRightW:1035023450592514048>**Brand Name:** {}\n<:ArrowRightW:1035023450592514048>**Thumbnail URL:** {}\n<:ArrowRightW:1035023450592514048>**Footer Text:** {}\n<:ArrowRightW:1035023450592514048>**Ban Channel:** {}\n<:ArrowRightW:1035023450592514048>**Kick Channel:** {}'
         .format(
             settingContents['customisation']['color'],
             settingContents['customisation']['prefix'],
@@ -1082,7 +1134,7 @@ async def viewconfig(ctx):
     )
     embed.add_field(
         name='<:SettingIcon:1035353776460152892>Verification',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n**Role:** {}'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
         .format(
             settingContents['verification']['enabled'],
             verification_role
@@ -1513,7 +1565,8 @@ async def warn(ctx, user, *, reason):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                     value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
     embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Warning",
@@ -1541,7 +1594,9 @@ async def warn(ctx, user, *, reason):
         for warning in item['warnings']:
             if warning['Guild'] == ctx.guild.id:
                 if warning['Type'] == "BOLO":
-                    await invisEmbed(ctx, 'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?', view = view)
+                    await invisEmbed(ctx,
+                                     'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?',
+                                     view=view)
                     await view.wait()
                     if view.value is True:
                         continue
@@ -1691,7 +1746,8 @@ async def kick(ctx, user, *, reason):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                     value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
     embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Kick",
@@ -1854,7 +1910,8 @@ async def ban(ctx, user, *, reason):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                     value=f"<:ArrowRightW:1035023450592514048> {EmbedMsg.embeds[0].title}", inline=False)
     embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> Ban",
@@ -1909,7 +1966,8 @@ async def mlog(ctx, *, message):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:MessageIcon:1035321236793860116> Message", value=message, inline=False)
 
     if not configItem['staff_management']['channel'] is None:
@@ -2090,7 +2148,8 @@ async def tempban(ctx, user, time: str, *, reason):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                     value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
     embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
@@ -2628,7 +2687,8 @@ async def help(ctx, *, command=None):
             "Miscellaneous": "<:QMark:1035308059532202104>",
             "Search": "<:Search:1035353785184288788>",
             "Utility": "<:SettingIcon:1035353776460152892>",
-            "Shift Management": "<:Clock:1035308064305332224>"
+            "Shift Management": "<:Clock:1035308064305332224>",
+            "Reminders": "<:Resume:1035269012445216858>"
         }
 
         for command in bot.walk_commands():
@@ -2642,7 +2702,8 @@ async def help(ctx, *, command=None):
                 if command.hidden:
                     continue
                 if command.parent is not None:
-                    if isinstance(command.parent, discord.ext.commands.core.Group) and not command.parent.name == "jishaku" and not command.parent.name == "jsk":
+                    if isinstance(command.parent,
+                                  discord.ext.commands.core.Group) and not command.parent.name == "jishaku" and not command.parent.name == "jsk":
                         if command.parent.name not in ['voice']:
                             command.full_name = f"{command.parent.name} {command.name}"
                         else:
@@ -2738,8 +2799,9 @@ async def duty(ctx):
 async def bolo(ctx):
     pass
 
+
 @bolo.command(
-    name = "create",
+    name="create",
     aliases=["add"],
     description="Create a BOLO. [Punishments]",
     with_app_command=True
@@ -2868,7 +2930,8 @@ async def bolo_create(ctx, user, *, reason):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}", inline=False)
+                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                    inline=False)
     embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                     value=f"<:ArrowRightW:1035023450592514048> {EmbedMsg.embeds[0].title}", inline=False)
     embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> BOLO",
@@ -2898,6 +2961,7 @@ async def bolo_create(ctx, user, *, reason):
     await EmbedMsg.edit(embed=success)
     await channel.send(embed=embed)
 
+
 @bolo.command(
     name="lookup",
     aliases=["search", "find"],
@@ -2908,8 +2972,10 @@ async def bolo_create(ctx, user, *, reason):
 async def bolo_lookup(ctx, *, user: str):
     data = requests.get(f'https://api.roblox.com/users/get-by-username?username={user}')
     if 'Id' not in data.json().keys():
-        return await invisEmbed('This user does not exist on the Roblox platform. Please try again with a valid username.')
-    Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(data.json()['Id'])
+        return await invisEmbed(
+            'This user does not exist on the Roblox platform. Please try again with a valid username.')
+    Headshot_URL = "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
+        data.json()['Id'])
     if not await bot.warnings.find_by_id(user.lower()):
         return await invisEmbed(ctx, f'**{user}** does not have any BOLOs.')
 
@@ -2923,12 +2989,12 @@ async def bolo_lookup(ctx, *, user: str):
     for warningItem in dataItem['warnings']:
         if warningItem['Type'] == "BOLO" and warningItem['Guild'] == ctx.guild.id:
             Embed.add_field(name="<:WarningIcon:1035258528149033090> BOLO",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {warningItem['Reason']}\n<:ArrowRightW:1035023450592514048> **Type:** {warningItem['Type']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {warningItem['Moderator'][0]}\n<:ArrowRightW:1035023450592514048> **Time:** {warningItem['Time']}\n<:ArrowRightW:1035023450592514048> **ID:** {warningItem['id']}", inline=False)
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {warningItem['Reason']}\n<:ArrowRightW:1035023450592514048> **Type:** {warningItem['Type']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {warningItem['Moderator'][0]}\n<:ArrowRightW:1035023450592514048> **Time:** {warningItem['Time']}\n<:ArrowRightW:1035023450592514048> **ID:** {warningItem['id']}",
+                            inline=False)
     try:
         await ctx.send(embeds=Embeds)
     except:
         return await invisEmbed(ctx, f'**{user}** does not have any BOLOs.')
-
 
 
 @duty.command(
@@ -2953,10 +3019,16 @@ async def dutyon(ctx):
 
     if not configItem['shift_management']['enabled']:
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
-        return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
 
     if await bot.shifts.find_by_id(ctx.author.id):
-        return await invisEmbed(ctx, 'You are already on duty.')
+        if 'data' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+            var = (await bot.shifts.find_by_id(ctx.author.id))['data']
+            for item in var:
+                if item['guild'] == ctx.guild.id:
+                    return await invisEmbed(ctx, 'You are already on duty.')
+        elif 'guild' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+            if (await bot.shifts.find_by_id(ctx.author.id))['guild'] == ctx.guild.id:
+                return await invisEmbed(ctx, 'You are already on duty.')
 
     embed = discord.Embed(
         title=ctx.author.name,
@@ -2982,12 +3054,47 @@ async def dutyon(ctx):
         inline=False
     )
 
-    await bot.shifts.insert({
-        '_id': ctx.author.id,
-        'name': ctx.author.name,
-        'startTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
-        'guild': ctx.guild.id
-    })
+    try:
+        await bot.shifts.insert({
+            '_id': ctx.author.id,
+            'name': ctx.author.name,
+            'data': [
+                {
+                    "guild": ctx.guild.id,
+                    "startTimestamp": ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                }
+            ]
+        })
+    except:
+        if await bot.shifts.find_by_id(ctx.author.id):
+            shift = await bot.shifts.find_by_id(ctx.author.id)
+            if 'data' in shift.keys():
+                newData = shift['data']
+                newData.append({
+                    "guild": ctx.guild.id,
+                    "startTimestamp": ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                })
+                await bot.shifts.update_by_id({
+                    '_id': ctx.author.id,
+                    'name': ctx.author.name,
+                    'data': newData
+                })
+            elif 'data' not in shift.keys():
+                await bot.shifts.update_by_id({
+                    '_id': ctx.author.id,
+                    'name': ctx.author.name,
+                    'data': [
+                        {
+                            "guild": ctx.guild.id,
+                            "startTimestamp": ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                        },
+                        {
+                            "guild": shift['guild'],
+                            "startTimestamp": shift['startTimestamp'],
+
+                        }
+                    ]
+                })
 
     await shift_channel.send(embed=embed)
 
@@ -3061,6 +3168,8 @@ async def bolo_void(ctx, id: str):
     if view.value:
         parent_item['warnings'].remove(selected_item)
         await bot.warnings.update_by_id(parent_item)
+
+
 @duty.command(
     name="off",
     description="Allows for you to clock out. [Shift Management]",
@@ -3087,8 +3196,17 @@ async def dutyoff(ctx):
     global_check = 0
     shift = None
 
-    if await bot.shifts.find_by_id(ctx.author.id):
-        global_check = 1
+    tempShift = await bot.shifts.find_by_id(ctx.author.id)
+    if tempShift:
+        if 'data' in tempShift.keys():
+            if isinstance(tempShift['data'], list):
+                for item in tempShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        global_check = 1
+                        break
+        elif "guild" in tempShift.keys():
+            if tempShift['guild'] == ctx.guild.id:
+                global_check += 1
     else:
         global_check = 0
 
@@ -3099,7 +3217,17 @@ async def dutyoff(ctx):
         return await invisEmbed(ctx, 'You have no concurrent shifts! Please clock in before clocking out.')
 
     if global_check == 1:
-        shift = await bot.shifts.find_by_id(ctx.author.id)
+        tempShift = await bot.shifts.find_by_id(ctx.author.id)
+        if tempShift:
+            if 'data' in tempShift.keys():
+                if isinstance(tempShift['data'], list):
+                    for item in tempShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            shift = item
+                            break
+            elif "guild" in tempShift.keys():
+                if tempShift['guild'] == ctx.guild.id:
+                    shift = tempShift
 
     embed = discord.Embed(
         title=ctx.author.name,
@@ -3185,7 +3313,15 @@ async def dutyoff(ctx):
 
                 })
 
-    await bot.shifts.delete_by_id(ctx.author.id)
+    if await bot.shifts.find_by_id(ctx.author.id):
+        dataShift = await bot.shifts.find_by_id(ctx.author.id)
+        if 'data' in dataShift.keys():
+            if isinstance(dataShift['data'], list):
+                for item in dataShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        dataShift['data'].remove(item)
+                        break
+        await bot.shifts.update_by_id(dataShift)
 
     role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
 
@@ -3205,7 +3341,7 @@ async def dutytime(ctx):
     if configItem is None:
         return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
 
-    if configItem['shift_management']['enabled'] == False:
+    if not configItem['shift_management']['enabled']:
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
@@ -3214,14 +3350,23 @@ async def dutytime(ctx):
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
 
-    if configItem['shift_management']['enabled'] == False:
+    if not configItem['shift_management']['enabled']:
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
 
     global_check = 0
     shift = None
 
-    if await bot.shifts.find_by_id(ctx.author.id):
-        global_check = 1
+    tempShift = await bot.shifts.find_by_id(ctx.author.id)
+    if tempShift:
+        if 'data' in tempShift.keys():
+            if isinstance(tempShift['data'], list):
+                for item in tempShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        global_check = 1
+                        break
+        elif "guild" in tempShift.keys():
+            if tempShift['guild'] == ctx.guild.id:
+                global_check += 1
     else:
         global_check = 0
 
@@ -3233,7 +3378,17 @@ async def dutytime(ctx):
                                 'You have no concurrent shifts! Please clock in before requesting shift estimation.')
 
     if global_check == 1:
-        shift = await bot.shifts.find_by_id(ctx.author.id)
+        tempShift = await bot.shifts.find_by_id(ctx.author.id)
+        if tempShift:
+            if 'data' in tempShift.keys():
+                if isinstance(tempShift['data'], list):
+                    for item in tempShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            shift = item
+                            break
+            elif "guild" in tempShift.keys():
+                if tempShift['guild'] == ctx.guild.id:
+                    shift = tempShift
 
     embed = discord.Embed(
         title=ctx.author.name,
@@ -3265,7 +3420,7 @@ async def dutyvoid(ctx):
     if configItem is None:
         return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
 
-    if configItem['shift_management']['enabled'] == False:
+    if not configItem['shift_management']['enabled']:
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
@@ -3274,14 +3429,23 @@ async def dutyvoid(ctx):
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
 
-    if configItem['shift_management']['enabled'] == False:
+    if not configItem['shift_management']['enabled']:
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
 
     global_check = 0
     shift = None
 
-    if await bot.shifts.find_by_id(ctx.author.id):
-        global_check = 1
+    tempShift = await bot.shifts.find_by_id(ctx.author.id)
+    if tempShift:
+        if 'data' in tempShift.keys():
+            if isinstance(tempShift['data'], list):
+                for item in tempShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        global_check = 1
+                        break
+        elif "guild" in tempShift.keys():
+            if tempShift['guild'] == ctx.guild.id:
+                global_check += 1
     else:
         global_check = 0
 
@@ -3292,7 +3456,17 @@ async def dutyvoid(ctx):
         return await invisEmbed(ctx,
                                 'You have no concurrent shifts! Please clock in before requesting shift cancelling.')
     if global_check == 1:
-        shift = await bot.shifts.find_by_id(ctx.author.id)
+        tempShift = await bot.shifts.find_by_id(ctx.author.id)
+        if tempShift:
+            if 'data' in tempShift.keys():
+                if isinstance(tempShift['data'], list):
+                    for item in tempShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            shift = item
+                            break
+            elif "guild" in tempShift.keys():
+                if tempShift['guild'] == ctx.guild.id:
+                    shift = tempShift
 
     view = YesNoMenu(ctx.author.id)
     embed = discord.Embed(
@@ -3341,7 +3515,17 @@ async def dutyvoid(ctx):
 
     embed.set_footer(text='Staff Logging Module')
 
-    await bot.shifts.delete_by_id(ctx.author.id)
+    if await bot.shifts.find_by_id(ctx.author.id):
+        dataShift = await bot.shifts.find_by_id(ctx.author.id)
+        if 'data' in dataShift.keys():
+            if isinstance(dataShift['data'], list):
+                for item in dataShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        dataShift['data'].remove(item)
+                        break
+            await bot.shifts.update_by_id(dataShift)
+        else:
+            await bot.shifts.delete_by_id(dataShift)
 
     try:
         role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
@@ -3383,8 +3567,17 @@ async def forcevoid(ctx, member: discord.Member):
     global_check = 0
     shift = None
 
-    if await bot.shifts.find_by_id(member.id):
-        global_check = 1
+    tempShift = await bot.shifts.find_by_id(member.id)
+    if tempShift:
+        if 'data' in tempShift.keys():
+            if isinstance(tempShift['data'], list):
+                for item in tempShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        global_check = 1
+                        break
+        elif "guild" in tempShift.keys():
+            if tempShift['guild'] == ctx.guild.id:
+                global_check += 1
     else:
         global_check = 0
 
@@ -3395,7 +3588,17 @@ async def forcevoid(ctx, member: discord.Member):
         return await invisEmbed(ctx,
                                 f'{member.display_name} has no concurrent shifts! Please get them to clock in before requesting shift cancelling.')
     if global_check == 1:
-        shift = await bot.shifts.find_by_id(member.id)
+        tempShift = await bot.shifts.find_by_id(member.id)
+        if tempShift:
+            if 'data' in tempShift.keys():
+                if isinstance(tempShift['data'], list):
+                    for item in tempShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            shift = item
+                            break
+            elif "guild" in tempShift.keys():
+                if tempShift['guild'] == ctx.guild.id:
+                    shift = tempShift
 
     view = YesNoMenu(ctx.author.id)
     embed = discord.Embed(
@@ -3444,7 +3647,17 @@ async def forcevoid(ctx, member: discord.Member):
 
     embed.set_footer(text='Staff Logging Module')
 
-    await bot.shifts.delete_by_id(ctx.author.id)
+    if await bot.shifts.find_by_id(ctx.author.id):
+        dataShift = await bot.shifts.find_by_id(ctx.author.id)
+        if 'data' in dataShift.keys():
+            if isinstance(dataShift['data'], list):
+                for item in dataShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        dataShift['data'].remove(item)
+                        break
+            await bot.shifts.update_by_id(dataShift)
+        else:
+            await bot.shifts.delete_by_id(dataShift)
 
     try:
         role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
@@ -3457,6 +3670,7 @@ async def forcevoid(ctx, member: discord.Member):
     if role:
         if role in ctx.author.roles:
             await ctx.author.remove_roles(role)
+
 
 @duty.command(
     name="modify",
@@ -3485,8 +3699,17 @@ async def modify(ctx, member: discord.Member):
     global_check = 0
     shift = None
 
-    if await bot.shifts.find_by_id(member.id):
-        global_check = 1
+    tempShift = await bot.shifts.find_by_id(member.id)
+    if tempShift:
+        if 'data' in tempShift.keys():
+            if isinstance(tempShift['data'], list):
+                for item in tempShift['data']:
+                    if item['guild'] == ctx.guild.id:
+                        global_check = 1
+                        break
+        elif "guild" in tempShift.keys():
+            if tempShift['guild'] == ctx.guild.id:
+                global_check += 1
     else:
         global_check = 0
 
@@ -3497,7 +3720,17 @@ async def modify(ctx, member: discord.Member):
         return await invisEmbed(ctx,
                                 f'{member.display_name} has no concurrent shifts! Please get them to clock in before requesting shift cancelling.')
     if global_check == 1:
-        shift = await bot.shifts.find_by_id(member.id)
+        tempShift = await bot.shifts.find_by_id(member.id)
+        if tempShift:
+            if 'data' in tempShift.keys():
+                if isinstance(tempShift['data'], list):
+                    for item in tempShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            shift = item
+                            break
+            elif "guild" in tempShift.keys():
+                if tempShift['guild'] == ctx.guild.id:
+                    shift = tempShift
 
     view = ShiftModify(ctx.author.id)
     embed = discord.Embed(
@@ -3521,8 +3754,10 @@ async def modify(ctx, member: discord.Member):
             value="<:ArrowRight:1035003246445596774> Clocking out.",
             inline=False
         )
-        print(str(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None)))
-        print(td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None)))
+        print(str(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+            shift['startTimestamp']).replace(tzinfo=None)))
+        print(td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+            shift['startTimestamp']).replace(tzinfo=None)))
         print(ctx.message.created_at.replace(tzinfo=None))
         print(datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None))
         embed.add_field(
@@ -3596,7 +3831,17 @@ async def modify(ctx, member: discord.Member):
 
                     })
 
-        await bot.shifts.delete_by_id(member.id)
+        if await bot.shifts.find_by_id(member.id):
+            dataShift = await bot.shifts.find_by_id(member.id)
+            if 'data' in dataShift.keys():
+                if isinstance(dataShift['data'], list):
+                    for item in dataShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            dataShift['data'].remove(item)
+                            break
+                await bot.shifts.update_by_id(dataShift)
+            else:
+                await bot.shifts.delete_by_id(dataShift)
 
         role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
 
@@ -3633,7 +3878,17 @@ async def modify(ctx, member: discord.Member):
 
         embed.set_footer(text='Staff Logging Module')
 
-        await bot.shifts.delete_by_id(member.id)
+        if await bot.shifts.find_by_id(member.id):
+            dataShift = await bot.shifts.find_by_id(member.id)
+            if 'data' in dataShift.keys():
+                if isinstance(dataShift['data'], list):
+                    for item in dataShift['data']:
+                        if item['guild'] == ctx.guild.id:
+                            dataShift['data'].remove(item)
+                            break
+                await bot.shifts.update_by_id(dataShift)
+            else:
+                await bot.shifts.delete_by_id(dataShift)
 
         try:
             role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
@@ -3657,7 +3912,7 @@ async def modify(ctx, member: discord.Member):
             if content.endswith('s'):
                 full = "seconds"
                 num = int(content[:-1])
-                tD = dT -  datetime.timedelta(seconds=num)
+                tD = dT - datetime.timedelta(seconds=num)
             if content.endswith('m'):
                 full = "minutes"
                 num = int(content[:-1])
@@ -3673,7 +3928,17 @@ async def modify(ctx, member: discord.Member):
             newTimestamp = tD.timestamp()
             shift['startTimestamp'] = newTimestamp
 
-            await bot.shifts.update_by_id(shift)
+            if await bot.shifts.find_by_id(member.id):
+                dataShift = await bot.shifts.find_by_id(member.id)
+                if 'data' in dataShift.keys():
+                    if isinstance(dataShift['data'], list):
+                        for item in dataShift['data']:
+                            if item['guild'] == ctx.guild.id:
+                                item = shift
+                                break
+                    await bot.shifts.update_by_id(dataShift)
+                else:
+                    await bot.shifts.update_by_id(shift)
             successEmbed = discord.Embed(
                 title="<:CheckIcon:1035018951043842088> Added time",
                 description=f"<:ArrowRight:1035003246445596774> **{num} {full}** have been added to {member.display_name}'s shift.",
@@ -3686,7 +3951,8 @@ async def modify(ctx, member: discord.Member):
         timestamp = shift['startTimestamp']
         dT = datetime.datetime.fromtimestamp(timestamp)
         tD = None
-        content = (await requestResponse(ctx, "How much time would you like to remove from the shift? (s/m/h/d)")).content
+        content = (
+            await requestResponse(ctx, "How much time would you like to remove from the shift? (s/m/h/d)")).content
         content = content.strip()
         if content.endswith(('s', 'm', 'h', 'd')):
             full = None
@@ -3708,7 +3974,17 @@ async def modify(ctx, member: discord.Member):
                 tD = dT + datetime.timedelta(days=num)
             newTimestamp = tD.timestamp()
             shift['startTimestamp'] = newTimestamp
-            await bot.shifts.update_by_id(shift)
+            if await bot.shifts.find_by_id(member.id):
+                dataShift = await bot.shifts.find_by_id(member.id)
+                if 'data' in dataShift.keys():
+                    if isinstance(dataShift['data'], list):
+                        for item in dataShift['data']:
+                            if item['guild'] == ctx.guild.id:
+                                item = shift
+                                break
+                    await bot.shifts.update_by_id(dataShift)
+                else:
+                    await bot.shifts.update_by_id(shift)
             successEmbed = discord.Embed(
                 title="<:CheckIcon:1035018951043842088> Added time",
                 description=f"<:ArrowRight:1035003246445596774> **{num} {full}** have been added to {member.display_name}'s shift.",
@@ -3718,6 +3994,7 @@ async def modify(ctx, member: discord.Member):
 
         else:
             return await invisEmbed(ctx, "Invalid time format. (e.g. 120m)")
+
 
 @duty.autocomplete('setting')
 async def autocomplete_callback(interaction: discord.Interaction, current: str):
@@ -3732,7 +4009,6 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
     ]
 
 
-
 @bot.hybrid_group(
     name='loa',
     description='File a Leave of Absence request [Staff Management]',
@@ -3740,6 +4016,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
 )
 async def loa(ctx, time, *, reason):
     pass
+
 
 @loa.command(
     name='request',
@@ -3848,6 +4125,7 @@ async def loarequest(ctx, time, *, reason):
     )
     await ctx.send(embed=successEmbed)
 
+
 @loa.command(
     name='void',
     description='Cancel a Leave of Absence request [Staff Management]',
@@ -3909,6 +4187,7 @@ async def loavoid(ctx, user: discord.Member = None):
 )
 async def ra(ctx, time, *, reason):
     pass
+
 
 @ra.command(
     name='request',
@@ -4017,6 +4296,7 @@ async def rarequest(ctx, time, *, reason):
     )
     await ctx.send(embed=successEmbed)
 
+
 @ra.command(
     name='void',
     description='Cancel a Reduced Activity request [Staff Management]',
@@ -4071,7 +4351,6 @@ async def loavoid(ctx, user: discord.Member = None):
         return await invisEmbed(ctx, 'Cancelled.')
 
 
-
 # context menus
 @bot.tree.context_menu(name='Force end shift')
 @is_management()
@@ -4094,7 +4373,17 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
     if shift is None:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.', ephemeral=True)
-    if shift['guild'] != interaction.guild.id:
+
+    if 'data' in shift.keys():
+        in_guild = False
+        for guild in shift['data']:
+            if guild['guild'] == interaction.guild.id:
+                in_guild = True
+                break
+
+        if in_guild == False:
+            return await int_invisEmbed(interaction, 'This member is not currently on shift.', ephemeral=True)
+    elif shift['guild'] != interaction.guild.id:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.', ephemeral=True)
 
     view = YesNoMenu(interaction.user.id)
@@ -4166,7 +4455,17 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
         await interaction.edit_original_response(embed=successEmbed)
         logging.info(await bot.warnings.find_by_id(member.id))
-        await bot.shifts.delete_by_id(member.id)
+        if await bot.shifts.find_by_id(member.id):
+            dataShift = await bot.shifts.find_by_id(member.id)
+            if 'data' in dataShift.keys():
+                if isinstance(dataShift['data'], list):
+                    for item in dataShift['data']:
+                        if item['guild'] == interaction.guild.id:
+                            dataShift['data'].remove(item)
+                            break
+                await bot.shifts.update_by_id(dataShift)
+            else:
+                await bot.shifts.delete_by_id(member.id)
         await shift_channel.send(embed=embed)
 
         role = discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])
@@ -4175,6 +4474,163 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
             if role in member.roles:
                 await member.remove_roles(role)
 
+
+@bot.hybrid_group(
+    name='reminders'
+)
+@is_management()
+async def reminders(ctx):
+    pass
+
+
+@reminders.command(
+    name="add",
+    description="Add a reminder. [Reminders]",
+)
+@is_management()
+async def add(ctx):
+    Data = await bot.reminders.find_by_id(ctx.guild.id)
+    if Data is None:
+        Data = {
+            '_id': ctx.guild.id,
+            "reminders": []
+        }
+
+    embed = discord.Embed(title="<:Resume:1035269012445216858> Add a reminder", color=0x2E3136)
+    for item in Data['reminders']:
+        embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
+                        value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']}s\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                        inline=False)
+
+    if len(embed.fields) == 0:
+        embed.add_field(name="<:Clock:1035308064305332224> No reminders",
+                        value="<:ArrowRightW:1035023450592514048> No reminders have been added.", inline=False)
+
+    view = AddReminder(ctx.author.id)
+
+    await ctx.send(embed=embed, view=view)
+    await view.wait()
+
+    if view.value == "create":
+        name = (await requestResponse(ctx,
+                                      "What would you like to name this reminder?")).content
+
+        time = (await requestResponse(ctx,
+                                      "What would you like you like the interval to be? (e.g. 5m)")).content
+
+        if time.endswith('s'):
+            time = int(removesuffix(time, 's'))
+        elif time.endswith('m'):
+            time = int(removesuffix(time, 'm')) * 60
+        elif time.endswith('h'):
+            time = int(removesuffix(time, 'h')) * 60 * 60
+        elif time.endswith('d'):
+            time = int(removesuffix(time, 'd')) * 60 * 60 * 24
+        elif time.endswith('w'):
+            time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+        else:
+            return await invisEmbed(ctx, 'You have not provided a correct suffix. (s/m/h/d)')
+
+        message = (await requestResponse(ctx,
+                                         "What would you like you like the message to be? (e.g. `Get Active!`)")).content
+
+        channel = (await requestResponse(ctx,
+                                         "What would you like you like the channel to be in? (e.g. `#general`)")).content
+
+        view = YesNoMenu(ctx.author.id)
+        question = 'Do you want a role to be mentioned?'
+        embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
+        await ctx.send(embed=embed, view=view)
+        await view.wait()
+        if view.value is not None:
+            if view.value:
+                role = (await requestResponse(ctx,
+                                                 'What role would you like to be mentioned?')).content
+                if ',' in role:
+                    roleObject = []
+                    for rol in role.split(','):
+                        rol = role.strip()
+                        roleObject.append(await discord.ext.commands.RoleConverter().convert(ctx, rol))
+                else:
+                    roleObject = [await discord.ext.commands.RoleConverter().convert(ctx, role)]
+
+        try:
+            channel = await commands.TextChannelConverter().convert(ctx, channel)
+        except:
+            return await invisEmbed(ctx, 'You have not provided a correct channel.')
+
+        if roleObject:
+            Data['reminders'].append({
+                "id": next(generator),
+                "name": name,
+                "interval": time,
+                "message": message,
+                "channel": channel.id,
+                "role": [role.id for role in roleObject ],
+                "lastTriggered": 0
+            })
+        elif not role:
+            Data['reminders'].append({
+                "id": next(generator),
+                "name": name,
+                "interval": time,
+                "message": message,
+                "channel": channel.id,
+                "role": 0,
+                "lastTriggered": 0
+            })
+        await bot.reminders.upsert(Data)
+        successEmbed = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Reminder Added",
+            description="<:ArrowRight:1035003246445596774> Your reminder has been added successfully.",
+            color=0x71c15f
+        )
+        await ctx.send(embed=successEmbed)
+
+
+
+@reminders.command(
+    name="remove",
+    description="Remove a reminder. [Reminders]",
+)
+@is_management()
+async def remove(ctx):
+    Data = await bot.reminders.find_by_id(ctx.guild.id)
+    if Data is None:
+        Data = {
+            '_id': ctx.guild.id,
+            "reminders": []
+        }
+
+    embed = discord.Embed(title="<:Resume:1035269012445216858> Add a reminder", color=0x2E3136)
+    for item in Data['reminders']:
+        embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
+                        value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']}s\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                        inline=False)
+
+    if len(embed.fields) == 0:
+        embed.add_field(name="<:Clock:1035308064305332224> No reminders",
+                        value="<:ArrowRightW:1035023450592514048> No reminders have been added.", inline=False)
+
+    view = RemoveReminder(ctx.author.id)
+
+    await ctx.send(embed=embed, view=view)
+    await view.wait()
+
+    if view.value == "delete":
+        name = (await requestResponse(ctx,
+                                      "What reminder would you like to delete? (e.g. `1`)\n*Specify the ID to delete the reminder.*")).content
+
+        for item in Data['reminders']:
+            if item['id'] == int(name):
+                Data['reminders'].remove(item)
+                await bot.reminders.upsert(Data)
+                successEmbed = discord.Embed(
+                    title="<:CheckIcon:1035018951043842088> Reminder Removed",
+                    description="<:ArrowRight:1035003246445596774> Your reminder has been removed successfully.",
+                    color=0x71c15f
+                )
+                return await ctx.send(embed=successEmbed)
 
 @bot.tree.context_menu(name='Force start shift')
 @is_management()
@@ -4196,6 +4652,15 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
         return await int_invisEmbed(interaction, 'Shift management channel not found.', ephemeral=True)
 
     if shift is not None:
+        if 'data' in shift.keys():
+            in_guild = False
+            for guild in shift['data']:
+                if guild["guild"] == interaction.guild.id:
+                    in_guild = True
+
+            if in_guild == True:
+                return await int_invisEmbed(interaction, 'This member is currently on shift.', ephemeral=True)
+
         return await int_invisEmbed(interaction, 'This member is currently on shift.', ephemeral=True)
 
     view = YesNoMenu(interaction.user.id)
@@ -4216,19 +4681,53 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
         except:
             pass
 
-
         embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
                         value="<:ArrowRight:1035003246445596774> Clocking in.", inline=False)
         embed.add_field(name="<:Clock:1035308064305332224> Current Time",
                         value=f"<:ArrowRight:1035003246445596774> <t:{int(interaction.created_at.timestamp())}>",
                         inline=False)
 
-        await bot.shifts.insert({
-            '_id': member.id,
-            'name': member.name,
-            'startTimestamp': interaction.created_at.replace(tzinfo=None).timestamp(),
-            'guild': interaction.guild.id
-        })
+        try:
+            await bot.shifts.insert({
+                '_id': member.id,
+                'name': member.name,
+                'data': [
+                    {
+                        "guild": interaction.guild.id,
+                        "startTimestamp": interaction.message.created_at.replace(tzinfo=None).timestamp(),
+                    }
+                ]
+            })
+        except:
+            if await bot.shifts.find_by_id(member.id):
+                shift = await bot.shifts.find_by_id(member.id)
+                if 'data' in shift.keys():
+                    newData = shift['data']
+                    newData.append({
+                        "guild": interaction.guild.id,
+                        "startTimestamp": interaction.created_at.replace(tzinfo=None).timestamp(),
+                    })
+                    await bot.shifts.update_by_id({
+                        '_id': member.id,
+                        'name': member.name,
+                        'data': newData
+                    })
+                elif 'data' not in shift.keys():
+                    await bot.shifts.update_by_id({
+                        '_id': member.id,
+                        'name': member.name,
+                        'data': [
+                            {
+                                "guild": interaction.guild.id,
+                                "startTimestamp": interaction.created_at.replace(tzinfo=None).timestamp(),
+                            },
+                            {
+                                "guild": shift['guild'],
+                                "startTimestamp": shift['startTimestamp'],
+
+                            }
+                        ]
+                    })
 
         successEmbed = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Success!",
@@ -4257,6 +4756,14 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
                                     ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
+    if shift:
+        in_guild = False
+        if 'data' in shift.keys():
+            for item in shift['data']:
+                if item['guild'] == interaction.guild.id:
+                    in_guild = True
+                    shift = item
+
     if configItem['shift_management']['enabled'] == False:
         return await int_invisEmbed(interaction, 'Shift management is not enabled on this server.',
                                     ephemeral=True)
@@ -4267,7 +4774,7 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
 
     if shift is None:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.', ephemeral=True)
-    if shift['guild'] != interaction.guild.id:
+    if not in_guild:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.', ephemeral=True)
 
     await int_invisEmbed(interaction,
@@ -4286,6 +4793,14 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
             'The server has not been set up yet. Please run `>setup` to set up the server.', ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
+    if shift:
+        in_guild = False
+        if 'data' in shift.keys():
+            for item in shift['data']:
+                if item['guild'] == interaction.guild.id:
+                    in_guild = True
+                    shift = item
+
     if configItem['shift_management']['enabled'] == False:
         return await interaction.response.send_message('Shift management is not enabled on this server.',
                                                        ephemeral=True)
@@ -4296,7 +4811,7 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
 
     if shift is None:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.')
-    if shift['guild'] != interaction.guild.id:
+    if not in_guild:
         return await int_invisEmbed(interaction, 'This member is not currently on shift.')
 
     view = YesNoMenu(interaction.user.id)
@@ -4337,7 +4852,17 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
 
         await interaction.edit_original_response(embed=successEmbed)
         logging.info(await bot.warnings.find_by_id(member.id))
-        await bot.shifts.delete_by_id(member.id)
+        if await bot.shifts.find_by_id(member.id):
+            dataShift = await bot.shifts.find_by_id(member.id)
+            if 'data' in dataShift.keys():
+                if isinstance(dataShift['data'], list):
+                    for item in dataShift['data']:
+                        if item['guild'] == interaction.guild.id:
+                            dataShift['data'].remove(item)
+                            break
+                await bot.shifts.update_by_id(dataShift)
+            else:
+                await bot.shifts.delete_by_id(dataShift)
         await shift_channel.send(embed=embed)
 
         role = discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])
@@ -4471,9 +4996,11 @@ async def shift_leaderboard(ctx):
         member = discord.utils.get(ctx.guild.members, id=i['id'])
         if member:
             if buffer is None:
-                buffer = "%s - %s" % (f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
+                buffer = "%s - %s" % (
+                    f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
             else:
-                buffer = buffer + "\n%s - %s" % (f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
+                buffer = buffer + "\n%s - %s" % (
+                    f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
 
     bbytes = buffer.encode('utf-8')
     await ctx.send(file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
