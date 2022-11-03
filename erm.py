@@ -898,156 +898,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
 )
 @is_management()
 async def config(ctx):
-    if not await bot.settings.find_by_id(ctx.guild.id):
-        return await invisEmbed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
-
-    settingContents = await bot.settings.find_by_id(ctx.guild.id)
-
-    settingContents = await bot.settings.find_by_id(ctx.guild.id)
-
-    try:
-        verification_role = ctx.guild.get_role(settingContents['staff_management']['verification_role']).mention
-    except:
-        verification_role = 'None'
-    try:
-        shift_role = ctx.guild.get_role(settingContents['shift_management']['role']).mention
-    except:
-        shift_role = 'None'
-    try:
-        antiping_role = ctx.guild.get_role(settingContents['anti_ping']['role']).mention
-    except:
-        antiping_role = 'None'
-
-    try:
-        bypass_role = ctx.guild.get_role(settingContents['anti_ping']['bypass_role']).mention
-    except:
-        bypass_role = 'None'
-
-    # staff management channel
-    try:
-        staff_management_channel = ctx.guild.get_channel(settingContents['staff_management']['channel']).mention
-    except:
-        staff_management_channel = 'None'
-
-    try:
-        staff_role = ctx.guild.get_channel(settingContents['staff_management']['role']).mention
-    except:
-        staff_role = 'None'
-
-    try:
-        management_role = ctx.guild.get_channel(settingContents['staff_management']['management_role']).mention
-    except:
-        management_role = 'None'
-
-    # punishments channel
-    try:
-        punishments_channel = ctx.guild.get_channel(settingContents['punishments']['channel']).mention
-    except:
-        punishments_channel = 'None'
-
-    # shift management channel
-    try:
-        shift_management_channel = ctx.guild.get_channel(settingContents['shift_management']['channel']).mention
-    except:
-        shift_management_channel = 'None'
-
-    try:
-        ban_channel = ctx.guild.get_channel(settingContents['customisation']['ban_channel']).mention
-    except:
-        ban_channel = 'None'
-
-    try:
-        kick_channel = ctx.guild.get_channel(settingContents['customisation']['kick_channel']).mention
-    except:
-        kick_channel = 'None'
-
-    try:
-        loa_role = ctx.guild.get_role(settingContents['staff_management']['loa_role']).mention
-    except:
-        loa_role = 'None'
-
-    try:
-        ra_role = ctx.guild.get_role(settingContents['staff_management']['ra_role']).mention
-    except:
-        ra_role = 'None'
-
-    embed = discord.Embed(
-        title='<:support:1035269007655321680> Server Configuration',
-        description=f'<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:',
-        color=await generate_random(ctx)
-    )
-    embed.add_field(
-        name='<:SettingIcon:1035353776460152892>Verification',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
-        .format(
-            settingContents['verification']['enabled'],
-            verification_role
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name='<:MessageIcon:1035321236793860116> Anti-ping',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}'
-        .format(
-            settingContents['antiping']['enabled'],
-            antiping_role,
-            bypass_role
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name='<:staff:1035308057007230976> Staff Management',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Staff Role:** {}\n<:ArrowRightW:1035023450592514048>**Management Role:** {}\n<:ArrowRightW:1035023450592514048>**LOA Role:** {}\n<:ArrowRightW:1035023450592514048>**RA Role:** {}'
-        .format(
-            settingContents['staff_management']['enabled'],
-            staff_management_channel,
-            staff_role,
-            management_role,
-            loa_role,
-            ra_role
-        ),
-        inline=False
-    )
-    embed.add_field(
-        name='<:MalletWhite:1035258530422341672> Punishments',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}'
-        .format(
-            settingContents['punishments']['enabled'],
-            punishments_channel
-        ),
-        inline=False
-    )
-    embed.add_field(
-        name='<:Search:1035353785184288788> Shift Management',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
-        .format(
-            settingContents['shift_management']['enabled'],
-            shift_management_channel,
-            shift_role
-        ),
-        inline=False
-    )
-    embed.add_field(
-        name='<:FlagIcon:1035258525955395664> Customisation',
-        value='<:ArrowRightW:1035023450592514048>**Color:** {}\n<:ArrowRightW:1035023450592514048>**Prefix:** `{}`\n<:ArrowRightW:1035023450592514048>**Brand Name:** {}\n<:ArrowRightW:1035023450592514048>**Thumbnail URL:** {}\n<:ArrowRightW:1035023450592514048>**Footer Text:** {}\n<:ArrowRightW:1035023450592514048>**Ban Channel:** {}\n<:ArrowRightW:1035023450592514048>**Kick Channel:** {}'
-        .format(
-            settingContents['customisation']['color'],
-            settingContents['customisation']['prefix'],
-            settingContents['customisation']['brand_name'],
-            settingContents['customisation']['thumbnail_url'],
-            settingContents['customisation']['footer_text'],
-            ban_channel,
-            kick_channel
-        ),
-        inline=False
-    )
-
-    for field in embed.fields:
-        field.inline = False
-
-    await ctx.send(embed=embed)
+    await ctx.invoke(bot.get_command('config view'))
 
 
 @config.command(
@@ -1066,7 +917,13 @@ async def viewconfig(ctx):
     except:
         verification_role = 'None'
     try:
-        shift_role = ctx.guild.get_role(settingContents['shift_management']['role']).mention
+        if isinstance(settingContents['shift_management']['role'], int):
+            shift_role = ctx.guild.get_role(settingContents['shift_management']['role']).mention
+        elif isinstance(settingContents['shift_management']['role'], list):
+            shift_role = ''
+            for role in settingContents['shift_management']['role']:
+                shift_role += ctx.guild.get_role(role).mention + ', '
+            shift_role = shift_role[:-2]
     except:
         shift_role = 'None'
     try:
@@ -1086,12 +943,24 @@ async def viewconfig(ctx):
         staff_management_channel = 'None'
 
     try:
-        staff_role = ctx.guild.get_role(settingContents['staff_management']['role']).mention
+        if isinstance(settingContents['staff_management']['role'], int):
+            staff_role = ctx.guild.get_role(settingContents['staff_management']['role']).mention
+        elif isinstance(settingContents['staff_management']['role'], list):
+            staff_role = ''
+            for role in settingContents['staff_management']['role']:
+                staff_role += ctx.guild.get_role(role).mention + ', '
+            staff_role = staff_role[:-2]
     except:
         staff_role = 'None'
 
     try:
-        management_role = ctx.guild.get_role(settingContents['staff_management']['management_role']).mention
+        if isinstance(settingContents['staff_management']['management_role'], int):
+            management_role = ctx.guild.get_role(settingContents['staff_management']['management_role']).mention
+        elif isinstance(settingContents['staff_management']['management_role'], list):
+            management_role = ''
+            for role in settingContents['staff_management']['management_role']:
+                management_role += ctx.guild.get_role(role).mention + ', '
+            management_role = management_role[:-2]
     except:
         management_role = 'None'
 
@@ -1118,14 +987,26 @@ async def viewconfig(ctx):
         kick_channel = 'None'
 
     try:
-        loa_role = ctx.guild.get_role(settingContents['staff_management']['loa_role']).mention
+        if isinstance(settingContents['staff_management']['loa_role'], int):
+            loa_role = ctx.guild.get_role(settingContents['staff_management']['loa_role']).mention
+        elif isinstance(settingContents['staff_management']['loa_role'], list):
+            loa_role = ''
+            for role in settingContents['staff_management']['loa_role']:
+                loa_role += ctx.guild.get_role(role).mention + ', '
+            loa_role = loa_role[:-2]
     except:
-        loa_role = 'None'
+            loa_role = 'None'
 
     try:
-        ra_role = ctx.guild.get_role(settingContents['staff_management']['ra_role']).mention
+        if isinstance(settingContents['staff_management']['ra_role'], int):
+            ra_role = ctx.guild.get_role(settingContents['staff_management']['ra_role']).mention
+        elif isinstance(settingContents['staff_management']['ra_role'], list):
+            ra_role = ''
+            for role in settingContents['staff_management']['ra_role']:
+                ra_role += ctx.guild.get_role(role).mention + ', '
+            ra_role = ra_role[:-2]
     except:
-        ra_role = 'None'
+            ra_role = 'None'
 
     embed = discord.Embed(
         title='<:support:1035269007655321680> Server Configuration',
@@ -3012,7 +2893,6 @@ async def dutyon(ctx):
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
     except:
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
@@ -3105,11 +2985,16 @@ async def dutyon(ctx):
     )
     await ctx.send(embed=successEmbed)
 
-    role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
+    if configItem['shift_management']['role']:
+        if not isinstance(configItem['shift_management']['role'], list):
+            role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+        else:
+            role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
     if role:
-        if not role in ctx.author.roles:
-            await ctx.author.add_roles(role)
+        for rl in role:
+            if not rl in ctx.author.roles:
+                await ctx.author.add_roles(rl)
 
 
 @bolo.command(
@@ -3185,7 +3070,6 @@ async def dutyoff(ctx):
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
     except:
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
@@ -3323,11 +3207,16 @@ async def dutyoff(ctx):
                         break
         await bot.shifts.update_by_id(dataShift)
 
-    role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
+    if configItem['shift_management']['role']:
+        if not isinstance(configItem['shift_management']['role'], list):
+            role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+        else:
+            role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
     if role:
-        if role in ctx.author.roles:
-            await ctx.author.remove_roles(role)
+        for rl in role:
+            if not rl in ctx.author.roles:
+                await ctx.author.remove_roles(rl)
 
 
 @duty.command(
@@ -3345,7 +3234,6 @@ async def dutytime(ctx):
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
     except:
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
@@ -3527,17 +3415,20 @@ async def dutyvoid(ctx):
         else:
             await bot.shifts.delete_by_id(dataShift)
 
-    try:
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
-    except:
-        await invisEmbed(ctx,
-                         "There was no role set for shift management. Please set one up via `/setup` or `/config change`.")
+
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
 
+    if configItem['shift_management']['role']:
+        if not isinstance(configItem['shift_management']['role'], list):
+            role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+        else:
+            role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
+
     if role:
-        if role in ctx.author.roles:
-            await ctx.author.remove_roles(role)
+        for rl in role:
+            if not rl in ctx.author.roles:
+                await ctx.author.remove_roles(rl)
 
 
 @duty.command(
@@ -3556,7 +3447,6 @@ async def forcevoid(ctx, member: discord.Member):
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
     except:
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
@@ -3659,17 +3549,19 @@ async def forcevoid(ctx, member: discord.Member):
         else:
             await bot.shifts.delete_by_id(dataShift)
 
-    try:
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
-    except:
-        await invisEmbed(ctx,
-                         "There was no role set for shift management. Please set one up via `/setup` or `/config change`.")
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
 
+    if configItem['shift_management']['role']:
+        if not isinstance(configItem['shift_management']['role'], list):
+            role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+        else:
+            role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
+
     if role:
-        if role in ctx.author.roles:
-            await ctx.author.remove_roles(role)
+        for rl in role:
+            if not rl in ctx.author.roles:
+                await ctx.author.remove_roles(rl)
 
 
 @duty.command(
@@ -3688,7 +3580,6 @@ async def modify(ctx, member: discord.Member):
         return await invisEmbed(ctx, 'Shift management is not enabled on this server.')
     try:
         shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
     except:
         return await invisEmbed(ctx,
                                 f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
@@ -3843,11 +3734,16 @@ async def modify(ctx, member: discord.Member):
             else:
                 await bot.shifts.delete_by_id(dataShift)
 
-        role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
+        if configItem['shift_management']['role']:
+            if not isinstance(configItem['shift_management']['role'], list):
+                role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+            else:
+                role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
         if role:
-            if role in member.roles:
-                await member.remove_roles(role)
+            for rl in role:
+                if not rl in member.roles:
+                    await member.remove_roles(rl)
     elif view.value == "void":
         embed = discord.Embed(
             title=f"{member.name}#{member.discriminator}",
@@ -3890,17 +3786,20 @@ async def modify(ctx, member: discord.Member):
             else:
                 await bot.shifts.delete_by_id(dataShift)
 
-        try:
-            role = discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])
-        except:
-            await invisEmbed(ctx,
-                             "There was no role set for shift management. Please set one up via `/setup` or `/config change`.")
+
         await shift_channel.send(embed=embed)
         await msg.edit(embed=successEmbed)
 
+        if configItem['shift_management']['role']:
+            if not isinstance(configItem['shift_management']['role'], list):
+                role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+            else:
+                role = [discord.utils.get(ctx.guild.roles, id=role) for role in configItem['shift_management']['role']]
+
         if role:
-            if role in ctx.author.roles:
-                await ctx.author.remove_roles(role)
+            for rl in role:
+                if not rl in ctx.author.roles:
+                    await ctx.author.remove_roles(rl)
     elif view.value == "add":
         timestamp = shift['startTimestamp']
         dT = datetime.datetime.fromtimestamp(timestamp)
@@ -4468,11 +4367,16 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
                 await bot.shifts.delete_by_id(member.id)
         await shift_channel.send(embed=embed)
 
-        role = discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])
+        if configItem['shift_management']['role']:
+            if not isinstance(configItem['shift_management']['role'], list):
+                role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
+            else:
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
         if role:
-            if role in member.roles:
-                await member.remove_roles(role)
+            for rl in role:
+                if not rl in member.roles:
+                    await member.remove_roles(rl)
 
 
 @bot.hybrid_group(
@@ -4541,18 +4445,18 @@ async def add(ctx):
         question = 'Do you want a role to be mentioned?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
         await ctx.send(embed=embed, view=view)
+        roleObject = None
         await view.wait()
-        if view.value is not None:
-            if view.value:
-                role = (await requestResponse(ctx,
-                                                 'What role would you like to be mentioned?')).content
-                if ',' in role:
-                    roleObject = []
-                    for rol in role.split(','):
-                        rol = role.strip()
-                        roleObject.append(await discord.ext.commands.RoleConverter().convert(ctx, rol))
-                else:
-                    roleObject = [await discord.ext.commands.RoleConverter().convert(ctx, role)]
+        if view.value == True:
+            role = (await requestResponse(ctx,
+                                          'What role would you like to be mentioned?')).content
+            if ',' in role:
+                roleObject = []
+                for rol in role.split(','):
+                    rol = role.strip()
+                    roleObject.append(await discord.ext.commands.RoleConverter().convert(ctx, rol))
+            else:
+                roleObject = [await discord.ext.commands.RoleConverter().convert(ctx, role)]
 
         try:
             channel = await commands.TextChannelConverter().convert(ctx, channel)
@@ -4566,10 +4470,10 @@ async def add(ctx):
                 "interval": time,
                 "message": message,
                 "channel": channel.id,
-                "role": [role.id for role in roleObject ],
+                "role": [role.id for role in roleObject],
                 "lastTriggered": 0
             })
-        elif not role:
+        else:
             Data['reminders'].append({
                 "id": next(generator),
                 "name": name,
@@ -4586,7 +4490,6 @@ async def add(ctx):
             color=0x71c15f
         )
         await ctx.send(embed=successEmbed)
-
 
 
 @reminders.command(
@@ -4631,6 +4534,7 @@ async def remove(ctx):
                     color=0x71c15f
                 )
                 return await ctx.send(embed=successEmbed)
+
 
 @bot.tree.context_menu(name='Force start shift')
 @is_management()
@@ -4738,11 +4642,16 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 
         await shift_channel.send(embed=embed)
 
-        role = discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])
+        if configItem['shift_management']['role']:
+            if not isinstance(configItem['shift_management']['role'], list):
+                role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
+            else:
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
         if role:
-            if role in member.roles:
-                await member.add_roles(role)
+            for rl in role:
+                if not rl in member.roles:
+                    await member.add_roles(rl)
 
 
 @bot.tree.context_menu(name='Get shift time')
@@ -4865,11 +4774,16 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
                 await bot.shifts.delete_by_id(dataShift)
         await shift_channel.send(embed=embed)
 
-        role = discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])
+        if configItem['shift_management']['role']:
+            if not isinstance(configItem['shift_management']['role'], list):
+                role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
+            else:
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
 
         if role:
-            if role in member.roles:
-                await member.remove_roles(role)
+            for rl in role:
+                if not rl in member.roles:
+                    await member.remove_roles(rl)
 
 
 # clockedin, to get all the members of a specific guild currently on duty
