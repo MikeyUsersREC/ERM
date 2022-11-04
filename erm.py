@@ -1,4 +1,5 @@
 import datetime
+import subprocess
 from io import BytesIO
 import json
 import random
@@ -309,12 +310,7 @@ async def change_status():
     ]
 
     chosen = random.choice(status)
-    request = requests.get('https://api.github.com/repos/mikeyusersrec/erm/commits', headers={
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {github_token}"
-    })
-    requestjson = request.json()
-    requestResponse = requestjson[0]['sha'][:7]
+    requestResponse = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
     chosen = chosen.replace('[R]', requestResponse)
     chosen = chosen[4:]
     await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=chosen))
