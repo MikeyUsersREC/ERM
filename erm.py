@@ -41,7 +41,7 @@ def removesuffix(input_string, suffix):
 
 def get_guild_icon(guild: discord.Guild):
     if guild.icon is None:
-        return bot.user.avatar.url
+        return bot.user.display_avatar.url
     else:
         return guild.icon.url
 
@@ -336,7 +336,7 @@ async def update_bot_status():
                 title='Bot Status',
                 color=discord.Color.red()
             )
-            embed.set_thumbnail(url=bot.user.avatar.url)
+            embed.set_thumbnail(url=bot.user.display_avatar.url)
             embed.add_field(name='Last ping', value=f'<t:{int(datetime.datetime.now().timestamp())}:R>')
             embed.add_field(name='Status', value='<:online:989218581764014161> Online')
             embed.add_field(name='Pings', value='1')
@@ -357,7 +357,7 @@ async def update_bot_status():
                 title='Bot Status',
                 color=discord.Color.red()
             )
-            embed.set_thumbnail(url=bot.user.avatar.url)
+            embed.set_thumbnail(url=bot.user.display_avatar.url)
             embed.add_field(name='Last ping', value=f'<t:{int(datetime.datetime.now().timestamp())}:R>')
             embed.add_field(name='Status', value='<:online:989218581764014161> Online')
             embed.add_field(name='Pings', value=str(pings + 1))
@@ -445,7 +445,7 @@ async def check_loa():
             )
             member = guild.get_member(loaObject['user_id'])
             settings = await bot.settings.find_by_id(guild.id)
-            role = None
+            roles = [None]
             if settings is not None:
                 if "loa_role" in settings['staff_management']:
                     try:
@@ -995,7 +995,7 @@ async def viewconfig(ctx):
                 loa_role += ctx.guild.get_role(role).mention + ', '
             loa_role = loa_role[:-2]
     except:
-            loa_role = 'None'
+        loa_role = 'None'
 
     try:
         if isinstance(settingContents['staff_management']['ra_role'], int):
@@ -1006,7 +1006,7 @@ async def viewconfig(ctx):
                 ra_role += ctx.guild.get_role(role).mention + ', '
             ra_role = ra_role[:-2]
     except:
-            ra_role = 'None'
+        ra_role = 'None'
 
     embed = discord.Embed(
         title='<:support:1035269007655321680> Server Configuration',
@@ -1842,7 +1842,7 @@ async def mlog(ctx, *, message):
 
     embed = discord.Embed(title='<:Resume:1035269012445216858> In-game Message', color=0x2E3136)
     try:
-        embed.set_thumbnail(url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
         embed.set_footer(text="Staff Logging Module")
     except:
         pass
@@ -2129,7 +2129,7 @@ async def search(ctx, *, query):
             triggered_alerts.append('NoAlerts')
 
         embed1 = discord.Embed(title=query, color=0x2E3136)
-        embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar.url)
+        embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
         if query.lower() in bot.staff_members.keys():
             await staff_field(embed1, query.lower())
         embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
@@ -2253,7 +2253,7 @@ async def search(ctx, *, query):
             embed.set_thumbnail(
                 url="https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
                     User.id))
-            embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar.url)
+            embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
             if index != 0:
                 embed.set_footer(text=f"Navigate this page by using the reactions below.")
 
@@ -2346,7 +2346,7 @@ async def globalsearch(ctx, *, query):
             triggered_alerts.append('NoAlerts')
 
         embed1 = discord.Embed(title=query, color=0x2E3136)
-        embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar.url)
+        embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
 
         if embed1.title in bot.staff_members.keys():
             await staff_field(embed1, embed1.title)
@@ -2448,7 +2448,7 @@ async def globalsearch(ctx, *, query):
             embed.set_thumbnail(
                 url="https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
                     User.id))
-            embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar.url)
+            embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
             if index != 0:
                 embed.set_footer(text=f"Navigate this page by using the reactions below.")
 
@@ -2916,8 +2916,8 @@ async def dutyon(ctx):
     )
 
     try:
-        embed.set_thumbnail(url=ctx.author.avatar.url)
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         embed.set_footer(text='Staff Logging Module')
     except:
         pass
@@ -2984,6 +2984,7 @@ async def dutyon(ctx):
         color=0x71c15f
     )
     await ctx.send(embed=successEmbed)
+    role = None
 
     if configItem['shift_management']['role']:
         if not isinstance(configItem['shift_management']['role'], list):
@@ -3118,7 +3119,7 @@ async def dutyoff(ctx):
         color=0x2E3136
     )
 
-    embed.set_thumbnail(url=ctx.author.avatar.url)
+    embed.set_thumbnail(url=ctx.author.display_avatar.url)
     embed.set_footer(text='Staff Logging Module')
 
     embed.add_field(
@@ -3207,6 +3208,7 @@ async def dutyoff(ctx):
                         break
         await bot.shifts.update_by_id(dataShift)
 
+    role = None
     if configItem['shift_management']['role']:
         if not isinstance(configItem['shift_management']['role'], list):
             role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -3215,7 +3217,7 @@ async def dutyoff(ctx):
 
     if role:
         for rl in role:
-            if not rl in ctx.author.roles:
+            if rl in ctx.author.roles:
                 await ctx.author.remove_roles(rl)
 
 
@@ -3380,7 +3382,7 @@ async def dutyvoid(ctx):
     )
 
     try:
-        embed.set_thumbnail(url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
     except:
         pass
     embed.add_field(
@@ -3415,10 +3417,9 @@ async def dutyvoid(ctx):
         else:
             await bot.shifts.delete_by_id(dataShift)
 
-
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
-
+    role = None
     if configItem['shift_management']['role']:
         if not isinstance(configItem['shift_management']['role'], list):
             role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -3427,7 +3428,7 @@ async def dutyvoid(ctx):
 
     if role:
         for rl in role:
-            if not rl in ctx.author.roles:
+            if rl in ctx.author.roles:
                 await ctx.author.remove_roles(rl)
 
 
@@ -3514,7 +3515,7 @@ async def forcevoid(ctx, member: discord.Member):
     )
 
     try:
-        embed.set_thumbnail(url=member.avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
     except:
         pass
     embed.add_field(
@@ -3551,7 +3552,7 @@ async def forcevoid(ctx, member: discord.Member):
 
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
-
+    role = None
     if configItem['shift_management']['role']:
         if not isinstance(configItem['shift_management']['role'], list):
             role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -3560,7 +3561,7 @@ async def forcevoid(ctx, member: discord.Member):
 
     if role:
         for rl in role:
-            if not rl in ctx.author.roles:
+            if rl in ctx.author.roles:
                 await ctx.author.remove_roles(rl)
 
 
@@ -3637,7 +3638,7 @@ async def modify(ctx, member: discord.Member):
             color=0x2E3136
         )
 
-        embed.set_thumbnail(url=member.avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text='Staff Logging Module')
 
         embed.add_field(
@@ -3733,7 +3734,7 @@ async def modify(ctx, member: discord.Member):
                 await bot.shifts.update_by_id(dataShift)
             else:
                 await bot.shifts.delete_by_id(dataShift)
-
+        role = None
         if configItem['shift_management']['role']:
             if not isinstance(configItem['shift_management']['role'], list):
                 role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -3751,7 +3752,7 @@ async def modify(ctx, member: discord.Member):
         )
 
         try:
-            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_thumbnail(url=member.display_avatar.url)
         except:
             pass
         embed.add_field(
@@ -3786,10 +3787,9 @@ async def modify(ctx, member: discord.Member):
             else:
                 await bot.shifts.delete_by_id(dataShift)
 
-
         await shift_channel.send(embed=embed)
         await msg.edit(embed=successEmbed)
-
+        role = None
         if configItem['shift_management']['role']:
             if not isinstance(configItem['shift_management']['role'], list):
                 role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -3798,7 +3798,7 @@ async def modify(ctx, member: discord.Member):
 
         if role:
             for rl in role:
-                if not rl in ctx.author.roles:
+                if rl in ctx.author.roles:
                     await ctx.author.remove_roles(rl)
     elif view.value == "add":
         timestamp = shift['startTimestamp']
@@ -3914,7 +3914,7 @@ async def autocomplete_callback(interaction: discord.Interaction, current: str):
     with_app_command=True,
 )
 async def loa(ctx, time, *, reason):
-    pass
+    await ctx.invoke(bot.get_command('loa request'), time=time, reason=reason)
 
 
 @loa.command(
@@ -3962,7 +3962,7 @@ async def loarequest(ctx, time, *, reason):
     )
 
     try:
-        Embed.set_thumbnail(url=ctx.author.avatar.url)
+        Embed.set_thumbnail(url=ctx.author.display_avatar.url)
         Embed.set_footer(text="Staff Logging Module")
 
     except:
@@ -4133,7 +4133,7 @@ async def rarequest(ctx, time, *, reason):
     )
 
     try:
-        Embed.set_thumbnail(url=ctx.author.avatar.url)
+        Embed.set_thumbnail(url=ctx.author.display_avatar.url)
         Embed.set_footer(text="Staff Logging Module")
 
     except:
@@ -4300,7 +4300,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
         embed = discord.Embed(title=member.name, color=0x2E3136)
         try:
-            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text="Staff Logging Module")
         except:
             pass
@@ -4366,16 +4366,17 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
             else:
                 await bot.shifts.delete_by_id(member.id)
         await shift_channel.send(embed=embed)
-
+        role = None
         if configItem['shift_management']['role']:
             if not isinstance(configItem['shift_management']['role'], list):
                 role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
             else:
-                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in
+                        configItem['shift_management']['role']]
 
         if role:
             for rl in role:
-                if not rl in member.roles:
+                if rl in member.roles:
                     await member.remove_roles(rl)
 
 
@@ -4580,7 +4581,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 
         embed = discord.Embed(title=member.name, color=0x2E3136)
         try:
-            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text="Staff Logging Module")
         except:
             pass
@@ -4641,12 +4642,13 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
         await interaction.edit_original_response(embed=successEmbed)
 
         await shift_channel.send(embed=embed)
-
+        role = None
         if configItem['shift_management']['role']:
             if not isinstance(configItem['shift_management']['role'], list):
                 role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
             else:
-                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in
+                        configItem['shift_management']['role']]
 
         if role:
             for rl in role:
@@ -4741,7 +4743,7 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
 
         embed = discord.Embed(title=member.name, color=0x2E3136)
         try:
-            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text='Staff Logging Module')
         except:
             pass
@@ -4773,16 +4775,17 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
             else:
                 await bot.shifts.delete_by_id(dataShift)
         await shift_channel.send(embed=embed)
-
+        role = None
         if configItem['shift_management']['role']:
             if not isinstance(configItem['shift_management']['role'], list):
                 role = [discord.utils.get(interaction.guild.roles, id=configItem['shift_management']['role'])]
             else:
-                role = [discord.utils.get(interaction.guild.roles, id=role) for role in configItem['shift_management']['role']]
+                role = [discord.utils.get(interaction.guild.roles, id=role) for role in
+                        configItem['shift_management']['role']]
 
         if role:
             for rl in role:
-                if not rl in member.roles:
+                if rl in member.roles:
                     await member.remove_roles(rl)
 
 
@@ -4808,22 +4811,31 @@ async def clockedin(ctx):
         pass
 
     for shift in await bot.shifts.get_all():
-        if shift['guild'] == ctx.guild.id:
-            member = discord.utils.get(ctx.guild.members, id=shift['_id'])
-            if member:
-                embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                value=f"<:ArrowRight:1035003246445596774> {td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']))}",
-                                inline=False)
+        if 'data' in shift.keys():
+            for s in shift['data']:
+                if s['guild'] == ctx.guild.id:
+                    member = discord.utils.get(ctx.guild.members, id=s['_id'])
+                    if member:
+                        embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                                        value=f"<:ArrowRight:1035003246445596774> {td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(s['startTimestamp']))}",
+                                        inline=False)
+        elif 'guild' in shift.keys():
+            if shift['guild'] == ctx.guild.id:
+                member = discord.utils.get(ctx.guild.members, id=shift['_id'])
+                if member:
+                    embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                                    value=f"<:ArrowRight:1035003246445596774> {td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']))}",
+                                    inline=False)
 
     await ctx.send(embed=embed)
 
 
 # staff info command, to get total seconds worked on a specific member
 @duty.command(name='info', description='Get the total seconds worked on a specific member. [Shift Management]',
-              aliases=['staff-stats'])
+              aliases=['i', "stats"])
 @is_staff()
 async def staff_info(ctx, member: discord.Member = None):
-    if member == None:
+    if member is None:
         member = ctx.author
 
     try:
@@ -4837,7 +4849,7 @@ async def staff_info(ctx, member: discord.Member = None):
         return await invisEmbed(ctx, 'Shift management channel not found.')
 
     embed = discord.Embed(title=f'{member.name}\'s Total Time On-Duty', color=0x2E3136)
-    embed.set_thumbnail(url=member.avatar.url)
+    embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text="Staff Logging Module")
 
     if not await bot.shift_storage.find_by_id(member.id):
@@ -4870,7 +4882,7 @@ async def staff_info(ctx, member: discord.Member = None):
 
 @duty.command(name='leaderboard',
               description='Get the total time worked for the whole of the staff team. [Shift Management]',
-              aliases=['shift-lb'])
+              aliases=['lb'])
 @is_staff()
 async def shift_leaderboard(ctx):
     try:
@@ -4894,8 +4906,6 @@ async def shift_leaderboard(ctx):
                                 for item in all_staff:
                                     if item['id'] == document['_id']:
                                         item['total_seconds'] = item['total_seconds'] + total_seconds
-            else:
-                all_staff.append({'id': document['_id'], "total_seconds": int(document['totalSeconds'])})
 
     if len(all_staff) == 0:
         return await invisEmbed(ctx, 'No shifts were made in your server.')

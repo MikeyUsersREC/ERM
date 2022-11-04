@@ -236,11 +236,10 @@ class LOAMenu(discord.ui.View):
                 await interaction.response.defer()
                 for item in self.children:
                     item.disabled = True
-                    if item.label == 'Deny':
-                        self.children.remove(item)
                     if item.label == "Accept":
                         item.label = "Accepted"
-
+                    else:
+                        self.children.remove(item)
                 s_loa = None
                 for loa in await self.bot.loas.get_all():
                     if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
@@ -275,10 +274,10 @@ class LOAMenu(discord.ui.View):
                 await interaction.response.defer()
                 for item in self.children:
                     item.disabled = True
-                    if item.label == 'Accept':
-                        self.children.remove(item)
                     if item.label == "Deny":
                         item.label = "Denied"
+                    else:
+                        self.children.remove(item)
 
                 s_loa = None
                 for loa in await self.bot.loas.get_all():
