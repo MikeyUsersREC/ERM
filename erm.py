@@ -4810,7 +4810,7 @@ async def clockedin(ctx):
         if 'data' in shift.keys():
             for s in shift['data']:
                 if s['guild'] == ctx.guild.id:
-                    member = discord.utils.get(ctx.guild.members, id=s['_id'])
+                    member = discord.utils.get(ctx.guild.members, id=shift['_id'])
                     if member:
                         embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                         value=f"<:ArrowRight:1035003246445596774> {td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(s['startTimestamp']))}",
