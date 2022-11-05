@@ -4978,7 +4978,7 @@ async def shift_leaderboard(ctx):
     try:
         bbytes = buffer.encode('utf-8')
     except:
-        return await invisEmbed('No shift data has been found.')
+        return await invisEmbed(ctx, 'No shift data has been found.')
     await ctx.send(file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
 
 
