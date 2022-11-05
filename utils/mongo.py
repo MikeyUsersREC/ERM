@@ -74,7 +74,7 @@ class Document:
         Params:
         - dict (Dictionary) : The Dictionary to insert
         """
-        # Check if its actually a Dictionary
+        # Check if it's actually a Dictionary
         if not isinstance(dict, collections.abc.Mapping):
             raise TypeError("Expected Dictionary.")
 

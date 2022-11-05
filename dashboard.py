@@ -21,7 +21,7 @@ elif os.config('ENVIRONMENT') == "PRODUCTION":
     app.config["DISCORD_REDIRECT_URI"] = config('PRODUCTION_REDIRECT_URI')
     app.config["DISCORD_BOT_TOKEN"] = config('PRODUCTION_BOT_TOKEN')
 else:
-    raise Exception("Environment variable 'enviroment' not set")
+    raise Exception("Environment variable 'environment' not set")
 
 discord_oauth = DiscordOAuth2Session(app)
 ipcClient = ipc.Client(host = "127.0.0.1", port = 5600, secret_key=config("IPC_SECRET_KEY"))
