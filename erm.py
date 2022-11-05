@@ -4946,15 +4946,14 @@ async def shift_leaderboard(ctx):
         if "shifts" in document.keys():
             if isinstance(document['shifts'], list):
                 for shift in document['shifts']:
-                    if isinstance(shift, dict):
-                        if shift['guild'] == ctx.guild.id:
-                            total_seconds += int(shift['totalSeconds'])
-                            if document['_id'] not in [item['id'] for item in all_staff]:
-                                all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-                            else:
-                                for item in all_staff:
-                                    if item['id'] == document['_id']:
-                                        item['total_seconds'] = item['total_seconds'] + total_seconds
+                    if shift['guild'] == ctx.guild.id:
+                        total_seconds += int(shift['totalSeconds'])
+                        if document['_id'] not in [item['id'] for item in all_staff]:
+                            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+                        else:
+                            for item in all_staff:
+                                if item['id'] == document['_id']:
+                                    item['total_seconds'] = item['total_seconds'] + total_seconds
 
     if len(all_staff) == 0:
         return await invisEmbed(ctx, 'No shifts were made in your server.')
