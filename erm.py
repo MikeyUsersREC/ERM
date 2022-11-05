@@ -548,6 +548,7 @@ async def on_guild_join(guild: discord.Guild):
         embed = discord.Embed(color = 0x2E3136)
         embed.description = f"""
         <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
+        <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
         <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
         <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
         """
