@@ -1054,6 +1054,11 @@ async def viewconfig(ctx):
         kick_channel = 'None'
 
     try:
+        shift_role = ctx.guild.get_channel(settingContents['shift_management']['role']).mention
+    except:
+        shift_role = 'None'
+
+    try:
         if isinstance(settingContents['staff_management']['loa_role'], int):
             loa_role = ctx.guild.get_role(settingContents['staff_management']['loa_role']).mention
         elif isinstance(settingContents['staff_management']['loa_role'], list):
