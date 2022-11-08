@@ -680,7 +680,7 @@ async def setup(ctx):
         'antiping': {
             'enabled': False,
             'role': None,
-            "role_bypass": "None"
+            "bypass_role": "None"
         },
 
         'staff_management': {
@@ -875,7 +875,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
         'antiping': {
             'enabled': False,
             'role': None,
-            "role_bypass": "None"
+            "bypass_role": "None"
         },
 
         'staff_management': {
@@ -1221,9 +1221,9 @@ async def changeconfig(ctx):
             settingContents['antiping']['role'] = convertedContent.id
         elif content == "bypass_role" or content == "bypass" or content == "bypass-role":
             content = (
-                await request_response(ctx, 'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
+                await request_response(ctx, 'What role do you want to use as a bypass role? (e.g. `@Antiping Bypass`)')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['antiping']['role_bypass'] = convertedContent.id
+            settingContents['antiping']['bypass_role'] = convertedContent.id
         else:
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'staff_management':
