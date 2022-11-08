@@ -10,10 +10,18 @@
     "@types/node": "^16.18.3",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.8",
+    "@types/react-router-dom": "^5.3.3",
+    "axios": "^1.1.3",
+    "query-string": "^7.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-particles": "^2.5.1",
+    "react-router-dom": "^5.2.0",
     "react-scripts": "5.0.1",
-    "typescript": "^4.8.4",
+    "react-tsparticles": "^2.5.1",
+    "tsparticles": "^2.5.1",
+    "tsparticles-engine": "^2.5.0",
+    "tsparticles-preset-links": "^2.5.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -39,5 +47,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "typescript": "^4.8.4"
   }
 }

@@ -77,6 +77,11 @@ class Dropdown(discord.ui.Select):
                 label="Customisation",
                 value="customisation",
                 description="Colours, branding, prefix, to customise to your liking"
+            ),
+            discord.SelectOption(
+                label="Privacy",
+                value="privacy",
+                description="Disable global warnings, privacy features"
             )
         ]
 

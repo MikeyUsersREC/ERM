@@ -1,14 +1,18 @@
+from json import loads
+
 import aiohttp
+import hikari
 from decouple import config
 from sanic import Sanic
-from sanic.response import json, redirect
-from sanic.exceptions import InvalidUsage
-from urllib.parse import quote
-import hikari
+from sanic.exceptions import InvalidUsage, Unauthorized
+from sanic.response import json
+from sanic_cors import CORS
 
+from utils import return_token_or_raise, filter_guilds
 
 app = Sanic("HelloWorld")
-
+CORS(app)
+app.config.FALLBACK_ERROR_FORMAT = "json"
 
 
 try:
@@ -32,13 +36,9 @@ elif config('ENVIRONMENT') == "PRODUCTION":
 else:
     raise Exception("Environment variable 'environment' not set")
 
-@app.route("/")
-async def test(request):
-    return json({"hello": "world"})
-
-@app.route('/oauth2/callback')
+@app.route('/oauth2/callback', methods=["POST"])
 async def callback(request):
-    args = request.args
+    args = request.json
 
     if not args.get('code'):
         raise InvalidUsage('Invalid request')
@@ -54,23 +54,25 @@ async def callback(request):
             "Content-Type": "application/x-www-form-urlencoded"
         }) as resp:
             data = await resp.json()
-            # return json({"access_token": data.get('access_token')})
-        return redirect(f'/users/me?token={data.get("access_token")}')
-    
+            print(data)
+            return json({"access_token": data.get('access_token')})
+        # return redirect(f'/users/me?token={data.get("access_token")}')
+        
 
 @app.route('/users/me')
 async def get_own_user(request):
-    if not request.args.get('token'):
-        raise InvalidUsage('Invalid request')
-
-    async with rest_client.acquire(request.args.get('token')) as rest:
-        user: hikari.OwnUser = await rest.fetch_my_user()
+    token = await return_token_or_raise(request)
+    try:
+        async with rest_client.acquire(token) as rest:
+            user = await rest.fetch_my_user()
+    except hikari.errors.UnauthorizedError:
+        raise Unauthorized("Invalid access token")
 
     return json({
         "id": user.id,
         "username": user.username,
         "discriminator": user.discriminator,
-        "avatar": f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar_hash}.png",
+        "avatar_url": f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar_hash}.png",
         "bot": user.is_bot,
         "system": user.is_system,
         "mfa_enabled": user.is_mfa_enabled,
@@ -81,6 +83,21 @@ async def get_own_user(request):
         "premium_type": user.premium_type,
     })
 
+@app.route('/guilds')
+async def mutual_guilds(request):
+    token = await return_token_or_raise(request)
 
+    try:
+        async with rest_client.acquire(token) as rest:
+            user_guilds = await rest.fetch_my_guilds()
+    except hikari.errors.UnauthorizedError:
+        raise Unauthorized("Invalid access token")
+
+    valid_guilds = await filter_guilds(user_guilds)
+    guild_ids = map(lambda x: str(x.id), valid_guilds)
+
+    async with aiohttp.ClientSession() as session:
+        response = await session.post('http://localhost:6969/guilds', json={"guilds": list(guild_ids)})
+        return json(loads(await response.text()))
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
