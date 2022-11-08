@@ -741,7 +741,7 @@ async def setup(ctx):
                 convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
         else:
             convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
-        settingContents['staff_management']['management_role'] = [role.id for role in convertedContent]
+        settingContents['staff_management']['role'] = [role.id for role in convertedContent]
 
         question = 'What role would you like to use for your Management role? (e.g. @Management)\n*You can separate multiple roles by using a comma.*'
         content = (await request_response(ctx, question)).content
