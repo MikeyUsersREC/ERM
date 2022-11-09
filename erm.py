@@ -5,7 +5,7 @@ import random
 import subprocess
 import time
 from io import BytesIO
-
+from reactionmenu import ViewButton, ViewMenu
 import DiscordUtils
 import discord
 import dns.resolver
@@ -20,6 +20,7 @@ from roblox import client as roblox
 from sentry_sdk import capture_exception, push_scope
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
+from utils.utils import *
 
 from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
     AddReminder, RemoveReminder
@@ -37,33 +38,6 @@ sentry_sdk.init(
 )
 
 discord.utils.setup_logging()
-
-
-def removesuffix(input_string, suffix):
-    if suffix and input_string.endswith(suffix):
-        return input_string[:-len(suffix)]
-    return input_string
-
-
-def get_guild_icon(guild: discord.Guild):
-    if guild.icon is None:
-        return bot.user.display_avatar.url
-    else:
-        return guild.icon.url
-
-
-async def get_prefix(bot, message):
-    if not message.guild:
-        return commands.when_mentioned_or('>')(bot, message)
-
-    try:
-        prefix = await bot.settings.find_by_id(message.guild.id)
-        prefix = prefix['customisation']['prefix']
-    except:
-        return discord.ext.commands.when_mentioned_or('>')(bot, message)
-
-    return commands.when_mentioned_or(prefix)(bot, message)
-
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -105,7 +79,6 @@ async def on_ready():
         update_bot_status.start()
         GDPR.start()
         check_loa.start()
-        check_reminders.start()
         bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
         if environment == 'DEVELOPMENT':
             bot.db = bot.mongo['beta']
@@ -123,6 +96,9 @@ async def on_ready():
         bot.loas = Document(bot.db, "leave_of_absences")
         bot.reminders = Document(bot.db, "reminders")
         bot.privacy = Document(bot.db, "privacy")
+        bot.flags = Document(bot.db, "flags")
+
+        check_reminders.start()
 
         bot.error_list = []
         logging.info('Connected to MongoDB!')
@@ -297,27 +273,6 @@ generator = SnowflakeGenerator(192)
 error_gen = ZUID(prefix="error_", length=10)
 
 
-async def invis_embed(ctx, content, **kwargs):
-    embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
-    await ctx.send(embed=embed, **kwargs)
-
-
-async def int_invis_embed(interaction, content, **kwargs):
-    embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
-    await interaction.response.send_message(embed=embed, **kwargs)
-
-
-async def request_response(ctx, question, **kwargs):
-    embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-    await ctx.send(embed=embed, **kwargs)
-    try:
-        response = await bot.wait_for('message', check=lambda
-            message: message.author == ctx.author and message.guild.id == ctx.guild.id, timeout=300)
-    except:
-        raise Exception('No response')
-    return response
-
-
 @bot.hybrid_group(
     name="punishments",
     description="Punishment commands [Punishments]"
@@ -325,6 +280,15 @@ async def request_response(ctx, question, **kwargs):
 async def punishments(ctx):
     pass
 
+# @bot.hybrid_command(
+#     name="debug"
+# )
+# @commands.is_owner()
+# async def debug(ctx):
+#     if isinstance(ctx, discord.Interaction):
+#         return await ctx.send('Interaction')
+#     else:
+#         return await ctx.send('Context')
 
 # status change discord.ext.tasks
 @tasks.loop(seconds=10)
@@ -426,40 +390,37 @@ async def GDPR():
 
 @tasks.loop(minutes=1)
 async def check_reminders():
-    await bot.wait_until_ready()
-    try:
-        if bot.reminders is not None:
-            pass
-    except:
-        return
     for guildObj in await bot.reminders.get_all():
         for item in guildObj['reminders']:
-            dT = datetime.datetime.now()
-            interval = item['interval']
-            full = None
-            num = None
+            try:
+                dT = datetime.datetime.now()
+                interval = item['interval']
+                full = None
+                num = None
 
-            tD = dT + datetime.timedelta(seconds=interval)
+                tD = dT + datetime.timedelta(seconds=interval)
 
-            if tD.timestamp() - item['lastTriggered'] >= interval:
-                guild = bot.get_guild(int(guildObj['_id']))
-                channel = guild.get_channel(int(item['channel']))
-                roles = []
-                try:
-                    for role in item['role']:
-                        roles.append(guild.get_role(int(role)).mention)
-                except:
-                    roles = [""]
+                if tD.timestamp() - item['lastTriggered'] >= interval:
+                    guild = bot.get_guild(int(guildObj['_id']))
+                    channel = guild.get_channel(int(item['channel']))
+                    roles = []
+                    try:
+                        for role in item['role']:
+                            roles.append(guild.get_role(int(role)).mention)
+                    except:
+                        roles = [""]
 
-                embed = discord.Embed(
-                    title="<:Clock:1035308064305332224> Notification",
-                    description=f"{item['message']}",
-                    color=0x2E3136
-                )
-                lastTriggered = tD.timestamp()
-                item['lastTriggered'] = lastTriggered
-                await bot.reminders.update_by_id(guildObj)
-                await channel.send(" ".join(roles), embed=embed)
+                    embed = discord.Embed(
+                        title="<:Clock:1035308064305332224> Notification",
+                        description=f"{item['message']}",
+                        color=0x2E3136
+                    )
+                    lastTriggered = tD.timestamp()
+                    item['lastTriggered'] = lastTriggered
+                    await bot.reminders.update_by_id(guildObj)
+                    await channel.send(" ".join(roles), embed=embed)
+            except:
+                pass
 
 
 @tasks.loop(minutes=1)
@@ -561,11 +522,11 @@ async def on_guild_join(guild: discord.Guild):
 
     try:
         await guild.system_channel.send(
-            'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008 or at the support server below. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'
+            'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `/setup`. If you need help, contact me on Discord at Mikey#0008 or at the support server below. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'
         )
     except:
         await guild.owner.send(
-            'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `>setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'
+            'Hello! I am the Emergency Response Management bot!\n\nFor me to work properly, you need to set me using `/setup`. If you need help, contact me on Discord at Mikey#0008. Other than that, have a good day! :wave:\n\nhttps://discord.gg/BGfyfqU5fx'
         )
     finally:
         channel = bot.get_channel(1033021466381398086)
@@ -573,6 +534,7 @@ async def on_guild_join(guild: discord.Guild):
         embed.description = f"""
         <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
         <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
+        <:ArrowRightW:1035023450592514048> **Bots:** {len([member for member in guild.members if member.bot == True])}
         <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
         <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
         """
@@ -609,7 +571,7 @@ async def on_message(message: discord.Message):
     if "bypass_role" in dataset['antiping'].keys():
         bypass_role = dataset['antiping']['bypass_role']
 
-    if dataset['antiping']['enabled'] == False or dataset['antiping']['role'] == None:
+    if dataset['antiping']['enabled'] is False or dataset['antiping']['role'] is None:
         await bot.process_commands(message)
         return
 
@@ -660,7 +622,7 @@ async def on_message(message: discord.Message):
                     pass
 
                 Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                 icon_url=get_guild_icon(message.guild))
+                                 icon_url=get_guild_icon(bot, message.guild))
 
                 ctx = await bot.get_context(message)
                 await ctx.reply(f'{message.author.mention}', embed=Embed)
@@ -737,12 +699,12 @@ async def setup(ctx):
 
     if settingContents['staff_management']['enabled']:
         question = 'What channel do you want to use for staff management?'
-        content = (await request_response(ctx, question)).content
+        content = (await request_response(bot, ctx, question)).content
         convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
         settingContents['staff_management']['channel'] = convertedContent.id
 
         question = 'What role would you like to use for your staff role? (e.g. @Staff)\n*You can separate multiple roles by using a comma.*'
-        content = (await request_response(ctx, question)).content
+        content = (await request_response(bot, ctx, question)).content
         if ',' in content:
             convertedContent = []
             for role in content.split(','):
@@ -753,7 +715,7 @@ async def setup(ctx):
         settingContents['staff_management']['role'] = [role.id for role in convertedContent]
 
         question = 'What role would you like to use for your Management role? (e.g. @Management)\n*You can separate multiple roles by using a comma.*'
-        content = (await request_response(ctx, question)).content
+        content = (await request_response(bot, ctx, question)).content
         if ',' in content:
             convertedContent = []
             for role in content.split(','):
@@ -770,7 +732,7 @@ async def setup(ctx):
         await view.wait()
         if view.value is not None:
             if view.value:
-                content = (await request_response(ctx,
+                content = (await request_response(bot, ctx,
                                                   'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
 
                 if ',' in content:
@@ -790,7 +752,7 @@ async def setup(ctx):
         await view.wait()
         if view.value is not None:
             if view.value:
-                content = (await request_response(ctx,
+                content = (await request_response(bot, ctx,
                                                   'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
 
                 if ',' in content:
@@ -803,11 +765,11 @@ async def setup(ctx):
 
                 settingContents['staff_management']['ra_role'] = [role.id for role in convertedContent]
     if settingContents['punishments']['enabled']:
-        content = (await request_response(ctx, 'What channel do you want to use for punishments?')).content
+        content = (await request_response(bot, ctx, 'What channel do you want to use for punishments?')).content
         convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
         settingContents['punishments']['channel'] = convertedContent.id
     if settingContents['shift_management']['enabled']:
-        content = (await request_response(ctx,
+        content = (await request_response(bot, ctx,
                                           'What channel do you want to use for shift management? (e.g. shift signups, etc.)')).content
         convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
         settingContents['shift_management']['channel'] = convertedContent.id
@@ -819,7 +781,7 @@ async def setup(ctx):
         await view.wait()
         if view.value is not None:
             if view.value:
-                content = (await request_response(ctx,
+                content = (await request_response(bot, ctx,
                                                   'What role(s) would you like to be given?\n*You can separate multiple roles by using a comma.*')).content
 
                 if ',' in content:
@@ -964,7 +926,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
         await bot.settings.update_by_id(settingContents)
 
     await invis_embed(ctx,
-                      'Quicksetup is now completed. You can now use it as usual. If you ever want to change any of these settings, feel free to run the `>config` command.')
+                      'Quicksetup is now completed. You can now use it as usual. If you ever want to change any of these settings, feel free to run the `/config` command.')
 
 
 @bot.hybrid_group(
@@ -982,7 +944,7 @@ async def config(ctx):
 @is_management()
 async def viewconfig(ctx):
     if not await bot.settings.find_by_id(ctx.guild.id):
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     settingContents = await bot.settings.find_by_id(ctx.guild.id)
     privacyConfig = await bot.privacy.find_by_id(ctx.guild.id)
@@ -1212,7 +1174,7 @@ async def changeconfig(ctx):
             settingContents['verification']['enabled'] = False
         elif content == 'role':
             content = (
-                await request_response(ctx,
+                await request_response(bot, ctx,
                                        'What role do you want to use for verification? (e.g. `@Verified`)')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
             settingContents['verification']['role'] = convertedContent.id
@@ -1231,12 +1193,13 @@ async def changeconfig(ctx):
             settingContents['antiping']['enabled'] = False
         elif content == 'role':
             content = (
-                await request_response(ctx, 'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
+                await request_response(bot, ctx,
+                                       'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
             settingContents['antiping']['role'] = convertedContent.id
         elif content == "bypass_role" or content == "bypass" or content == "bypass-role":
             content = (
-                await request_response(ctx,
+                await request_response(bot, ctx,
                                        'What role do you want to use as a bypass role? (e.g. `@Antiping Bypass`)')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
             settingContents['antiping']['bypass_role'] = convertedContent.id
@@ -1255,34 +1218,58 @@ async def changeconfig(ctx):
         elif content == 'disable':
             settingContents['staff_management']['enabled'] = False
         elif content == 'channel':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What channel do you want to use for staff management? (e.g. `#staff-management`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['staff_management']['channel'] = convertedContent.id
         elif content == 'role':
             content = (
-                await request_response(ctx,
-                                       'What role do you want to use as a staff role? (e.g. `@Staff`\n**Note:** All members you want to be able to run advanced permission commands (punishments, staff management, shift management) must have this role.')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['staff_management']['role'] = convertedContent.id
+                await request_response(bot, ctx,
+                                       'What role do you want to use as a staff role? (e.g. `@Staff`\n**Note:** All members you want to be able to run advanced permission commands (punishments, staff management, shift management) must have this role. You can separate multiple roles by commas.')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['staff_management']['role'] = [role.id for role in convertedContent]
         elif content == 'management_role':
             content = (
-                await request_response(ctx,
-                                       'What role do you want to use as a management role? (e.g. `@Community Management`\n**Note:** All members you want to be able to run **elevated** permission commands (removing warnings, setting up he bot, shift management, configurations) must have this role.')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['staff_management']['management_role'] = convertedContent.id
+                await request_response(bot, ctx,
+                                       'What role do you want to use as a management role? (e.g. `@Community Management`\n**Note:** All members you want to be able to run **elevated** permission commands (removing warnings, setting up he bot, shift management, configurations) must have this role. You can separate multiple roles by commas.')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['staff_management']['management_role'] = [role.id for role in convertedContent]
         elif content == 'loa_role':
             content = (
-                await request_response(ctx,
-                                       'What role do you want to use as a LOA role? (e.g. `@LOA`)')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['staff_management']['loa_role'] = convertedContent.id
+                await request_response(bot, ctx,
+                                       'What role do you want to use as a LOA role? (e.g. `@LOA`)\n*You can separate multiple roles by a comma.*')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['staff_management']['loa_role'] = [role.id for role in convertedContent]
         elif content == 'ra_role':
             content = (
-                await request_response(ctx,
+                await request_response(bot, ctx,
                                        'What role do you want to use as a RA role? (e.g. `@RA`)')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['staff_management']['ra_role'] = convertedContent.id
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['staff_management']['ra_role'] = [role.id for role in convertedContent]
         else:
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'punishments':
@@ -1297,23 +1284,24 @@ async def changeconfig(ctx):
         elif content == 'disable':
             settingContents['punishments']['enabled'] = False
         elif content == 'channel':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What channel do you want to use for punishments? (e.g. `#punishments`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['punishments']['channel'] = convertedContent.id
         elif content == 'ban_channel':
             content = (
-                await request_response(ctx, 'What channel do you want to use for banning? (e.g. `#bans`)')).content
+                await request_response(bot, ctx, 'What channel do you want to use for banning? (e.g. `#bans`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['customisation']['ban_channel'] = convertedContent.id
         elif content == 'kick_channel':
             content = (
-                await request_response(ctx, 'What channel do you want to use for kicking? (e.g. `#kicks`)')).content
+                await request_response(bot, ctx,
+                                       'What channel do you want to use for kicking? (e.g. `#kicks`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['customisation']['kick_channel'] = convertedContent.id
         elif content == 'bolo_channel':
             content = (
-                await request_response(ctx, 'What channel do you want to use for BOLOs? (e.g. `#bolos`)')).content
+                await request_response(bot, ctx, 'What channel do you want to use for BOLOs? (e.g. `#bolos`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['customisation']['bolo_channel'] = convertedContent.id
         else:
@@ -1329,12 +1317,12 @@ async def changeconfig(ctx):
         elif content == 'disable':
             settingContents['shift_management']['enabled'] = False
         elif content == 'channel':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What channel do you want to use for shift management? (e.g. `#shift-management`)')).content
             convertedContent = await discord.ext.commands.TextChannelConverter().convert(ctx, content)
             settingContents['shift_management']['channel'] = convertedContent.id
         elif content == 'role':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What role do you want to use for "Currently in game moderating"? (e.g. `@Currently In-game moderating`)')).content
             convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
             settingContents['shift_management']['role'] = convertedContent.id
@@ -1351,26 +1339,28 @@ async def changeconfig(ctx):
         content = customselect.value
         if content == 'color':
             content = (
-                await request_response(ctx, 'What color do you want to use for the server? (e.g. `#00FF00`)')).content
+                await request_response(bot, ctx,
+                                       'What color do you want to use for the server? (e.g. `#00FF00`)')).content
             convertedContent = await discord.ext.commands.ColourConverter().convert(ctx, content)
             settingContents['customisation']['color'] = convertedContent.value
         elif content == 'prefix':
-            content = (await request_response(ctx, 'What prefix do you want to use for the server? (e.g. `!`)')).content
+            content = (
+                await request_response(bot, ctx, 'What prefix do you want to use for the server? (e.g. `!`)')).content
             settingContents['customisation']['prefix'] = content
         elif content == 'brand_name':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What brand name do you want to use for the server? (e.g. `My Server`)')).content
             settingContents['customisation']['brand_name'] = content
         elif content == 'thumbnail_url':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What thumbnail url do you want to use for the server? (e.g. `https://i.imgur.com/...`)')).content
             settingContents['customisation']['thumbnail_url'] = content
         elif content == 'footer_text':
-            content = (await request_response(ctx,
+            content = (await request_response(bot, ctx,
                                               'What footer text do you want to use for the server? (e.g. `My Server`)')).content
             settingContents['customisation']['footer_text'] = content
         elif content == 'server_code':
-            content = (await request_response(ctx, 'What server code do you use for your ER:LC server?')).content
+            content = (await request_response(bot, ctx, 'What server code do you use for your ER:LC server?')).content
             settingContents['customisation']['server_code'] = content
         else:
             return await invis_embed(ctx,
@@ -1534,109 +1524,151 @@ async def warn(ctx, user, *, reason):
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         Embeds.append(Embed)
 
-    paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-    paginator.add_reaction('✅', 'lock')
-    paginator.add_reaction('❎', "delete")
+    if ctx.interaction:
+        interaction = ctx.interaction
+    else:
+        interaction = ctx
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
 
-    try:
-        EmbedMsg = await paginator.run(Embeds)
-    except:
-        return await invis_embed(ctx,
-                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
+    async def warn_function(ctx, menu):
+        user = menu.message.embeds[0].title
+        await menu.stop(disable_items=True)
+        default_warning_item = {
+            '_id': user.lower(),
+            'warnings': [{
+                'id': next(generator),
+                "Type": "Warning",
+                "Reason": reason,
+                "Moderator": [ctx.author.name, ctx.author.id],
+                "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
+                "Guild": ctx.guild.id
+            }]
+        }
 
-    try:
-        await ctx.channel.fetch_message(EmbedMsg.id)
-    except discord.errors.NotFound:
-        return await invis_embed(ctx, 'Successfully cancelled.')
-
-    logging.info(EmbedMsg)
-    logging.info(EmbedMsg.embeds)
-
-    user = EmbedMsg.embeds[0].title
-
-    default_warning_item = {
-        '_id': user.lower(),
-        'warnings': [{
+        singular_warning_item = {
             'id': next(generator),
             "Type": "Warning",
             "Reason": reason,
             "Moderator": [ctx.author.name, ctx.author.id],
             "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
             "Guild": ctx.guild.id
-        }]
-    }
+        }
 
-    singular_warning_item = {
-        'id': next(generator),
-        "Type": "Warning",
-        "Reason": reason,
-        "Moderator": [ctx.author.name, ctx.author.id],
-        "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-        "Guild": ctx.guild.id
-    }
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        if not configItem['punishments']['enabled']:
+            return await invis_embed(ctx,
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
-    if not configItem['punishments']['enabled']:
-        return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+        embed = discord.Embed(title=user, color=0x2E3136)
+        embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
+        try:
+            embed.set_footer(text="Staff Logging Module")
+        except:
+            pass
+        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        inline=False)
+        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
+                        value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Warning",
+                        inline=False)
+        embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
+                        inline=False)
 
-    embed = discord.Embed(title=user, color=0x2E3136)
-    embed.set_thumbnail(url=EmbedMsg.embeds[0].thumbnail.url)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
-    embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
-                    inline=False)
-    embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                    value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
-    embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Warning",
-                    inline=False)
-    embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
-                    inline=False)
+        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
 
-    channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+        if not channel:
+            return await invis_embed(ctx,
+                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-    if not channel:
-        return await invis_embed(ctx,
-                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+        item = None
+        if not await bot.warnings.find_by_id(user.lower()):
+            item = await bot.warnings.find_by_id(user.lower())
+            await bot.warnings.insert(default_warning_item)
+        else:
+            dataset = await bot.warnings.find_by_id(user.lower())
+            dataset['warnings'].append(singular_warning_item)
+            await bot.warnings.update_by_id(dataset)
 
-    item = None
-    if not await bot.warnings.find_by_id(user.lower()):
-        item = await bot.warnings.find_by_id(user.lower())
-        await bot.warnings.insert(default_warning_item)
-    else:
-        dataset = await bot.warnings.find_by_id(user.lower())
-        dataset['warnings'].append(singular_warning_item)
-        await bot.warnings.update_by_id(dataset)
+        view = YesNoMenu(ctx.author.id)
+        if item is not None:
+            for warning in item['warnings']:
+                if warning['Guild'] == ctx.guild.id:
+                    if warning['Type'] == "BOLO":
+                        await invis_embed(ctx,
+                                          'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?',
+                                          view=view)
+                        await view.wait()
+                        if view.value is True:
+                            continue
+                        else:
+                            return await invis_embed(ctx, 'Successfully cancelled.')
 
-    view = YesNoMenu(ctx.author.id)
-    if item is not None:
-        for warning in item['warnings']:
-            if warning['Guild'] == ctx.guild.id:
-                if warning['Type'] == "BOLO":
-                    await invis_embed(ctx,
-                                      'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?',
-                                      view=view)
-                    await view.wait()
-                    if view.value is True:
-                        continue
-                    else:
-                        return await invis_embed(ctx, 'Successfully cancelled.')
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Warning Logged",
+            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s warning has been logged.",
+            color=0x71c15f
+        )
 
-    success = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> Warning Logged",
-        description=f"<:ArrowRightW:1035023450592514048>**{EmbedMsg.embeds[0].title}**'s warning has been logged.",
-        color=0x71c15f
+        await menu.message.edit(embed=success)
+        await channel.send(embed=embed)
+        await ctx.send('should be logged: debug msg')
+        await ctx.send(channel)
+
+    async def task():
+        await warn_function(ctx, menu)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    async def cancelTask():
+        await menu.message.edit(embed=discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            color=0xff3c3c
+        ))
+        await menu.stop(disable_items=True)
+
+    def cancelTaskWrapper():
+        bot.loop.create_task(
+            cancelTask()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    cancelFollowup = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            cancelTaskWrapper
+        )
     )
 
-    await EmbedMsg.edit(embed=success)
-    await channel.send(embed=embed)
+    menu.add_buttons([
+        ViewButton(
+            emoji="✅",
+            custom_id=ViewButton.ID_CALLER,
+            followup=followUp
+        ),
+        ViewButton(
+            emoji="❎",
+            custom_id=ViewButton.ID_CALLER,
+            followup=cancelFollowup
+        )
+    ])
 
+    try:
+        menu.add_pages(Embeds)
+        await menu.start()
+    except:
+        return await invis_embed(ctx,
+                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
 
 @bot.hybrid_command(
     name="kick",
@@ -1731,96 +1763,137 @@ async def kick(ctx, user, *, reason):
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         Embeds.append(Embed)
 
-    paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-    paginator.add_reaction('✅', 'lock')
-    paginator.add_reaction('❎', "delete")
+    if ctx.interaction:
+        interaction = ctx.interaction
+    else:
+        interaction = ctx
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+    async def kick_function(ctx, menu):
+        user = menu.message.embeds[0].title
+        await menu.stop(disable_items=True)
+        default_warning_item = {
+            '_id': user.lower(),
+            'warnings': [{
+                'id': next(generator),
+                "Type": "Kick",
+                "Reason": reason,
+                "Moderator": [ctx.author.name, ctx.author.id],
+                "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
+                "Guild": ctx.guild.id
+            }]
+        }
 
-    try:
-        EmbedMsg = await paginator.run(Embeds)
-    except:
-        return await invis_embed(ctx,
-                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
-
-    try:
-        await ctx.channel.fetch_message(EmbedMsg.id)
-    except discord.errors.NotFound:
-        return await invis_embed(ctx, 'Successfully cancelled.')
-
-    logging.info(EmbedMsg)
-    logging.info(EmbedMsg.embeds)
-
-    user = EmbedMsg.embeds[0].title
-
-    default_warning_item = {
-        '_id': user.lower(),
-        'warnings': [{
+        singular_warning_item = {
             'id': next(generator),
             "Type": "Kick",
             "Reason": reason,
             "Moderator": [ctx.author.name, ctx.author.id],
             "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
             "Guild": ctx.guild.id
-        }]
-    }
+        }
 
-    singular_warning_item = {
-        'id': next(generator),
-        "Type": "Kick",
-        "Reason": reason,
-        "Moderator": [ctx.author.name, ctx.author.id],
-        "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-        "Guild": ctx.guild.id
-    }
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        if not configItem['punishments']['enabled']:
+            return await invis_embed(ctx,
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
-    if not configItem['punishments']['enabled']:
-        return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+        embed = discord.Embed(title=user, color=0x2E3136)
+        embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
+        try:
+            embed.set_footer(text="Staff Logging Module")
+        except:
+            pass
+        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        inline=False)
+        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
+                        value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Kick",
+                        inline=False)
+        embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
+                        inline=False)
 
-    embed = discord.Embed(title=user, color=0x2E3136)
-    embed.set_thumbnail(url=EmbedMsg.embeds[0].thumbnail.url)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
-    embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
-                    inline=False)
-    embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                    value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
-    embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Kick",
-                    inline=False)
-    embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
-                    inline=False)
+        try:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['kick_channel'])
+        except:
+            channel = None
+        if not channel:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+        if not channel:
+            return await invis_embed(ctx,
+                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-    try:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['kick_channel'])
-    except:
-        channel = None
-    if not channel:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
-    if not channel:
-        return await invis_embed(ctx,
-                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+        if not await bot.warnings.find_by_id(user.lower()):
+            await bot.warnings.insert(default_warning_item)
+        else:
+            dataset = await bot.warnings.find_by_id(user.lower())
+            dataset['warnings'].append(singular_warning_item)
+            await bot.warnings.update_by_id(dataset)
 
-    if not await bot.warnings.find_by_id(user.lower()):
-        await bot.warnings.insert(default_warning_item)
-    else:
-        dataset = await bot.warnings.find_by_id(user.lower())
-        dataset['warnings'].append(singular_warning_item)
-        await bot.warnings.update_by_id(dataset)
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Kick Logged",
+            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s kick has been logged.",
+            color=0x71c15f
+        )
 
-    success = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> Kick Logged",
-        description=f"<:ArrowRightW:1035023450592514048>**{EmbedMsg.embeds[0].title}**'s kick has been logged.",
-        color=0x71c15f
+        await menu.message.edit(embed=success)
+        await channel.send(embed=embed)
+    async def task():
+        await kick_function(ctx, menu)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    async def cancelTask():
+        await menu.message.edit(embed=discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            color=0xff3c3c
+        ))
+        await menu.stop(disable_items=True)
+
+    def cancelTaskWrapper():
+        bot.loop.create_task(
+            cancelTask()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    cancelFollowup = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            cancelTaskWrapper
+        )
     )
 
-    await EmbedMsg.edit(embed=success)
-    await channel.send(embed=embed)
+    menu.add_buttons([
+        ViewButton(
+            emoji="✅",
+            custom_id=ViewButton.ID_CALLER,
+            followup=followUp
+        ),
+        ViewButton(
+            emoji="❎",
+            custom_id=ViewButton.ID_CALLER,
+            followup=cancelFollowup
+        )
+    ])
+
+    try:
+        menu.add_pages(Embeds)
+        await menu.start()
+    except:
+        return await invis_embed(ctx,
+                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
+
 
 
 @bot.hybrid_command(
@@ -1918,96 +1991,140 @@ async def ban(ctx, user, *, reason):
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         Embeds.append(Embed)
 
-    paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-    paginator.add_reaction('✅', 'lock')
-    paginator.add_reaction('❎', "delete")
+    if ctx.interaction:
+        interaction = ctx.interaction
+    else:
+        interaction = ctx
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
 
-    try:
-        EmbedMsg = await paginator.run(Embeds)
-    except:
-        return await invis_embed(ctx,
-                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
-    try:
-        await ctx.channel.fetch_message(EmbedMsg.id)
-    except discord.errors.NotFound:
-        return await invis_embed(ctx, 'Successfully cancelled.')
+    async def ban_function(ctx, menu):
+        user = menu.message.embeds[0].title
+        await menu.stop(disable_items=True)
+        default_warning_item = {
+            '_id': user.lower(),
+            'warnings': [{
+                'id': next(generator),
+                "Type": "Ban",
+                "Reason": reason,
+                "Moderator": [ctx.author.name, ctx.author.id],
+                "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
+                "Guild": ctx.guild.id
+            }]
+        }
 
-    logging.info(EmbedMsg)
-    logging.info(EmbedMsg.embeds)
-
-    user = EmbedMsg.embeds[0].title
-
-    default_warning_item = {
-        '_id': user.lower(),
-        'warnings': [{
+        singular_warning_item = {
             'id': next(generator),
             "Type": "Ban",
             "Reason": reason,
             "Moderator": [ctx.author.name, ctx.author.id],
             "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
             "Guild": ctx.guild.id
-        }]
-    }
+        }
 
-    singular_warning_item = {
-        'id': next(generator),
-        "Type": "Ban",
-        "Reason": reason,
-        "Moderator": [ctx.author.name, ctx.author.id],
-        "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-        "Guild": ctx.guild.id
-    }
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        if not configItem['punishments']['enabled']:
+            return await invis_embed(ctx,
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
-    if not configItem['punishments']['enabled']:
-        return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+        embed = discord.Embed(title=user, color=0x2E3136)
+        embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
+        try:
+            embed.set_footer(text="Staff Logging Module")
+        except:
+            pass
+        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
+                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                        inline=False)
+        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
+                        value=f"<:ArrowRightW:1035023450592514048> {menu.message.embeds[0].title}", inline=False)
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> Ban",
+                        inline=False)
+        embed.add_field(name="<:QMark:1035308059532202104> Reason",
+                        value=f"<:ArrowRightW:1035023450592514048> {reason}",
+                        inline=False)
 
-    embed = discord.Embed(title=user, color=0x2E3136)
-    embed.set_thumbnail(url=EmbedMsg.embeds[0].thumbnail.url)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
-    embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
-                    inline=False)
-    embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                    value=f"<:ArrowRightW:1035023450592514048> {EmbedMsg.embeds[0].title}", inline=False)
-    embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> Ban",
-                    inline=False)
-    embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRightW:1035023450592514048> {reason}",
-                    inline=False)
+        try:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['kick_channel'])
+        except:
+            channel = None
+        if not channel:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
 
-    try:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['kick_channel'])
-    except:
-        channel = None
-    if not channel:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+        if not channel:
+            return await invis_embed(ctx,
+                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-    if not channel:
-        return await invis_embed(ctx,
-                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+        if not await bot.warnings.find_by_id(user.lower()):
+            await bot.warnings.insert(default_warning_item)
+        else:
+            dataset = await bot.warnings.find_by_id(user.lower())
+            dataset['warnings'].append(singular_warning_item)
+            await bot.warnings.update_by_id(dataset)
 
-    if not await bot.warnings.find_by_id(user.lower()):
-        await bot.warnings.insert(default_warning_item)
-    else:
-        dataset = await bot.warnings.find_by_id(user.lower())
-        dataset['warnings'].append(singular_warning_item)
-        await bot.warnings.update_by_id(dataset)
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Ban Logged",
+            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
+            color=0x71c15f
+        )
 
-    success = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> Ban Logged",
-        description=f"<:ArrowRightW:1035023450592514048>**{EmbedMsg.embeds[0].title}**'s ban has been logged.",
-        color=0x71c15f
+        await menu.message.edit(embed=success)
+        await channel.send(embed=embed)
+    async def task():
+        await ban_function(ctx, menu)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    async def cancelTask():
+        await menu.message.edit(embed=discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            color=0xff3c3c
+        ))
+        await menu.stop(disable_items=True)
+
+    def cancelTaskWrapper():
+        bot.loop.create_task(
+            cancelTask()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    cancelFollowup = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            cancelTaskWrapper
+        )
     )
 
-    await EmbedMsg.edit(embed=success)
-    await channel.send(embed=embed)
+    menu.add_buttons([
+        ViewButton(
+            emoji="✅",
+            custom_id=ViewButton.ID_CALLER,
+            followup=followUp
+        ),
+        ViewButton(
+            emoji="❎",
+            custom_id=ViewButton.ID_CALLER,
+            followup=cancelFollowup
+        )
+    ])
+
+    try:
+        menu.add_pages(Embeds)
+        await menu.start()
+    except:
+        return await invis_embed(ctx,
+                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
+
 
 
 @bot.hybrid_command(
@@ -2021,11 +2138,11 @@ async def ban(ctx, user, *, reason):
 async def mlog(ctx, *, message):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if not configItem['staff_management']['enabled']:
         return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+                                 'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
     embed = discord.Embed(title='<:Resume:1035269012445216858> In-game Message', color=0x2E3136)
     try:
@@ -2042,7 +2159,7 @@ async def mlog(ctx, *, message):
         channel = ctx.guild.get_channel(configItem['staff_management']['channel'])
     if not channel:
         return await invis_embed(
-            'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+            'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Message Logged",
@@ -2176,29 +2293,24 @@ async def tempban(ctx, user, time: str, *, reason):
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         Embeds.append(Embed)
 
-    paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-    paginator.add_reaction('✅', 'lock')
-    paginator.add_reaction('❎', "delete")
+    async def ban_function(ctx, menu):
 
-    try:
-        EmbedMsg = await paginator.run(Embeds)
-    except:
-        return await invis_embed(ctx,
-                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
+        user = menu.message.embeds[0].title
+        await menu.stop(disable_items=True)
+        default_warning_item = {
+            '_id': user.lower(),
+            'warnings': [{
+                'id': next(generator),
+                "Type": "Temporary Ban",
+                "Reason": reason,
+                "Moderator": [ctx.author.name, ctx.author.id],
+                "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
+                "Until": endTimestamp,
+                "Guild": ctx.guild.id
+            }]
+        }
 
-    try:
-        await ctx.channel.fetch_message(EmbedMsg.id)
-    except discord.errors.NotFound:
-        return await invis_embed(ctx, 'Successfully cancelled.')
-
-    logging.info(EmbedMsg)
-    logging.info(EmbedMsg.embeds)
-
-    user = EmbedMsg.embeds[0].title
-
-    default_warning_item = {
-        '_id': user.lower(),
-        'warnings': [{
+        singular_warning_item = {
             'id': next(generator),
             "Type": "Temporary Ban",
             "Reason": reason,
@@ -2206,72 +2318,119 @@ async def tempban(ctx, user, time: str, *, reason):
             "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
             "Until": endTimestamp,
             "Guild": ctx.guild.id
-        }]
-    }
+        }
 
-    singular_warning_item = {
-        'id': next(generator),
-        "Type": "Temporary Ban",
-        "Reason": reason,
-        "Moderator": [ctx.author.name, ctx.author.id],
-        "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-        "Until": endTimestamp,
-        "Guild": ctx.guild.id
-    }
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        if not configItem['punishments']['enabled']:
+            return await invis_embed(ctx,
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
-    if not configItem['punishments']['enabled']:
-        return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+        embed = discord.Embed(title=user, color=0x2E3136)
+        embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
+        try:
+            embed.set_footer(text="Staff Logging Module")
+        except:
+            pass
+        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        inline=False)
+        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
+                        value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
+                        value="<:ArrowRight:1035003246445596774> Temporary Ban",
+                        inline=False)
+        embed.add_field(name="<:Clock:1035308064305332224> Until",
+                        value=f"<:ArrowRight:1035003246445596774> <t:{singular_warning_item['Until']}>",
+                        inline=False)
+        embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
+                        inline=False)
 
-    embed = discord.Embed(title=user, color=0x2E3136)
-    embed.set_thumbnail(url=EmbedMsg.embeds[0].thumbnail.url)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
-    embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
-                    inline=False)
-    embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                    value=f"<:ArrowRight:1035003246445596774> {EmbedMsg.embeds[0].title}", inline=False)
-    embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
-                    value="<:ArrowRight:1035003246445596774> Temporary Ban",
-                    inline=False)
-    embed.add_field(name="<:Clock:1035308064305332224> Until",
-                    value=f"<:ArrowRight:1035003246445596774> <t:{singular_warning_item['Until']}>",
-                    inline=False)
-    embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
-                    inline=False)
+        try:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['ban_channel'])
+        except:
+            channel = None
 
-    try:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['ban_channel'])
-    except:
-        channel = None
+        if not channel:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+        if not channel:
+            return await invis_embed(ctx,
+                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-    if not channel:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
-    if not channel:
-        return await invis_embed(ctx,
-                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+        if not await bot.warnings.find_by_id(user.lower()):
+            await bot.warnings.insert(default_warning_item)
+        else:
+            dataset = await bot.warnings.find_by_id(user.lower())
+            dataset['warnings'].append(singular_warning_item)
+            await bot.warnings.update_by_id(dataset)
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Ban Logged",
+            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
+            color=0x71c15f
+        )
 
-    if not await bot.warnings.find_by_id(user.lower()):
-        await bot.warnings.insert(default_warning_item)
+        await menu.message.edit(embed=success)
+        await channel.send(embed=embed)
+
+    if ctx.interaction:
+        interaction = ctx.interaction
     else:
-        dataset = await bot.warnings.find_by_id(user.lower())
-        dataset['warnings'].append(singular_warning_item)
-        await bot.warnings.update_by_id(dataset)
-    success = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> Ban Logged",
-        description=f"<:ArrowRightW:1035023450592514048>**{EmbedMsg.embeds[0].title}**'s ban has been logged.",
-        color=0x71c15f
+        interaction = ctx
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+    async def task():
+        await ban_function(ctx, menu)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    async def cancelTask():
+        await menu.message.edit(embed=discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            color=0xff3c3c
+        ))
+        await menu.stop(disable_items=True)
+
+    def cancelTaskWrapper():
+        bot.loop.create_task(
+            cancelTask()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    cancelFollowup = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            cancelTaskWrapper
+        )
     )
 
-    await EmbedMsg.edit(embed=success)
-    await channel.send(embed=embed)
+    menu.add_buttons([
+        ViewButton(
+            emoji="✅",
+            custom_id=ViewButton.ID_CALLER,
+            followup=followUp
+        ),
+        ViewButton(
+            emoji="❎",
+            custom_id=ViewButton.ID_CALLER,
+            followup=cancelFollowup
+        )
+    ])
+
+    try:
+        menu.add_pages(Embeds)
+        await menu.start()
+    except:
+        return await invis_embed(ctx,
+                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
 
 
 @bot.hybrid_command(
@@ -2410,11 +2569,11 @@ async def search(ctx, *, query):
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if configItem is None:
             return await invis_embed(ctx,
-                                     'The server has not been set up yet. Please run `>setup` to set up the server.')
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
         if not configItem['punishments']['enabled']:
             return await invis_embed(ctx,
-                                     'This server has punishments disabled. Please run `>config change` to enable punishments.')
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
         embeds = [embed1, embed2]
 
@@ -2470,13 +2629,16 @@ async def search(ctx, *, query):
             embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
                              icon_url=ctx.author.display_avatar.url)
             if index != 0:
-                embed.set_footer(text=f"Navigate this page by using the reactions below.")
+                embed.set_footer(text=f"Navigate this page by using the buttons below.")
 
-        paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-        paginator.add_reaction('⏪', "back")
-        paginator.add_reaction('🗑️', 'lock')
-        paginator.add_reaction('⏩', "next")
-        await paginator.run(embeds)
+        if ctx.interaction:
+            interaction = ctx.interaction
+        else:
+            interaction = ctx
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        menu.add_buttons([ViewButton.back(), ViewButton.next()])
+        menu.add_pages(embeds)
+        await menu.start()
 
 
 # @search.autocomplete('query')
@@ -2594,7 +2756,48 @@ async def globalsearch(ctx, *, query):
                 if not privacySettings:
                     result.remove(warning)
 
-        User = await client.get_user_by_username(result[0]['name'], expand=True, exclude_banned_users=False)
+        try:
+            User = await client.get_user_by_username(result[0]['name'], expand=True, exclude_banned_users=False)
+        except IndexError:
+            try:
+                User = await client.get_user_by_username(query, exclude_banned_users=False, expand=True)
+            except:
+                return await invis_embed(ctx, 'No user matches your query.')
+            triggered_alerts = []
+
+            if User.is_banned:
+                triggered_alerts.append('IsBanned')
+            if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+                triggered_alerts.append('AccountAge')
+            if not User:
+                triggered_alerts.append('UserDoesNotExist')
+            if len(User.description) < 10:
+                triggered_alerts.append('NoDescription')
+            if any(x in User.name for x in ['alt', 'alternative', 'account']):
+                triggered_alerts.append('SuspiciousUsername')
+            if await User.get_friend_count() <= 30:
+                triggered_alerts.append('NotManyFriends')
+            if len(await User.get_group_roles()) <= 5:
+                triggered_alerts.append('NotManyGroups')
+
+            if len(triggered_alerts) == 0:
+                triggered_alerts.append('NoAlerts')
+
+            embed1 = discord.Embed(title=query, color=0x2E3136)
+            embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
+                              icon_url=ctx.author.display_avatar.url)
+
+            if embed1.title in bot.staff_members.keys():
+                await staff_field(embed1, embed1.title)
+
+            embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
+                             value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
+            string = "\n".join([alerts[i] for i in triggered_alerts])
+            embed1.add_field(name='<:WarningIcon:1035258528149033090> Alerts', value=f'{string}', inline=False)
+            embed1.set_thumbnail(
+                url="https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
+                    User.id))
+            return await ctx.send(embed=embed1)
 
         if User.is_banned:
             triggered_alerts.append('IsBanned')
@@ -2619,11 +2822,9 @@ async def globalsearch(ctx, *, query):
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if configItem is None:
             return await invis_embed(ctx,
-                                     'The server has not been set up yet. Please run `>setup` to set up the server.')
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-        embeds = []
-        embeds.append(embed1)
-        embeds.append(embed2)
+        embeds = [embed1, embed2]
 
         if embed1.title in bot.staff_members.keys():
             await staff_field(embeds[0], embed1.title)
@@ -2674,11 +2875,14 @@ async def globalsearch(ctx, *, query):
             if index != 0:
                 embed.set_footer(text=f"Navigate this page by using the reactions below.")
 
-        paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-        paginator.add_reaction('⏪', "back")
-        paginator.add_reaction('🗑️', 'lock')
-        paginator.add_reaction('⏩', "next")
-        await paginator.run(embeds)
+        if ctx.interaction:
+            interaction = ctx.interaction
+        else:
+            interaction = ctx
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        menu.add_buttons([ViewButton.back(), ViewButton.next()])
+        menu.add_pages(embeds)
+        await menu.start()
 
 
 #
@@ -2771,7 +2975,7 @@ async def removewarning(ctx, id: str):
 async def help(ctx, *, command=None):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if command == None:
 
@@ -2978,96 +3182,142 @@ async def bolo_create(ctx, user, *, reason):
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         Embeds.append(Embed)
 
-    paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx)
-    paginator.add_reaction('✅', 'lock')
-    paginator.add_reaction('❎', "delete")
+    if ctx.interaction:
+        interaction = ctx.interaction
+    else:
+        interaction = ctx
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
 
-    try:
-        EmbedMsg = await paginator.run(Embeds)
-    except:
-        return await invis_embed(ctx,
-                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
-    try:
-        await ctx.channel.fetch_message(EmbedMsg.id)
-    except discord.errors.NotFound:
-        return await invis_embed(ctx, 'Successfully cancelled.')
+    async def bolo_function(ctx, menu):
 
-    logging.info(EmbedMsg)
-    logging.info(EmbedMsg.embeds)
+        user = menu.message.embeds[0].title
+        await menu.stop(disable_items=True)
 
-    user = EmbedMsg.embeds[0].title
+        default_warning_item = {
+            '_id': user.lower(),
+            'warnings': [{
+                'id': next(generator),
+                "Type": "BOLO",
+                "Reason": reason,
+                "Moderator": [ctx.author.name, ctx.author.id],
+                "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
+                "Guild": ctx.guild.id
+            }]
+        }
 
-    default_warning_item = {
-        '_id': user.lower(),
-        'warnings': [{
+        singular_warning_item = {
             'id': next(generator),
             "Type": "BOLO",
             "Reason": reason,
             "Moderator": [ctx.author.name, ctx.author.id],
             "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
             "Guild": ctx.guild.id
-        }]
-    }
+        }
 
-    singular_warning_item = {
-        'id': next(generator),
-        "Type": "BOLO",
-        "Reason": reason,
-        "Moderator": [ctx.author.name, ctx.author.id],
-        "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-        "Guild": ctx.guild.id
-    }
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    configItem = await bot.settings.find_by_id(ctx.guild.id)
-    if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        if not configItem['punishments']['enabled']:
+            return await invis_embed(ctx,
+                                     'This server has punishments disabled. Please run `/config change` to enable punishments.')
 
-    if not configItem['punishments']['enabled']:
-        return await invis_embed(ctx,
-                                 'This server has punishments disabled. Please run `>config change` to enable punishments.')
+        embed = discord.Embed(title=user, color=0x2E3136)
+        embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
+        try:
+            embed.set_footer(text="Staff Logging Module")
+        except:
+            pass
+        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
+                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                        inline=False)
+        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
+                        value=f"<:ArrowRightW:1035023450592514048> {menu.message.embeds[0].title}", inline=False)
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> BOLO",
+                        inline=False)
+        embed.add_field(name="<:QMark:1035308059532202104> Reason",
+                        value=f"<:ArrowRightW:1035023450592514048> {reason}",
+                        inline=False)
 
-    embed = discord.Embed(title=user, color=0x2E3136)
-    embed.set_thumbnail(url=EmbedMsg.embeds[0].thumbnail.url)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
-    embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
-                    inline=False)
-    embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                    value=f"<:ArrowRightW:1035023450592514048> {EmbedMsg.embeds[0].title}", inline=False)
-    embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRightW:1035023450592514048> BOLO",
-                    inline=False)
-    embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRightW:1035023450592514048> {reason}",
-                    inline=False)
+        try:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['bolo_channel'])
+        except:
+            channel = None
+        if not channel:
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
 
-    try:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['bolo_channel'])
-    except:
-        channel = None
-    if not channel:
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+        if not channel:
+            return await invis_embed(ctx,
+                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-    if not channel:
-        return await invis_embed(ctx,
-                                 'The channel in the configuration does not exist. Please tell the server owner to run `>config change` for the channel to be changed.')
+        if not await bot.warnings.find_by_id(user.lower()):
+            await bot.warnings.insert(default_warning_item)
+        else:
+            dataset = await bot.warnings.find_by_id(user.lower())
+            dataset['warnings'].append(singular_warning_item)
+            await bot.warnings.update_by_id(dataset)
 
-    if not await bot.warnings.find_by_id(user.lower()):
-        await bot.warnings.insert(default_warning_item)
-    else:
-        dataset = await bot.warnings.find_by_id(user.lower())
-        dataset['warnings'].append(singular_warning_item)
-        await bot.warnings.update_by_id(dataset)
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> BOLO Logged",
+            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
+            color=0x71c15f
+        )
 
-    success = discord.Embed(
-        title="<:CheckIcon:1035018951043842088> BOLO Logged",
-        description=f"<:ArrowRightW:1035023450592514048>**{EmbedMsg.embeds[0].title}**'s ban has been logged.",
-        color=0x71c15f
+        await menu.message.edit(embed=success)
+        await channel.send(embed=embed)
+
+    async def task():
+        await bolo_function(ctx, menu)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    async def cancelTask():
+        await menu.message.edit(embed=discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            color=0xff3c3c
+        ))
+        await menu.stop(disable_items=True)
+
+    def cancelTaskWrapper():
+        bot.loop.create_task(
+            cancelTask()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    cancelFollowup = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            cancelTaskWrapper
+        )
     )
 
-    await EmbedMsg.edit(embed=success)
-    await channel.send(embed=embed)
+    menu.add_buttons([
+        ViewButton(
+            emoji="✅",
+            custom_id=ViewButton.ID_CALLER,
+            followup=followUp
+        ),
+        ViewButton(
+            emoji="❎",
+            custom_id=ViewButton.ID_CALLER,
+            followup=cancelFollowup
+        )
+    ])
+
+    try:
+        menu.add_pages(Embeds)
+        await menu.start()
+    except:
+        return await invis_embed(ctx,
+                                 'This user does not exist on the Roblox platform. Please try again with a valid username.')
 
 
 @bolo.command(
@@ -3114,7 +3364,7 @@ async def bolo_lookup(ctx, *, user: str):
 async def dutyon(ctx):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if configItem['shift_management']['enabled'] == False:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -3292,7 +3542,7 @@ async def bolo_void(ctx, id: str):
 async def dutyoff(ctx):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if configItem['shift_management']['enabled'] == False:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -3389,7 +3639,7 @@ async def dutyoff(ctx):
         })
     else:
         if "shifts" in await bot.shift_storage.find_by_id(ctx.author.id):
-            if not None in dict(await bot.shift_storage.find_by_id(ctx.author.id)).values():
+            if None not in dict(await bot.shift_storage.find_by_id(ctx.author.id)).values():
 
                 await bot.shift_storage.update_by_id(
                     {
@@ -3457,7 +3707,7 @@ async def dutyoff(ctx):
 async def dutytime(ctx):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if not configItem['shift_management']['enabled']:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -3535,7 +3785,7 @@ async def dutytime(ctx):
 async def dutyvoid(ctx):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if not configItem['shift_management']['enabled']:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -3669,7 +3919,7 @@ async def dutyvoid(ctx):
 async def forcevoid(ctx, member: discord.Member):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if configItem['shift_management']['enabled'] == False:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -3802,7 +4052,7 @@ async def forcevoid(ctx, member: discord.Member):
 async def modify(ctx, member: discord.Member):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     if configItem['shift_management']['enabled'] == False:
         return await invis_embed(ctx, 'Shift management is not enabled on this server.')
@@ -4031,7 +4281,8 @@ async def modify(ctx, member: discord.Member):
         timestamp = shift['startTimestamp']
         dT = datetime.datetime.fromtimestamp(timestamp)
         tD = None
-        content = (await request_response(ctx, "How much time would you like to add to the shift? (s/m/h/d)")).content
+        content = (
+            await request_response(bot, ctx, "How much time would you like to add to the shift? (s/m/h/d)")).content
         content = content.strip()
         if content.endswith(('s', 'm', 'h', 'd')):
             full = None
@@ -4076,7 +4327,8 @@ async def modify(ctx, member: discord.Member):
         dT = datetime.datetime.fromtimestamp(timestamp)
         tD = None
         content = (
-            await request_response(ctx, "How much time would you like to remove from the shift? (s/m/h/d)")).content
+            await request_response(bot, ctx,
+                                   "How much time would you like to remove from the shift? (s/m/h/d)")).content
         content = content.strip()
         if content.endswith(('s', 'm', 'h', 'd')):
             full = None
@@ -4149,7 +4401,7 @@ async def loa(ctx, time, *, reason):
 async def loarequest(ctx, time, *, reason):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     try:
         timeObj = reason.split(' ')[-1]
@@ -4275,6 +4527,9 @@ async def loavoid(ctx, user: discord.Member = None):
             loa = l
             break
 
+    if loa is None:
+        return await invis_embed(ctx, f"{user.display_name} is currently not on LoA.")
+
     embed = discord.Embed(
         description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s LoA?**\n**End date:** <t:{loa["expiry"]}>',
         color=0x2E3136)
@@ -4320,7 +4575,7 @@ async def ra(ctx, time, *, reason):
 async def rarequest(ctx, time, *, reason):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     try:
         timeObj = reason.split(' ')[-1]
@@ -4446,6 +4701,9 @@ async def loavoid(ctx, user: discord.Member = None):
             ra = l
             break
 
+    if ra is None:
+        return await invis_embed(ctx, f"{user.display_name} is currently not on RA.")
+
     embed = discord.Embed(
         description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s LoA?**\n**End date:** <t:{ra["expiry"]}>',
         color=0x2E3136)
@@ -4482,7 +4740,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
         configItem = await bot.settings.find_by_id(interaction.guild.id)
     except:
         return await int_invis_embed(interaction,
-                                     'The server has not been set up yet. Please run `>setup` to set up the server.',
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.',
                                      ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
@@ -4646,10 +4904,10 @@ async def add(ctx):
     await view.wait()
 
     if view.value == "create":
-        name = (await request_response(ctx,
+        name = (await request_response(bot, ctx,
                                        "What would you like to name this reminder?")).content
 
-        time = (await request_response(ctx,
+        time = (await request_response(bot, ctx,
                                        "What would you like you like the interval to be? (e.g. 5m)")).content
 
         if time.endswith('s'):
@@ -4665,10 +4923,10 @@ async def add(ctx):
         else:
             return await invis_embed(ctx, 'You have not provided a correct suffix. (s/m/h/d)')
 
-        message = (await request_response(ctx,
+        message = (await request_response(bot, ctx,
                                           "What would you like you like the message to be? (e.g. `Get Active!`)")).content
 
-        channel = (await request_response(ctx,
+        channel = (await request_response(bot, ctx,
                                           "What would you like you like the channel to be in? (e.g. `#general`)")).content
 
         view = YesNoMenu(ctx.author.id)
@@ -4678,7 +4936,7 @@ async def add(ctx):
         roleObject = None
         await view.wait()
         if view.value == True:
-            role = (await request_response(ctx,
+            role = (await request_response(bot, ctx,
                                            'What role would you like to be mentioned?')).content
             if ',' in role:
                 roleObject = []
@@ -4751,7 +5009,7 @@ async def remove(ctx):
     await view.wait()
 
     if view.value == "delete":
-        name = (await request_response(ctx,
+        name = (await request_response(bot, ctx,
                                        "What reminder would you like to delete? (e.g. `1`)\n*Specify the ID to delete the reminder.*")).content
 
         for item in Data['reminders']:
@@ -4773,7 +5031,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
         configItem = await bot.settings.find_by_id(interaction.guild.id)
     except:
         return await int_invis_embed(interaction,
-                                     'The server has not been set up yet. Please run `>setup` to set up the server.',
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.',
                                      ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
@@ -4898,7 +5156,7 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
         configItem = await bot.settings.find_by_id(interaction.guild.id)
     except:
         return await int_invis_embed(interaction,
-                                     'The server has not been set up yet. Please run `>setup` to set up the server.',
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.',
                                      ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
@@ -4941,7 +5199,7 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
         configItem = await bot.settings.find_by_id(interaction.guild.id)
     except:
         return await interaction.response.send_message(
-            'The server has not been set up yet. Please run `>setup` to set up the server.', ephemeral=True)
+            'The server has not been set up yet. Please run `/setup` to set up the server.', ephemeral=True)
 
     shift = await bot.shifts.find_by_id(member.id)
     if shift:
@@ -5042,7 +5300,7 @@ async def clockedin(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
 
@@ -5086,7 +5344,7 @@ async def info(ctx, member: discord.Member = None):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
 
@@ -5133,7 +5391,7 @@ async def shift_leaderboard(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     all_staff = [{"id": None, "total_seconds": 0}]
 
@@ -5142,17 +5400,14 @@ async def shift_leaderboard(ctx):
         if "shifts" in document.keys():
             if isinstance(document['shifts'], list):
                 for shift in document['shifts']:
-                    try:
-                        if shift['guild'] == ctx.guild.id:
-                            total_seconds += int(shift['totalSeconds'])
-                            if document['_id'] not in [item['id'] for item in all_staff]:
-                                all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-                            else:
-                                for item in all_staff:
-                                    if item['id'] == document['_id']:
-                                        item['total_seconds'] = item['total_seconds'] + total_seconds
-                    except:
-                        pass
+                    if shift['guild'] == ctx.guild.id:
+                        total_seconds += int(shift['totalSeconds'])
+                        if document['_id'] not in [item['id'] for item in all_staff]:
+                            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+                        else:
+                            for item in all_staff:
+                                if item['id'] == document['_id']:
+                                    item['total_seconds'] = item['total_seconds'] + total_seconds
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
@@ -5190,7 +5445,7 @@ async def clearmember(ctx, member: discord.Member = None):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     view = YesNoMenu(ctx.author.id)
 
@@ -5228,7 +5483,7 @@ async def clearall(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
-        return await invis_embed(ctx, 'The server has not been set up yet. Please run `>setup` to set up the server.')
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
     view = YesNoMenu(ctx.author.id)
     embed = discord.Embed(

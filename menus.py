@@ -1,5 +1,5 @@
 import discord
-
+from utils.utils import int_invis_embed
 
 class Setup(discord.ui.View):
     def __init__(self, user_id):
@@ -51,31 +51,37 @@ class Dropdown(discord.ui.Select):
             discord.SelectOption(
                 label="Staff Management",
                 value="staff_management",
+                emoji="<:staff:1035308057007230976>",
                 description="Inactivity Notices, and managing staff members"
             ),
             discord.SelectOption(
                 label="Anti-ping",
                 value="antiping",
+                emoji="<:MessageIcon:1035321236793860116>",
                 description="Responding to certain pings, ping immunity"
             ),
             discord.SelectOption(
                 label="Punishments",
                 value="punishments",
+                emoji="<:MalletWhite:1035258530422341672>",
                 description="Punishing community members for rule infractions"
             ),
             discord.SelectOption(
                 label="Shift Management",
                 value="shift_management",
+                emoji="<:Search:1035353785184288788>",
                 description="Shifts (duty on, duty off), and where logs should go"
             ),
             discord.SelectOption(
                 label="Verification",
                 value="verification",
+                emoji="<:SettingIcon:1035353776460152892>",
                 description="Currently in active development"
             ),
             discord.SelectOption(
                 label="Customisation",
                 value="customisation",
+                emoji="<:FlagIcon:1035258525955395664>",
                 description="Colours, branding, prefix, to customise to your liking"
             ),
             discord.SelectOption(
@@ -236,68 +242,76 @@ class LOAMenu(discord.ui.View):
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        for role in self.roles:
-            if role in [role.id for role in interaction.user.roles]:
-                await interaction.response.defer()
-                for item in self.children:
-                    item.disabled = True
-                    if item.label == "Accept":
-                        item.label = "Accepted"
-                    else:
-                        self.children.remove(item)
-                s_loa = None
-                for loa in await self.bot.loas.get_all():
-                    if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
-                        s_loa = loa
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+            if item.label == "Accept":
+                item.label = "Accepted"
+            else:
+                self.children.remove(item)
+        s_loa = None
+        for loa in await self.bot.loas.get_all():
+            if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
+                s_loa = loa
 
+        s_loa['accepted'] = True
+        guild = self.bot.get_guild(s_loa['guild_id'])
+        try:
+            try:
+                guild = self.bot.get_guild(s_loa['guild_id'])
+                user = guild.get_member(s_loa['user_id'])
+            except:
                 try:
-                    s_loa['accepted'] = True
-                    guild = self.bot.get_guild(s_loa['guild_id'])
-                    user = guild.get_member(s_loa['user_id'])
-                    success = discord.Embed(
-                        title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
-                        description=f"<:ArrowRightW:1035023450592514048> {interaction.user.mention} has accepted your {s_loa['type']} request.",
-                        color=0x71c15f
-                    )
-                    await user.send(embed=success)
-                    await self.bot.loas.update_by_id(s_loa)
-                    if isinstance(self.loa_role, int):
-                        role = [discord.utils.get(guild.roles, id=self.loa_role)]
-                    elif isinstance(self.loa_role, list):
-                        role = [discord.utils.get(guild.roles, id=role) for role in self.loa_role]
-
-                    for rl in role:
-                        if rl not in user.roles:
-                            await user.add_roles(role)
+                    return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
                 except:
                     pass
-                self.value = True
-                await interaction.edit_original_response(view=self)
-                self.stop()
-                continue
+            success = discord.Embed(
+                title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
+                description=f"<:ArrowRightW:1035023450592514048> {interaction.user.mention} has accepted your {s_loa['type']} request.",
+                color=0x71c15f
+            )
+            await user.send(embed=success)
+        except:
+            pass
+        await self.bot.loas.update_by_id(s_loa)
+        if isinstance(self.loa_role, int):
+            role = [discord.utils.get(guild.roles, id=self.loa_role)]
+        elif isinstance(self.loa_role, list):
+            role = [discord.utils.get(guild.roles, id=role) for role in self.loa_role]
+
+        for rl in role:
+            if rl not in user.roles:
+                await user.add_roles(rl)
+
+        self.value = True
+        await interaction.edit_original_response(view=self)
+        self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger)
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        for role in self.roles:
-            if role in [role.id for role in interaction.user.roles]:
-                await interaction.response.defer()
-                for item in self.children:
-                    item.disabled = True
-                    if item.label == "Deny":
-                        item.label = "Denied"
-                    else:
-                        self.children.remove(item)
+            await interaction.response.defer()
+            for item in self.children:
+                if item.label == button.label:
+                    item.label = "Denied"
+                item.disabled = True
+            await interaction.edit_original_response(view=self)
 
-                s_loa = None
-                for loa in await self.bot.loas.get_all():
-                    if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
-                        s_loa = loa
-
-                try:
+            s_loa = None
+            for loa in await self.bot.loas.get_all():
+                if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
+                    s_loa = loa
+                if s_loa != None:
                     s_loa['denied'] = True
-                    guild = self.bot.get_guild(s_loa['guild_id'])
-                    user = guild.get_member(s_loa['user_id'])
+
+                    try:
+                        guild = self.bot.get_guild(s_loa['guild_id'])
+                        user = guild.get_member(s_loa['user_id'])
+                    except:
+                        try:
+                            return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
+                        except:
+                            pass
                     success = discord.Embed(
                         title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
                         description=f"<:ArrowRightW:1035023450592514048>{interaction.user.mention} has denied your {s_loa['type']} request.",
@@ -305,15 +319,9 @@ class LOAMenu(discord.ui.View):
                     )
                     await user.send(embed=success)
                     await self.bot.loas.update_by_id(s_loa)
-                    role = discord.utils.get(interaction.guild.roles, id=self.loa_role)
-                    await user.add_roles(role)
-                except Exception as e:
-                    raise Exception(e)
-                    pass
-                self.value = True
-                await interaction.edit_original_response(view=self)
-                self.stop()
-                continue
+
+            self.value = True
+            self.stop()
 
 
 class AddReminder(discord.ui.View):
