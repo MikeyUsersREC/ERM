@@ -220,7 +220,7 @@ class ShiftModify(discord.ui.View):
 
 
 class LOAMenu(discord.ui.View):
-    def __init__(self, bot, roles, loa_role, user_id):
+    def __init__(self, bot, roles, loa_roles, user_id):
         super().__init__()
         self.value = None
         self.bot = bot
@@ -228,7 +228,7 @@ class LOAMenu(discord.ui.View):
             self.roles = roles
         elif isinstance(roles, int):
             self.roles = [roles]
-        self.loa_role = loa_role
+        self.loa_role = loa_roles
         self.user_id = user_id
 
     # When the confirm button is pressed, set the inner value to `True` and
@@ -261,9 +261,14 @@ class LOAMenu(discord.ui.View):
                     )
                     await user.send(embed=success)
                     await self.bot.loas.update_by_id(s_loa)
-                    role = discord.utils.get(interaction.guild.roles, id=self.loa_role)
-                    if role is not None:
-                        await user.add_roles(role)
+                    if isinstance(self.loa_role, int):
+                        role = [discord.utils.get(guild.roles, id=self.loa_role)]
+                    elif isinstance(self.loa_role, list):
+                        role = [discord.utils.get(guild.roles, id=role) for role in self.loa_role]
+
+                    for rl in role:
+                        if rl not in user.roles:
+                            await user.add_roles(role)
                 except:
                     pass
                 self.value = True
