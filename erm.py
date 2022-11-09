@@ -1615,8 +1615,7 @@ async def warn(ctx, user, *, reason):
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
-        await ctx.send('should be logged: debug msg')
-        await ctx.send(channel)
+
 
     async def task():
         await warn_function(ctx, menu)
