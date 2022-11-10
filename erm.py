@@ -95,7 +95,6 @@ async def on_ready():
         bot.privacy = Document(bot.db, "privacy")
         bot.flags = Document(bot.db, "flags")
 
-        check_reminders.start()
 
         bot.error_list = []
         logging.info('Connected to MongoDB!')
@@ -115,10 +114,10 @@ async def on_ready():
 
 
         # change_status.start()
-        update_bot_status.start()
+        # update_bot_status.start()
         GDPR.start()
         check_loa.start()
-
+        check_reminders.start()
     except commands.errors.ExtensionAlreadyLoaded:
         logging.info('Already loaded extensions + bot. (Sharded)')
 
