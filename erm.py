@@ -63,8 +63,8 @@ environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
 @bot.before_invoke
 async def DeferInteraction(ctx):
-    if isinstance(ctx, discord.Interaction):
-        await ctx.defer()
+    if isinstance(ctx.interaction, discord.Interaction):
+        await ctx.interaction.defer()
 
 
 @bot.event
@@ -115,9 +115,9 @@ async def on_ready():
 
         # change_status.start()
         # update_bot_status.start()
-        GDPR.start()
-        check_loa.start()
-        check_reminders.start()
+        # GDPR.start()
+        # check_loa.start()
+        # check_reminders.start()
     except commands.errors.ExtensionAlreadyLoaded:
         logging.info('Already loaded extensions + bot. (Sharded)')
 
@@ -642,103 +642,103 @@ async def on_guild_join(guild: discord.Guild):
         logging.info('Server has been sent welcome sequence.')
 
 
-@bot.event
-async def on_message(message: discord.Message):
-    bypass_role = None
-
-    if not hasattr(bot, 'settings'):
-        return
-
-    if message.author == bot.user:
-        return
-
-    if message.author.bot:
-        return
-
-    if not message.guild:
-        await bot.process_commands(message)
-        return
-
-    dataset = await bot.settings.find_by_id(message.guild.id)
-    if dataset == None:
-        await bot.process_commands(message)
-        return
-
-    antiping_roles = None
-    bypass_roles = None
-
-    if "bypass_role" in dataset['antiping'].keys():
-        bypass_role = dataset['antiping']['bypass_role']
-
-    if dataset['antiping']['enabled'] is False or dataset['antiping']['role'] is None:
-        await bot.process_commands(message)
-        return
-
-    if isinstance(bypass_role, list):
-        bypass_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
-    else:
-        bypass_roles = [discord.utils.get(message.guild.roles, id=bypass_role)]
-
-    if isinstance(dataset['antiping']['role'], list):
-        antiping_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
-    else:
-        antiping_roles = [discord.utils.get(message.guild.roles, id=dataset['antiping']['role'])]
-
-    if antiping_roles is None:
-        await bot.process_commands(message)
-        return
-
-    if bypass_roles is not None:
-        for role in bypass_roles:
-            if bypass_role in message.author.roles:
-                await bot.process_commands(message)
-                return
-
-    for mention in message.mentions:
-        isStaffPermitted = False
-        logging.info(isStaffPermitted)
-
-        if mention.bot:
-            await bot.process_commands(message)
-            return
-
-        if mention == message.author:
-            await bot.process_commands(message)
-            return
-
-        for role in antiping_roles:
-            if message.author.top_role.position > role.position or message.author.top_role.position == role.position:
-                await bot.process_commands(message)
-                return
-
-        if message.author == message.guild.owner:
-            await bot.process_commands(message)
-            return
-
-        if not isStaffPermitted:
-            for role in antiping_roles:
-                if mention.top_role.position > role.position:
-                    Embed = discord.Embed(
-                        title=f'Do not ping {role.name} or above!',
-                        color=discord.Color.red(),
-                        description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
-                    )
-                    try:
-                        msg = await message.channel.fetch_message(message.reference.message_id)
-                        if msg.author == mention:
-                            Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
-                    except:
-                        pass
-
-                    Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                     icon_url=get_guild_icon(bot, message.guild))
-
-                    ctx = await bot.get_context(message)
-                    await ctx.reply(f'{message.author.mention}', embed=Embed)
-                    return
-                await bot.process_commands(message)
-                return
-    await bot.process_commands(message)
+# @bot.event
+# async def on_message(message: discord.Message):
+#     bypass_role = None
+#
+#     if not hasattr(bot, 'settings'):
+#         return
+#
+#     if message.author == bot.user:
+#         return
+#
+#     if message.author.bot:
+#         return
+#
+#     if not message.guild:
+#         await bot.process_commands(message)
+#         return
+#
+#     dataset = await bot.settings.find_by_id(message.guild.id)
+#     if dataset == None:
+#         await bot.process_commands(message)
+#         return
+#
+#     antiping_roles = None
+#     bypass_roles = None
+#
+#     if "bypass_role" in dataset['antiping'].keys():
+#         bypass_role = dataset['antiping']['bypass_role']
+#
+#     if dataset['antiping']['enabled'] is False or dataset['antiping']['role'] is None:
+#         await bot.process_commands(message)
+#         return
+#
+#     if isinstance(bypass_role, list):
+#         bypass_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
+#     else:
+#         bypass_roles = [discord.utils.get(message.guild.roles, id=bypass_role)]
+#
+#     if isinstance(dataset['antiping']['role'], list):
+#         antiping_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
+#     else:
+#         antiping_roles = [discord.utils.get(message.guild.roles, id=dataset['antiping']['role'])]
+#
+#     if antiping_roles is None:
+#         await bot.process_commands(message)
+#         return
+#
+#     if bypass_roles is not None:
+#         for role in bypass_roles:
+#             if bypass_role in message.author.roles:
+#                 await bot.process_commands(message)
+#                 return
+#
+#     for mention in message.mentions:
+#         isStaffPermitted = False
+#         logging.info(isStaffPermitted)
+#
+#         if mention.bot:
+#             await bot.process_commands(message)
+#             return
+#
+#         if mention == message.author:
+#             await bot.process_commands(message)
+#             return
+#
+#         for role in antiping_roles:
+#             if message.author.top_role.position > role.position or message.author.top_role.position == role.position:
+#                 await bot.process_commands(message)
+#                 return
+#
+#         if message.author == message.guild.owner:
+#             await bot.process_commands(message)
+#             return
+#
+#         if not isStaffPermitted:
+#             for role in antiping_roles:
+#                 if mention.top_role.position > role.position:
+#                     Embed = discord.Embed(
+#                         title=f'Do not ping {role.name} or above!',
+#                         color=discord.Color.red(),
+#                         description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
+#                     )
+#                     try:
+#                         msg = await message.channel.fetch_message(message.reference.message_id)
+#                         if msg.author == mention:
+#                             Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+#                     except:
+#                         pass
+#
+#                     Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+#                                      icon_url=get_guild_icon(bot, message.guild))
+#
+#                     ctx = await bot.get_context(message)
+#                     await ctx.reply(f'{message.author.mention}', embed=Embed)
+#                     return
+#                 await bot.process_commands(message)
+#                 return
+#     await bot.process_commands(message)
 
 
 @bot.hybrid_command(
