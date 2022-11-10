@@ -1754,7 +1754,7 @@ async def warn(ctx, user, *, reason):
     async def cancelTask():
         await menu.message.edit(embed=discord.Embed(
             title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            description="<:ArrowRight:1035003246445596774>This warn has not been logged.",
             color=0xff3c3c
         ))
         await menu.stop(disable_items=True)
@@ -1981,7 +1981,7 @@ async def kick(ctx, user, *, reason):
     async def cancelTask():
         await menu.message.edit(embed=discord.Embed(
             title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            description="<:ArrowRight:1035003246445596774>This kick has not been logged.",
             color=0xff3c3c
         ))
         await menu.stop(disable_items=True)
@@ -3408,7 +3408,7 @@ async def bolo_create(ctx, user, *, reason):
     async def cancelTask():
         await menu.message.edit(embed=discord.Embed(
             title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            description="<:ArrowRight:1035003246445596774>This BOLO has not been logged.",
             color=0xff3c3c
         ))
         await menu.stop(disable_items=True)
