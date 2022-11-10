@@ -114,7 +114,7 @@ async def on_ready():
         bot.is_synced = True
 
 
-        change_status.start()
+        # change_status.start()
         update_bot_status.start()
         GDPR.start()
         check_loa.start()
