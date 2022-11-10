@@ -47,7 +47,7 @@ intents.members = True
 intents.voice_states = True
 
 
-class AutoShardedBot(commands.AutoShardedBot):
+class AutoShardedBot(commands.Bot):
     async def is_owner(self, user: discord.User):
         if user.id in [459374864067723275, 713899230183424011]:  # Implement your own conditions here
             return True
