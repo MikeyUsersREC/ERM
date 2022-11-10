@@ -85,7 +85,7 @@ async def on_ready():
         elif environment == "PRODUCTION":
             bot.db = bot.mongo["erm"]
         else:
-            raise Exception("Invalid enviroment")
+            raise Exception("Invalid environment")
 
         bot.start_time = time.time()
         bot.warnings = Document(bot.db, "warnings")
@@ -438,29 +438,30 @@ async def check_loa():
             print(loaObject)
             await bot.loas.update_by_id(loaObject)
             guild = bot.get_guild(loaObject['guild_id'])
-            embed = discord.Embed(
-                title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
-                description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
-                color=0x2E3136
-            )
-            member = guild.get_member(loaObject['user_id'])
-            settings = await bot.settings.find_by_id(guild.id)
-            roles = [None]
-            if settings is not None:
-                if "loa_role" in settings['staff_management']:
-                    try:
-                        if isinstance(settings['staff_management']['loa_role'], int):
-                            roles = [discord.utils.get(guild.roles, id=settings['staff_management']['loa_role'])]
-                        elif isinstance(settings['staff_management']['loa_role'], list):
-                            roles = [discord.utils.get(guild.roles, id=role) for role in
-                                     settings['staff_management']['loa_role']]
-                    except:
-                        pass
-            if roles is not [None]:
-                for role in roles:
-                    if role in member.roles:
-                        await member.remove_roles(role)
-            await member.send(embed=embed)
+            if guild:
+                embed = discord.Embed(
+                    title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
+                    description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
+                    color=0x2E3136
+                )
+                member = guild.get_member(loaObject['user_id'])
+                settings = await bot.settings.find_by_id(guild.id)
+                roles = [None]
+                if settings is not None:
+                    if "loa_role" in settings['staff_management']:
+                        try:
+                            if isinstance(settings['staff_management']['loa_role'], int):
+                                roles = [discord.utils.get(guild.roles, id=settings['staff_management']['loa_role'])]
+                            elif isinstance(settings['staff_management']['loa_role'], list):
+                                roles = [discord.utils.get(guild.roles, id=role) for role in
+                                         settings['staff_management']['loa_role']]
+                        except:
+                            pass
+                if roles is not [None]:
+                    for role in roles:
+                        if role in member.roles:
+                            await member.remove_roles(role)
+                await member.send(embed=embed)
 
 
 @bot.event
@@ -5399,14 +5400,15 @@ async def shift_leaderboard(ctx):
         if "shifts" in document.keys():
             if isinstance(document['shifts'], list):
                 for shift in document['shifts']:
-                    if shift['guild'] == ctx.guild.id:
-                        total_seconds += int(shift['totalSeconds'])
-                        if document['_id'] not in [item['id'] for item in all_staff]:
-                            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-                        else:
-                            for item in all_staff:
-                                if item['id'] == document['_id']:
-                                    item['total_seconds'] = item['total_seconds'] + total_seconds
+                    if isinstance(shift, dict):
+                        if shift['guild'] == ctx.guild.id:
+                            total_seconds += int(shift['totalSeconds'])
+                            if document['_id'] not in [item['id'] for item in all_staff]:
+                                all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+                            else:
+                                for item in all_staff:
+                                    if item['id'] == document['_id']:
+                                        item['total_seconds'] = item['total_seconds'] + total_seconds
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
