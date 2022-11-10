@@ -69,7 +69,6 @@ async def DeferInteraction(ctx):
 
 @bot.event
 async def on_ready():
-    await bot.wait_until_ready()
 
     # load IPC extension
     try:
