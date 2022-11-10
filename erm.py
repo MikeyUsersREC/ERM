@@ -47,7 +47,7 @@ intents.members = True
 intents.voice_states = True
 
 
-class AutoShardedBot(commands.Bot):
+class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [459374864067723275, 713899230183424011]:  # Implement your own conditions here
             return True
@@ -56,22 +56,8 @@ class AutoShardedBot(commands.Bot):
         return await super().is_owner(user)
 
 
-bot = AutoShardedBot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
-bot.is_synced = False
-environment = config('ENVIRONMENT', default='DEVELOPMENT')
-
-
-@bot.before_invoke
-async def DeferInteraction(ctx):
-    if isinstance(ctx.interaction, discord.Interaction):
-        await ctx.interaction.defer()
-
-
-@bot.event
-async def on_ready():
-
-    # load IPC extension
-    try:
+    async def setup_hook(self) -> None:
+        bot = self
         # await bot.load_extension('utils.routes')
         logging.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
         global startTime
@@ -95,12 +81,11 @@ async def on_ready():
         bot.privacy = Document(bot.db, "privacy")
         bot.flags = Document(bot.db, "flags")
 
-
         bot.error_list = []
         logging.info('Connected to MongoDB!')
 
         await bot.load_extension('jishaku')
-        await bot.load_extension('utils.server')
+
 
         if not bot.is_synced:  # check if slash commands have been synced
             bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
@@ -108,16 +93,33 @@ async def on_ready():
                 logging.info(item.name)
         if environment == 'DEVELOPMENT':
             await bot.tree.sync(guild=discord.Object(id=987798554972143728))
+
         else:
-            await bot.tree.sync()  # guild specific: leave blank if global (global registration can take 1-24 hours)
+            await bot.tree.sync()
+            # guild specific: leave blank if global (global registration can take 1-24 hours)
         bot.is_synced = True
+        change_status.start()
 
 
-        # change_status.start()
-        # update_bot_status.start()
-        # GDPR.start()
-        # check_loa.start()
-        # check_reminders.start()
+bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None,
+          chunk_guilds_on_startup=False)
+bot.is_synced = False
+environment = config('ENVIRONMENT', default='DEVELOPMENT')
+
+
+@bot.before_invoke
+async def DeferInteraction(ctx):
+    if isinstance(ctx.interaction, discord.Interaction):
+        await ctx.interaction.response.defer()
+
+
+@bot.event
+async def on_ready():
+    try:
+        update_bot_status.start()
+        GDPR.start()
+        check_loa.start()
+        check_reminders.start()
     except commands.errors.ExtensionAlreadyLoaded:
         logging.info('Already loaded extensions + bot. (Sharded)')
 
