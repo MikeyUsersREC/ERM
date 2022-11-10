@@ -584,7 +584,7 @@ async def on_command_error(ctx, error):
             capture_exception(error)
 
 
-@bot.command(
+@bot.hybrid_command(
     name="import",
     description="Import CRP Moderation data [Miscellaneous]"
 )
