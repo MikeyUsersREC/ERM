@@ -76,10 +76,6 @@ async def on_ready():
         logging.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!'.format(bot.user.name))
         global startTime
         startTime = time.time()
-        change_status.start()
-        update_bot_status.start()
-        GDPR.start()
-        check_loa.start()
         bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
         if environment == 'DEVELOPMENT':
             bot.db = bot.mongo['beta']
@@ -116,6 +112,13 @@ async def on_ready():
         else:
             await bot.tree.sync()  # guild specific: leave blank if global (global registration can take 1-24 hours)
         bot.is_synced = True
+
+
+        change_status.start()
+        update_bot_status.start()
+        GDPR.start()
+        check_loa.start()
+
     except commands.errors.ExtensionAlreadyLoaded:
         logging.info('Already loaded extensions + bot. (Sharded)')
 
