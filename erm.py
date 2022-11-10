@@ -98,7 +98,6 @@ class Bot(commands.AutoShardedBot):
             await bot.tree.sync()
             # guild specific: leave blank if global (global registration can take 1-24 hours)
         bot.is_synced = True
-        change_status.start()
 
 
 bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None,
@@ -107,16 +106,17 @@ bot.is_synced = False
 environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
 
-@bot.before_invoke
-async def DeferInteraction(ctx):
-    if isinstance(ctx.interaction, discord.Interaction):
-        await ctx.interaction.response.defer()
-
+# @bot.before_invoke
+# async def DeferInteraction(ctx):
+#     if isinstance(ctx.interaction, discord.Interaction):
+#         await ctx.interaction.response.defer()
+#
 
 @bot.event
 async def on_ready():
     try:
         update_bot_status.start()
+        GDPR.start()
         GDPR.start()
         check_loa.start()
         check_reminders.start()
@@ -364,25 +364,10 @@ async def punishments(ctx):
 #     else:
 #         return await ctx.send('Context')
 
-# status change discord.ext.tasks
-@tasks.loop(hours=1)
-async def change_status():
-    mcl = [guild.member_count for guild in bot.guilds]
-    member_count = sum(mcl)
-
-    status = [
-        "[N] Version [R]"
-    ]
-
-    chosen = random.choice(status)
-    requestResponse = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
-    chosen = chosen.replace('[R]', requestResponse)
-    chosen = chosen[4:]
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game(name=chosen))
 
 
 # status change discord.ext.tasks
-@tasks.loop(seconds=30)
+@tasks.loop(minutes=3)
 async def update_bot_status():
     try:
         # get channel from bot
@@ -402,7 +387,7 @@ async def update_bot_status():
             embed.add_field(name='Status', value='<:online:989218581764014161> Online')
             embed.add_field(name='Pings', value='1')
             embed.add_field(name='Note',
-                            value=f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
+                            value=f'This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
                             inline=False)
 
             await channel.send(embed=embed)
@@ -586,13 +571,16 @@ async def on_command_error(ctx, error):
             })
             capture_exception(error)
 
-
+#
 @bot.hybrid_command(
     name="import",
     description="Import CRP Moderation data [Miscellaneous]"
 )
 @is_management()
 async def _import(ctx):
+    return await invis_embed(ctx, '`/import` has been temporarily disabled for performance reasons. We are currently working on a fix as soon as possible.')
+
+
     try:
         attachments = await request_response(bot, ctx,
                                              "Please send your CRP export file.\n*Note: You can find this by doing `/export` with the CRP bot.*")
