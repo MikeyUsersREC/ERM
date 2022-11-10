@@ -361,7 +361,7 @@ async def punishments(ctx):
 #         return await ctx.send('Context')
 
 # status change discord.ext.tasks
-@tasks.loop(seconds=10)
+@tasks.loop(hours=1)
 async def change_status():
     mcl = [guild.member_count for guild in bot.guilds]
     member_count = sum(mcl)
