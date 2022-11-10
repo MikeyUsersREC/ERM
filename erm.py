@@ -645,6 +645,9 @@ async def on_guild_join(guild: discord.Guild):
 async def on_message(message: discord.Message):
     bypass_role = None
 
+    if not hasattr(bot, 'settings'):
+        return
+
     if message.author == bot.user:
         return
 
