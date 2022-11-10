@@ -1,6 +1,8 @@
 import datetime
 import json
 import logging
+import os
+import pprint
 import random
 import subprocess
 import time
@@ -201,6 +203,74 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
             await bot.warnings.update(structure)
 
 
+async def crp_data_to_mongo(jsonName: str, guildId: int):
+    f = None
+    with open(f'{jsonName}.json', 'r') as f:
+        logging.info(f)
+        f = json.load(f)
+
+    logging.info(f)
+    users = {}
+
+    for value in f["moderations"]:
+        # get user
+        if value['userId'] not in users.keys():
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post('https://users.roblox.com/v1/users', data={
+                    "userIds":
+                        [
+                            value["userId"]
+                        ]
+                }) as r:
+                    requestJSON = await r.json()
+                    name = requestJSON['data'][0]["name"].lower()
+        else:
+            name = users[value["userId"]]
+        users[value["userId"]] = name
+        userItem = None
+        user = discord.utils.get(bot.users, id=int(value['staffId']))
+        if user is not None:
+            userItem = [user.name, user.id]
+        else:
+            userItem = ["-", int(value['staffId'])]
+
+        timeObject = datetime.datetime.fromtimestamp(int(value['time']) / 1000)
+        types = {
+            "other": "Warning",
+            "warn": "Warning",
+            "kick": "Kick",
+            "ban": "Ban"
+        }
+
+        default_warning_item = {
+            'id': next(generator),
+            "Type": types[value['type']],
+            "Reason": value['reason'],
+            "Moderator": userItem,
+            "Time": timeObject.strftime('%m/%d/%Y, %H:%M:%S'),
+            "Guild": guildId
+        }
+
+        pprint.pprint(default_warning_item)
+
+        parent_structure = {
+            "_id": name,
+            "warnings": []
+        }
+
+        if await bot.warnings.find_by_id(name):
+            data = await bot.warnings.find_by_id(name)
+            data["warnings"].append(default_warning_item)
+            await bot.warnings.update_by_id(data)
+        else:
+            data = parent_structure
+            data['warnings'].append(default_warning_item)
+            await bot.warnings.insert(data)
+
+    os.remove(f"{jsonName}.json")
+
+
 bot.staff_members = {
     "i_imikey": "Bot Developer",
     "kiper4k": "Support Team",
@@ -279,6 +349,7 @@ error_gen = ZUID(prefix="error_", length=10)
 )
 async def punishments(ctx):
     pass
+
 
 # @bot.hybrid_command(
 #     name="debug"
@@ -513,6 +584,32 @@ async def on_command_error(ctx, error):
             capture_exception(error)
 
 
+@bot.command(
+    name="import",
+    description="Import CRP Moderation data [Miscellaneous]"
+)
+@is_management()
+async def _import(ctx):
+    try:
+        attachments = await request_response(bot, ctx,
+                                             "Please send your CRP export file.\n*Note: You can find this by doing `/export` with the CRP bot.*")
+        attachments = attachments.attachments
+    except:
+        return await invis_embed(ctx, 'Cancelled.')
+
+    if attachments:
+        await attachments[0].save(f'cache/{ctx.guild.id}.json')
+        await crp_data_to_mongo(f"cache/{ctx.guild.id}", ctx.guild.id)
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Data Merged",
+            description=f"<:ArrowRightW:1035023450592514048>**{ctx.guild.name}**'s data has been merged.",
+            color=0x71c15f
+        )
+        await ctx.send(embed=success)
+    else:
+        return await invis_embed(ctx, 'Cancelled.')
+
+
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     logging.info(f'{bot.user.name} has been added to a new server!')
@@ -546,12 +643,6 @@ async def on_guild_join(guild: discord.Guild):
 
 @bot.event
 async def on_message(message: discord.Message):
-    await bot.wait_until_ready()
-    try:
-        if bot.reminders is not None:
-            pass
-    except:
-        return
     bypass_role = None
 
     if message.author == bot.user:
@@ -569,6 +660,9 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
+    antiping_roles = None
+    bypass_roles = None
+
     if "bypass_role" in dataset['antiping'].keys():
         bypass_role = dataset['antiping']['bypass_role']
 
@@ -576,17 +670,25 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    bypass_role = discord.utils.get(message.guild.roles, id=bypass_role)
-    AntipingRole = discord.utils.get(message.guild.roles, id=dataset['antiping']['role'])
+    if isinstance(bypass_role, list):
+        bypass_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
+    else:
+        bypass_roles = [discord.utils.get(message.guild.roles, id=bypass_role)]
 
-    if AntipingRole == None:
+    if isinstance(dataset['antiping']['role'], list):
+        antiping_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
+    else:
+        antiping_roles = [discord.utils.get(message.guild.roles, id=dataset['antiping']['role'])]
+
+    if antiping_roles is None:
         await bot.process_commands(message)
         return
 
-    if bypass_role != None:
-        if bypass_role in message.author.roles:
-            await bot.process_commands(message)
-            return
+    if bypass_roles is not None:
+        for role in bypass_roles:
+            if bypass_role in message.author.roles:
+                await bot.process_commands(message)
+                return
 
     for mention in message.mentions:
         isStaffPermitted = False
@@ -600,37 +702,38 @@ async def on_message(message: discord.Message):
             await bot.process_commands(message)
             return
 
-        if message.author.top_role.position > AntipingRole.position or message.author.top_role.position == AntipingRole.position:
-            await bot.process_commands(message)
-            return
+        for role in antiping_roles:
+            if message.author.top_role.position > role.position or message.author.top_role.position == role.position:
+                await bot.process_commands(message)
+                return
 
         if message.author == message.guild.owner:
             await bot.process_commands(message)
             return
 
         if not isStaffPermitted:
-            if mention.top_role.position > AntipingRole.position:
-                Embed = discord.Embed(
-                    title=f'Do not ping {AntipingRole.name} or above!',
-                    color=discord.Color.red(),
-                    description=f'Do not ping {AntipingRole.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
-                )
-                try:
-                    msg = await message.channel.fetch_message(message.reference.message_id)
-                    if msg.author == mention:
-                        Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
-                except:
-                    pass
+            for role in antiping_roles:
+                if mention.top_role.position > role.position:
+                    Embed = discord.Embed(
+                        title=f'Do not ping {role.name} or above!',
+                        color=discord.Color.red(),
+                        description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
+                    )
+                    try:
+                        msg = await message.channel.fetch_message(message.reference.message_id)
+                        if msg.author == mention:
+                            Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                    except:
+                        pass
 
-                Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                 icon_url=get_guild_icon(bot, message.guild))
+                    Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                     icon_url=get_guild_icon(bot, message.guild))
 
-                ctx = await bot.get_context(message)
-                await ctx.reply(f'{message.author.mention}', embed=Embed)
+                    ctx = await bot.get_context(message)
+                    await ctx.reply(f'{message.author.mention}', embed=Embed)
+                    return
+                await bot.process_commands(message)
                 return
-        else:
-            await bot.process_commands(message)
-            return
     await bot.process_commands(message)
 
 
@@ -641,7 +744,7 @@ async def on_message(message: discord.Message):
     aliases=['setupbot'],
     with_app_command=True,
 )
-@is_staff()
+@is_management()
 async def setup(ctx):
     settingContents = {
         '_id': 0,
@@ -833,7 +936,7 @@ async def setup(ctx):
     aliases=['qsetup'],
     with_app_command=True,
 )
-@is_staff()
+@is_management()
 async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: discord.TextChannel = None,
                      punishmentschannel: discord.TextChannel = None,
                      shiftmanagementchannel: discord.TextChannel = None):
@@ -949,6 +1052,8 @@ async def viewconfig(ctx):
 
     settingContents = await bot.settings.find_by_id(ctx.guild.id)
     privacyConfig = await bot.privacy.find_by_id(ctx.guild.id)
+    antiping_role = None
+    bypass_role = None
 
     try:
         verification_role = ctx.guild.get_role(settingContents['staff_management']['verification_role']).mention
@@ -965,12 +1070,24 @@ async def viewconfig(ctx):
     except:
         shift_role = 'None'
     try:
-        antiping_role = ctx.guild.get_role(settingContents['anti_ping']['role']).mention
+        if isinstance(settingContents['antiping']['role'], int):
+            antiping_role = ctx.guild.get_role(settingContents['antiping']['role']).mention
+        elif isinstance(settingContents['antiping']['role'], list):
+            antiping_role = ''
+            for role in settingContents['antiping']['role']:
+                antiping_role += ctx.guild.get_role(role).mention + ', '
+            antiping_role = shift_role[:-2]
     except:
         antiping_role = 'None'
 
     try:
-        bypass_role = ctx.guild.get_role(settingContents['anti_ping']['bypass_role']).mention
+        if isinstance(settingContents['antiping']['bypass_role'], int):
+            bypass_role = ctx.guild.get_role(settingContents['antiping']['bypass_role']).mention
+        elif isinstance(settingContents['antiping']['bypass_role'], list):
+            bypass_role = ''
+            for role in settingContents['antiping']['bypass_role']:
+                bypass_role += ctx.guild.get_role(role).mention + ', '
+            bypass_role = shift_role[:-2]
     except:
         bypass_role = 'None'
 
@@ -1028,11 +1145,6 @@ async def viewconfig(ctx):
         bolo_channel = ctx.guild.get_channel(settingContents['customisation']['bolo_channel']).mention
     except:
         bolo_channel = 'None'
-
-    try:
-        shift_role = ctx.guild.get_channel(settingContents['shift_management']['role']).mention
-    except:
-        shift_role = 'None'
 
     try:
         if isinstance(settingContents['staff_management']['loa_role'], int):
@@ -1195,15 +1307,27 @@ async def changeconfig(ctx):
         elif content == 'role':
             content = (
                 await request_response(bot, ctx,
-                                       'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['antiping']['role'] = convertedContent.id
+                                       'What role do you want to use for anti-ping? (e.g. `@Anti-ping`)\n*You can separate roles with commas.*')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['antiping']['role'] = [role.id for role in convertedContent]
         elif content == "bypass_role" or content == "bypass" or content == "bypass-role":
             content = (
                 await request_response(bot, ctx,
-                                       'What role do you want to use as a bypass role? (e.g. `@Antiping Bypass`)')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['antiping']['bypass_role'] = convertedContent.id
+                                       'What role do you want to use as a bypass role? (e.g. `@Antiping Bypass`)\n*You can separate roles with commas.*')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['antiping']['bypass_role'] = [role.id for role in convertedContent]
         else:
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'staff_management':
@@ -1324,9 +1448,15 @@ async def changeconfig(ctx):
             settingContents['shift_management']['channel'] = convertedContent.id
         elif content == 'role':
             content = (await request_response(bot, ctx,
-                                              'What role do you want to use for "Currently in game moderating"? (e.g. `@Currently In-game moderating`)')).content
-            convertedContent = await discord.ext.commands.RoleConverter().convert(ctx, content)
-            settingContents['shift_management']['role'] = convertedContent.id
+                                              'What role do you want to use for "Currently in game moderating"? (e.g. `@Currently In-game moderating`)\n*You can separate multiple roles by commas.*')).content
+            if ',' in content:
+                convertedContent = []
+                for role in content.split(','):
+                    role = role.strip()
+                    convertedContent.append(await discord.ext.commands.RoleConverter().convert(ctx, role))
+            else:
+                convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
+            settingContents['shift_management']['role'] = [role.id for role in convertedContent]
         else:
             return await invis_embed(ctx,
                                      'Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.')
@@ -1557,7 +1687,8 @@ async def warn(ctx, user, *, reason):
 
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if configItem is None:
-            return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
 
         if not configItem['punishments']['enabled']:
             return await invis_embed(ctx,
@@ -1574,7 +1705,8 @@ async def warn(ctx, user, *, reason):
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
-        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Warning",
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
+                        value="<:ArrowRight:1035003246445596774> Warning",
                         inline=False)
         embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
                         inline=False)
@@ -1616,7 +1748,6 @@ async def warn(ctx, user, *, reason):
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
-
 
     async def task():
         await warn_function(ctx, menu)
@@ -1669,6 +1800,7 @@ async def warn(ctx, user, *, reason):
     except:
         return await invis_embed(ctx,
                                  'This user does not exist on the Roblox platform. Please try again with a valid username.')
+
 
 @bot.hybrid_command(
     name="kick",
@@ -1768,6 +1900,7 @@ async def kick(ctx, user, *, reason):
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+
     async def kick_function(ctx, menu):
         user = menu.message.embeds[0].title
         await menu.stop(disable_items=True)
@@ -1842,6 +1975,7 @@ async def kick(ctx, user, *, reason):
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
+
     async def task():
         await kick_function(ctx, menu)
 
@@ -1893,7 +2027,6 @@ async def kick(ctx, user, *, reason):
     except:
         return await invis_embed(ctx,
                                  'This user does not exist on the Roblox platform. Please try again with a valid username.')
-
 
 
 @bot.hybrid_command(
@@ -2073,6 +2206,7 @@ async def ban(ctx, user, *, reason):
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
+
     async def task():
         await ban_function(ctx, menu)
 
@@ -2124,7 +2258,6 @@ async def ban(ctx, user, *, reason):
     except:
         return await invis_embed(ctx,
                                  'This user does not exist on the Roblox platform. Please try again with a valid username.')
-
 
 
 @bot.hybrid_command(
@@ -2380,6 +2513,7 @@ async def tempban(ctx, user, time: str, *, reason):
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+
     async def task():
         await ban_function(ctx, menu)
 
@@ -2593,6 +2727,8 @@ async def search(ctx, *, query):
                     user = discord.utils.get(ctx.guild.members, id=action['Moderator'][1])
                     if user:
                         action['Moderator'] = user.mention
+                    else:
+                        action['Moderator'] = action['Moderator'][1]
                 if 'Until' in action.keys():
                     if len(embeds[-1].fields) <= 2:
                         embeds[-1].add_field(
@@ -4220,7 +4356,7 @@ async def modify(ctx, member: discord.Member):
 
         if role:
             for rl in role:
-                if not rl in member.roles:
+                if rl in member.roles:
                     await member.remove_roles(rl)
     elif view.value == "void":
         embed = discord.Embed(
@@ -4764,6 +4900,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
         in_guild = False
         for guild in shift['data']:
             if guild['guild'] == interaction.guild.id:
+                shift = guild
                 in_guild = True
                 break
 
@@ -4840,7 +4977,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
         )
 
         await interaction.edit_original_response(embed=successEmbed)
-        logging.info(await bot.warnings.find_by_id(member.id))
+        logging.info(await bot.shifts.find_by_id(member.id))
         if await bot.shifts.find_by_id(member.id):
             dataShift = await bot.shifts.find_by_id(member.id)
             if 'data' in dataShift.keys():
@@ -5056,10 +5193,10 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
                 if guild["guild"] == interaction.guild.id:
                     in_guild = True
 
-            if in_guild == True:
+            if in_guild:
                 return await int_invis_embed(interaction, 'This member is currently on shift.', ephemeral=True)
-
-        return await int_invis_embed(interaction, 'This member is currently on shift.', ephemeral=True)
+        else:
+            return await int_invis_embed(interaction, 'This member is currently on shift.', ephemeral=True)
 
     view = YesNoMenu(interaction.user.id)
     await int_invis_embed(interaction, f'Are you sure you want to force start the shift of {member.mention}?',
@@ -5092,7 +5229,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
                 'data': [
                     {
                         "guild": interaction.guild.id,
-                        "startTimestamp": interaction.message.created_at.replace(tzinfo=None).timestamp(),
+                        "startTimestamp": interaction.created_at.replace(tzinfo=None).timestamp(),
                     }
                 ]
             })
