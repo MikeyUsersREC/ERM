@@ -227,7 +227,7 @@ class ShiftModify(discord.ui.View):
 
 class LOAMenu(discord.ui.View):
     def __init__(self, bot, roles, loa_roles, user_id):
-        super().__init__()
+        super().__init__(timeout=None)
         self.value = None
         self.bot = bot
         if isinstance(roles, list):
