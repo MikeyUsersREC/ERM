@@ -220,8 +220,11 @@ async def crp_data_to_mongo(jsonData, guildId: int):
                         value["userId"]
                     ]
             }) as r:
-                requestJSON = await r.json()
-                name = requestJSON['data'][0]["name"].lower()
+                try:
+                    requestJSON = await r.json()
+                    name = requestJSON['data'][0]["name"].lower()
+                except:
+                    name = "placeholder"
         userItem = None
         user = discord.utils.get(bot.users, id=int(value['staffId']))
         if user is not None:
@@ -273,7 +276,8 @@ bot.staff_members = {
     "theoneandonly_5567": "Manager",
     "l0st_nations": "Junior Support",
     "royalcrests": "Developer",
-    "quiverze": "Junior Support"
+    "quiverze": "Junior Support",
+    "jonylion": "Trial Support"
 }
 
 
@@ -396,9 +400,9 @@ async def update_bot_status():
             embed.set_thumbnail(url=bot.user.display_avatar.url)
             embed.add_field(name='Last ping', value=f'<t:{int(datetime.datetime.now().timestamp())}:R>')
             embed.add_field(name='Status', value='<:online:989218581764014161> Online')
-            embed.add_field(name='Pings', value=str(pings + 1))
+            embed.add_field(name='Pings', value=str(pings+1))
             embed.add_field(name='Note',
-                            value=f'This is updated every 30 seconds. If you see the last ping was over 30 seconds ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
+                            value=f'This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
                             inline=False)
 
             await last_message.edit(embed=embed)
@@ -619,133 +623,141 @@ async def on_guild_join(guild: discord.Guild):
         await channel.send(embed=embed)
         logging.info('Server has been sent welcome sequence.')
 
-#
-# @bot.hybrid_group(
-#     name="activity"
-# )
-# async def activity(ctx):
-#     return await invis_embed(ctx, "You have not picked a subcommand.")
-#
-# @activity.command(
-#     name="report",
-#     description="Send an activity report [Activity Management]"
-# )
-# async def activity_report(ctx):
-#     view = CustomSelectMenu(ctx.author.id, [
-#         discord.SelectOption(
-#             label="1 day",
-#             value="1d",
-#             description="Shows the activity of staff members within the last day",
-#             emoji="<:Clock:1035308064305332224>"
-#         ),
-#         discord.SelectOption(
-#             label="7 days",
-#             value="7d",
-#             description="Shows the activity of staff members within the last week",
-#             emoji="<:Clock:1035308064305332224>"
-#         ),
-#         discord.SelectOption(
-#             label="14 days",
-#             value="14d",
-#             description="Shows the activity of staff members within the last 2 weeks",
-#             emoji="<:Clock:1035308064305332224>"
-#         ),
-#         discord.SelectOption(
-#             label="28 days",
-#             value="28d",
-#             description="Shows the activity of staff members within the last month",
-#             emoji="<:Clock:1035308064305332224>"
-#         ),
-#         discord.SelectOption(
-#             label="Custom",
-#             value="custom",
-#             description="Choose a custom time period",
-#             emoji="<:Clock:1035308064305332224>"
-#         )
-#     ])
-#     await invis_embed(ctx, "Choose a period of time you would like to receive a report on.", view=view)
-#     await view.wait()
-#
-#     starting_period = None
-#     ending_period = None
-#     if view.value.endswith('d'):
-#         amount_of_days = view.value.removesuffix('d')
-#         amount = int(amount_of_days)
-#         datetime_obj = datetime.datetime.now()
-#         ending_period = datetime_obj
-#         starting_period = datetime_obj - datetime.timedelta(days=amount)
-#     elif view.value == "custom":
-#         msg = await request_response(bot, ctx, "When do you want this period of time to start?")
-#         try:
-#             start_date = parser.parse(msg.content)
-#         except:
-#             return await invis_embed('We were unable to translate your date. Please try again in another date format.')
-#
-#         msg = await request_response(bot, ctx, "When do you want this period of time to end?")
-#         try:
-#             end_date = parser.parse(msg.content)
-#         except:
-#             return await invis_embed('We were unable to translate your date. Please try again in another date format.')
-#
-#         starting_period = start_date
-#         ending_period = end_date
-#
-#     embed = discord.Embed(
-#         title="<:Clock:1035308064305332224> Activity Report",
-#         color=0x2E3136
-#     )
-#
-#     all_staff = [{"id": None, "total_seconds": 0}]
-#
-#     for document in await bot.shift_storage.get_all():
-#         total_seconds = 0
-#         if "shifts" in document.keys():
-#             if isinstance(document['shifts'], list):
-#                 for shift in document['shifts']:
-#                     if isinstance(shift, dict):
-#                         if shift['guild'] == ctx.guild.id:
-#                             if shift['startTimestamp'] >= starting_period.timestamp() and shift['startTimestamp'] <= ending_period.timestamp():
-#                                 total_seconds += int(shift['totalSeconds'])
-#                                 if document['_id'] not in [item['id'] for item in all_staff]:
-#                                     all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-#                                 else:
-#                                     for item in all_staff:
-#                                         if item['id'] == document['_id']:
-#                                             item['total_seconds'] = item['total_seconds'] + total_seconds
-#
-#     if len(all_staff) == 0:
-#         return await invis_embed(ctx, 'No shifts were made in your server.')
-#     for item in all_staff:
-#         if item['id'] is None:
-#             all_staff.remove(item)
-#
-#     sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
-#
-#     string = ""
-#     for index, value in enumerate(sorted_staff):
-#         print(value)
-#         member = discord.utils.get(ctx.guild.members, id=value['id'])
-#         for i in range(50):
-#             string += f"{index+1}. {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
-#
-#     splitted_str = []
-#     if len(list(string)) >= 1024:
-#         for index in range(0, len(string), 1024):
-#             newIndex = 1024
-#             if "\n" in string[index+1000 : index+1024]:
-#                 newIndex = 1000 + list(string[index+1000:index+1024]).index('\n')
-#             splitted_str.append(string[index : index+newIndex])
-#
-#     if splitted_str == []:
-#         splitted_str.append(string)
-#
-#     for string_obj in splitted_str:
-#         if len(embed.fields) == 0:
-#             embed.add_field(name="<:Clock:1035308064305332224> Shifts", value=string_obj)
-#         else:
-#             embed.add_field(name="\u200b", value=string_obj, inline=False   )
-#
-#     await ctx.send(embed=embed)
+
+@bot.hybrid_group(
+    name="activity"
+)
+async def activity(ctx):
+    return await invis_embed(ctx, "You have not picked a subcommand.")
+
+@activity.command(
+    name="report",
+    description="Send an activity report [Activity Management]"
+)
+async def activity_report(ctx):
+    return await invis_embed(ctx, "This feature has not been released yet.")
+    view = CustomSelectMenu(ctx.author.id, [
+        discord.SelectOption(
+            label="1 day",
+            value="1d",
+            description="Shows the activity of staff members within the last day",
+            emoji="<:Clock:1035308064305332224>"
+        ),
+        discord.SelectOption(
+            label="7 days",
+            value="7d",
+            description="Shows the activity of staff members within the last week",
+            emoji="<:Clock:1035308064305332224>"
+        ),
+        discord.SelectOption(
+            label="14 days",
+            value="14d",
+            description="Shows the activity of staff members within the last 2 weeks",
+            emoji="<:Clock:1035308064305332224>"
+        ),
+        discord.SelectOption(
+            label="28 days",
+            value="28d",
+            description="Shows the activity of staff members within the last month",
+            emoji="<:Clock:1035308064305332224>"
+        ),
+        discord.SelectOption(
+            label="Custom",
+            value="custom",
+            description="Choose a custom time period",
+            emoji="<:Clock:1035308064305332224>"
+        )
+    ])
+    await invis_embed(ctx, "Choose a period of time you would like to receive a report on.", view=view)
+    await view.wait()
+
+    starting_period = None
+    ending_period = None
+    if view.value.endswith('d'):
+        amount_of_days = view.value.removesuffix('d')
+        amount = int(amount_of_days)
+        datetime_obj = datetime.datetime.now()
+        ending_period = datetime_obj
+        starting_period = datetime_obj - datetime.timedelta(days=amount)
+    elif view.value == "custom":
+        msg = await request_response(bot, ctx, "When do you want this period of time to start?")
+        try:
+            start_date = parser.parse(msg.content)
+        except:
+            return await invis_embed('We were unable to translate your date. Please try again in another date format.')
+
+        msg = await request_response(bot, ctx, "When do you want this period of time to end?")
+        try:
+            end_date = parser.parse(msg.content)
+        except:
+            return await invis_embed('We were unable to translate your date. Please try again in another date format.')
+
+        starting_period = start_date
+        ending_period = end_date
+
+    embed = discord.Embed(
+        title="<:Clock:1035308064305332224> Activity Report",
+        color=0x2E3136
+    )
+
+    all_staff = [{"id": None, "total_seconds": 0}]
+
+    for document in await bot.shift_storage.get_all():
+        total_seconds = 0
+        if "shifts" in document.keys():
+            if isinstance(document['shifts'], list):
+                for shift in document['shifts']:
+                    if isinstance(shift, dict):
+                        if shift['guild'] == ctx.guild.id:
+                            if shift['startTimestamp'] >= starting_period.timestamp() and shift['startTimestamp'] <= ending_period.timestamp():
+                                total_seconds += int(shift['totalSeconds'])
+                                if document['_id'] not in [item['id'] for item in all_staff]:
+                                    all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+                                else:
+                                    for item in all_staff:
+                                        if item['id'] == document['_id']:
+                                            item['total_seconds'] = item['total_seconds'] + total_seconds
+
+    loa_staff = []
+
+    for document in await bot.loas.get_all():
+        if document['guild_id'] == ctx.guild.id:
+            if document['expiry'] <= ending_period.timestamp():
+                if document['denied'] is False:
+                    loa_staff.append({"member": document['user_id'], "expiry": document['expiry'], "reason": document['reason']})
+
+    if len(all_staff) == 0:
+        return await invis_embed(ctx, 'No shifts were made in your server.')
+    for item in all_staff:
+        if item['id'] is None:
+            all_staff.remove(item)
+
+    sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
+
+    string = ""
+    for index, value in enumerate(sorted_staff):
+        print(value)
+        member = discord.utils.get(ctx.guild.members, id=value['id'])
+        string += f"**{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
+
+    splitted_str = []
+    resplit = string.splitlines()
+
+    for index, i in enumerate(resplit):
+        if index % 10 == 0:
+            splitted_str.append(i)
+        else:
+            splitted_str[-1] += f"\n{i}"
+    if splitted_str == []:
+        splitted_str.append(string)
+    #
+    for string_obj in splitted_str:
+        if len(embed.fields) == 0:
+            embed.add_field(name="<:Clock:1035308064305332224> Shifts", value=string_obj)
+        else:
+            embed.add_field(name="\u200b", value=string_obj, inline=False)
+
+    await ctx.send(embed=embed)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -795,7 +807,7 @@ async def on_message(message: discord.Message):
 
     if bypass_roles is not None:
         for role in bypass_roles:
-            if bypass_role in message.author.roles:
+            if role in message.author.roles:
                 await bot.process_commands(message)
                 return
 
@@ -807,14 +819,11 @@ async def on_message(message: discord.Message):
             await bot.process_commands(message)
             return
 
-        if mention == message.author:
-            await bot.process_commands(message)
-            return
-
         for role in antiping_roles:
-            if message.author.top_role.position > role.position or message.author.top_role.position == role.position:
-                await bot.process_commands(message)
-                return
+            if role != None:
+                if message.member.top_role.position > role.position or message.author.top_role.position == role.position:
+                    await bot.process_commands(message)
+                    return
 
         if message.author == message.guild.owner:
             await bot.process_commands(message)
@@ -822,24 +831,27 @@ async def on_message(message: discord.Message):
 
         if not isStaffPermitted:
             for role in antiping_roles:
-                if mention.top_role.position > role.position:
-                    Embed = discord.Embed(
-                        title=f'Do not ping {role.name} or above!',
-                        color=discord.Color.red(),
-                        description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
-                    )
-                    try:
-                        msg = await message.channel.fetch_message(message.reference.message_id)
-                        if msg.author == mention:
-                            Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
-                    except:
-                        pass
+                if role != None:
+                    if mention.top_role.position > role.position:
+                        Embed = discord.Embed(
+                            title=f'Do not ping {role.name} or above!',
+                            color=discord.Color.red(),
+                            description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
+                        )
+                        try:
+                            msg = await message.channel.fetch_message(message.reference.message_id)
+                            if msg.author == mention:
+                                Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                        except:
+                            pass
 
-                    Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                     icon_url=get_guild_icon(bot, message.guild))
+                        Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                         icon_url=get_guild_icon(bot, message.guild))
 
-                    ctx = await bot.get_context(message)
-                    await ctx.reply(f'{message.author.mention}', embed=Embed)
+                        ctx = await bot.get_context(message)
+                        await ctx.reply(f'{message.author.mention}', embed=Embed)
+                        return
+                    await bot.process_commands(message)
                     return
                 await bot.process_commands(message)
                 return
@@ -1161,8 +1173,19 @@ async def viewconfig(ctx):
 
     settingContents = await bot.settings.find_by_id(ctx.guild.id)
     privacyConfig = await bot.privacy.find_by_id(ctx.guild.id)
-    antiping_role = None
-    bypass_role = None
+    antiping_role = "None"
+    bypass_role = "None"
+    verification_role = "None"
+    shift_role = "None"
+    staff_management_channel = "None"
+    staff_role = "None"
+    management_role = "None"
+    punishments_channel = "None"
+    kick_channel = "None"
+    ban_channel = "None"
+    bolo_channel = "None"
+    ra_role = "None"
+    loa_role = "None"
 
     try:
         verification_role = ctx.guild.get_role(settingContents['staff_management']['verification_role']).mention
@@ -1185,7 +1208,7 @@ async def viewconfig(ctx):
             antiping_role = ''
             for role in settingContents['antiping']['role']:
                 antiping_role += ctx.guild.get_role(role).mention + ', '
-            antiping_role = shift_role[:-2]
+            antiping_role = antiping_role[:-2]
     except:
         antiping_role = 'None'
 
@@ -1196,7 +1219,7 @@ async def viewconfig(ctx):
             bypass_role = ''
             for role in settingContents['antiping']['bypass_role']:
                 bypass_role += ctx.guild.get_role(role).mention + ', '
-            bypass_role = shift_role[:-2]
+            bypass_role = bypass_role[:-2]
     except:
         bypass_role = 'None'
 
@@ -2743,7 +2766,7 @@ async def search(ctx, *, query):
 
         embed1 = discord.Embed(title=query, color=0x2E3136)
         embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
-        if query.lower() in bot.staff_members.keys():
+        if await bot.flags.find_by_id(query.lower()):
             await staff_field(embed1, query.lower())
         embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                          value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
@@ -2820,7 +2843,7 @@ async def search(ctx, *, query):
 
         embeds = [embed1, embed2]
 
-        if embed1.title in bot.staff_members.keys():
+        if await bot.flags.find_by_id(embed1.title):
             await staff_field(embeds[0], embed1.title)
 
         embeds[0].add_field(name='<:MalletWhite:1035258530422341672> Punishments',
@@ -2970,7 +2993,7 @@ async def globalsearch(ctx, *, query):
         embed1 = discord.Embed(title=query, color=0x2E3136)
         embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
 
-        if embed1.title in bot.staff_members.keys():
+        if  await bot.flags.find_by_id(embed1.title):
             await staff_field(embed1, embed1.title)
 
         embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
@@ -3032,7 +3055,7 @@ async def globalsearch(ctx, *, query):
             embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
                               icon_url=ctx.author.display_avatar.url)
 
-            if embed1.title in bot.staff_members.keys():
+            if await bot.flags.find_by_id(embed1.title):
                 await staff_field(embed1, embed1.title)
 
             embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
@@ -3071,7 +3094,7 @@ async def globalsearch(ctx, *, query):
 
         embeds = [embed1, embed2]
 
-        if embed1.title in bot.staff_members.keys():
+        if await bot.flags.find_by_id(embed1.title):
             await staff_field(embeds[0], embed1.title)
 
         embeds[0].add_field(name='<:MalletWhite:1035258530422341672> Punishments',
