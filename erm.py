@@ -86,7 +86,6 @@ class Bot(commands.AutoShardedBot):
 
         await bot.load_extension('jishaku')
 
-
         if not bot.is_synced:  # check if slash commands have been synced
             bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
             for item in bot.tree._get_all_commands():
@@ -114,14 +113,7 @@ environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
 @bot.event
 async def on_ready():
-    try:
-        update_bot_status.start()
-        GDPR.start()
-        GDPR.start()
-        check_loa.start()
-        check_reminders.start()
-    except commands.errors.ExtensionAlreadyLoaded:
-        logging.info('Already loaded extensions + bot. (Sharded)')
+    print('Bot is now online!')
 
 
 client = roblox.Client()
@@ -206,31 +198,19 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
             await bot.warnings.update(structure)
 
 
-async def crp_data_to_mongo(jsonName: str, guildId: int):
-    f = None
-    with open(f'{jsonName}.json', 'r') as f:
-        logging.info(f)
-        f = json.load(f)
-
-    logging.info(f)
-    users = {}
-
-    for value in f["moderations"]:
+async def crp_data_to_mongo(jsonData, guildId: int):
+    for value in jsonData["moderations"]:
         # get user
-        if value['userId'] not in users.keys():
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post('https://users.roblox.com/v1/users', data={
-                    "userIds":
-                        [
-                            value["userId"]
-                        ]
-                }) as r:
-                    requestJSON = await r.json()
-                    name = requestJSON['data'][0]["name"].lower()
-        else:
-            name = users[value["userId"]]
-        users[value["userId"]] = name
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.post('https://users.roblox.com/v1/users', data={
+                "userIds":
+                    [
+                        value["userId"]
+                    ]
+            }) as r:
+                requestJSON = await r.json()
+                name = requestJSON['data'][0]["name"].lower()
         userItem = None
         user = discord.utils.get(bot.users, id=int(value['staffId']))
         if user is not None:
@@ -271,7 +251,6 @@ async def crp_data_to_mongo(jsonName: str, guildId: int):
             data['warnings'].append(default_warning_item)
             await bot.warnings.insert(data)
 
-    os.remove(f"{jsonName}.json")
 
 
 bot.staff_members = {
@@ -589,8 +568,15 @@ async def _import(ctx):
         return await invis_embed(ctx, 'Cancelled.')
 
     if attachments:
-        await attachments[0].save(f'cache/{ctx.guild.id}.json')
-        await crp_data_to_mongo(f"cache/{ctx.guild.id}", ctx.guild.id)
+        try:
+            read = await attachments.read()
+            decoded = read.decode('utf-8')
+            jsonData = json.load(decoded)
+        except Exception as e:
+            print(e)
+            return await invis_embed(ctx, "You have not provided a correct CRP export file. You can find this by doing `/export` with the CRP bot.")
+
+        await crp_data_to_mongo(jsonData, ctx.guild.id)
         success = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Data Merged",
             description=f"<:ArrowRightW:1035023450592514048>**{ctx.guild.name}**'s data has been merged.",
@@ -2175,7 +2161,7 @@ async def ban(ctx, user, *, reason):
                         inline=False)
 
         try:
-            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['kick_channel'])
+            channel = discord.utils.get(ctx.guild.channels, id=configItem['customisation']['ban_channel'])
         except:
             channel = None
         if not channel:
