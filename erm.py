@@ -2997,10 +2997,13 @@ async def globalsearch(ctx, *, query):
     dataset = await bot.warnings.find_by_id(query.lower())
     if dataset:
         logging.info(dataset)
-        logging.info(dataset['warnings'][0])
+        try:
+            logging.info(dataset['warnings'][0])
+            dataset['warnings'][0]['name'] = query.lower()
+            RESULTS.append(dataset['warnings'])
+        except:
+            pass
 
-        dataset['warnings'][0]['name'] = query.lower()
-        RESULTS.append(dataset['warnings'])
 
     if len(RESULTS) == 0:
         try:
