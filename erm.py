@@ -635,7 +635,7 @@ async def activity(ctx):
     description="Send an activity report [Activity Management]"
 )
 async def activity_report(ctx):
-    return await invis_embed(ctx, "This feature has not been released yet.")
+    # return await invis_embed(ctx, "This feature has not been released yet.")
     view = CustomSelectMenu(ctx.author.id, [
         discord.SelectOption(
             label="1 day",
@@ -722,9 +722,9 @@ async def activity_report(ctx):
 
     for document in await bot.loas.get_all():
         if document['guild_id'] == ctx.guild.id:
-            if document['expiry'] <= ending_period.timestamp():
-                if document['denied'] is False:
-                    loa_staff.append({"member": document['user_id'], "expiry": document['expiry'], "reason": document['reason']})
+            if document['expiry'] >= starting_period.timestamp():
+                if document['denied'] is False and document['accepted'] is True:
+                    loa_staff.append({"member": document['user_id'], "expiry": document['expiry'], "reason": document['reason'], "type": document['type']})
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
@@ -735,10 +735,28 @@ async def activity_report(ctx):
     sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
 
     string = ""
+    loa_string = ""
     for index, value in enumerate(sorted_staff):
         print(value)
         member = discord.utils.get(ctx.guild.members, id=value['id'])
-        string += f"**{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
+        string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
+
+    for index, value in enumerate(loa_staff):
+        print(value)
+        member = discord.utils.get(ctx.guild.members, id=value['member'])
+        loa_string += f"<:ArrowRight:1035003246445596774> {member.name}#{member.discriminator} - <t:{value['expiry']}> ({value['type']})\n"
+
+    loa_str = []
+    res = loa_string.splitlines()
+
+    for index, i in enumerate(res):
+        if index % 10 == 0:
+            loa_str.append(i)
+        else:
+            loa_str[-1] += f"\n{i}"
+
+    if loa_str == []:
+        loa_str.append(string)
 
     splitted_str = []
     resplit = string.splitlines()
@@ -757,7 +775,26 @@ async def activity_report(ctx):
         else:
             embed.add_field(name="\u200b", value=string_obj, inline=False)
 
-    await ctx.send(embed=embed)
+    embed2 = discord.Embed(
+        title="<:Clock:1035308064305332224> Activity Report",
+        color=0x2E3136
+    )
+
+    for loa_obj in loa_str:
+        if len(embed2.fields) == 0:
+            embed2.add_field(name="<:Pause:1035308061679689859> Activity Notices", value=loa_obj)
+        else:
+            embed2.add_field(name='\u200b', value=loa_obj, inline=False)
+
+    if len(embed2.fields) == 0:
+        embed2.add_field(name="<:Pause:1035308061679689859> Activity Notices", value="<:ArrowRight:1035003246445596774> No LoAs and RAs were found.")
+
+
+    menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
+    menu.add_pages([embed, embed2])
+    menu.add_buttons([ViewButton.back(), ViewButton.next()])
+
+    await menu.start()
 
 @bot.event
 async def on_message(message: discord.Message):
