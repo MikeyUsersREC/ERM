@@ -3263,7 +3263,8 @@ async def help(ctx, *, command=None):
             "Search": "<:Search:1035353785184288788>",
             "Utility": "<:SettingIcon:1035353776460152892>",
             "Shift Management": "<:Clock:1035308064305332224>",
-            "Reminders": "<:Resume:1035269012445216858>"
+            "Reminders": "<:Resume:1035269012445216858>",
+            "Activity Management": "<:Pause:1035308061679689859>"
         }
 
         for command in bot.walk_commands():
