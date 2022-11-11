@@ -108,13 +108,17 @@ class CustomDropdown(discord.ui.Select):
         self.user_id = user_id
         optionList = []
 
+
         for option in options:
-            optionList.append(
-                discord.SelectOption(
-                    label=option.replace('_', ' ').title(),
-                    value=option
+            if isinstance(option, str):
+                optionList.append(
+                    discord.SelectOption(
+                        label=option.replace('_', ' ').title(),
+                        value=option
+                    )
                 )
-            )
+            elif isinstance(option, discord.SelectOption):
+                optionList.append(option)
 
         # The placeholder is what will be shown when no option is chosen
         # The min and max values indicate we can only pick one of the three options

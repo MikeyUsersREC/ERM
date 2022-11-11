@@ -1,33 +1,31 @@
 import datetime
 import json
 import logging
-import os
 import pprint
-import random
-import subprocess
 import time
 from io import BytesIO
-from reactionmenu import ViewButton, ViewMenu
-import DiscordUtils
-import discord
+
 import dns.resolver
 import motor.motor_asyncio
 import pytz
 import requests
 import sentry_sdk
+from dateutil import parser
 from decouple import config
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
+from discord.ext.commands.cooldowns import BucketType
+from reactionmenu import ViewButton, ViewMenu
 from roblox import client as roblox
 from sentry_sdk import capture_exception, push_scope
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
-from utils.utils import *
 
 from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
     AddReminder, RemoveReminder
 from utils.mongo import Document
 from utils.timestamp import td_format
+from utils.utils import *
 
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ['8.8.8.8']
@@ -46,7 +44,7 @@ intents.message_content = True
 intents.members = True
 intents.voice_states = True
 
-
+_cd = commands.CooldownMapping.from_cooldown(1.0, 2.0, commands.BucketType.member)
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [459374864067723275, 713899230183424011]:  # Implement your own conditions here
@@ -99,6 +97,8 @@ class Bot(commands.AutoShardedBot):
         bot.is_synced = True
 
 
+
+
 bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None,
           chunk_guilds_on_startup=False)
 bot.is_synced = False
@@ -113,11 +113,22 @@ environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
 @bot.event
 async def on_ready():
+    await check_reminders.start()
+    await check_loa.start()
+    await update_bot_status.start()
+    await GDPR.start()
     print('Bot is now online!')
 
 
 client = roblox.Client()
 
+@bot.check
+async def cooldown_check(ctx):
+    bucket = _cd.get_bucket(ctx.message)
+    retry_after = bucket.update_rate_limit()
+    if retry_after:
+        raise commands.CommandOnCooldown(bucket, retry_after, BucketType.member)
+    return True
 
 def is_staff():
     async def predicate(ctx):
@@ -326,7 +337,7 @@ error_gen = ZUID(prefix="error_", length=10)
 
 
 @bot.hybrid_group(
-    name="punishments",
+    name="punishment",
     description="Punishment commands [Punishments]"
 )
 async def punishments(ctx):
@@ -556,26 +567,19 @@ async def on_command_error(ctx, error):
     description="Import CRP Moderation data [Miscellaneous]"
 )
 @is_management()
-async def _import(ctx):
-    return await invis_embed(ctx, '`/import` has been temporarily disabled for performance reasons. We are currently working on a fix as soon as possible.')
+async def _import(ctx, export_file: discord.Attachment):
+    # return await invis_embed(ctx, '`/import` has been temporarily disabled for performance reasons. We are currently working on a fix as soon as possible.')
 
 
-    try:
-        attachments = await request_response(bot, ctx,
-                                             "Please send your CRP export file.\n*Note: You can find this by doing `/export` with the CRP bot.*")
-        attachments = attachments.attachments
-    except:
-        return await invis_embed(ctx, 'Cancelled.')
+        read = await export_file.read()
+        decoded = read.decode('utf-8')
+        jsonData = json.loads(decoded)
+        # except Exception as e:
+        #     print(e)
+        #     return await invis_embed(ctx,
+        #                              "You have not provided a correct CRP export file. You can find this by doing `/export` with the CRP bot.")
 
-    if attachments:
-        try:
-            read = await attachments.read()
-            decoded = read.decode('utf-8')
-            jsonData = json.load(decoded)
-        except Exception as e:
-            print(e)
-            return await invis_embed(ctx, "You have not provided a correct CRP export file. You can find this by doing `/export` with the CRP bot.")
-
+        await invis_embed(ctx, 'We are currently processing your export file.')
         await crp_data_to_mongo(jsonData, ctx.guild.id)
         success = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Data Merged",
@@ -583,8 +587,6 @@ async def _import(ctx):
             color=0x71c15f
         )
         await ctx.send(embed=success)
-    else:
-        return await invis_embed(ctx, 'Cancelled.')
 
 
 @bot.event
@@ -617,6 +619,133 @@ async def on_guild_join(guild: discord.Guild):
         await channel.send(embed=embed)
         logging.info('Server has been sent welcome sequence.')
 
+#
+# @bot.hybrid_group(
+#     name="activity"
+# )
+# async def activity(ctx):
+#     return await invis_embed(ctx, "You have not picked a subcommand.")
+#
+# @activity.command(
+#     name="report",
+#     description="Send an activity report [Activity Management]"
+# )
+# async def activity_report(ctx):
+#     view = CustomSelectMenu(ctx.author.id, [
+#         discord.SelectOption(
+#             label="1 day",
+#             value="1d",
+#             description="Shows the activity of staff members within the last day",
+#             emoji="<:Clock:1035308064305332224>"
+#         ),
+#         discord.SelectOption(
+#             label="7 days",
+#             value="7d",
+#             description="Shows the activity of staff members within the last week",
+#             emoji="<:Clock:1035308064305332224>"
+#         ),
+#         discord.SelectOption(
+#             label="14 days",
+#             value="14d",
+#             description="Shows the activity of staff members within the last 2 weeks",
+#             emoji="<:Clock:1035308064305332224>"
+#         ),
+#         discord.SelectOption(
+#             label="28 days",
+#             value="28d",
+#             description="Shows the activity of staff members within the last month",
+#             emoji="<:Clock:1035308064305332224>"
+#         ),
+#         discord.SelectOption(
+#             label="Custom",
+#             value="custom",
+#             description="Choose a custom time period",
+#             emoji="<:Clock:1035308064305332224>"
+#         )
+#     ])
+#     await invis_embed(ctx, "Choose a period of time you would like to receive a report on.", view=view)
+#     await view.wait()
+#
+#     starting_period = None
+#     ending_period = None
+#     if view.value.endswith('d'):
+#         amount_of_days = view.value.removesuffix('d')
+#         amount = int(amount_of_days)
+#         datetime_obj = datetime.datetime.now()
+#         ending_period = datetime_obj
+#         starting_period = datetime_obj - datetime.timedelta(days=amount)
+#     elif view.value == "custom":
+#         msg = await request_response(bot, ctx, "When do you want this period of time to start?")
+#         try:
+#             start_date = parser.parse(msg.content)
+#         except:
+#             return await invis_embed('We were unable to translate your date. Please try again in another date format.')
+#
+#         msg = await request_response(bot, ctx, "When do you want this period of time to end?")
+#         try:
+#             end_date = parser.parse(msg.content)
+#         except:
+#             return await invis_embed('We were unable to translate your date. Please try again in another date format.')
+#
+#         starting_period = start_date
+#         ending_period = end_date
+#
+#     embed = discord.Embed(
+#         title="<:Clock:1035308064305332224> Activity Report",
+#         color=0x2E3136
+#     )
+#
+#     all_staff = [{"id": None, "total_seconds": 0}]
+#
+#     for document in await bot.shift_storage.get_all():
+#         total_seconds = 0
+#         if "shifts" in document.keys():
+#             if isinstance(document['shifts'], list):
+#                 for shift in document['shifts']:
+#                     if isinstance(shift, dict):
+#                         if shift['guild'] == ctx.guild.id:
+#                             if shift['startTimestamp'] >= starting_period.timestamp() and shift['startTimestamp'] <= ending_period.timestamp():
+#                                 total_seconds += int(shift['totalSeconds'])
+#                                 if document['_id'] not in [item['id'] for item in all_staff]:
+#                                     all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+#                                 else:
+#                                     for item in all_staff:
+#                                         if item['id'] == document['_id']:
+#                                             item['total_seconds'] = item['total_seconds'] + total_seconds
+#
+#     if len(all_staff) == 0:
+#         return await invis_embed(ctx, 'No shifts were made in your server.')
+#     for item in all_staff:
+#         if item['id'] is None:
+#             all_staff.remove(item)
+#
+#     sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
+#
+#     string = ""
+#     for index, value in enumerate(sorted_staff):
+#         print(value)
+#         member = discord.utils.get(ctx.guild.members, id=value['id'])
+#         for i in range(50):
+#             string += f"{index+1}. {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
+#
+#     splitted_str = []
+#     if len(list(string)) >= 1024:
+#         for index in range(0, len(string), 1024):
+#             newIndex = 1024
+#             if "\n" in string[index+1000 : index+1024]:
+#                 newIndex = 1000 + list(string[index+1000:index+1024]).index('\n')
+#             splitted_str.append(string[index : index+newIndex])
+#
+#     if splitted_str == []:
+#         splitted_str.append(string)
+#
+#     for string_obj in splitted_str:
+#         if len(embed.fields) == 0:
+#             embed.add_field(name="<:Clock:1035308064305332224> Shifts", value=string_obj)
+#         else:
+#             embed.add_field(name="\u200b", value=string_obj, inline=False   )
+#
+#     await ctx.send(embed=embed)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -3569,6 +3698,7 @@ async def dutyon(ctx):
                     ]
                 })
 
+    print(await bot.shifts.find_by_id(ctx.author.id))
     await shift_channel.send(embed=embed)
 
     successEmbed = discord.Embed(
@@ -3754,42 +3884,55 @@ async def dutyoff(ctx):
 
         })
     else:
-        if "shifts" in await bot.shift_storage.find_by_id(ctx.author.id):
-            if None not in dict(await bot.shift_storage.find_by_id(ctx.author.id)).values():
+        data = await bot.shift_storage.find_by_id(ctx.author.id)
 
-                await bot.shift_storage.update_by_id(
+        if "shifts" in data.keys():
+            if data['shifts'] is None:
+                data['shifts'] = []
+
+            if data['shifts'] == []:
+                shifts = [
                     {
-                        '_id': ctx.author.id,
-                        'shifts': [(await bot.shift_storage.find_by_id(ctx.author.id))['shifts']].append(
-
-                            {
-                                'name': ctx.author.name,
-                                'startTimestamp': shift['startTimestamp'],
-                                'endTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
-                                'totalSeconds': time_delta.total_seconds(),
-                                'guild': ctx.guild.id
-                            }
-
-                        ),
-                        'totalSeconds': sum(
-                            [(await bot.shift_storage.find_by_id(ctx.author.id))['shifts'][i]['totalSeconds'] for i in
-                             range(len((await bot.shift_storage.find_by_id(ctx.author.id))['shifts']))])
+                        'name': ctx.author.name,
+                        'startTimestamp': shift['startTimestamp'],
+                        'endTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                        'totalSeconds': time_delta.total_seconds(),
+                        'guild': ctx.guild.id
                     }
-                )
+                ]
             else:
-                await bot.shift_storage.update_by_id({
-                    '_id': ctx.author.id,
-                    'shifts': [
-                        {
-                            'name': ctx.author.name,
-                            'startTimestamp': shift['startTimestamp'],
-                            'endTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
-                            'totalSeconds': time_delta.total_seconds(),
-                            'guild': ctx.guild.id
-                        }],
-                    'totalSeconds': time_delta.total_seconds()
+                object = {
+                        'name': ctx.author.name,
+                        'startTimestamp': shift['startTimestamp'],
+                        'endTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                        'totalSeconds': time_delta.total_seconds(),
+                        'guild': ctx.guild.id
+                    }
+                shiftdata = data['shifts']
+                shifts = shiftdata + [object]
 
-                })
+            await bot.shift_storage.update_by_id(
+                {
+                    '_id': ctx.author.id,
+                    'shifts': shifts,
+                    'totalSeconds': sum(
+                        [shifts[i]['totalSeconds'] for i in range(len(shifts))])
+                }
+            )
+        else:
+            await bot.shift_storage.update_by_id({
+                '_id': ctx.author.id,
+                'shifts': [
+                    {
+                        'name': ctx.author.name,
+                        'startTimestamp': shift['startTimestamp'],
+                        'endTimestamp': ctx.message.created_at.replace(tzinfo=None).timestamp(),
+                        'totalSeconds': time_delta.total_seconds(),
+                        'guild': ctx.guild.id
+                    }],
+                'totalSeconds': time_delta.total_seconds()
+
+            })
 
     if await bot.shifts.find_by_id(ctx.author.id):
         dataShift = await bot.shifts.find_by_id(ctx.author.id)
@@ -4929,12 +5072,14 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
             })
         else:
-            logging.info((await bot.shift_storage.find_by_id(member.id))['shifts'])
-            await bot.shift_storage.update_by_id(
-                {
-                    '_id': member.id,
-                    'shifts': [(await bot.shift_storage.find_by_id(member.id))['shifts']].append(
+            data = await bot.shift_storage.find_by_id(member.id)
 
+            if "shifts" in data.keys():
+                if data['shifts'] is None:
+                    data['shifts'] = []
+
+                if data['shifts'] == []:
+                    shifts = [
                         {
                             'name': member.name,
                             'startTimestamp': shift['startTimestamp'],
@@ -4942,13 +5087,40 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
                             'totalSeconds': time_delta.total_seconds(),
                             'guild': interaction.guild.id
                         }
+                    ]
+                else:
+                    object = {
+                        'name': member.name,
+                        'startTimestamp': shift['startTimestamp'],
+                        'endTimestamp': interaction.created_at.replace(tzinfo=None).timestamp(),
+                        'totalSeconds': time_delta.total_seconds(),
+                        'guild': interaction.guild.id
+                    }
+                    shiftdata = data['shifts']
+                    shifts = shiftdata + [object]
 
-                    ),
-                    'totalSeconds': sum(
-                        [(await bot.shift_storage.find_by_id(member.id))['shifts'][i]['totalSeconds'] for i in
-                         range(len((await bot.shift_storage.find_by_id(member.id))['shifts'] or []))])
-                }
-            )
+                await bot.shift_storage.update_by_id(
+                    {
+                        '_id': member.id,
+                        'shifts': shifts,
+                        'totalSeconds': sum(
+                            [shifts[i]['totalSeconds'] for i in range(len(shifts))])
+                    }
+                )
+            else:
+                await bot.shift_storage.update_by_id({
+                    '_id': member.id,
+                    'shifts': [
+                        {
+                            'name': member.name,
+                            'startTimestamp': shift['startTimestamp'],
+                            'endTimestamp': interaction.created_at.replace(tzinfo=None).timestamp(),
+                            'totalSeconds': time_delta.total_seconds(),
+                            'guild': interaction.guild.id
+                        }],
+                    'totalSeconds': time_delta.total_seconds()
+
+                })
 
         successEmbed = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Success!",
