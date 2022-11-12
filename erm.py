@@ -3310,7 +3310,7 @@ async def globalsearch(ctx, *, query):
 @punishments.command(
     name='void',
     aliases=['rw', 'delwarn', 'dw', 'removewarnings', 'rws', 'dws', 'delwarnings'],
-    description='Remove a warning from a user. [Punishments]',
+    description='Remove a punishment from a user. [Punishments]',
     usage='<user> <warning id>',
     with_app_command=True,
 )
@@ -3336,14 +3336,14 @@ async def removewarning(ctx, id: str):
                 break
 
     if selected_item is None:
-        return await invis_embed(ctx, 'That warning does not exist.')
+        return await invis_embed(ctx, 'That punishment does not exist.')
 
     if selected_item['Guild'] != ctx.guild.id:
-        return await invis_embed(ctx, 'You are trying to remove a warning that is not apart of this guild.')
+        return await invis_embed(ctx, 'You are trying to remove a punishment that is not apart of this guild.')
 
     if len(selected_items) > 1:
         return await invis_embed(ctx,
-                                 'There is more than one warning associated with this ID. Please contact Mikey as soon as possible. I have cancelled the removal of this warning since it is unsafe to continue.')
+                                 'There is more than one punishment associated with this ID. Please contact Mikey as soon as possible. I have cancelled the removal of this warning since it is unsafe to continue.')
 
     Moderator = discord.utils.get(ctx.guild.members, id=selected_item['Moderator'][1])
     if Moderator:
@@ -3352,7 +3352,7 @@ async def removewarning(ctx, id: str):
         Moderator = selected_item['Moderator'][0]
 
     embed = discord.Embed(
-        title="<:MalletWhite:1035258530422341672> Remove Warning",
+        title="<:MalletWhite:1035258530422341672> Remove Punishment",
         description=f"<:ArrowRightW:1035023450592514048> **Reason:** {selected_item['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {Moderator}\n<:ArrowRightW:1035023450592514048> **ID:** {selected_item['id']}\n",
         color=0x2E3136
     )
