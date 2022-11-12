@@ -751,8 +751,8 @@ async def activity_report(ctx):
             met_quota = "<:CheckIcon:1035018951043842088>"
         else:
             met_quota = "<:ErrorIcon:1035000018165321808>"
-
-        string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
+        if member:
+            string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
 
     for index, value in enumerate(loa_staff):
         if value['member'] in [item['id'] for item in all_staff]:
@@ -772,8 +772,10 @@ async def activity_report(ctx):
             formatted_data = "0 seconds"
 
         print(value)
+
         member = discord.utils.get(ctx.guild.members, id=value['member'])
-        loa_string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {formatted_data}\n*{value['type']} expires <t:{value['expiry']}>*\n"
+        if member:
+            loa_string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {formatted_data}\n*{value['type']} expires <t:{value['expiry']}>*\n"
 
     loa_str = []
     res = loa_string.splitlines()
