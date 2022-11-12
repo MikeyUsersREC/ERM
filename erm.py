@@ -47,7 +47,7 @@ intents.voice_states = True
 _cd = commands.CooldownMapping.from_cooldown(1.0, 2.0, commands.BucketType.member)
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
-        if user.id in [459374864067723275, 713899230183424011]:  # Implement your own conditions here
+        if user.id in [459374864067723275, 713899230183424011, 906383042841563167]:  # Implement your own conditions here
             return True
 
         # Else fall back to the original
@@ -680,7 +680,7 @@ async def activity_report(ctx):
         ending_period = datetime_obj
         starting_period = datetime_obj - datetime.timedelta(days=amount)
     elif view.value == "custom":
-        msg = await request_response(bot, ctx, "When do you want this period of time to start?")
+        msg = await request_response(bot, ctx, "When do you want this period of time to start?\n*Use a date, example: 5/11/2022*")
         try:
             start_date = parser.parse(msg.content)
         except:
@@ -699,6 +699,7 @@ async def activity_report(ctx):
         title="<:Clock:1035308064305332224> Activity Report",
         color=0x2E3136
     )
+    embed.set_footer(text="Click 'Next' to see users who are on LoA.")
 
     all_staff = [{"id": None, "total_seconds": 0}]
 
@@ -716,7 +717,7 @@ async def activity_report(ctx):
                                 else:
                                     for item in all_staff:
                                         if item['id'] == document['_id']:
-                                            item['total_seconds'] = item['total_seconds'] + total_seconds
+                                            item['total_seconds'] = total_seconds
 
     loa_staff = []
 
@@ -736,15 +737,42 @@ async def activity_report(ctx):
 
     string = ""
     loa_string = ""
+    try:
+        settings = await bot.settings.find_by_id(ctx.guild.id)
+        quota = settings['shift_management']['quota']
+    except:
+        quota = 0
+
     for index, value in enumerate(sorted_staff):
         print(value)
         member = discord.utils.get(ctx.guild.members, id=value['id'])
-        string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))}\n"
+        if value['total_seconds'] > quota:
+            met_quota = "<:CheckIcon:1035018951043842088>"
+        else:
+            met_quota = "<:ErrorIcon:1035000018165321808>"
+
+        string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
 
     for index, value in enumerate(loa_staff):
+        if value['member'] in [item['id'] for item in all_staff]:
+            item = None
+            print(value['member'])
+
+            for i in all_staff:
+                print(i)
+                if value['member'] == i['id']:
+                    print(i)
+                    item = i
+
+            print(item)
+
+            formatted_data = td_format(datetime.timedelta(seconds=item['total_seconds']))
+        else:
+            formatted_data = "0 seconds"
+
         print(value)
         member = discord.utils.get(ctx.guild.members, id=value['member'])
-        loa_string += f"<:ArrowRight:1035003246445596774> {member.name}#{member.discriminator} - <t:{value['expiry']}> ({value['type']})\n"
+        loa_string += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.name}#{member.discriminator} - {formatted_data}\n*{value['type']} expires <t:{value['expiry']}>*\n"
 
     loa_str = []
     res = loa_string.splitlines()
@@ -756,7 +784,7 @@ async def activity_report(ctx):
             loa_str[-1] += f"\n{i}"
 
     if loa_str == []:
-        loa_str.append(string)
+        loa_str.append(loa_string)
 
     splitted_str = []
     resplit = string.splitlines()
@@ -779,23 +807,33 @@ async def activity_report(ctx):
         title="<:Clock:1035308064305332224> Activity Report",
         color=0x2E3136
     )
+    embed2.set_footer(text="Click 'Next' to see users who are on shifts.")
 
+    print(loa_str)
     for loa_obj in loa_str:
         if len(embed2.fields) == 0:
-            embed2.add_field(name="<:Pause:1035308061679689859> Activity Notices", value=loa_obj)
+            embed2.add_field(name="<:Pause:1035308061679689859> Currently on LoA", value=loa_obj)
         else:
             embed2.add_field(name='\u200b', value=loa_obj, inline=False)
 
     if len(embed2.fields) == 0:
-        embed2.add_field(name="<:Pause:1035308061679689859> Activity Notices", value="<:ArrowRight:1035003246445596774> No LoAs and RAs were found.")
+        embed2 = None
+    elif embed2.fields[0].value == "":
+        embed2 = None
 
+    if embed2 is not None:
+        menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
+        menu.add_pages([embed, embed2])
+        menu.add_buttons([ViewButton.back(), ViewButton.next()])
 
-    menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
-    menu.add_pages([embed, embed2])
-    menu.add_buttons([ViewButton.back(), ViewButton.next()])
+        await menu.start()
+    else:
 
-    await menu.start()
+        menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
+        menu.add_pages([embed])
+        menu.add_buttons([ViewButton.back(), ViewButton.next()])
 
+        await menu.start()
 @bot.event
 async def on_message(message: discord.Message):
     bypass_role = None
@@ -1055,6 +1093,31 @@ async def setup(ctx):
                     convertedContent = [await discord.ext.commands.RoleConverter().convert(ctx, content)]
 
                 settingContents['shift_management']['role'] = [role.id for role in convertedContent]
+        view = YesNoMenu(ctx.author.id)
+        question = 'Do you have a weekly quota? (e.g. 2 hours per week)'
+        embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
+        await ctx.send(embed=embed, view=view)
+        await view.wait()
+        if view.value is not None:
+            if view.value:
+                content = (
+                    await request_response(bot, ctx, "What would you like the quota to be? (s/m/h/d)")).content
+                content = content.strip()
+                total_seconds = 0
+
+                if content.endswith(('s', 'm', 'h', 'd')):
+                    if content.endswith('s'):
+                        total_seconds = int(content.removesuffix('s'))
+                    if content.endswith('m'):
+                        total_seconds = int(content.removesuffix('m')) * 60
+                    if content.endswith('h'):
+                        total_seconds = int(content.removesuffix('h')) * 60 * 60
+                    if content.endswith('d'):
+                        total_seconds = int(content.removesuffix('d')) * 60 * 60 * 24
+                else:
+                    return await invis_embed('We could not translate your time. Remember to end it with s/m/h/d.')
+
+                settingContents['shift_management']['quota'] = total_seconds
 
     privacyDefault = {
         "_id": ctx.guild.id,
@@ -1223,6 +1286,7 @@ async def viewconfig(ctx):
     bolo_channel = "None"
     ra_role = "None"
     loa_role = "None"
+    minimum_shift_time = 0
 
     try:
         verification_role = ctx.guild.get_role(settingContents['staff_management']['verification_role']).mention
@@ -1337,6 +1401,11 @@ async def viewconfig(ctx):
     except:
         ra_role = 'None'
 
+    try:
+        quota = f"{settingContents['shift_management']['quota']} seconds"
+    except:
+        quota = '0 seconds'
+
     embed = discord.Embed(
         title='<:support:1035269007655321680> Server Configuration',
         description=f'<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:',
@@ -1387,11 +1456,12 @@ async def viewconfig(ctx):
     )
     embed.add_field(
         name='<:Search:1035353785184288788> Shift Management',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Quota:** {}'
         .format(
             settingContents['shift_management']['enabled'],
             shift_management_channel,
-            shift_role
+            shift_role,
+            quota
         ),
         inline=False
     )
@@ -1602,7 +1672,7 @@ async def changeconfig(ctx):
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'shift_management':
         question = 'What do you want to do with shift management?'
-        customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "channel", "role"])
+        customselect = CustomSelectMenu(ctx.author.id, ["enable", "disable", "quota", "channel", "role"])
         await invis_embed(ctx, question, view=customselect)
         await customselect.wait()
         content = customselect.value
@@ -1610,6 +1680,26 @@ async def changeconfig(ctx):
             settingContents['shift_management']['enabled'] = True
         elif content == 'disable':
             settingContents['shift_management']['enabled'] = False
+        elif content == 'quota':
+            content = (
+                await request_response(bot, ctx, "What would you like the quota to be? (s/m/h/d)")).content
+            content = content.strip()
+            total_seconds = 0
+
+            if content.endswith(('s', 'm', 'h', 'd')):
+                if content.endswith('s'):
+                    total_seconds = int(content.removesuffix('s'))
+                if content.endswith('m'):
+                    total_seconds = int(content.removesuffix('m')) * 60
+                if content.endswith('h'):
+                    total_seconds = int(content.removesuffix('h')) * 60 * 60
+                if content.endswith('d'):
+                    total_seconds = int(content.removesuffix('d')) * 60 * 60 * 24
+            else:
+                return await invis_embed('We could not translate your time. Remember to end it with s/m/h/d.')
+
+            settingContents['shift_management']['quota'] = total_seconds
+
         elif content == 'channel':
             content = (await request_response(bot, ctx,
                                               'What channel do you want to use for shift management? (e.g. `#shift-management`)')).content
@@ -1870,7 +1960,7 @@ async def warn(ctx, user, *, reason):
         except:
             pass
         embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.mention}",
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
@@ -2110,7 +2200,7 @@ async def kick(ctx, user, *, reason):
         except:
             pass
         embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.mention}",
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
@@ -2339,7 +2429,7 @@ async def ban(ctx, user, *, reason):
         except:
             pass
         embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.mention}",
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRightW:1035023450592514048> {menu.message.embeds[0].title}", inline=False)
@@ -2453,7 +2543,7 @@ async def mlog(ctx, *, message):
     except:
         pass
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                    value=f"<:ArrowRightW:1035023450592514048> {ctx.author.mention}",
                     inline=False)
     embed.add_field(name="<:MessageIcon:1035321236793860116> Message", value=message, inline=False)
 
@@ -2638,7 +2728,7 @@ async def tempban(ctx, user, time: str, *, reason):
         except:
             pass
         embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.name}#{ctx.author.discriminator}",
+                        value=f"<:ArrowRight:1035003246445596774> {ctx.author.mention}",
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
@@ -3539,7 +3629,7 @@ async def bolo_create(ctx, user, *, reason):
         except:
             pass
         embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.name}#{ctx.author.discriminator}",
+                        value=f"<:ArrowRightW:1035023450592514048> {ctx.author.mention}",
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRightW:1035023450592514048> {menu.message.embeds[0].title}", inline=False)
@@ -3703,7 +3793,6 @@ async def dutyon(ctx):
 
     try:
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         embed.set_footer(text='Staff Logging Module')
     except:
         pass
@@ -4768,7 +4857,7 @@ async def loarequest(ctx, time, *, reason):
         pass
     Embed.add_field(
         name="<:staff:1035308057007230976> Staff Member",
-        value=f"<:ArrowRight:1035003246445596774>{ctx.author.name}",
+        value=f"<:ArrowRight:1035003246445596774>{ctx.author.mention}",
         inline=False
     )
 
@@ -4942,7 +5031,7 @@ async def rarequest(ctx, time, *, reason):
         pass
     Embed.add_field(
         name="<:staff:1035308057007230976> Staff Member",
-        value=f"<:ArrowRight:1035003246445596774>{ctx.author.name}",
+        value=f"<:ArrowRight:1035003246445596774>{ctx.author.mention}",
         inline=False
     )
 
@@ -5761,7 +5850,7 @@ async def shift_leaderboard(ctx):
                             else:
                                 for item in all_staff:
                                     if item['id'] == document['_id']:
-                                        item['total_seconds'] = item['total_seconds'] + total_seconds
+                                        item['total_seconds'] = total_seconds
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
@@ -5772,6 +5861,14 @@ async def shift_leaderboard(ctx):
     sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
 
     buffer = None
+    embeds = []
+
+    embed = discord.Embed(
+        color=0x2E3136,
+        title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+    )
+    embeds.append(embed)
+
     for i in sorted_staff:
         member = discord.utils.get(ctx.guild.members, id=i['id'])
         if member:
@@ -5781,12 +5878,35 @@ async def shift_leaderboard(ctx):
             else:
                 buffer = buffer + "\n%s - %s" % (
                     f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
-
+            if len(embeds[-1].fields) <= 24:
+                embeds[-1].add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
+            else:
+                new_embed = discord.Embed(
+                    color=0x2E3136,
+                    title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+                )
+                new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
+                embeds.append(new_embed)
     try:
         bbytes = buffer.encode('utf-8')
     except:
         return await invis_embed(ctx, 'No shift data has been found.')
-    await ctx.send(file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
+    if len(embeds) == 0:
+        await ctx.send(embeds=embeds, file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
+    else:
+        file = discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt')
+        if ctx.interaction:
+            interaction = ctx.interaction
+        else:
+            interaction = ctx
+
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        for embed in embeds:
+            menu.add_page(embed=embed)
+
+        menu.add_buttons([ViewButton.back(), ViewButton.next()])
+        await menu.start()
+        await ctx.send(file=file)
 
 
 @duty.command(name='clear',
