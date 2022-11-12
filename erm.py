@@ -5747,15 +5747,9 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
                     aliases=['on-duty'])
 @is_staff()
 async def clockedin(ctx):
-    try:
-        configItem = await bot.settings.find_by_id(ctx.guild.id)
-    except:
+    configItem = await bot.settings.find_by_id(ctx.guild.id)
+    if not configItem:
         return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
-
-    shift_channel = discord.utils.get(ctx.guild.channels, id=configItem['shift_management']['channel'])
-
-    if shift_channel is None:
-        return await invis_embed(ctx, 'Shift management channel not found.')
 
     embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
     try:
