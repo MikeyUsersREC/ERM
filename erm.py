@@ -781,7 +781,7 @@ async def activity_report(ctx):
     res = loa_string.splitlines()
 
     for index, i in enumerate(res):
-        if index % 10 == 0:
+        if index % 5 == 0:
             loa_str.append(i)
         else:
             loa_str[-1] += f"\n{i}"
@@ -793,7 +793,7 @@ async def activity_report(ctx):
     resplit = string.splitlines()
 
     for index, i in enumerate(resplit):
-        if index % 10 == 0:
+        if index % 5 == 0:
             splitted_str.append(i)
         else:
             splitted_str[-1] += f"\n{i}"
