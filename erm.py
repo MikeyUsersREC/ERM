@@ -634,6 +634,7 @@ async def activity(ctx):
     name="report",
     description="Send an activity report [Activity Management]"
 )
+@is_management()
 async def activity_report(ctx):
     # return await invis_embed(ctx, "This feature has not been released yet.")
     view = CustomSelectMenu(ctx.author.id, [
