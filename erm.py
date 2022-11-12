@@ -824,6 +824,11 @@ async def activity_report(ctx):
     elif embed2.fields[0].value == "":
         embed2 = None
 
+    if len(embed.fields) == 0:
+        embed.add_field(name="<:Clock:1035308064305332224> Shifts", value="No shifts found.")
+    elif embed.fields[0].value == "":
+        embed.add_field(name="<:Clock:1035308064305332224> Shifts", value="No shifts found.")
+
     if embed2 is not None:
         menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
         menu.add_pages([embed, embed2])
