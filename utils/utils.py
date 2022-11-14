@@ -2,8 +2,6 @@ from discord.ext import commands
 import discord
 import typing
 
-from utils.embeds import Embed
-
 
 def removesuffix(input_string: str, suffix: str):
     if suffix and input_string.endswith(suffix):
