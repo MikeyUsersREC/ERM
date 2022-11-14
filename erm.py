@@ -162,17 +162,18 @@ def strip_string(value: str):
 async def compact(embed, bot: Union[discord.ext.commands.Bot, discord.ext.commands.AutoShardedBot], guild: int):
     settings = bot.settings
     guild_settings = await settings.find_by_id(guild)
-    if 'compact_mode' in guild_settings['customisation']:
-        if guild_settings['customisation']['compact_mode'] == True:
-            embed.title = strip_string(embed.title)
-            embed.description = strip_string(embed.description)
-            for index, field in enumerate(embed.fields):
-                name = strip_string(field.name)
-                value = strip_string(field.value)
-                field.name = name
-                field.value = value
-                embed.fields[index] = field
-                print(embed.fields)
+    if guild_settings != None:
+        if 'compact_mode' in guild_settings['customisation']:
+            if guild_settings['customisation']['compact_mode'] == True:
+                embed.title = strip_string(embed.title)
+                embed.description = strip_string(embed.description)
+                for index, field in enumerate(embed.fields):
+                    name = strip_string(field.name)
+                    value = strip_string(field.value)
+                    field.name = name
+                    field.value = value
+                    embed.fields[index] = field
+                    print(embed.fields)
 
 def is_management():
     async def predicate(ctx):
@@ -1124,7 +1125,7 @@ async def setup(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(bot, ctx.guild.id)
+        await compact(embed, bot, ctx.guild.id)
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value is not None:

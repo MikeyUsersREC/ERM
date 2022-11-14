@@ -28,17 +28,18 @@ def strip_string(value: str):
 async def compact(embed, bot: typing.Union[discord.ext.commands.Bot, discord.ext.commands.AutoShardedBot], guild: int):
     settings = bot.settings
     guild_settings = await settings.find_by_id(guild)
-    if 'compact_mode' in guild_settings['customisation']:
-        if guild_settings['customisation']['compact_mode'] == True:
-            embed.title = strip_string(embed.title)
-            embed.description = strip_string(embed.description)
-            for index, field in enumerate(embed.fields):
-                name = strip_string(field.name)
-                value = strip_string(field.value)
-                field.name = name
-                field.value = value
-                embed.fields[index] = field
-                print(embed.fields)
+    if guild_settings != None:
+        if 'compact_mode' in guild_settings['customisation']:
+            if guild_settings['customisation']['compact_mode'] == True:
+                embed.title = strip_string(embed.title)
+                embed.description = strip_string(embed.description)
+                for index, field in enumerate(embed.fields):
+                    name = strip_string(field.name)
+                    value = strip_string(field.value)
+                    field.name = name
+                    field.value = value
+                    embed.fields[index] = field
+                    print(embed.fields)
 
 async def get_prefix(bot, message):
     if not message.guild:
