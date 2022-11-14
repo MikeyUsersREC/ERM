@@ -4150,7 +4150,7 @@ async def dutyoff(ctx):
                     '_id': ctx.author.id,
                     'shifts': shifts,
                     'totalSeconds': sum(
-                        [shifts[i]['totalSeconds'] for i in range(len(shifts)) if i is not None])
+                        [shifts[i]['totalSeconds'] for i in range(len(shifts)) if shifts[i] is not None])
                 }
             )
         else:
@@ -5396,7 +5396,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
                         '_id': member.id,
                         'shifts': shifts,
                         'totalSeconds': sum(
-                            [shifts[i]['totalSeconds'] for i in range(len(shifts)) if i is not None])
+                            [shifts[i]['totalSeconds'] for i in range(len(shifts)) if shifts[i] is not None])
                     }
                 )
             else:
