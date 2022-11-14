@@ -1,5 +1,6 @@
 import discord
 from utils.utils import int_invis_embed
+from utils.embeds import Embed
 
 class Setup(discord.ui.View):
     def __init__(self, user_id):
@@ -104,7 +105,7 @@ class Dropdown(discord.ui.Select):
 
 
 class CustomDropdown(discord.ui.Select):
-    def __init__(self, user_id, options: list):
+    def __init__(self, user_id, options: list, limit = 1):
         self.user_id = user_id
         optionList = []
 
@@ -123,12 +124,48 @@ class CustomDropdown(discord.ui.Select):
         # The placeholder is what will be shown when no option is chosen
         # The min and max values indicate we can only pick one of the three options
         # The options parameter defines the dropdown options. We defined this above
-        super().__init__(placeholder='Select an option', min_values=1, max_values=1, options=optionList)
+        super().__init__(placeholder='Select an option', min_values=1, max_values=limit, options=optionList)
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
-            self.view.value = self.values[0]
+            if len(self.values) == 0:
+                self.view.value = self.values[0]
+            else:
+                self.view.value = self.values
+            self.view.stop()
+
+class MultiDropdown(discord.ui.Select):
+    def __init__(self, user_id, options: list):
+        self.user_id = user_id
+        optionList = []
+
+
+        for option in options:
+            if isinstance(option, str):
+                optionList.append(
+                    discord.SelectOption(
+                        label=option.replace('_', ' ').title(),
+                        value=option
+                    )
+                )
+            elif isinstance(option, discord.SelectOption):
+                optionList.append(option)
+
+        print(optionList)
+
+        # The placeholder is what will be shown when no option is chosen
+        # The min and max values indicate we can only pick one of the three options
+        # The options parameter defines the dropdown options. We defined this above
+        super().__init__(placeholder='Select an option', max_values=len(optionList), options=optionList)
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            if len(self.values) == 0:
+                self.view.value = self.values[0]
+            else:
+                self.view.value = self.values
             self.view.stop()
 
 
@@ -163,6 +200,38 @@ class YesNoMenu(discord.ui.View):
 
     # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = False
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+class EnableDisableMenu(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Enable', style=discord.ButtonStyle.green)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = True
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='Disable', style=discord.ButtonStyle.danger)
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return
@@ -252,7 +321,7 @@ class LOAMenu(discord.ui.View):
             if item.label == "Accept":
                 item.label = "Accepted"
             else:
-                self.children.remove(item)
+                self.remove_item(item)
         s_loa = None
         for loa in await self.bot.loas.get_all():
             if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
@@ -269,7 +338,7 @@ class LOAMenu(discord.ui.View):
                     return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
                 except:
                     pass
-            success = discord.Embed(
+            success = Embed(
                 title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
                 description=f"<:ArrowRightW:1035023450592514048> {interaction.user.mention} has accepted your {s_loa['type']} request.",
                 color=0x71c15f
@@ -277,18 +346,26 @@ class LOAMenu(discord.ui.View):
             await user.send(embed=success)
         except:
             pass
-        await self.bot.loas.update_by_id(s_loa)
-        if isinstance(self.loa_role, int):
-            role = [discord.utils.get(guild.roles, id=self.loa_role)]
-        elif isinstance(self.loa_role, list):
-            role = [discord.utils.get(guild.roles, id=role) for role in self.loa_role]
+        try:
+            await self.bot.loas.update_by_id(s_loa)
+            if isinstance(self.loa_role, int):
+                role = [discord.utils.get(guild.roles, id=self.loa_role)]
+            elif isinstance(self.loa_role, list):
+                role = [discord.utils.get(guild.roles, id=role) for role in self.loa_role]
 
-        for rl in role:
-            if rl not in user.roles:
-                await user.add_roles(rl)
+            for rl in role:
+                if rl not in user.roles:
+                    await user.add_roles(rl)
 
-        self.value = True
-        await interaction.edit_original_response(view=self)
+            self.value = True
+        except:
+            pass
+        embed = interaction.message.embeds[0]
+        embed.title = "<:CheckIcon:1035018951043842088> LOA Accepted"
+        embed.colour = 0x71c15f
+        embed.set_footer(text=f'Staff Logging Module - Accepted by {interaction.user.name}#{interaction.user.discriminator}')
+
+        await interaction.edit_original_response(embed=embed, view=self)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
@@ -316,11 +393,11 @@ class LOAMenu(discord.ui.View):
                             return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
                         except:
                             pass
-                    success = discord.Embed(
+                    success = Embed(
                         title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
                         description=f"<:ArrowRightW:1035023450592514048>{interaction.user.mention} has denied your {s_loa['type']} request.",
                         color=0xff3c3c
-                    )
+                    ).compact(self.bot, interaction.guild.id)
                     await user.send(embed=success)
                     await self.bot.loas.update_by_id(s_loa)
 
@@ -355,9 +432,10 @@ class RemoveReminder(discord.ui.View):
         self.stop()
 
 class RemoveWarning(discord.ui.View):
-    def __init__(self, user_id):
+    def __init__(self, bot, user_id):
         super().__init__()
         self.value = None
+        self.bot = bot
         self.user_id = user_id
 
     # When the confirm button is pressed, set the inner value to `True` and
@@ -372,11 +450,11 @@ class RemoveWarning(discord.ui.View):
             item.disabled = True
         self.value = True
 
-        success = discord.Embed(
+        success = Embed(
             title="<:CheckIcon:1035018951043842088> Removed Warning",
             description="<:ArrowRightW:1035023450592514048>I've successfully removed the warning from the user.",
             color=0x71c15f
-        )
+        ).compact(self.bot, interaction.guild.id)
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
@@ -401,7 +479,53 @@ class RemoveWarning(discord.ui.View):
         self.stop()
 
 
-class RemoveWarning(discord.ui.View):
+class RemoveBOLO(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = True
+
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Removed Punishment",
+            description="<:ArrowRightW:1035023450592514048>I've successfully removed the punishment from the user.",
+            color=0x71c15f
+        )
+
+        await interaction.edit_original_response(embed=success, view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = False
+
+        success = discord.Embed(
+            title="<:ErrorIcon:1035000018165321808> Cancelled",
+            description="<:ArrowRightW:1035023450592514048>The punishment has not been removed from the user.",
+            color=0xff3c3c
+        )
+
+        await interaction.edit_original_response(embed=success, view=self)
+        self.stop()
+
+class RemoveBOLO(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
         self.value = None
@@ -447,7 +571,6 @@ class RemoveWarning(discord.ui.View):
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
-
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
         super().__init__()
@@ -455,3 +578,70 @@ class CustomSelectMenu(discord.ui.View):
         self.user_id = user_id
 
         self.add_item(CustomDropdown(self.user_id, options))
+
+class MultiSelectMenu(discord.ui.View):
+    def __init__(self, user_id, options: list):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+        self.add_item(MultiDropdown(self.user_id, options))
+
+
+class RoleSelect(discord.ui.View):
+    def __init__(self, user_id, **kwargs):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+        self.limit = 25
+
+        for key, value in kwargs.items():
+            if key == "limit":
+                self.limit = value
+
+        if self.limit > 1:
+            self.placeholder = "Select roles"
+        else:
+            self.placeholder = "Select a role"
+
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(cls=discord.ui.RoleSelect)
+    async def role_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            self.value = select.values
+            self.stop()
+
+class ChannelSelect(discord.ui.View):
+    def __init__(self, user_id, **kwargs):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+        self.limit = 25
+
+        for key, value in kwargs.items():
+            if key == "limit":
+                self.limit = value
+
+        if self.limit > 1:
+            self.placeholder = "Select channels"
+        else:
+            self.placeholder = "Select a channel"
+
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.text])
+    async def channel_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            self.value = select.values
+            self.stop()

@@ -2,6 +2,9 @@ from discord.ext import commands
 import discord
 import typing
 
+from utils.embeds import Embed
+
+
 def removesuffix(input_string: str, suffix: str):
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
@@ -27,13 +30,15 @@ async def get_prefix(bot, message):
 
     return commands.when_mentioned_or(prefix)(bot, message)
 
-async def invis_embed(ctx, content, **kwargs):
-    embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+async def invis_embed(bot: typing.Union[commands.AutoShardedBot, commands.Bot], ctx: commands.Context, content: str, **kwargs):
+    embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+    await embed.compact(bot, ctx.guild.id)
     await ctx.send(embed=embed, **kwargs)
 
 
-async def int_invis_embed(interaction, content, **kwargs):
-    embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+async def int_invis_embed(bot, interaction, content, **kwargs):
+    embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+    await embed.compact(bot, interaction.guild.id)
     await interaction.response.send_message(embed=embed, **kwargs)
 
 
