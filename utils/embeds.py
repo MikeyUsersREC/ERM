@@ -258,8 +258,8 @@ class Embed:
         print('SUCCESS')
         print(title)
         print(description)
-        self.title: Optional[str] = title
-        self.description: Optional[str] = description
+        self._title: Optional[str] = title
+        self._description: Optional[str] = description
 
         if self.title is not None:
             self.title = str(self.title)
