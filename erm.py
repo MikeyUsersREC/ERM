@@ -6103,7 +6103,8 @@ async def shift_leaderboard(ctx):
     print(buffer)
     try:
         bbytes = buffer.encode('utf-8')
-    except:
+    except Exception as e:
+        print(e)
         return await invis_embed(bot, ctx,  'No shift data has been found.')
     if len(embeds) == 0:
         new_embeds = []
