@@ -965,7 +965,7 @@ async def on_message(message: discord.Message):
                 print(role)
                 if role is not None:
                     if mention.top_role.position > role.position:
-                        Embed =  discord.Embed(
+                        embed =  discord.Embed(
                             title=f'Do not ping {role.name} or above!',
                             color=discord.Color.red(),
                             description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
@@ -973,16 +973,16 @@ async def on_message(message: discord.Message):
                         try:
                             msg = await message.channel.fetch_message(message.reference.message_id)
                             if msg.author == mention:
-                                Embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                                embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
                         except:
                             pass
 
-                        Embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                        embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
                                          icon_url=get_guild_icon(bot, message.guild))
 
                         ctx = await bot.get_context(message)
-                        await compact(Embed, bot, message.guild.id)
-                        await ctx.reply(f'{message.author.mention}', embed=Embed)
+                        await compact(embed, bot, message.guild.id)
+                        await ctx.reply(f'{message.author.mention}', embed=embed)
                         return
                     await bot.process_commands(message)
                     return
@@ -2143,7 +2143,7 @@ async def kick(ctx, user, *, reason):
     Embeds = []
 
     for dataItem in data:
-        Embed = discord.Embed(
+        embed = discord.Embed(
             title=dataItem['name'],
             color=0x2E3136
         )
@@ -2152,7 +2152,7 @@ async def kick(ctx, user, *, reason):
 
         user = await bot.warnings.find_by_id(dataItem['name'].lower())
         if user is None:
-            Embed.description = """
+            embed.description = """
             <:ArrowRightW:1035023450592514048>**Warnings:** 0
             <:ArrowRightW:1035023450592514048>**Kicks:** 0
             <:ArrowRightW:1035023450592514048>**Bans:** 0
@@ -2183,7 +2183,7 @@ async def kick(ctx, user, *, reason):
                 banned = "<:ErrorIcon:1035000018165321808>"
 
             if bolos >= 1:
-                Embed.description = f"""
+                embed.description = f"""
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -2194,17 +2194,17 @@ async def kick(ctx, user, *, reason):
                 `Banned:` {banned}
                 """
             else:
-                Embed.description = f"""
+                embed.description = f"""
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
 
                 `Banned:` {banned}
                 """
-        Embed.set_thumbnail(url=Headshot_URL)
-        Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(Embed, bot, ctx.guild.id)
-        Embeds.append(Embed)
+        embed.set_thumbnail(url=Headshot_URL)
+        embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
+        await compact(embed, bot, ctx.guild.id)
+        Embeds.append(embed)
 
     if ctx.interaction:
         interaction = ctx.interaction
@@ -2685,7 +2685,7 @@ async def tempban(ctx, user, time: str, *, reason):
     Embeds = []
 
     for dataItem in data:
-        Embed = discord.Embed(
+        embed = discord.Embed(
             title=dataItem['name'],
             color=0x2E3136
         )
@@ -2695,7 +2695,7 @@ async def tempban(ctx, user, time: str, *, reason):
 
         user = await bot.warnings.find_by_id(dataItem['name'].lower())
         if user is None:
-            Embed.description = """
+            embed.description = """
                    <:ArrowRightW:1035023450592514048>**Warnings:** 0
                    <:ArrowRightW:1035023450592514048>**Kicks:** 0
                    <:ArrowRightW:1035023450592514048>**Bans:** 0
@@ -2727,7 +2727,7 @@ async def tempban(ctx, user, time: str, *, reason):
                 banned = "<:ErrorIcon:1035000018165321808>"
 
             if bolos >= 1:
-                Embed.description = f"""
+                embed.description = f"""
                        <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                        <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                        <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -2738,7 +2738,7 @@ async def tempban(ctx, user, time: str, *, reason):
                        `Banned:` {banned}
                        """
             else:
-                Embed.description = f"""
+                embed.description = f"""
                        <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                        <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                        <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -2746,10 +2746,10 @@ async def tempban(ctx, user, time: str, *, reason):
                        `Banned:` {banned}
                        """
 
-        Embed.set_thumbnail(url=Headshot_URL)
-        Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(Embed, bot, ctx.guild.id)
-        Embeds.append(Embed)
+        embed.set_thumbnail(url=Headshot_URL)
+        embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
+        await compact(embed, bot, ctx.guild.id)
+        Embeds.append(embed)
 
     async def ban_function(ctx, menu):
 
@@ -3628,7 +3628,7 @@ async def bolo_create(ctx, user, *, reason):
     Embeds = []
 
     for dataItem in data:
-        Embed = discord.Embed(
+        embed = discord.Embed(
             title=dataItem['name'],
             color=0x2E3136
         )
@@ -3638,7 +3638,7 @@ async def bolo_create(ctx, user, *, reason):
 
         user = await bot.warnings.find_by_id(dataItem['name'].lower())
         if user is None:
-            Embed.description = """
+            embed.description = """
             <:ArrowRightW:1035023450592514048>**Warnings:** 0
             <:ArrowRightW:1035023450592514048>**Kicks:** 0
             <:ArrowRightW:1035023450592514048>**Bans:** 0
@@ -3663,7 +3663,7 @@ async def bolo_create(ctx, user, *, reason):
                 banned = "<:CheckIcon:1035018951043842088>"
             else:
                 banned = "<:ErrorIcon:1035000018165321808>"
-            Embed.description = f"""
+            embed.description = f"""
             <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
             <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
             <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -3671,10 +3671,10 @@ async def bolo_create(ctx, user, *, reason):
             `Banned:` {banned}
             """
 
-        Embed.set_thumbnail(url=Headshot_URL)
-        Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(Embed, bot, ctx.guild.id)
-        Embeds.append(Embed)
+        embed.set_thumbnail(url=Headshot_URL)
+        embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
+        await compact(embed, bot, ctx.guild.id)
+        Embeds.append(embed)
 
     if ctx.interaction:
         interaction = ctx.interaction
@@ -4981,30 +4981,30 @@ async def loarequest(ctx, time, *, reason):
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
 
-    Embed =  discord.Embed(
+    embed =  discord.Embed(
         title="Leave of Absence",
         color=0x2E3136
     )
 
     try:
-        Embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        Embed.set_footer(text="Staff Logging Module")
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_footer(text="Staff Logging Module")
 
     except:
         pass
-    Embed.add_field(
+    embed.add_field(
         name="<:staff:1035308057007230976> Staff Member",
         value=f"<:ArrowRight:1035003246445596774>{ctx.author.mention}",
         inline=False
     )
 
-    Embed.add_field(
+    embed.add_field(
         name="<:Resume:1035269012445216858> Start",
         value=f'<:ArrowRight:1035003246445596774><t:{int(startTimestamp)}>',
         inline=False
     )
 
-    Embed.add_field(
+    embed.add_field(
         name="<:Pause:1035308061679689859> End",
         value=f'<:ArrowRight:1035003246445596774><t:{int(endTimestamp)}>',
         inline=False
@@ -5012,7 +5012,7 @@ async def loarequest(ctx, time, *, reason):
 
     reason = ''.join(reason)
 
-    Embed.add_field(
+    embed.add_field(
         name='<:QMark:1035308059532202104> Reason',
         value=f'<:ArrowRight:1035003246445596774>{reason}',
         inline=False
@@ -5031,10 +5031,10 @@ async def loarequest(ctx, time, *, reason):
                                  "The LOA role has not been set up yet. Please run `/config change` to add the LOA role.")
 
     view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
-    await compact(Embed, bot, ctx.guild.id)
+    await compact(embed, bot, ctx.guild.id)
 
     channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
-    msg = await channel.send(embed=Embed, view=view)
+    msg = await channel.send(embed=embed, view=view)
 
     example_schema = {"_id": f"{ctx.author.id}_{ctx.guild.id}_{int(startTimestamp)}_{int(endTimestamp)}",
                       "user_id": ctx.author.id, "guild_id": ctx.guild.id, "message_id": msg.id, "type": "LoA",
@@ -5173,30 +5173,30 @@ async def rarequest(ctx, time, *, reason):
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
 
-    Embed =  discord.Embed(
+    embed =  discord.Embed(
         title="Reduced Activity",
         color=0x2E3136
     )
 
     try:
-        Embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        Embed.set_footer(text="Staff Logging Module")
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_footer(text="Staff Logging Module")
 
     except:
         pass
-    Embed.add_field(
+    embed.add_field(
         name="<:staff:1035308057007230976> Staff Member",
         value=f"<:ArrowRight:1035003246445596774>{ctx.author.mention}",
         inline=False
     )
 
-    Embed.add_field(
+    embed.add_field(
         name="<:Resume:1035269012445216858> Start",
         value=f'<:ArrowRight:1035003246445596774><t:{int(startTimestamp)}>',
         inline=False
     )
 
-    Embed.add_field(
+    embed.add_field(
         name="<:Pause:1035308061679689859> End",
         value=f'<:ArrowRight:1035003246445596774><t:{int(endTimestamp)}>',
         inline=False
@@ -5204,7 +5204,7 @@ async def rarequest(ctx, time, *, reason):
 
     reason = ''.join(reason)
 
-    Embed.add_field(
+    embed.add_field(
         name='<:QMark:1035308059532202104> Reason',
         value=f'<:ArrowRight:1035003246445596774>{reason}',
         inline=False
@@ -5225,8 +5225,8 @@ async def rarequest(ctx, time, *, reason):
     view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
 
     channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
-    await compact(Embed, bot, ctx.guild.id)
-    msg = await channel.send(embed=Embed, view=view)
+    await compact(embed, bot, ctx.guild.id)
+    msg = await channel.send(embed=embed, view=view)
 
     example_schema = {"_id": f"{ctx.author.id}_{ctx.guild.id}_{int(startTimestamp)}_{int(endTimestamp)}",
                       "user_id": ctx.author.id, "guild_id": ctx.guild.id, "message_id": msg.id, "type": "RA",
