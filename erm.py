@@ -22,7 +22,7 @@ from sentry_sdk import capture_exception, push_scope
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
 
-from menus import CustomSelectMenu, SettingsSelectMenu, Setup, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
+from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
     AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu
 from utils.mongo import Document
 from utils.timestamp import td_format
