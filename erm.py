@@ -653,7 +653,7 @@ async def on_guild_join(guild: discord.Guild):
         )
     finally:
         channel = bot.get_channel(1033021466381398086)
-        embed = discord.Embed(olor=0x2E3136)
+        embed = discord.Embed(color=0x2E3136)
         embed.description = f"""
         <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
         <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
