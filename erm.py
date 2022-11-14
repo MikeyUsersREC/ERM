@@ -6098,6 +6098,9 @@ async def shift_leaderboard(ctx):
                 print(new_embed)
                 new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
                 embeds.append(new_embed)
+    print(all_staff)
+    print(sorted_staff)
+    print(buffer)
     try:
         bbytes = buffer.encode('utf-8')
     except:
