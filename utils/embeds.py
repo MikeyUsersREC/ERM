@@ -179,8 +179,8 @@ class Embed:
         guild_settings = await settings.find_by_id(guild)
         if 'compact_mode' in guild_settings['customisation']:
             if guild_settings['customisation']['compact_mode'] == True:
-                self._title = strip_string(self._title)
-                self._description = strip_string(self._description)
+                self.title = strip_string(self.title)
+                self.description = strip_string(self.description)
                 for field in self.fields:
                     field.name = strip_string(field.name)
                     field.value = strip_string(field.value)
@@ -207,7 +207,8 @@ class Embed:
         '_author',
         '_fields',
         "_description",
-        "_title",
+        "description",
+        "title",
         "_allow_emojis"
     )
 
@@ -258,14 +259,14 @@ class Embed:
         print('SUCCESS')
         print(title)
         print(description)
-        self._title: Optional[str] = title
-        self._description: Optional[str] = description
+        self.title = title
+        self.description = description
 
         if self.title is not None:
             self.title = str(self.title)
 
         if self.description is not None:
-            self._description = str(self.description)
+            self.description = str(self.description)
 
         if self.url is not None:
             self.url = str(self.url)
@@ -292,14 +293,14 @@ class Embed:
 
         self.title = data.get('title', None)
         self.type = data.get('type', None)
-        self._description = data.get('description', None)
+        self.description = data.get('description', None)
         self.url = data.get('url', None)
 
         if self.title is not None:
             self.title = str(self.title)
 
-        if self._description is not None:
-            self._description = str(self._description)
+        if self.description is not None:
+            self.description = str(self.description)
 
         if self.url is not None:
             self.url = str(self.url)
@@ -331,7 +332,7 @@ class Embed:
         return self.__class__.from_dict(self.to_dict())
 
     def __len__(self) -> int:
-        total = len(self._title or '') + len(self._description or '')
+        total = len(self.title or '') + len(self.description or '')
         for field in getattr(self, '_fields', []):
             total += len(field['name']) + len(field['value'])
 
@@ -374,7 +375,7 @@ class Embed:
                 self.type == other.type
                 and self.title == other.title
                 and self.url == other.url
-                and self._description == other._description
+                and self.description == other._description
                 and self.colour == other.colour
                 and self.fields == other.fields
                 and self.timestamp == other.timestamp
@@ -390,6 +391,7 @@ class Embed:
     def colour(self) -> Optional[Colour]:
         return getattr(self, '_colour', None)
 
+
     @colour.setter
     def colour(self, value: Optional[Union[int, Colour]]) -> None:
         if value is None:
@@ -402,51 +404,30 @@ class Embed:
             raise TypeError(f'Expected discord.Colour, int, or None but received {value.__class__.__name__} instead.')
 
     color = colour
+    # def get_description(self) -> Optional[str]:
+    #     return self._description
+    # def set_description(self, value: Optional[str]) -> None:
+    #     if value != None:
+    #         emojis = re.findall("<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>", value)
+    #         if not self.allow_emojis:
+    #             print(emojis)
+    #             for emoji in emojis:
+    #                 print(emoji)
+    #                 try:
+    #                     emoji_full = '<:' + list(emoji)[1] + ":" + list(emoji)[2] + ">"
+    #                     print(emoji_full)
+    #                     if 'Check' not in emoji_full and 'Error' not in emoji_full:
+    #                         print(5)
+    #                         value = value.replace(str(emoji_full), "")
+    #                 except:
+    #                     pass
+    #     self._description = value
+    #
+    # def del_description(self) -> None:
+    #     self._description = ""
 
-    @property
-    def description(self) -> Optional[str]:
-        return self._description
-
-    @description.setter
-    def description(self, value: Optional[str]) -> None:
-        if value != None:
-            emojis = re.findall("<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>", value)
-            if not self.allow_emojis:
-                print(emojis)
-                for emoji in emojis:
-                    print(emoji)
-                    try:
-                        emoji_full = '<:' + list(emoji)[1] + ":" + list(emoji)[2] + ">"
-                        print(emoji_full)
-                        if 'Check' not in emoji_full and 'Error' not in emoji_full:
-                            print(5)
-                            value = value.replace(str(emoji_full), "")
-                    except:
-                        pass
-        self._description = value
-
-    @property
-    def title(self) -> Optional[str]:
-        return self._title
-
-    @title.setter
-    def title(self, value: Optional[str]) -> None:
-        if value != None:
-            emojis = re.findall("<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>", value)
-            if not self.allow_emojis:
-                print(emojis)
-                for emoji in emojis:
-                    print(emoji)
-                    try:
-                        emoji_full = '<:' + list(emoji)[1] + ":" + list(emoji)[2] + ">"
-                        print(emoji_full)
-                        if 'Check' not in emoji_full and 'Error' not in emoji_full:
-                            print(5)
-                            value = value.replace(str(emoji_full), "")
-                    except:
-                        pass
-                        pass
-        self._title = value
+    # description = ""
+    # title = ""
 
     @property
     def allow_emojis(self) -> Optional[bool]:
@@ -880,7 +861,7 @@ class Embed:
         result = {
             key[1:]: getattr(self, key)
             for key in self.__slots__
-            if key[0] == '_' and hasattr(self, key) and key not in ["_description", "_title", "_allow_emojis"]
+            if key[0] == '_' and hasattr(self, key) and key not in ["_allow_emojis"]
         }
         # fmt: on
 
@@ -906,13 +887,13 @@ class Embed:
                     result['timestamp'] = timestamp.replace(tzinfo=datetime.timezone.utc).isoformat()
 
         # add in the non raw attribute ones
-        result['description'] = self._description
+        result['description'] = self.description
 
         if self.type:
             result['type'] = self.type
 
-        if self._description:
-            result['description'] = self._description
+        if self.description:
+            result['description'] = self.description
 
         if self.url:
             result['url'] = self.url
