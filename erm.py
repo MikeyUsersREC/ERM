@@ -6082,7 +6082,7 @@ async def shift_leaderboard(ctx):
     if len(embeds) == 0:
         new_embeds = []
         for i in embeds:
-            i = await compact(i, bot, ctx.guild.id)
+            await compact(i, bot, ctx.guild.id)
             new_embeds.append(i)
         await ctx.send(embeds=new_embeds, file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
     else:
@@ -6095,8 +6095,8 @@ async def shift_leaderboard(ctx):
         menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
         for embed in embeds:
             if embed is not None:
-                i = await compact(embed, bot, ctx.guild.id)
-                menu.add_page(embed=i)
+                await compact(embed, bot, ctx.guild.id)
+                menu.add_pages([embed])
 
         if len(menu.pages) == 1:
             return await ctx.send(embed=embed, file=file)
