@@ -23,7 +23,7 @@ from snowflake import SnowflakeGenerator
 from zuid import ZUID
 
 from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
-    AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu
+    AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, RemoveBOLO
 from utils.mongo import Document
 from utils.timestamp import td_format
 from utils.utils import *
@@ -1642,7 +1642,7 @@ async def changeconfig(ctx):
         question = 'What do you want to do with staff management?'
         customselect = CustomSelectMenu(ctx.author.id,
                                         ["enable", "disable", "channel", "staff_role", "management_role", "loa_role",
-                                         "ra_role"])
+                                         "ra_role", "privacy_mode"])
         await invis_embed(bot, ctx,  question, view=customselect)
         await customselect.wait()
         content = customselect.value
@@ -1676,6 +1676,14 @@ async def changeconfig(ctx):
             await invis_embed(bot, ctx,  'What roles do you want to use as a RA role? (e.g. `@RA`)', view=view)
             await view.wait()
             settingContents['staff_management']['ra_role'] = [role.id for role in view.value]
+        elif content == 'privacy_mode':
+            view = EnableDisableMenu(ctx.author.id)
+            await invis_embed(bot, ctx,  'Do you want to enable Privacy Mode? This will anonymize the person who denies/accepts/voids a LoA/RA.', view=view)
+            await view.wait()
+            if view.value == True:
+                settingContents['staff_management']['privacy_mode'] = True
+            elif view.value == False:
+                settingContents['customisation']['privacy_mode'] = False
         else:
             return await invis_embed(bot, ctx,  'You have not selected one of the options. Please run this command again.')
     elif category == 'punishments':
@@ -4034,7 +4042,7 @@ async def bolo_void(ctx, id: str):
     )
     await compact(embed, bot, ctx.guild.id)
 
-    view = RemoveWarning(ctx.author.id)
+    view = RemoveBOLO(ctx.author.id)
     await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -5095,12 +5103,20 @@ async def loavoid(ctx, user: discord.Member = None):
     await ctx.send(embed=embed, view=view)
     await view.wait()
     print(view.value)
+
+    if 'privacy_mode' in configItem['staff_management'].keys():
+        if configItem['staff_management']['privacy_mode'] == True:
+            mentionable = "Management"
+        else:
+            mentionable = ctx.author.mention
+    else:
+        mentionable = ctx.author.mention
     if view.value == True:
         await bot.loas.delete_by_id(loa['_id'])
         await invis_embed(bot, ctx,  f'**{user.display_name}\'s** LoA has been voided.')
         success = discord.Embed(
             title=f"<:ErrorIcon:1035000018165321808> {loa['type']} Voided",
-            description=f"<:ArrowRightW:1035023450592514048>{ctx.author.mention} has voided your {loa['type']}.",
+            description=f"<:ArrowRightW:1035023450592514048>{mentionable} has voided your {loa['type']}.",
             color=0xff3c3c
         )
         success.set_footer(text="Staff Management Module")
@@ -5286,13 +5302,19 @@ async def loavoid(ctx, user: discord.Member = None):
     await compact(embed, bot, ctx.guild.id)
     await ctx.send(embed=embed, view=view)
     await view.wait()
-    print(view.value)
+    if 'privacy_mode' in configItem['staff_management'].keys():
+        if configItem['staff_management']['privacy_mode'] == True:
+            mentionable = "Management"
+        else:
+            mentionable = ctx.author.mention
+    else:
+        mentionable = ctx.author.mention
     if view.value == True:
-        await bot.loas.delete_by_id(ra['_id'])
+        await bot.loas.delete_by_id(loa['_id'])
         await invis_embed(bot, ctx,  f'**{user.display_name}\'s** RA has been voided.')
         success = discord.Embed(
             title=f"<:ErrorIcon:1035000018165321808> {ra['type']} Voided",
-            description=f"<:ArrowRightW:1035023450592514048>{ctx.author.mention} has voided your {ra['type']}.",
+            description=f"<:ArrowRightW:1035023450592514048>{mentionable} has voided your {ra['type']}.",
             color=0xff3c3c
         )
         success.set_footer(text="Staff Management Module")

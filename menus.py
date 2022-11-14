@@ -128,7 +128,7 @@ class CustomDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
-            if len(self.values) == 0:
+            if len(self.values) == 1:
                 self.view.value = self.values[0]
             else:
                 self.view.value = self.values
@@ -161,7 +161,7 @@ class MultiDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
-            if len(self.values) == 0:
+            if len(self.values) == 1:
                 self.view.value = self.values[0]
             else:
                 self.view.value = self.values
@@ -337,9 +337,23 @@ class LOAMenu(discord.ui.View):
                     return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
                 except:
                     pass
-            success = Embed(
+
+
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            mentionable = ""
+            if settings:
+                if 'privacy_mode' in settings['staff_management'].keys():
+                    if settings['staff_management']['privacy_mode'] == True:
+                        mentionable = "Management"
+                    else:
+                        mentionable = interaction.user.mention
+                else:
+                    mentionable = interaction.user.mention
+            else:
+                mentionable = interaction.user.mention
+            success = discord.Embed(
                 title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
-                description=f"<:ArrowRightW:1035023450592514048> {interaction.user.mention} has accepted your {s_loa['type']} request.",
+                description=f"<:ArrowRightW:1035023450592514048> {mentionable} has accepted your {s_loa['type']} request.",
                 color=0x71c15f
             )
             await user.send(embed=success)
@@ -392,11 +406,23 @@ class LOAMenu(discord.ui.View):
                             return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
                         except:
                             pass
-                    success = Embed(
+                    settings = await self.bot.settings.find_by_id(interaction.guild.id)
+                    mentionable = ""
+                    if settings:
+                        if 'privacy_mode' in settings['staff_management'].keys():
+                            if settings['staff_management']['privacy_mode'] == True:
+                                mentionable = "Management"
+                            else:
+                                mentionable = interaction.user.mention
+                        else:
+                            mentionable = interaction.user.mention
+                    else:
+                        mentionable = interaction.user.mention
+                    success = discord.Embed(
                         title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
-                        description=f"<:ArrowRightW:1035023450592514048>{interaction.user.mention} has denied your {s_loa['type']} request.",
+                        description=f"<:ArrowRightW:1035023450592514048>{mentionable} has denied your {s_loa['type']} request.",
                         color=0xff3c3c
-                    ).compact(self.bot, interaction.guild.id)
+                    )
                     await user.send(embed=success)
                     await self.bot.loas.update_by_id(s_loa)
 
@@ -449,53 +475,6 @@ class RemoveWarning(discord.ui.View):
             item.disabled = True
         self.value = True
 
-        success = Embed(
-            title="<:CheckIcon:1035018951043842088> Removed Warning",
-            description="<:ArrowRightW:1035023450592514048>I've successfully removed the warning from the user.",
-            color=0x71c15f
-        ).compact(self.bot, interaction.guild.id)
-
-        await interaction.edit_original_response(embed=success, view=self)
-        self.stop()
-
-    # This one is similar to the confirmation button except sets the inner value to `False`
-    @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
-    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return
-        await interaction.response.defer()
-        for item in self.children:
-            item.disabled = True
-        self.value = False
-
-        success = discord.Embed(
-            title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRightW:1035023450592514048>The warning has not been removed from the user.",
-            color=0xff3c3c
-        )
-
-        await interaction.edit_original_response(embed=success, view=self)
-        self.stop()
-
-
-class RemoveBOLO(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__()
-        self.value = None
-        self.user_id = user_id
-
-    # When the confirm button is pressed, set the inner value to `True` and
-    # stop the View from listening to more input.
-    # We also send the user an ephemeral message that we're confirming their choice.
-    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
-    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return
-        await interaction.response.defer()
-        for item in self.children:
-            item.disabled = True
-        self.value = True
-
         success = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Removed Punishment",
             description="<:ArrowRightW:1035023450592514048>I've successfully removed the punishment from the user.",
@@ -523,6 +502,7 @@ class RemoveBOLO(discord.ui.View):
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
+
 
 class RemoveBOLO(discord.ui.View):
     def __init__(self, user_id):
@@ -563,12 +543,58 @@ class RemoveBOLO(discord.ui.View):
 
         success = discord.Embed(
             title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRightW:1035023450592514048>The BOLO has not been removed from the user.",
+            description="<:ArrowRightW:1035023450592514048>The punishment has not been removed from the user.",
             color=0xff3c3c
         )
 
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
+
+# class RemoveBOLO(discord.ui.View):
+#     def __init__(self, user_id):
+#         super().__init__()
+#         self.value = None
+#         self.user_id = user_id
+#
+#     # When the confirm button is pressed, set the inner value to `True` and
+#     # stop the View from listening to more input.
+#     # We also send the user an ephemeral message that we're confirming their choice.
+#     @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+#     async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+#         if interaction.user.id != self.user_id:
+#             return
+#         await interaction.response.defer()
+#         for item in self.children:
+#             item.disabled = True
+#         self.value = True
+#
+#         success = discord.Embed(
+#             title="<:CheckIcon:1035018951043842088> Removed BOLO",
+#             description="<:ArrowRightW:1035023450592514048>I've successfully removed the BOLO from the user.",
+#             color=0x71c15f
+#         )
+#
+#         await interaction.edit_original_response(embed=success, view=self)
+#         self.stop()
+#
+#     # This one is similar to the confirmation button except sets the inner value to `False`
+#     @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
+#     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+#         if interaction.user.id != self.user_id:
+#             return
+#         await interaction.response.defer()
+#         for item in self.children:
+#             item.disabled = True
+#         self.value = False
+#
+#         success = discord.Embed(
+#             title="<:ErrorIcon:1035000018165321808> Cancelled",
+#             description="<:ArrowRightW:1035023450592514048>The BOLO has not been removed from the user.",
+#             color=0xff3c3c
+#         )
+#
+#         await interaction.edit_original_response(embed=success, view=self)
+#         self.stop()
 
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
