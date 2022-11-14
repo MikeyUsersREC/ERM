@@ -885,7 +885,10 @@ async def activity_report(ctx):
 
         await menu.start()
     else:
-        await ctx.send(embed=embed)
+        try:
+            await ctx.send(embed=embed)
+        except:
+            return await invis_embed(bot, ctx, "No activity data was found.")
 @bot.event
 async def on_message(message: discord.Message):
     bypass_role = None
