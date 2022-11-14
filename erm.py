@@ -982,7 +982,6 @@ async def on_message(message: discord.Message):
                                          icon_url=get_guild_icon(bot, message.guild))
 
                         ctx = await bot.get_context(message)
-                        await compact(embed, bot, message.guild.id)
                         await ctx.reply(f'{message.author.mention}', embed=embed)
                         return
                     await bot.process_commands(message)
