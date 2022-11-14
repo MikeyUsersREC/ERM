@@ -6077,7 +6077,7 @@ async def shift_leaderboard(ctx):
     await compact(embed, bot, ctx.guild.id)
 
     embeds.append(embed)
-
+    print(sorted_staff)
     for i in sorted_staff:
         member = discord.utils.get(ctx.guild.members, id=i['id'])
         if member:
