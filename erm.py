@@ -6105,8 +6105,27 @@ async def shift_leaderboard(ctx):
         bbytes = buffer.encode('utf-8')
     except Exception as e:
         print(e)
-        return await invis_embed(bot, ctx,  'No shift data has been found.')
-    if len(embeds) == 0:
+        if len(embeds) == 0:
+            return await invis_embed(bot, ctx,  'No shift data has been found.')
+        else:
+            if ctx.interaction:
+                interaction = ctx.interaction
+            else:
+                interaction = ctx
+
+            menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+            for embed in embeds:
+                if embed is not None:
+                    await compact(embed, bot, ctx.guild.id)
+                    menu.add_pages([embed])
+
+            if len(menu.pages) == 1:
+                return await ctx.send(embed=embed)
+
+            menu.add_buttons([ViewButton.back(), ViewButton.next()])
+            await menu.start()
+
+    if len(embeds) == 1:
         new_embeds = []
         for i in embeds:
             await compact(i, bot, ctx.guild.id)
