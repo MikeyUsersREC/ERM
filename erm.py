@@ -5,8 +5,6 @@ import pprint
 import time
 from io import BytesIO
 from typing import Union
-
-from utils import embeds as custom_embeds
 import dns.resolver
 import motor.motor_asyncio
 import pytz
@@ -1939,7 +1937,7 @@ async def warn(ctx, user, *, reason):
                 banned = "<:ErrorIcon:1035000018165321808>"
 
             if bolos >= 1:
-                Embed.description = f"""
+                embed.description = f"""
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -1950,7 +1948,7 @@ async def warn(ctx, user, *, reason):
                 `Banned:` {banned}
                 """
             else:
-                Embed.description = f"""
+                embed.description = f"""
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
@@ -1958,10 +1956,10 @@ async def warn(ctx, user, *, reason):
                 `Banned:` {banned}
                 """
 
-        Embed.set_thumbnail(url=Headshot_URL)
-        Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
+        embed.set_thumbnail(url=Headshot_URL)
+        embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
         await compact(embed, bot, ctx.guild.id)
-        Embeds.append(Embed)
+        Embeds.append(embed)
 
     if ctx.interaction:
         interaction = ctx.interaction
@@ -3840,20 +3838,22 @@ async def bolo_lookup(ctx, *, user: str):
     dataItem = await bot.warnings.find_by_id(user.lower())
 
     Embeds = []
-    Embed =  discord.Embed(title=user, color=0x2E3136)
-    Embeds.append(Embed)
-    Embed.set_thumbnail(url=Headshot_URL)
+    embed =  discord.Embed(title=user, color=0x2E3136)
+    embed.set_thumbnail(url=Headshot_URL)
 
     for warningItem in dataItem['warnings']:
         if warningItem['Type'] == "BOLO" and warningItem['Guild'] == ctx.guild.id:
-            Embed.add_field(name="<:WarningIcon:1035258528149033090> BOLO",
+            embed.add_field(name="<:WarningIcon:1035258528149033090> BOLO",
                             value=f"<:ArrowRightW:1035023450592514048> **Reason:** {warningItem['Reason']}\n<:ArrowRightW:1035023450592514048> **Type:** {warningItem['Type']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {warningItem['Moderator'][0]}\n<:ArrowRightW:1035023450592514048> **Time:** {warningItem['Time']}\n<:ArrowRightW:1035023450592514048> **ID:** {warningItem['id']}",
                             inline=False)
+    Embeds.append(embed)
     try:
         new_embeds = []
         for i in Embeds:
-            new_embed = await compact(i, bot, ctx.guild.id)
-            new_embeds.append(new_embed)
+            print(i)
+            if i is not None:
+                await compact(i, bot, ctx.guild.id)
+                new_embeds.append(i)
         await ctx.send(embeds=new_embeds)
     except Exception as e:
         print(e)
