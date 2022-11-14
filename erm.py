@@ -6077,7 +6077,7 @@ async def shift_leaderboard(ctx):
     embeds.append(embed)
     print(sorted_staff)
     for i in sorted_staff:
-        member = ctx.guild.get_member(i["id"])
+        member = await ctx.guild.fetch_member(i["id"])
         print(member)
         if member:
             if buffer is None:
