@@ -104,6 +104,7 @@ class Dropdown(discord.ui.Select):
             self.view.stop()
 
 
+
 class CustomDropdown(discord.ui.Select):
     def __init__(self, user_id, options: list, limit = 1):
         self.user_id = user_id
