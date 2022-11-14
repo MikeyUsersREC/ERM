@@ -6082,19 +6082,23 @@ async def shift_leaderboard(ctx):
         member = discord.utils.get(ctx.guild.members, id=i['id'])
         if member:
             if buffer is None:
+                print('buffer none')
                 buffer = "%s - %s" % (
                     f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
             else:
+                print('buffer not none')
                 buffer = buffer + "\n%s - %s" % (
                     f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
             if len(embeds[-1].fields) <= 24:
+                print('fields less than 24')
                 embeds[-1].add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
             else:
+                print('fields more than 24')
                 new_embed = discord.Embed(
                     color=0x2E3136,
                     title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
                 )
-                await compact(embed, bot, ctx.guild.id)
+                await compact(new_embed, bot, ctx.guild.id)
                 print(new_embed)
                 new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
                 embeds.append(new_embed)
