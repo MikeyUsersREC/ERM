@@ -179,8 +179,8 @@ class Embed:
         guild_settings = await settings.find_by_id(guild)
         if 'compact_mode' in guild_settings['customisation']:
             if guild_settings['customisation']['compact_mode'] == True:
-                self.title = strip_string(self.title)
-                self.description = strip_string(self.description)
+                self._title = strip_string(self._title)
+                self._description = strip_string(self._description)
                 for field in self.fields:
                     field.name = strip_string(field.name)
                     field.value = strip_string(field.value)
@@ -265,7 +265,7 @@ class Embed:
             self.title = str(self.title)
 
         if self.description is not None:
-            self.description = str(self.description)
+            self._description = str(self.description)
 
         if self.url is not None:
             self.url = str(self.url)
@@ -292,14 +292,14 @@ class Embed:
 
         self.title = data.get('title', None)
         self.type = data.get('type', None)
-        self.description = data.get('description', None)
+        self._description = data.get('description', None)
         self.url = data.get('url', None)
 
         if self.title is not None:
             self.title = str(self.title)
 
-        if self.description is not None:
-            self.description = str(self.description)
+        if self._description is not None:
+            self._description = str(self._description)
 
         if self.url is not None:
             self.url = str(self.url)
@@ -331,7 +331,7 @@ class Embed:
         return self.__class__.from_dict(self.to_dict())
 
     def __len__(self) -> int:
-        total = len(self.title or '') + len(self.description or '')
+        total = len(self._title or '') + len(self._description or '')
         for field in getattr(self, '_fields', []):
             total += len(field['name']) + len(field['value'])
 
@@ -374,7 +374,7 @@ class Embed:
                 self.type == other.type
                 and self.title == other.title
                 and self.url == other.url
-                and self.description == other.description
+                and self._description == other._description
                 and self.colour == other.colour
                 and self.fields == other.fields
                 and self.timestamp == other.timestamp
@@ -906,13 +906,13 @@ class Embed:
                     result['timestamp'] = timestamp.replace(tzinfo=datetime.timezone.utc).isoformat()
 
         # add in the non raw attribute ones
-        result['description'] = self.description
+        result['description'] = self._description
 
         if self.type:
             result['type'] = self.type
 
-        if self.description:
-            result['description'] = self.description
+        if self._description:
+            result['description'] = self._description
 
         if self.url:
             result['url'] = self.url
