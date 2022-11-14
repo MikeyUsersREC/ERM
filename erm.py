@@ -6080,6 +6080,7 @@ async def shift_leaderboard(ctx):
     print(sorted_staff)
     for i in sorted_staff:
         member = discord.utils.get(ctx.guild.members, id=i['id'])
+        print(member)
         if member:
             if buffer is None:
                 print('buffer none')
