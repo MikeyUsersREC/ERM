@@ -130,7 +130,7 @@ class CustomDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
-            if len(self.values) == 0:
+            if len(self.values) == 1:
                 self.view.value = self.values[0]
             else:
                 self.view.value = self.values
@@ -163,7 +163,7 @@ class MultiDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
-            if len(self.values) == 0:
+            if len(self.values) == 1:
                 self.view.value = self.values[0]
             else:
                 self.view.value = self.values
