@@ -1,6 +1,5 @@
 import discord
 from utils.utils import int_invis_embed
-from utils.embeds import Embed
 
 class Setup(discord.ui.View):
     def __init__(self, user_id):
