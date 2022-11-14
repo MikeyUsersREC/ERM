@@ -3855,7 +3855,8 @@ async def bolo_lookup(ctx, *, user: str):
             new_embed = await compact(i, bot, ctx.guild.id)
             new_embeds.append(new_embed)
         await ctx.send(embeds=new_embeds)
-    except:
+    except Exception as e:
+        print(e)
         return await invis_embed(bot, ctx,  f'**{user}** does not have any BOLOs.')
 
 
