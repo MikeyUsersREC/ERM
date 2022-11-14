@@ -100,8 +100,7 @@ class Bot(commands.AutoShardedBot):
 
 
 
-bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None,
-          chunk_guilds_on_startup=False)
+bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
 bot.is_synced = False
 environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
