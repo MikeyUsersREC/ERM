@@ -6079,7 +6079,7 @@ async def shift_leaderboard(ctx):
     embeds.append(embed)
     print(sorted_staff)
     for i in sorted_staff:
-        member = discord.utils.get(ctx.guild.members, id=i['id'])
+        member = ctx.guild.get_member(i)
         print(member)
         if member:
             if buffer is None:
