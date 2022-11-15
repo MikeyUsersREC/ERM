@@ -6142,11 +6142,22 @@ async def clearmember(ctx, member: discord.Member = None):
 
     document = await bot.shift_storage.find_by_id(member.id)
     if "shifts" in document.keys():
+        doc_shifts = document['shifts']
         if isinstance(document['shifts'], list):
             for shift in document['shifts']:
+                print(shift)
                 if isinstance(shift, dict):
                     if shift['guild'] == ctx.guild.id:
-                        document['shifts'].remove(shift)
+                        for i in document['shifts']:
+                            doc_shifts.remove(i)
+
+            for index, shift in enumerate(doc_shifts):
+                if shift == None:
+                    doc_shifts[index] = None
+                elif shift['guild'] == ctx.guild.id:
+                    doc_shifts[index] = None
+            print(doc_shifts)
+            document['shifts'] = doc_shifts
             await bot.shift_storage.update_by_id(document)
 
     await invis_embed(bot, ctx,  f'{member.display_name}\'s shift data has been cleared.')
@@ -6184,7 +6195,9 @@ async def clearall(ctx):
                                 doc_shifts.remove(i)
 
                 for index, shift in enumerate(doc_shifts):
-                    if shift['guild'] == ctx.guild.id:
+                    if shift == None:
+                        doc_shifts[index] = None
+                    elif shift['guild'] == ctx.guild.id:
                         doc_shifts[index] = None
                 print(doc_shifts)
                 document['shifts'] = doc_shifts
