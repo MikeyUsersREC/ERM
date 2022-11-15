@@ -5094,7 +5094,7 @@ async def loavoid(ctx, user: discord.Member = None):
 
     embed = discord.Embed(
         description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s LoA?**\n**End date:** <t:{loa["expiry"]}>',
-        color=0x2E136)
+        color=0x2E3136)
     embed.set_footer(text="Staff Management Module")
     view = YesNoMenu(ctx.author.id)
     await compact(embed, bot, ctx.guild.id)
