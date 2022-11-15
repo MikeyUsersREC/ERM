@@ -148,32 +148,6 @@ def is_staff():
         return False
 
     return commands.check(predicate)
-def strip_string(value: str):
-    import re
-    emojis = re.findall("<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>", str(value))
-    for emoji in emojis:
-        emoji_full = '<:' + list(emoji)[1] + ":" + list(emoji)[2] + ">"
-
-        if 'Check' not in emoji_full and 'Error' not in emoji_full:
-            print(2)
-            value = value.replace(str(emoji_full), "")
-    return value
-async def compact(embed, bot: Union[discord.ext.commands.Bot, discord.ext.commands.AutoShardedBot], guild: int):
-    settings = bot.settings
-    guild_settings = await settings.find_by_id(guild)
-    if guild_settings != None:
-        if 'compact_mode' in guild_settings['customisation']:
-            if guild_settings['customisation']['compact_mode'] == True:
-                embed.title = strip_string(embed.title)
-                embed.description = strip_string(embed.description)
-                for index, field in enumerate(embed.fields):
-                    name = strip_string(field.name)
-                    value = strip_string(field.value)
-                    field.name = name
-                    field.value = value
-                    embed.fields[index] = field
-                    print(embed.fields)
-
 def is_management():
     async def predicate(ctx):
         guild_settings = await bot.settings.find_by_id(ctx.guild.id)
@@ -414,7 +388,7 @@ async def update_bot_status():
                             value=f'This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
                             inline=False)
 
-            await compact(embed, bot, channel.guild.id)
+            
             await channel.send(embed=embed)
         else:
             last_embed = last_message.embeds[0]
@@ -435,7 +409,7 @@ async def update_bot_status():
             embed.add_field(name='Note',
                             value=f'This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}',
                             inline=False)
-            await compact(embed, bot, channel.guild.id)
+            
             await last_message.edit(embed=embed)
     except:
         logging.info('Failing updating the status.')
@@ -502,7 +476,7 @@ async def check_reminders():
                     lastTriggered = tD.timestamp()
                     item['lastTriggered'] = lastTriggered
                     await bot.reminders.update_by_id(guildObj)
-                    await compact(embed, bot, channel.guild.id)
+                    
                     await channel.send(" ".join(roles), embed=embed)
             except:
                 pass
@@ -551,7 +525,7 @@ async def check_loa():
                                         await member.remove_roles(role)
                                     except:
                                         pass
-                await compact(embed, bot, guild.id)
+                
                 await member.send(embed=embed)
 
 
@@ -563,13 +537,13 @@ async def on_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         embed = discord.Embed(title="<:ErrorIcon:1035000018165321808> Permissions Error", color=0xff3c3c,
                               description="You do not have permission to use this command.")
-        await compact(embed, bot, ctx.guild.id)
+        
         return await ctx.send(embed=embed)
     if isinstance(error, commands.MissingRequiredArgument):
         embed = discord.Embed(title="<:ErrorIcon:1035000018165321808> Error", color=0xff3c3c,
                               description="You are missing a required argument to run this command.")
         embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
-        await compact(embed, bot, ctx.guild.id)
+        
         return await ctx.send(embed=embed)
     try:
         embed = discord.Embed(
@@ -589,7 +563,7 @@ async def on_error(ctx, error):
         embed.add_field(name='Error ID', value=f"`{error_id}`", inline=False)
 
         if not isinstance(error, (commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument)):
-            await compact(embed, bot, ctx.guild.id)
+            
             await ctx.send(embed=embed)
     except Exception as e:
         logging.info(e)
@@ -631,7 +605,7 @@ async def _import(ctx, export_file: discord.Attachment):
             description=f"<:ArrowRightW:1035023450592514048>**{ctx.guild.name}**'s data has been merged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
+        
         await ctx.send(embed=success)
 
 
@@ -662,7 +636,7 @@ async def on_guild_join(guild: discord.Guild):
         <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
         """
         embed.set_footer(icon_url=guild.icon.url, text=guild.name)
-        await compact(embed, bot, channel.guild.id)
+        
         await channel.send(embed=embed)
         logging.info('Server has been sent welcome sequence.')
 
@@ -850,12 +824,12 @@ async def activity_report(ctx):
         else:
             embed.add_field(name="\u200b", value=string_obj, inline=False)
 
-    await compact(embed, bot, ctx.guild.id)
+    
     embed2 = discord.Embed(
         title="<:Clock:1035308064305332224> Activity Report",
         color=0x2E3136
     )
-    await compact(embed2, bot, ctx.guild.id)
+    
 
     embed2.set_footer(text="Click 'Next' to see users who are on shifts.")
 
@@ -1065,7 +1039,7 @@ async def setup(ctx):
     welcome.description = "Toggle which modules of ERM you would like to use.\n\n<:ArrowRight:1035003246445596774> All *(default)*\n*All features of the bot*\n\n<:ArrowRight:1035003246445596774> Staff Management\n*Manage your staff members, LoAs, and more!*\n\n<:ArrowRight:1035003246445596774> Punishments\n*Roblox moderation, staff logging systems, and more!*\n\n<:ArrowRight:1035003246445596774> Shift Management\n*Manage staff member's shifts, view who's in game!*"
 
     view = MultiSelectMenu(ctx.author.id, options)
-    await compact(welcome, bot, ctx.guild.id)
+    
     await ctx.send(embed=welcome, view=view)
 
     await view.wait()
@@ -1108,7 +1082,7 @@ async def setup(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value is not None:
@@ -1123,7 +1097,7 @@ async def setup(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value is not None:
@@ -1152,7 +1126,7 @@ async def setup(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are in game?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value is not None:
@@ -1167,7 +1141,7 @@ async def setup(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you have a weekly quota? (e.g. 2 hours per week)'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value is not None:
@@ -1199,7 +1173,7 @@ async def setup(ctx):
     view = YesNoMenu(ctx.author.id)
     question = 'Do you want your server\'s warnings to be able to be queried across the bot? (e.g. `globalsearch`)'
     embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed, view=view)
     await view.wait()
     if view.value is not None:
@@ -1221,7 +1195,7 @@ async def setup(ctx):
 
     embed = discord.Embed(title="<:CheckIcon:1035018951043842088> Setup Complete", color=0x69cc5e,
                           description="<:ArrowRight:1035003246445596774>ERM has been set up and is ready for use!\n*If you want to change these settings, run the command again!*")
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -1277,7 +1251,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
         description='<:ArrowRight:1035003246445596774> Running this command will override any already configured settings with ERM.\nAre you sure you would like to run this command?',
         color=0x2E3136
     )
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -1287,7 +1261,7 @@ async def quicksetup(ctx, featuresenabled='default', staffmanagementchannel: dis
             description="<:ArrowRight:1035003246445596774> Quick setup has been cancelled.",
             color=0xff3c3c
         )
-        await compact(success, bot, ctx.guild.id)
+        
         return await ctx.send(embed=success)
 
     if featuresenabled == 'all' or featuresenabled == 'default':
@@ -1574,7 +1548,7 @@ async def viewconfig(ctx):
     for field in embed.fields:
         field.inline = False
 
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -1827,7 +1801,7 @@ async def changeconfig(ctx):
             description="<:ArrowRight:1035003246445596774> Your configuration has been changed.",
             color=0x71c15f
         )
-        await compact(successEmbed, bot, ctx.guild.id)
+        
         return await ctx.send(embed=successEmbed)
     else:
         return await invis_embed(bot, ctx,
@@ -1851,7 +1825,7 @@ async def support_server(ctx):
                           description='<:ArrowRight:1035003246445596774> Join the [**Support Server**](https://discord.gg/5pMmJEYazQ) to get help with the bot!',
                        color=0x2E3136)
     embed.set_footer(text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}")
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -1868,7 +1842,7 @@ async def uptime(ctx):
                     value=f"<:ArrowRight:1035003246445596774> <t:{int(bot.start_time)}>")
     embed.add_field(name='<:UptimeIconW:1035269010272550932> Uptime',
                     value=f"<:ArrowRight:1035003246445596774> {td_format(text)}")
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -1965,7 +1939,7 @@ async def warn(ctx, user, *, reason):
 
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(embed, bot, ctx.guild.id)
+        
         Embeds.append(embed)
 
     if ctx.interaction:
@@ -2058,10 +2032,10 @@ async def warn(ctx, user, *, reason):
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s warning has been logged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
+        
 
         await menu.message.edit(embed=success)
-        await compact(embed, bot, ctx.guild.id)
+        
         await channel.send(embed=embed)
 
     async def task():
@@ -2078,7 +2052,7 @@ async def warn(ctx, user, *, reason):
             description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
             color=0xff3c3c
         )
-        await compact(embed, bot, menu.message.guild.id)
+        
         await menu.message.edit(embed=embed)
 
         await menu.stop(disable_items=True)
@@ -2210,7 +2184,7 @@ async def kick(ctx, user, *, reason):
                 """
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(embed, bot, ctx.guild.id)
+        
         Embeds.append(embed)
 
     if ctx.interaction:
@@ -2290,10 +2264,10 @@ async def kick(ctx, user, *, reason):
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s kick has been logged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
+        
 
         await menu.message.edit(embed=success)
-        await compact(embed, bot, ctx.guild.id)
+        
         await channel.send(embed=embed)
 
     async def task():
@@ -2310,7 +2284,7 @@ async def kick(ctx, user, *, reason):
             description="<:ArrowRight:1035003246445596774>This kick has not been logged.",
             color=0xff3c3c
         )
-        await compact(embed, bot, menu.message.guild.id)
+        
         await menu.message.edit(embed=embed)
 
         await menu.stop(disable_items=True)
@@ -2445,7 +2419,7 @@ async def ban(ctx, user, *, reason):
 
         Embed.set_thumbnail(url=Headshot_URL)
         Embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(Embed, bot, ctx.guild.id)
+        
         Embeds.append(Embed)
 
     if ctx.interaction:
@@ -2528,8 +2502,8 @@ async def ban(ctx, user, *, reason):
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
-        await compact(embed, bot, ctx.guild.id)
+        
+        
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
 
@@ -2547,7 +2521,7 @@ async def ban(ctx, user, *, reason):
             description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
             color=0xff3c3c
         )
-        await compact(embed, bot, menu.message.guild.id)
+        
         await menu.message.edit(embed=embed)
 
         await menu.stop(disable_items=True)
@@ -2628,8 +2602,8 @@ async def mlog(ctx, *, message):
         description="<:ArrowRight:1035003246445596774> Your message has been logged successfully.",
         color=0x71c15f
     )
-    await compact(embed, bot, ctx.guild.id)
-    await compact(successEmbed, bot, ctx.guild.id)
+    
+    
     await channel.send(embed=embed)
     await ctx.send(embed=successEmbed)
 
@@ -2755,7 +2729,7 @@ async def tempban(ctx, user, time: str, *, reason):
 
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(embed, bot, ctx.guild.id)
+        
         Embeds.append(embed)
 
     async def ban_function(ctx, menu):
@@ -2836,8 +2810,8 @@ async def tempban(ctx, user, time: str, *, reason):
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
-        await compact(embed, bot, ctx.guild.id)
+        
+        
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
@@ -2862,7 +2836,7 @@ async def tempban(ctx, user, time: str, *, reason):
             description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
             color=0xff3c3c
         )
-        await compact(embed, bot, menu.message.guild.id)
+        
         await menu.message.edit(embed=embed)
 
         await menu.stop(disable_items=True)
@@ -2983,7 +2957,7 @@ async def search(ctx, *, query):
         embed1.set_thumbnail(
             url="https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
                 User.id))
-        await compact(embed1, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed1)
 
     if len(RESULTS) > 1:
@@ -3077,7 +3051,7 @@ async def search(ctx, *, query):
                         )
                     else:
                         new_embed = discord.Embed(title=embeds[0].title, color=await generate_random(ctx))
-                        await compact(new_embed, bot, ctx.guild.id)
+                        
                         embeds.append(new_embed)
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
@@ -3093,7 +3067,7 @@ async def search(ctx, *, query):
                         )
                     else:
                         new_embed = discord.Embed(title=embeds[0].title, color=await generate_random(ctx))
-                        await compact(new_embed, bot, ctx.guild.id)
+                        
                         embeds.append(new_embed)
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
@@ -3118,8 +3092,7 @@ async def search(ctx, *, query):
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         new_embeds = []
         for embed in embeds:
-            new_embed = await compact(embed, bot, ctx.guild.id)
-            new_embeds.append(new_embed)
+            new_embeds.append(embed)
         menu.add_pages(new_embeds)
         await menu.start()
 
@@ -3222,7 +3195,7 @@ async def globalsearch(ctx, *, query):
         embed1.set_thumbnail(
             url="https://www.roblox.com/headshot-thumbnail/image?userId={}&width=420&height=420&format=png".format(
                 User.id))
-        await compact(embed1, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed1)
     if len(RESULTS) == 1:
 
@@ -3271,7 +3244,7 @@ async def globalsearch(ctx, *, query):
             if len(triggered_alerts) == 0:
                 triggered_alerts.append('NoAlerts')
             embed1 =  discord.Embed(title=query, color=0x2E3136)
-            await compact(embed1, bot, ctx.guild.id)
+            
             embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
                               icon_url=ctx.author.display_avatar.url)
 
@@ -3334,7 +3307,7 @@ async def globalsearch(ctx, *, query):
                     )
                 else:
                     new_embed = discord.Embed(title=embeds[0].title, color=await generate_random(ctx))
-                    await compact(new_embed, bot, ctx.guild.id)
+                    
                     embeds.append(new_embed)
 
                     embeds[-1].add_field(
@@ -3351,7 +3324,7 @@ async def globalsearch(ctx, *, query):
                     )
                 else:
                     new_embed = discord.Embed(title=embeds[0].title, color=await generate_random(ctx))
-                    await compact(new_embed, bot, ctx.guild.id)
+                    
                     embeds.append(new_embed)
 
                     embeds[-1].add_field(
@@ -3377,8 +3350,7 @@ async def globalsearch(ctx, *, query):
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         new_embeds = []
         for embed in embeds:
-            new_embed = await compact(embed, bot, ctx.guild.id)
-            new_embeds.append(new_embed)
+            new_embeds.append(embed)
         menu.add_pages(new_embeds)
         await menu.start()
 
@@ -3453,7 +3425,7 @@ async def removewarning(ctx, id: str):
         description=f"<:ArrowRightW:1035023450592514048> **Reason:** {selected_item['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {Moderator}\n<:ArrowRightW:1035023450592514048> **ID:** {selected_item['id']}\n",
         color=0x2E3136
     )
-    await compact(embed, bot, ctx.guild.id)
+    
 
     view = RemoveWarning(ctx.author.id)
     await ctx.send(embed=embed, view=view)
@@ -3562,7 +3534,7 @@ async def help(ctx, *, command=None):
 
         embed.set_footer(text="Use /help <command> for specific help on a command.",
                          icon_url="https://cdn.discordapp.com/emojis/1035258528149033090.webp?size=60&quality=lossless")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed)
     else:
         command = bot.get_command(command)
@@ -3589,7 +3561,7 @@ async def help(ctx, *, command=None):
                 value='<:ArrowRight:1035003246445596774> `{}`'.format(', '.join(command.aliases)),
                 inline=False
             )
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed)
 
 
@@ -3680,7 +3652,7 @@ async def bolo_create(ctx, user, *, reason):
 
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        await compact(embed, bot, ctx.guild.id)
+        
         Embeds.append(embed)
 
     if ctx.interaction:
@@ -3764,8 +3736,8 @@ async def bolo_create(ctx, user, *, reason):
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s ban has been logged.",
             color=0x71c15f
         )
-        await compact(success, bot, ctx.guild.id)
-        await compact(embed, bot, ctx.guild.id)
+        
+        
 
         await menu.message.edit(embed=success)
         await channel.send(embed=embed)
@@ -3784,7 +3756,7 @@ async def bolo_create(ctx, user, *, reason):
             description="<:ArrowRight:1035003246445596774>This BOLO has not been logged.",
             color=0xff3c3c
         )
-        await compact(embed, bot, ctx.guild.id)
+        
         await menu.message.edit(embed=embed)
         await menu.stop(disable_items=True)
 
@@ -3859,7 +3831,7 @@ async def bolo_lookup(ctx, *, user: str):
         for i in Embeds:
             print(i)
             if i is not None:
-                await compact(i, bot, ctx.guild.id)
+                
                 new_embeds.append(i)
         await ctx.send(embeds=new_embeds)
     except Exception as e:
@@ -3964,7 +3936,7 @@ async def dutyon(ctx):
                     ]
                 })
 
-    await compact(embed, bot, ctx.guild.id)
+    
     await shift_channel.send(embed=embed)
 
     successEmbed = discord.Embed(
@@ -3972,7 +3944,7 @@ async def dutyon(ctx):
         description="<:ArrowRight:1035003246445596774> Your shift is now active.",
         color=0x71c15f
     )
-    await compact(successEmbed, bot, ctx.guild.id)
+    
     await ctx.send(embed=successEmbed)
     role = None
 
@@ -4038,7 +4010,7 @@ async def bolo_void(ctx, id: str):
         description=f"<:ArrowRightW:1035023450592514048> **User:** {parent_item['_id']}\n<:ArrowRightW:1035023450592514048> **Reason:** {selected_item['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {Moderator}\n<:ArrowRightW:1035023450592514048> **ID:** {selected_item['id']}\n",
         color=0x2E3136
     )
-    await compact(embed, bot, ctx.guild.id)
+    
 
     view = RemoveBOLO(ctx.author.id)
     await ctx.send(embed=embed, view=view)
@@ -4135,8 +4107,8 @@ async def dutyoff(ctx):
         description="<:ArrowRight:1035003246445596774> Your shift has now ended.",
         color=0x71c15f
     )
-    await compact(successEmbed, bot, ctx.guild.id)
-    await compact(embed, bot, ctx.guild.id)
+    
+    
 
     await ctx.send(embed=successEmbed)
     await shift_channel.send(embed=embed)
@@ -4306,7 +4278,7 @@ async def dutytime(ctx):
         value="<:ArrowRight:1035003246445596774>" +
               str(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
                   shift['startTimestamp']).replace(tzinfo=None)).split('.')[0])
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -4376,7 +4348,7 @@ async def dutyvoid(ctx):
     )
 
     embed.set_footer(text="Select 'Yes' to void your shift.")
-    await compact(embed, bot, ctx.guild.id)
+    
     msg = await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -4386,7 +4358,7 @@ async def dutyvoid(ctx):
             description="<:ArrowRight:1035003246445596774>This shift has not been voided.",
             color=0xff3c3c
         )
-        await compact(success, bot, ctx.guild.id)
+        
 
         return await ctx.send(embed=success)
 
@@ -4416,7 +4388,7 @@ async def dutyvoid(ctx):
         description="<:ArrowRight:1035003246445596774> Shift has been voided successfully.",
         color=0x71c15f
     )
-    await compact(successEmbed, bot, ctx.guild.id)
+    
 
     embed.set_footer(text='Staff Logging Module')
 
@@ -4431,7 +4403,7 @@ async def dutyvoid(ctx):
             await bot.shifts.update_by_id(dataShift)
         else:
             await bot.shifts.delete_by_id(dataShift)
-    await compact(embed, bot, ctx.guild.id)
+    
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
     role = None
@@ -4514,7 +4486,7 @@ async def forcevoid(ctx, member: discord.Member):
         color=0x2E3136
     )
     embed.set_footer(text="Select 'Yes' to continue.")
-    await compact(embed, bot, ctx.guild.id)
+    
 
     msg = await ctx.send(embed=embed, view=view)
     await view.wait()
@@ -4525,7 +4497,7 @@ async def forcevoid(ctx, member: discord.Member):
             description="<:ArrowRight:1035003246445596774>This shift has not been voided.",
             color=0xff3c3c
         )
-        await compact(success, bot, ctx.guild.id)
+        
         return await ctx.send(embed=success)
 
     embed = discord.Embed(
@@ -4568,7 +4540,7 @@ async def forcevoid(ctx, member: discord.Member):
             await bot.shifts.update_by_id(dataShift)
         else:
             await bot.shifts.delete_by_id(dataShift)
-    await compact(embed, bot, ctx.guild.id)
+    
     await shift_channel.send(embed=embed)
     await msg.edit(embed=successEmbed)
     role = None
@@ -4651,7 +4623,7 @@ async def modify(ctx, member: discord.Member):
         description=f"<:Clock:1035308064305332224> **What would you like to do to {member.display_name}'s current shift?**",
         color=0x2E3136
     )
-    await compact(embed, bot, ctx.guild.id)
+    
     msg = await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -4689,8 +4661,8 @@ async def modify(ctx, member: discord.Member):
             description=f"<:ArrowRight:1035003246445596774> {member.display_name}'s shift has now ended.",
             color=0x71c15f
         )
-        await compact(successEmbed, bot, ctx.guild.id)
-        await compact(embed, bot, ctx.guild.id)
+        
+        
 
         await ctx.send(embed=successEmbed)
         await shift_channel.send(embed=embed)
@@ -4814,7 +4786,7 @@ async def modify(ctx, member: discord.Member):
                 await bot.shifts.update_by_id(dataShift)
             else:
                 await bot.shifts.delete_by_id(dataShift)
-        await compact(embed, bot, ctx.guild.id)
+        
         await shift_channel.send(embed=embed)
         await msg.edit(embed=successEmbed)
         role = None
@@ -4873,7 +4845,7 @@ async def modify(ctx, member: discord.Member):
                 description=f"<:ArrowRight:1035003246445596774> **{num} {full}** have been added to {member.display_name}'s shift.",
                 color=0x71c15f
             )
-            await compact(successEmbed, bot, ctx.guild.id)
+            
             await ctx.send(embed=successEmbed)
         else:
             return await invis_embed(bot, ctx,  "Invalid time format. (e.g. 120m)")
@@ -4920,7 +4892,7 @@ async def modify(ctx, member: discord.Member):
                 description=f"<:ArrowRight:1035003246445596774> **{num} {full}** have been removed from {member.display_name}'s shift.",
                 color=0x71c15f
             )
-            await compact(successEmbed, bot, ctx.guild.id)
+            
             await ctx.send(embed=successEmbed)
 
         else:
@@ -5038,7 +5010,7 @@ async def loarequest(ctx, time, *, reason):
                                  "The LOA role has not been set up yet. Please run `/config change` to add the LOA role.")
 
     view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
-    await compact(embed, bot, ctx.guild.id)
+    
 
     channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
     msg = await channel.send(embed=embed, view=view)
@@ -5055,7 +5027,7 @@ async def loarequest(ctx, time, *, reason):
         description="<:ArrowRight:1035003246445596774> I've sent your LoA request to a Management member of this server.",
         color=0x71c15f
     )
-    await compact(successEmbed, bot, ctx.guild.id)
+    
 
     if ctx.interaction:
         await ctx.interaction.response.send_message(embed=successEmbed, ephemeral=True)
@@ -5097,7 +5069,7 @@ async def loavoid(ctx, user: discord.Member = None):
         color=0x2E3136)
     embed.set_footer(text="Staff Management Module")
     view = YesNoMenu(ctx.author.id)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed, view=view)
     await view.wait()
     print(view.value)
@@ -5118,7 +5090,7 @@ async def loavoid(ctx, user: discord.Member = None):
             color=0xff3c3c
         )
         success.set_footer(text="Staff Management Module")
-        await compact(embed, bot, ctx.guild.id)
+        
         try:
             await ctx.guild.get_member(loa['user_id']).send(embed=success)
             if loa_role in [role.id for role in user.roles]:
@@ -5240,7 +5212,7 @@ async def rarequest(ctx, time, *, reason):
     view = LOAMenu(bot, management_role, loa_role, ctx.author.id)
 
     channel = discord.utils.get(ctx.guild.channels, id=configItem['staff_management']['channel'])
-    await compact(embed, bot, ctx.guild.id)
+    
     msg = await channel.send(embed=embed, view=view)
 
     example_schema = {"_id": f"{ctx.author.id}_{ctx.guild.id}_{int(startTimestamp)}_{int(endTimestamp)}",
@@ -5255,7 +5227,7 @@ async def rarequest(ctx, time, *, reason):
         description="<:ArrowRight:1035003246445596774> I've sent your LoA request to a Management member of this server.",
         color=0x71c15f
     )
-    await compact(successEmbed, bot, ctx.guild.id)
+    
 
     if ctx.interaction:
         await ctx.interaction.response.send_message(embed=successEmbed, ephemeral=True)
@@ -5297,7 +5269,7 @@ async def loavoid(ctx, user: discord.Member = None):
         color=0x2E136)
     embed.set_footer(text="Staff Management Module")
     view = YesNoMenu(ctx.author.id)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed, view=view)
     await view.wait()
     if 'privacy_mode' in configItem['staff_management'].keys():
@@ -5316,7 +5288,7 @@ async def loavoid(ctx, user: discord.Member = None):
             color=0xff3c3c
         )
         success.set_footer(text="Staff Management Module")
-        await compact(embed, bot, ctx.guild.id)
+        
         try:
             await ctx.guild.get_member(ra['user_id']).send(embed=success)
             if ra_role in [role.id for role in user.roles]:
@@ -5393,7 +5365,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
         embed.add_field(name="<:Clock:1035308064305332224> Elapsed Time",
                         value=f"<:ArrowRight:1035003246445596774> {td_format(interaction.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None)).split('.')[0]}",
                         inline=False)
-        await compact(embed, bot, interaction.guild.id)
+        
 
         if not await bot.shift_storage.find_by_id(member.id):
             await bot.shift_storage.insert({
@@ -5465,7 +5437,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
             description=f"<:ArrowRight:1035003246445596774> {member.mention}'s shift has now ended.",
             color=0x71c15f
         )
-        await compact(successEmbed, bot, interaction.guild.id)
+        
 
         await interaction.edit_original_response(embed=successEmbed)
         logging.info(await bot.shifts.find_by_id(member.id))
@@ -5531,7 +5503,7 @@ async def add(ctx):
                         value="<:ArrowRightW:1035023450592514048> No reminders have been added.", inline=False)
 
     view = AddReminder(ctx.author.id)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -5564,7 +5536,7 @@ async def add(ctx):
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be mentioned?'
         embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
         roleObject = None
         await view.wait()
@@ -5610,7 +5582,7 @@ async def add(ctx):
             description="<:ArrowRight:1035003246445596774> Your reminder has been added successfully.",
             color=0x71c15f
         )
-        await compact(successEmbed, bot, ctx.guild.id)
+        
         await ctx.send(embed=successEmbed)
 
 
@@ -5628,7 +5600,7 @@ async def remove(ctx):
         }
 
     embed = discord.Embed(title="<:Resume:1035269012445216858> Remove a reminder", color=0x2E3136)
-    await compact(embed, bot, ctx.guild.id)
+    
     for item in Data['reminders']:
         embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
                         value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']}s\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
@@ -5656,7 +5628,7 @@ async def remove(ctx):
                     description="<:ArrowRight:1035003246445596774> Your reminder has been removed successfully.",
                     color=0x71c15f
                 )
-                await compact(successEmbed, bot, ctx.guild.id)
+                
                 return await ctx.send(embed=successEmbed)
 
 
@@ -5768,8 +5740,8 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
             description=f"<:ArrowRight:1035003246445596774> {member.mention}'s shift is now active.",
             color=0x71c15f
         )
-        await compact(embed, bot, interaction.guild.id)
-        await compact(successEmbed, bot, interaction.guild.id)
+        
+        
         await interaction.edit_original_response(embed=successEmbed)
 
         await shift_channel.send(embed=embed)
@@ -5878,7 +5850,7 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
         color=0x2E3136
     )
     embed.set_footer(text="Select 'Yes' to void the shift.")
-    await compact(embed, bot, interaction.guild.id)
+    
     await interaction.response.send_message(embed=embed, view=view)
     await view.wait()
 
@@ -5907,8 +5879,8 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
             description=f"<:ArrowRight:1035003246445596774> {member.mention}'s shift has been voided.",
             color=0x71c15f
         )
-        await compact(embed, bot, interaction.guild.id)
-        await compact(successEmbed, bot, interaction.guild.id)
+        
+        
 
         await interaction.edit_original_response(embed=successEmbed)
         logging.info(await bot.warnings.find_by_id(member.id))
@@ -5975,7 +5947,7 @@ async def clockedin(ctx):
                     embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                     value=f"<:ArrowRight:1035003246445596774> {td_format(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']))}",
                                     inline=False)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -6026,7 +5998,7 @@ async def info(ctx, member: discord.Member = None):
     else:
         embed.add_field(name="<:Clock:1035308064305332224> Total Time",
                         value="<:ArrowRight:1035003246445596774> No shifts found", inline=False)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=embed)
 
 
@@ -6072,7 +6044,7 @@ async def shift_leaderboard(ctx):
         color=0x2E3136,
         title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
     )
-    await compact(embed, bot, ctx.guild.id)
+    
 
     embeds.append(embed)
     print(sorted_staff)
@@ -6100,7 +6072,7 @@ async def shift_leaderboard(ctx):
                     color=0x2E3136,
                     title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
                 )
-                await compact(new_embed, bot, ctx.guild.id)
+                
                 print(new_embed)
                 new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}', value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}", inline=False)
                 embeds.append(new_embed)
@@ -6122,7 +6094,7 @@ async def shift_leaderboard(ctx):
             menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
             for embed in embeds:
                 if embed is not None:
-                    await compact(embed, bot, ctx.guild.id)
+                    
                     menu.add_pages([embed])
 
             if len(menu.pages) == 1:
@@ -6134,7 +6106,7 @@ async def shift_leaderboard(ctx):
     if len(embeds) == 1:
         new_embeds = []
         for i in embeds:
-            await compact(i, bot, ctx.guild.id)
+            
             new_embeds.append(i)
         await ctx.send(embeds=new_embeds, file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'))
     else:
@@ -6147,7 +6119,7 @@ async def shift_leaderboard(ctx):
         menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
         for embed in embeds:
             if embed is not None:
-                await compact(embed, bot, ctx.guild.id)
+                
                 menu.add_pages([embed])
 
         if len(menu.pages) == 1:
@@ -6177,14 +6149,14 @@ async def clearmember(ctx, member: discord.Member = None):
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear your shift data?** This is irreversible.',
             color=0x2E3136)
         await embed
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
     else:
         embed = discord.Embed(
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {member.display_name}\'s shift data?** This is irreversible.',
             color=0x2E3136)
         await embed
-        await compact(embed, bot, ctx.guild.id)
+        
         await ctx.send(embed=embed, view=view)
     await view.wait()
     if view.value is False:
@@ -6216,7 +6188,7 @@ async def clearall(ctx):
     embed = discord.Embed(
         description='<:WarningIcon:1035258528149033090> **Are you sure you would like to clear ALL shift data?** This is irreversible.',
         color=0x2E3136)
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(view=view, embed=embed)
     await view.wait()
     if view.value is False:
@@ -6245,7 +6217,7 @@ async def clearall(ctx):
         description="<:ArrowRight:1035003246445596774> All shift data has been cleared.",
         color=0x71c15f
     )
-    await compact(embed, bot, ctx.guild.id)
+    
     await ctx.send(embed=successEmbed)
 
 
