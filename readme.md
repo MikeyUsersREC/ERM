@@ -22,6 +22,8 @@ This license allows reusers to copy and distribute the material in any medium or
 CC BY-NC-ND includes the following elements:
 
 BY  – Credit must be given to the creator
+
 NC  – Only noncommercial uses of the work are permitted
+
 ND  – No derivatives or adaptations of the work are permitted
 
