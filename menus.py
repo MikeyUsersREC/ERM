@@ -670,3 +670,30 @@ class ChannelSelect(discord.ui.View):
             await interaction.response.defer()
             self.value = select.values
             self.stop()
+
+class CheckMark(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.gray)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        self.value = True
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(emoji='❎', style=discord.ButtonStyle.gray)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        await interaction.response.defer()
+        self.value = False
+        self.stop()
+

@@ -1861,7 +1861,7 @@ async def warn(ctx, user, *, reason):
         oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
         oldRequestJSON = oldRequest.json()
         if not oldRequest.status_code == 200:
-            return await invis_embed(bot, ctx,  'User does not exist.')
+            return await invis_embed(bot, ctx, 'User does not exist.')
         Id = oldRequestJSON['Id']
         request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
         requestJson = request.json()
@@ -1886,19 +1886,19 @@ async def warn(ctx, user, *, reason):
 
         user = await bot.warnings.find_by_id(dataItem['name'].lower())
         if user is None:
-            Embed.description = """
+            embed.description = """
             <:ArrowRightW:1035023450592514048>**Warnings:** 0
             <:ArrowRightW:1035023450592514048>**Kicks:** 0
             <:ArrowRightW:1035023450592514048>**Bans:** 0
-            
+
             `Banned:` <:ErrorIcon:1035000018165321808>
             """
         else:
-
             warnings = 0
             kicks = 0
             bans = 0
             bolos = 0
+
             for warningItem in user['warnings']:
                 if warningItem['Guild'] == ctx.guild.id:
                     if warningItem['Type'] == "Warning":
@@ -1911,7 +1911,6 @@ async def warn(ctx, user, *, reason):
                         bans += 1
                     elif warningItem['Type'] == "BOLO":
                         bolos += 1
-
             if bans != 0:
                 banned = "<:CheckIcon:1035018951043842088>"
             else:
@@ -1922,10 +1921,10 @@ async def warn(ctx, user, *, reason):
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
-                
+
                 <:WarningIcon:1035258528149033090> **BOLOs:**
                 <:ArrowRightW:1035023450592514048> There is currently a BOLO on this user. Please check their reason with `/bolo lookup` before continuing.
-                
+
                 `Banned:` {banned}
                 """
             else:
@@ -1933,13 +1932,12 @@ async def warn(ctx, user, *, reason):
                 <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
                 <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                 <:ArrowRightW:1035023450592514048>**Bans:** {bans}
-                                                                                       
+
                 `Banned:` {banned}
                 """
-
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
-        
+
         Embeds.append(embed)
 
     if ctx.interaction:
@@ -1992,50 +1990,31 @@ async def warn(ctx, user, *, reason):
                         inline=False)
         embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
                         value=f"<:ArrowRight:1035003246445596774> {menu.message.embeds[0].title}", inline=False)
-        embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
-                        value="<:ArrowRight:1035003246445596774> Warning",
+        embed.add_field(name="<:MalletWhite:1035258530422341672> Type", value="<:ArrowRight:1035003246445596774> Warning",
                         inline=False)
         embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
                         inline=False)
 
         channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
-
         if not channel:
             return await invis_embed(bot, ctx,
                                      'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
 
-        item = None
         if not await bot.warnings.find_by_id(user.lower()):
-            item = await bot.warnings.find_by_id(user.lower())
             await bot.warnings.insert(default_warning_item)
         else:
             dataset = await bot.warnings.find_by_id(user.lower())
             dataset['warnings'].append(singular_warning_item)
             await bot.warnings.update_by_id(dataset)
 
-        view = YesNoMenu(ctx.author.id)
-        if item is not None:
-            for warning in item['warnings']:
-                if warning['Guild'] == ctx.guild.id:
-                    if warning['Type'] == "BOLO":
-                        await invis_embed(bot, ctx,
-                                          'This user has a BOLO (Be on the Lookout) active. Are you sure you would like to continue?',
-                                          view=view)
-                        await view.wait()
-                        if view.value is True:
-                            continue
-                        else:
-                            return await invis_embed(bot, ctx,  'Successfully cancelled.')
-
         success = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Warning Logged",
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s warning has been logged.",
             color=0x71c15f
         )
-        
 
         await menu.message.edit(embed=success)
-        
+
         await channel.send(embed=embed)
 
     async def task():
@@ -2049,10 +2028,10 @@ async def warn(ctx, user, *, reason):
     async def cancelTask():
         embed = discord.Embed(
             title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRight:1035003246445596774>This ban has not been logged.",
+            description="<:ArrowRight:1035003246445596774>This warning has not been logged.",
             color=0xff3c3c
         )
-        
+
         await menu.message.edit(embed=embed)
 
         await menu.stop(disable_items=True)
@@ -2092,7 +2071,6 @@ async def warn(ctx, user, *, reason):
     except:
         return await invis_embed(bot, ctx,
                                  'This user does not exist on the Roblox platform. Please try again with a valid username.')
-
 
 @bot.hybrid_command(
     name="kick",
@@ -6219,6 +6197,20 @@ async def clearall(ctx):
     )
     
     await ctx.send(embed=successEmbed)
+
+# @bot.command()
+# async def debug(ctx):
+#     from utils.paginator import example_callback, Paginator
+#     embeds = [
+#         discord.Embed(title="Hello"),
+#         discord.Embed(title="World"),
+#         discord.Embed(title="Again"),
+#     ]
+#
+#
+#     view = Paginator(example_callback(embeds), len(embeds))
+#     embed = view.get_page(1)
+#     await ctx.send(embed=embed, view=view)
 
 
 if __name__ == "__main__":
