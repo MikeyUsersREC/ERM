@@ -556,7 +556,7 @@ async def check_loa():
 
 
 @bot.event
-async def on_command_error(ctx, error):
+async def on_error(ctx, error):
     error_id = error_gen()
     if isinstance(error, commands.CommandNotFound):
         return
