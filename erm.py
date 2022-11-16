@@ -3405,7 +3405,7 @@ async def removewarning(ctx, id: str):
     )
     
 
-    view = RemoveWarning(ctx.author.id)
+    view = RemoveWarning(bot, ctx.author.id)
     await ctx.send(embed=embed, view=view)
     await view.wait()
 
@@ -4680,7 +4680,7 @@ async def modify(ctx, member: discord.Member):
                             'totalSeconds': sum(
                                 [(await bot.shift_storage.find_by_id(member.id))['shifts'][i]['totalSeconds'] for i
                                  in
-                                 range(len((await bot.shift_storage.find_by_id(member.id))['shifts']))])
+                                 range(len((await bot.shift_storage.find_by_id(member.id))['shifts'])) if (await bot.shift_storage.find_by_id(member.id))['shifts'][i] is not None])
                         }
                     )
                 else:
@@ -6133,8 +6133,6 @@ async def clearmember(ctx, member: discord.Member = None):
         embed = discord.Embed(
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {member.display_name}\'s shift data?** This is irreversible.',
             color=0x2E3136)
-        await embed
-        
         await ctx.send(embed=embed, view=view)
     await view.wait()
     if view.value is False:
