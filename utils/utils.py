@@ -27,12 +27,12 @@ async def get_prefix(bot, message):
 
     return commands.when_mentioned_or(prefix)(bot, message)
 
-async def invis_embed(bot: typing.Union[commands.AutoShardedBot, commands.Bot], ctx: commands.Context, content: str, **kwargs):
+async def invis_embed(ctx: commands.Context, content: str, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     await ctx.send(embed=embed, **kwargs)
 
 
-async def int_invis_embed(bot, interaction, content, **kwargs):
+async def int_invis_embed(interaction, content, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     await interaction.response.send_message(embed=embed, **kwargs)
 

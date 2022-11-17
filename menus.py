@@ -1,5 +1,8 @@
+import typing
+
 import discord
 from utils.utils import int_invis_embed
+
 
 class Setup(discord.ui.View):
     def __init__(self, user_id):
@@ -104,10 +107,9 @@ class Dropdown(discord.ui.Select):
 
 
 class CustomDropdown(discord.ui.Select):
-    def __init__(self, user_id, options: list, limit = 1):
+    def __init__(self, user_id, options: list, limit=1):
         self.user_id = user_id
         optionList = []
-
 
         for option in options:
             if isinstance(option, str):
@@ -134,11 +136,11 @@ class CustomDropdown(discord.ui.Select):
                 self.view.value = self.values
             self.view.stop()
 
+
 class MultiDropdown(discord.ui.Select):
     def __init__(self, user_id, options: list):
         self.user_id = user_id
         optionList = []
-
 
         for option in options:
             if isinstance(option, str):
@@ -208,6 +210,7 @@ class YesNoMenu(discord.ui.View):
         self.value = False
         await interaction.edit_original_response(view=self)
         self.stop()
+
 
 class EnableDisableMenu(discord.ui.View):
     def __init__(self, user_id):
@@ -338,7 +341,6 @@ class LOAMenu(discord.ui.View):
                 except:
                     pass
 
-
             settings = await self.bot.settings.find_by_id(interaction.guild.id)
             mentionable = ""
             if settings:
@@ -376,7 +378,8 @@ class LOAMenu(discord.ui.View):
         embed = interaction.message.embeds[0]
         embed.title = "<:CheckIcon:1035018951043842088> LOA Accepted"
         embed.colour = 0x71c15f
-        embed.set_footer(text=f'Staff Logging Module - Accepted by {interaction.user.name}#{interaction.user.discriminator}')
+        embed.set_footer(
+            text=f'Staff Logging Module - Accepted by {interaction.user.name}#{interaction.user.discriminator}')
 
         await interaction.edit_original_response(embed=embed, view=self)
         self.stop()
@@ -384,56 +387,58 @@ class LOAMenu(discord.ui.View):
     # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger)
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-            await interaction.response.defer()
-            for item in self.children:
-                if item.label == button.label:
-                    item.label = "Denied"
-                item.disabled = True
-            await interaction.edit_original_response(view=self)
+        await interaction.response.defer()
+        for item in self.children:
+            if item.label == button.label:
+                item.label = "Denied"
+            item.disabled = True
+        await interaction.edit_original_response(view=self)
 
-            s_loa = None
-            for loa in await self.bot.loas.get_all():
-                if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
-                    s_loa = loa
-                if s_loa != None:
-                    s_loa['denied'] = True
+        s_loa = None
+        for loa in await self.bot.loas.get_all():
+            if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
+                s_loa = loa
+            if s_loa != None:
+                s_loa['denied'] = True
 
+                try:
+                    guild = self.bot.get_guild(s_loa['guild_id'])
+                    user = guild.get_member(s_loa['user_id'])
+                except:
                     try:
-                        guild = self.bot.get_guild(s_loa['guild_id'])
-                        user = guild.get_member(s_loa['user_id'])
+                        return await int_invis_embed(interaction, "User could not be found in the server.",
+                                                     ephemeral=True)
                     except:
-                        try:
-                            return await int_invis_embed(interaction, "User could not be found in the server.", ephemeral=True)
-                        except:
-                            pass
-                    settings = await self.bot.settings.find_by_id(interaction.guild.id)
-                    mentionable = ""
-                    if settings:
-                        if 'privacy_mode' in settings['staff_management'].keys():
-                            if settings['staff_management']['privacy_mode'] == True:
-                                mentionable = "Management"
-                            else:
-                                mentionable = interaction.user.mention
+                        pass
+                settings = await self.bot.settings.find_by_id(interaction.guild.id)
+                mentionable = ""
+                if settings:
+                    if 'privacy_mode' in settings['staff_management'].keys():
+                        if settings['staff_management']['privacy_mode'] == True:
+                            mentionable = "Management"
                         else:
                             mentionable = interaction.user.mention
                     else:
                         mentionable = interaction.user.mention
-                    success = discord.Embed(
-                        title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
-                        description=f"<:ArrowRightW:1035023450592514048>{mentionable} has denied your {s_loa['type']} request.",
-                        color=0xff3c3c
-                    )
-                    await user.send(embed=success)
-                    await self.bot.loas.update_by_id(s_loa)
+                else:
+                    mentionable = interaction.user.mention
+                success = discord.Embed(
+                    title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
+                    description=f"<:ArrowRightW:1035023450592514048>{mentionable} has denied your {s_loa['type']} request.",
+                    color=0xff3c3c
+                )
+                await user.send(embed=success)
+                await self.bot.loas.update_by_id(s_loa)
 
-            self.value = True
-            self.stop()
+        self.value = True
+        self.stop()
 
 
 class AddReminder(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
         self.value = None
+
     @discord.ui.button(label='Create a reminder', style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -443,10 +448,12 @@ class AddReminder(discord.ui.View):
         self.value = "create"
         self.stop()
 
+
 class RemoveReminder(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
         self.value = None
+
     @discord.ui.button(label="Delete a reminder", style=discord.ButtonStyle.danger)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -455,6 +462,7 @@ class RemoveReminder(discord.ui.View):
         await interaction.edit_original_response(view=self)
         self.value = "delete"
         self.stop()
+
 
 class RemoveWarning(discord.ui.View):
     def __init__(self, bot, user_id):
@@ -504,6 +512,165 @@ class RemoveWarning(discord.ui.View):
         self.stop()
 
 
+class RequestReason(discord.ui.Modal, title="Edit Reason"):
+    name = discord.ui.TextInput(label='Reason')
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class TimeRequest(discord.ui.Modal, title="Temporary Ban"):
+    time = discord.ui.TextInput(label='Time (s/m/h/d)')
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+
+class ChangeWarningType(discord.ui.Select):
+    def __init__(self, user_id):
+        self.user_id: int = user_id
+
+        options = [
+            discord.SelectOption(
+                label="Warning",
+                value="Warn",
+                description="A warning, the smallest form of logged punishment",
+                emoji="<:WarningIcon:1035258528149033090>"
+            ),
+            discord.SelectOption(
+                label="Kick",
+                value="Kick",
+                description="Removing a user from the game, usually given after warnings",
+                emoji="<:MalletWhite:1035258530422341672>"
+            ),
+            discord.SelectOption(
+                label="Ban",
+                value="Ban",
+                description="A permanent form of removing a user from the game, given after kicks",
+                emoji="<:MalletWhite:1035258530422341672>"
+            ),
+            discord.SelectOption(
+                label="Temporary Ban",
+                value="Temporary Ban",
+                description="Given after kicks, not enough to warrant a permanent removal",
+                emoji="<:Clock:1035308064305332224>"
+            ),
+            discord.SelectOption(
+                label="BOLO",
+                value="BOLO",
+                description="Cannot be found in the game, be on the lookout",
+                emoji="<:Search:1035353785184288788>"
+            ),
+        ]
+        super().__init__(placeholder='Select a warning type', min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == self.user_id:
+            if self.values[0] == "Temporary Ban":
+                modal = TimeRequest()
+                await interaction.response.send_modal(modal)
+                seconds = 0
+                if modal.time.value.endswith('s', 'm', 'h', 'd'):
+                    if modal.time.value.endswith('s'):
+                        seconds = int(modal.time.value.removesuffix('s'))
+                    elif modal.time.value.endswith('m'):
+                        seconds = int(modal.time.value.removesuffix('m')) * 60
+                    elif modal.time.value.endswith('h'):
+                        seconds = int(modal.time.value.removesuffix('h')) * 60 * 60
+                    else:
+                        seconds = int(modal.time.value.removesuffix('d')) * 60 * 60 * 24
+                else:
+                    seconds = int(modal.time.value)
+            await interaction.response.defer()
+            try:
+                self.view.value = [self.values[0], seconds]
+            except:
+                self.view.value = self.values[0]
+            self.view.stop()
+
+
+class EditWarningSelect(discord.ui.Select):
+
+    def __init__(self, user_id: int):
+        self.user_id: int = user_id
+
+        options = [
+            discord.SelectOption(
+                label="Edit reason",
+                value="edit",
+                emoji="<:EditIcon:1042550862834323597>",
+                description="Edit the reason of the punishment"
+            ),
+            discord.SelectOption(
+                label="Change punishment type",
+                value="change",
+                emoji="<:EditIcon:1042550862834323597>",
+                description="Change the punishment type to a higher or lower severity"
+            ),
+            discord.SelectOption(
+                label="Delete punishment",
+                value="delete",
+                emoji="<:TrashIcon:1042550860435181628>",
+                description="Change the punishment type to a higher or lower severity"
+            ),
+        ]
+
+        super().__init__(placeholder='Select an option', min_values=1, max_values=1, options=options)
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == self.user_id:
+            self.view.value = self.values[0]
+            if self.view.value == "edit":
+                if interaction.user.id != self.user_id:
+                    return
+                # await interaction.response.defer()
+                for item in self.view.children:
+                    item.disabled = True
+                self.view.value = "edit"
+
+                self.view.modal = RequestReason()
+                await interaction.response.send_modal(self.view.modal)
+                await self.view.modal.wait()
+                self.view.further_value = self.view.modal.name.value
+                self.view.stop()
+            elif self.view.value == "change":
+                if interaction.user.id != self.user_id:
+                    return
+                for item in self.view.children:
+                    item.disabled = True
+                self.value = "type"
+                view = WarningDropdownMenu(interaction.user.id)
+                await int_invis_embed(interaction, "What type would you like the punishment to be?", view=view)
+                await view.wait()
+                self.view.further_value = view.value
+
+                self.view.stop()
+            elif self.view.value == "delete":
+                if interaction.user.id != self.user_id:
+                    return
+                await interaction.response.defer()
+                for item in self.view.children:
+                    item.disabled = True
+                self.value = "delete"
+                await interaction.response.edit_original_response(view=self.view)
+                self.view.stop()
+            else:
+                await int_invis_embed(interaction, "You have not picked an option.")
+
+class EditWarning(discord.ui.View):
+    def __init__(self, bot, user_id):
+        super().__init__()
+        self.value: typing.Union[None, str] = None
+        self.bot: typing.Union[discord.ext.commands.Bot, discord.ext.commands.AutoShardedBot] = bot
+        self.user_id: int = user_id
+        self.modal: typing.Union[None, discord.ui.Modal] = None
+        self.further_value: typing.Union[None, str] = None
+
+        self.add_item(EditWarningSelect(user_id))
+
+
 class RemoveBOLO(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
@@ -550,52 +717,6 @@ class RemoveBOLO(discord.ui.View):
         await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
-# class RemoveBOLO(discord.ui.View):
-#     def __init__(self, user_id):
-#         super().__init__()
-#         self.value = None
-#         self.user_id = user_id
-#
-#     # When the confirm button is pressed, set the inner value to `True` and
-#     # stop the View from listening to more input.
-#     # We also send the user an ephemeral message that we're confirming their choice.
-#     @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
-#     async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-#         if interaction.user.id != self.user_id:
-#             return
-#         await interaction.response.defer()
-#         for item in self.children:
-#             item.disabled = True
-#         self.value = True
-#
-#         success = discord.Embed(
-#             title="<:CheckIcon:1035018951043842088> Removed BOLO",
-#             description="<:ArrowRightW:1035023450592514048>I've successfully removed the BOLO from the user.",
-#             color=0x71c15f
-#         )
-#
-#         await interaction.edit_original_response(embed=success, view=self)
-#         self.stop()
-#
-#     # This one is similar to the confirmation button except sets the inner value to `False`
-#     @discord.ui.button(label='No', style=discord.ButtonStyle.danger)
-#     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-#         if interaction.user.id != self.user_id:
-#             return
-#         await interaction.response.defer()
-#         for item in self.children:
-#             item.disabled = True
-#         self.value = False
-#
-#         success = discord.Embed(
-#             title="<:ErrorIcon:1035000018165321808> Cancelled",
-#             description="<:ArrowRightW:1035023450592514048>The BOLO has not been removed from the user.",
-#             color=0xff3c3c
-#         )
-#
-#         await interaction.edit_original_response(embed=success, view=self)
-#         self.stop()
-
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
         super().__init__()
@@ -603,6 +724,16 @@ class CustomSelectMenu(discord.ui.View):
         self.user_id = user_id
 
         self.add_item(CustomDropdown(self.user_id, options))
+
+
+class WarningDropdownMenu(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
+
+        self.add_item(ChangeWarningType(self.user_id))
+
 
 class MultiSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
@@ -629,7 +760,6 @@ class RoleSelect(discord.ui.View):
         else:
             self.placeholder = "Select a role"
 
-
         for child in self.children:
             child.placeholder = self.placeholder
             child.max_values = self.limit
@@ -641,6 +771,7 @@ class RoleSelect(discord.ui.View):
             await interaction.response.defer()
             self.value = select.values
             self.stop()
+
 
 class ChannelSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
@@ -658,7 +789,6 @@ class ChannelSelect(discord.ui.View):
         else:
             self.placeholder = "Select a channel"
 
-
         for child in self.children:
             child.placeholder = self.placeholder
             child.max_values = self.limit
@@ -670,6 +800,7 @@ class ChannelSelect(discord.ui.View):
             await interaction.response.defer()
             self.value = select.values
             self.stop()
+
 
 class CheckMark(discord.ui.View):
     def __init__(self, user_id):
@@ -696,4 +827,3 @@ class CheckMark(discord.ui.View):
         await interaction.response.defer()
         self.value = False
         self.stop()
-
