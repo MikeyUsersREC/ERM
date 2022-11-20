@@ -438,31 +438,270 @@ class AddReminder(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
         self.value = None
+        self.user_id = user_id
 
     @discord.ui.button(label='Create a reminder', style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        for item in self.children:
-            item.disabled = True
-        await interaction.edit_original_response(view=self)
-        self.value = "create"
-        self.stop()
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            for item in self.children:
+                item.disabled = True
+            await interaction.edit_original_response(view=self)
+            self.value = "create"
+            self.stop()
 
 
+
+class AddCustomCommand(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.information = {}
+        self.user_id = user_id
+        self.view: typing.Union[MessageCustomisation, None] = None
+
+    @discord.ui.button(label='Create a custom command', style=discord.ButtonStyle.secondary, emoji="<:Resume:1035269012445216858>")
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = CustomCommandSettings()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.information = {
+                "name": modal.name.value
+            }
+            view = MessageCustomisation(interaction.user.id)
+            self.view = view
+            await interaction.message.edit(view=view)
+            self.value = "create"
+            self.stop()
+
+class MessageCustomisation(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value: typing.Union[str, None] = None
+        self.modal: typing.Union[discord.ui.Modal, None] = None
+        self.newView: typing.Union[EmbedCustomisation, None] = None
+        self.msg = None
+        self.user_id = user_id
+
+    @discord.ui.button(label='Set Message', style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def content(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetContent()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            await interaction.message.edit(content=modal.name.value)
+
+    @discord.ui.button(label='Add Embed', style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def addembed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            if len(interaction.message.embeds) > 0:
+                return await int_invis_embed(interaction, "You can only have one embed per custom command. This is a temporary restriction and will be removed soon.", ephemeral=True)
+
+            newView = EmbedCustomisation(interaction.user.id, self)
+            self.newView = newView
+            await interaction.message.edit(view=newView, embed=discord.Embed(colour=0x2E3136, description="\u200b"))
+            await int_invis_embed(interaction, 'You can now customise your embed. Once you are done, click the "Finish" button to save your embed.', ephemeral=True)
+
+    @discord.ui.button(label='✅ Finish', style=discord.ButtonStyle.success)
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            self.msg = interaction.message
+            self.newView = self
+            self.value = "finish"
+            await int_invis_embed(interaction, 'Your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!', ephemeral=True)
+            await interaction.message.delete()
+            self.stop()
+
+
+
+class EmbedCustomisation(discord.ui.View):
+    def __init__(self, user_id, view):
+        super().__init__()
+        self.value: typing.Union[str, None] = None
+        self.modal: typing.Union[discord.ui.Modal, None] = None
+        self.msg = None
+        self.user_id = user_id
+        self.parent_view = view
+
+    @discord.ui.button(label='Set Message', style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def content(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetContent()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+
+    @discord.ui.button(label='Remove Embed', style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def remove_embed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            if len(interaction.message.embeds) > 0:
+                await interaction.message.edit(view=self.parent_view, embed=None)
+                return await int_invis_embed(interaction, 'Embed removed.', ephemeral=True)
+
+            await interaction.edit_original_response(embed=discord.Embed())
+
+
+
+    @discord.ui.button(label='✅ Finish', style=discord.ButtonStyle.success)
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            for item in self.children:
+                item.disabled = True
+            self.msg = interaction.message
+            await interaction.message.edit(view=self)
+            self.value = "finish"
+            await int_invis_embed(interaction, 'Your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!', ephemeral=True)
+            await interaction.message.delete()
+            self.parent_view.stop()
+            self.stop()
+
+    @discord.ui.button(label="Set Title", row=1, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_title(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetTitle()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.title = modal.name.value
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Description", row=1, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_description(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetDescription()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.description = modal.name.value
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Embed Colour", row=1, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_color(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetColour()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                embed.colour = modal.name.value
+            except:
+                try:
+                    embed.colour = int(modal.name.value.replace('#', ''), 16)
+                except:
+                    return await int_invis_embed(interaction, "Invalid colour. Please try again.\n*Example: #ff0000*", ephemeral=True)
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Thumbnail", row=2, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_thumbnail(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetThumbnail()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                embed.set_thumbnail(url=modal.thumbnail.value)
+            except:
+                return await int_invis_embed(interaction, "Invalid URL. Please try again.", ephemeral=True)
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Image", row=2, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_image(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetImage()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                embed.set_image(url=modal.image.value)
+            except:
+                return await int_invis_embed(interaction, "Invalid URL. Please try again.", ephemeral=True)
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Add Field", row=3, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def add_field(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = AddField()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                inline = modal.inline.value
+                if inline.lower() in ['yes', 'y', 'true']:
+                    inline = True
+                elif inline.lower() in ['no', 'n', 'false']:
+                    inline = False
+                else:
+                    inline = False
+                embed.add_field(name=modal.name.value, value=modal.value.value, inline=inline)
+            except:
+                return await int_invis_embed(interaction, "Invalid field. Please try again.", ephemeral=True)
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Footer", row=3, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_footer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetFooter()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                embed.set_footer(text=modal.name.value, icon_url=modal.icon.value)
+            except:
+                return await int_invis_embed(interaction, "Invalid footer. Please try again.", ephemeral=True)
+            await interaction.message.edit(embed=embed)
+
+    @discord.ui.button(label="Set Author", row=3, style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
+    async def set_author(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = SetAuthor()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            try:
+                embed.set_author(name=modal.name.value, url=modal.url.value, icon_url=modal.icon.value)
+            except:
+                return await int_invis_embed(interaction, "Invalid author. Please try again.", ephemeral=True)
+            await interaction.message.edit(embed=embed)
 class RemoveReminder(discord.ui.View):
     def __init__(self, user_id):
         super().__init__()
         self.value = None
+        self.user_id = user_id
 
     @discord.ui.button(label="Delete a reminder", style=discord.ButtonStyle.danger)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        for item in self.children:
-            item.disabled = True
-        await interaction.edit_original_response(view=self)
-        self.value = "delete"
-        self.stop()
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            for item in self.children:
+                item.disabled = True
+            await interaction.edit_original_response(view=self)
+            self.value = "delete"
+            self.stop()
+class RemoveCustomCommand(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__()
+        self.value = None
+        self.user_id = user_id
 
+    @discord.ui.button(label="Delete a custom command", style=discord.ButtonStyle.danger)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            for item in self.children:
+                item.disabled = True
+            await interaction.edit_original_response(view=self)
+            self.value = "delete"
+            self.stop()
 
 class RemoveWarning(discord.ui.View):
     def __init__(self, bot, user_id):
@@ -514,6 +753,83 @@ class RemoveWarning(discord.ui.View):
 
 class RequestReason(discord.ui.Modal, title="Edit Reason"):
     name = discord.ui.TextInput(label='Reason')
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetContent(discord.ui.Modal, title="Set Message Content"):
+    name = discord.ui.TextInput(label='Content', placeholder="Content of the message", max_length=2000, style=discord.TextStyle.long)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetTitle(discord.ui.Modal, title="Set Embed Title"):
+    name = discord.ui.TextInput(label='Title', placeholder="Title of the embed", style=discord.TextStyle.short)
+    url = discord.ui.TextInput(label="Title URL", placeholder="URL of the title", style=discord.TextStyle.short, required=False)
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class CustomCommandSettings(discord.ui.Modal, title="Custom Command Settings"):
+    name = discord.ui.TextInput(label='Custom Command Name', placeholder="e.g. ssu", style=discord.TextStyle.short, max_length=20)
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetDescription(discord.ui.Modal, title="Set Embed Title"):
+    name = discord.ui.TextInput(label='Title', placeholder="Description of the embed", style=discord.TextStyle.long, max_length=2000)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetColour(discord.ui.Modal, title="Set Embed Colour"):
+    name = discord.ui.TextInput(label='Colour', placeholder="#2E3136", style=discord.TextStyle.short)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+
+class SetImage(discord.ui.Modal, title="Set Image"):
+    image = discord.ui.TextInput(label='Image URL', placeholder="Image URL", style=discord.TextStyle.short)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class AddField(discord.ui.Modal, title="Add Field"):
+    name = discord.ui.TextInput(label='Field Name', placeholder="Field Name", style=discord.TextStyle.short)
+    value = discord.ui.TextInput(label='Field Value', placeholder="Field Value", style=discord.TextStyle.short)
+    inline = discord.ui.TextInput(label='Inline?', placeholder="Yes/No", default="Yes", style=discord.TextStyle.short, required=False)
+
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetFooter(discord.ui.Modal, title="Set Footer"):
+    name = discord.ui.TextInput(label='Footer Text', placeholder="Footer Text", style=discord.TextStyle.short)
+    icon = discord.ui.TextInput(label='Footer Icon URL', placeholder="Footer Icon URL", default="", style=discord.TextStyle.short, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+class SetAuthor(discord.ui.Modal, title="Set Author"):
+    name = discord.ui.TextInput(label='Author Name', placeholder="Author Name", style=discord.TextStyle.short)
+    url = discord.ui.TextInput(label='Author URL', placeholder="Author URL", default="", style=discord.TextStyle.short, required=False)
+    icon = discord.ui.TextInput(label='Author Icon URL', placeholder="Author Icon URL", default="", style=discord.TextStyle.short, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)
+        self.stop()
+
+
+class SetThumbnail(discord.ui.Modal, title="Set Thumbnail"):
+    thumbnail = discord.ui.TextInput(label='Thumbnail URL', placeholder="Thumbnail URL", style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True)

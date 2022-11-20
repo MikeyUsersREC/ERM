@@ -24,7 +24,8 @@ from zuid import ZUID
 
 import utils.utils
 from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
-    AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, RemoveBOLO, EditWarning
+    AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, RemoveBOLO, EditWarning, \
+    AddCustomCommand, RemoveCustomCommand
 from utils.mongo import Document
 from utils.timestamp import td_format
 from utils.utils import *
@@ -78,6 +79,7 @@ class Bot(commands.AutoShardedBot):
         bot.shift_storage = Document(bot.db, "shift_storage")
         bot.loas = Document(bot.db, "leave_of_absences")
         bot.reminders = Document(bot.db, "reminders")
+        bot.custom_commands = Document(bot.db, "custom_commands")
         bot.privacy = Document(bot.db, "privacy")
         bot.flags = Document(bot.db, "flags")
 
@@ -153,7 +155,7 @@ def is_management():
     async def predicate(ctx):
         guild_settings = await bot.settings.find_by_id(ctx.guild.id)
         if guild_settings:
-            if 'role' in guild_settings['staff_management'].keys():
+            if 'management_role' in guild_settings['staff_management'].keys():
                 if guild_settings['staff_management']['management_role'] != "":
                     if isinstance(guild_settings['staff_management']['management_role'], list):
                         for role in guild_settings['staff_management']['management_role']:
@@ -564,7 +566,6 @@ async def on_command_error(ctx, error):
         embed.add_field(name='Error ID', value=f"`{error_id}`", inline=False)
 
         if not isinstance(error, (commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument)):
-            
             await ctx.send(embed=embed)
     except Exception as e:
         logging.info(e)
@@ -1044,6 +1045,9 @@ async def setup(ctx):
     await ctx.send(embed=welcome, view=view)
 
     await view.wait()
+    if not view.value:
+        return await invis_embed(ctx,  '<:Setup:1035006520817090640> You have took too long to respond. Please try again.')
+
     if 'all' in view.value:
         settingContents['staff_management']['enabled'] = True
         settingContents['punishments']['enabled'] = True
@@ -1055,8 +1059,6 @@ async def setup(ctx):
             settingContents['shift_management']['enabled'] = True
         if 'staff_management' in view.value:
             settingContents['staff_management']['enabled'] = True
-    if view.value == None:
-        return await invis_embed(ctx,  '<:Setup:1035006520817090640> You have took too long to respond. Please try again.')
 
     if settingContents['staff_management']['enabled']:
         question = 'What channel do you want to use for staff management?'
@@ -3681,13 +3683,7 @@ async def bolo_create(ctx, user, *, reason):
 
         user = await bot.warnings.find_by_id(dataItem['name'].lower())
         if user is None:
-            embed.description = """
-            <:ArrowRightW:1035023450592514048>**Warnings:** 0
-            <:ArrowRightW:1035023450592514048>**Kicks:** 0
-            <:ArrowRightW:1035023450592514048>**Bans:** 0
-
-            `Banned:` <:ErrorIcon:1035000018165321808>
-            """
+            embed.description = """<:ArrowRightW:1035023450592514048>**Warnings:** 0\n<:ArrowRightW:1035023450592514048>**Kicks:** 0\n<:ArrowRightW:1035023450592514048>**Bans:** 0\n`Banned:` <:ErrorIcon:1035000018165321808>"""
         else:
             warnings = 0
             kicks = 0
@@ -3706,13 +3702,7 @@ async def bolo_create(ctx, user, *, reason):
                 banned = "<:CheckIcon:1035018951043842088>"
             else:
                 banned = "<:ErrorIcon:1035000018165321808>"
-            embed.description = f"""
-            <:ArrowRightW:1035023450592514048>**Warnings:** {warnings}
-            <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
-            <:ArrowRightW:1035023450592514048>**Bans:** {bans}
-
-            `Banned:` {banned}
-            """
+            embed.description = f"""<:ArrowRightW:1035023450592514048>**Warnings:** {warnings}\n<:ArrowRightW:1035023450592514048>**Kicks:** {kicks}\n<:ArrowRightW:1035023450592514048>**Bans:** {bans}\n`Banned:` {banned}"""
 
         embed.set_thumbnail(url=Headshot_URL)
         embed.set_footer(text=f'Select the Check to confirm that {dataItem["name"]} is the user you wish to punish.')
@@ -5157,8 +5147,14 @@ async def loavoid(ctx, user: discord.Member = None):
         
         try:
             await ctx.guild.get_member(loa['user_id']).send(embed=success)
-            if loa_role in [role.id for role in user.roles]:
-                await user.remove_roles(discord.utils.get(ctx.guild.roles, id=loa_role))
+            if isinstance(loa_role, int):
+                if loa_role in [role.id for role in user.roles]:
+                    await user.remove_roles(discord.utils.get(ctx.guild.roles, id=loa_role))
+            elif isinstance(loa_role, list):
+                for role in loa_role:
+                    if role in [r.id for r in user.roles]:
+                        await user.remove_roles(discord.utils.get(ctx.guild.roles, id=role))
+
         except:
             await invis_embed(ctx,  'Could not remove the LOA role from the user.')
 
@@ -5319,18 +5315,18 @@ async def loavoid(ctx, user: discord.Member = None):
         return await invis_embed(ctx,
                                  "The RA role has not been set up yet. Please run `/config change` to add the RA role.")
 
-    ra = None
+    ra_var = None
     for l in await bot.loas.get_all():
         if l['user_id'] == user.id and l['guild_id'] == ctx.guild.id and l['type'] == "RA" and l['expired'] == False:
-            ra = l
+            ra_var = l
             break
 
-    if ra is None:
+    if ra_var is None:
         return await invis_embed(ctx,  f"{user.display_name} is currently not on RA.")
 
     embed = discord.Embed(
-        description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s RA?**\n**End date:** <t:{ra["expiry"]}>',
-        color=0x2E136)
+        description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {user.display_name}\'s RA?**\n**End date:** <t:{ra_var["expiry"]}>',
+        color=0x2E3136)
     embed.set_footer(text="Staff Management Module")
     view = YesNoMenu(ctx.author.id)
     
@@ -5347,14 +5343,14 @@ async def loavoid(ctx, user: discord.Member = None):
         await bot.loas.delete_by_id(loa['_id'])
         await invis_embed(ctx,  f'**{user.display_name}\'s** RA has been voided.')
         success = discord.Embed(
-            title=f"<:ErrorIcon:1035000018165321808> {ra['type']} Voided",
-            description=f"<:ArrowRightW:1035023450592514048>{mentionable} has voided your {ra['type']}.",
+            title=f"<:ErrorIcon:1035000018165321808> {ra_var['type']} Voided",
+            description=f"<:ArrowRightW:1035023450592514048>{mentionable} has voided your {ra_var['type']}.",
             color=0xff3c3c
         )
         success.set_footer(text="Staff Management Module")
         
         try:
-            await ctx.guild.get_member(ra['user_id']).send(embed=success)
+            await ctx.guild.get_member(ra_var['user_id']).send(embed=success)
             if ra_role in [role.id for role in user.roles]:
                 await user.remove_roles(discord.utils.get(ctx.guild.roles, id=ra_role))
         except:
@@ -5696,6 +5692,181 @@ async def remove(ctx):
                 return await ctx.send(embed=successEmbed)
 
 
+@bot.hybrid_group(
+    name='custom'
+)
+@is_management()
+async def custom(ctx):
+    pass
+
+
+@custom.command(
+    name="add",
+    description="Add a custom command. [Custom Commands]",
+)
+@is_management()
+async def add(ctx):
+    Data = await bot.custom_commands.find_by_id(ctx.guild.id)
+
+    view = AddCustomCommand(ctx.author.id)
+
+    await ctx.send(view=view)
+    await view.wait()
+    await view.view.wait()
+    await view.view.newView.wait()
+
+
+    try:
+        name = view.information['name']
+    except:
+        return await invis_embed(ctx, 'This has been successfully cancelled.')
+    embeds = []
+    resultingMessage = view.view.newView.msg
+    for embed in resultingMessage.embeds:
+        embeds.append(embed.to_dict())
+        
+    custom_command_data = {
+        "_id": ctx.guild.id,
+        "commands": [
+            {
+                "name": name,
+                "id": next(generator),
+                "message": {
+                    "content": resultingMessage.content,
+                    "embeds": embeds
+                }
+            }
+        ]
+    }   
+    
+    if Data:
+        Data['commands'].append({
+                "name": name,
+                "id": next(generator),
+                "message": {
+                    "content": resultingMessage.content,
+                    "embeds": embeds
+                }
+            })
+    else:
+        Data = custom_command_data
+    
+    await bot.custom_commands.upsert(Data)
+    successEmbed = discord.Embed(
+        title="<:CheckIcon:1035018951043842088> Success!",
+        description=f"<:ArrowRight:1035003246445596774> Your custom command has been added successfully.",
+        color=0x71c15f
+    )
+    await ctx.send(embed=successEmbed)
+
+async def command_autocomplete(
+        interaction: discord.Interaction,
+        current: str) -> typing.List[app_commands.Choice[str]]:
+    Data = await bot.custom_commands.find_by_id(interaction.guild.id)
+    if Data is None:
+        return [discord.app_commands.Choice(name='No custom commands found', value="NULL")]
+    else:
+        commands = []
+        for command in Data['commands']:
+            if current not in ["", " "]:
+                if command['name'].startswith(current) or current in command['name'] or command['name'].endswith(current):
+                    commands.append(command['name'])
+            else:
+                commands.append(command['name'])
+        if len(commands) == 0:
+            return [discord.app_commands.Choice(name='No custom commands found', value="NULL")]
+
+        print(commands)
+        commandList = []
+        for command in commands:
+            if command not in [""]:
+                commandList.append(discord.app_commands.Choice(name=command, value=command))
+            else:
+                cmd = None
+                for c in Data['commands']:
+                    if c['name'].lower() == command.lower():
+                        cmd = c
+                commandList.append(discord.app_commands.Choice(name=cmd['message']['content'][:20].replace(' ', '').lower(), value=cmd['name']))
+        return commandList
+@custom.command(
+    name="run",
+    description="Run a custom command. [Custom Commands]",
+)
+@app_commands.autocomplete(command=command_autocomplete)
+@is_management()
+async def run(ctx, command: str, channel: discord.TextChannel = None):
+    if not channel:
+        channel = ctx.channel
+    Data = await bot.custom_commands.find_by_id(ctx.guild.id)
+    if Data is None:
+        return await invis_embed(ctx, 'There are no custom commands associated with this server.')
+    is_command = False
+    selected = None
+    if 'commands' in Data.keys():
+        if isinstance(Data['commands'], list):
+            for cmd in Data['commands']:
+                if cmd['name'].lower().replace(' ', '') == command.lower().replace(' ', ''):
+                    is_command = True
+                    selected = cmd
+
+    if not is_command:
+        return await invis_embed(ctx, 'There is no custom command with the associated name.')
+
+    embeds = []
+    for embed in selected['message']['embeds']:
+        embeds.append(discord.Embed.from_dict(embed))
+
+    await channel.send(content=selected['message']['content'], embeds=embeds)
+    if ctx.interaction:
+        await int_invis_embed(ctx.interaction, "Successfully ran this custom command!", ephemeral=True)
+    else:
+        await invis_embed(ctx, "Successfully ran this custom command!")
+@custom.command(
+    name="remove",
+    description="Remove a custom command. [Custom Commands]",
+)
+@is_management()
+async def remove(ctx):
+    Data = await bot.custom_commands.find_by_id(ctx.guild.id)
+    if Data is None:
+        Data = {
+            '_id': ctx.guild.id,
+            "commands": []
+        }
+
+    embed = discord.Embed(title="<:Resume:1035269012445216858> Remove a custom command", color=0x2E3136)
+    for item in Data['commands']:
+        embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
+                        value=f"<:ArrowRightW:1035023450592514048> **Name:** {item['name']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}",
+                        inline=False)
+
+    if len(embed.fields) == 0:
+        embed.add_field(name="<:Clock:1035308064305332224> No custom commands",
+                        value="<:ArrowRightW:1035023450592514048> No custom commands have been added.", inline=False)
+        return await ctx.send(embed=embed)
+
+    view = RemoveCustomCommand(ctx.author.id)
+
+    await ctx.send(embed=embed, view=view)
+    await view.wait()
+
+    if view.value == "delete":
+        name = (await request_response(bot, ctx,
+                                       "What custom command would you like to delete? (e.g. `1`)\n*Specify the ID to delete the custom command.*")).content
+
+        for item in Data['commands']:
+            if item['id'] == int(name):
+                Data['commands'].remove(item)
+                await bot.custom_commands.upsert(Data)
+                successEmbed = discord.Embed(
+                    title="<:CheckIcon:1035018951043842088> Command Removed",
+                    description="<:ArrowRight:1035003246445596774> Your custom command has been removed successfully.",
+                    color=0x71c15f
+                )
+
+                return await ctx.send(embed=successEmbed)
+
+
 @bot.tree.context_menu(name='Force start shift')
 @is_management()
 async def force_start_shift(interaction: discord.Interaction, member: discord.Member):
@@ -5819,7 +5990,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 
         if role:
             for rl in role:
-                if rl in member.roles:
+                if rl not in member.roles:
                     try:
                         await member.add_roles(rl)
                     except:
@@ -6071,6 +6242,10 @@ async def info(ctx, member: discord.Member = None):
               aliases=['lb'])
 @is_staff()
 async def shift_leaderboard(ctx):
+    if ctx.interaction:
+        await int_invis_embed(ctx.interaction, 'We are currently loading the shift leaderboard.', ephemeral=True)
+
+
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
     except:
@@ -6151,7 +6326,7 @@ async def shift_leaderboard(ctx):
             return await invis_embed(ctx,  'No shift data has been found.')
         else:
             if ctx.interaction:
-                interaction = ctx.interaction
+                interaction = ctx
             else:
                 interaction = ctx
 
@@ -6176,7 +6351,7 @@ async def shift_leaderboard(ctx):
     else:
         file = discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt')
         if ctx.interaction:
-            interaction = ctx.interaction
+            interaction = ctx
         else:
             interaction = ctx
 
@@ -6267,6 +6442,7 @@ async def clearall(ctx):
     if view.value is False:
         return await invis_embed(ctx,  'Successfully cancelled.')
 
+    shifts_deleted = 0
     for document in await bot.shift_storage.get_all():
         if "shifts" in document.keys():
             doc_shifts = document['shifts']
@@ -6276,12 +6452,15 @@ async def clearall(ctx):
                     if isinstance(shift, dict):
                         if shift['guild'] == ctx.guild.id:
                             for i in document['shifts']:
+                                shifts_deleted += 1
                                 doc_shifts.remove(i)
 
                 for index, shift in enumerate(doc_shifts):
                     if shift == None:
+                        shifts_deleted += 1
                         doc_shifts[index] = None
                     elif shift['guild'] == ctx.guild.id:
+                        shifts_deleted += 1
                         doc_shifts[index] = None
                 print(doc_shifts)
                 document['shifts'] = doc_shifts
@@ -6289,7 +6468,7 @@ async def clearall(ctx):
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Success!",
-        description="<:ArrowRight:1035003246445596774> All shift data has been cleared.",
+        description=" {} shift data has been cleared.",
         color=0x71c15f
     )
 

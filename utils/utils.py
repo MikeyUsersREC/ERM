@@ -36,6 +36,13 @@ async def int_invis_embed(interaction, content, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     await interaction.response.send_message(embed=embed, **kwargs)
 
+async def coloured_embed(ctx: commands.Context, content: str, **kwargs):
+    embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+    await ctx.send(embed=embed, **kwargs)
+async def int_coloured_embed(interaction, content, **kwargs):
+    embed = Embed(color=0x2E3136, description=f"{content}")
+    await interaction.response.send_message(embed=embed, **kwargs)
+
 
 async def request_response(bot, ctx, question, **kwargs):
     embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
