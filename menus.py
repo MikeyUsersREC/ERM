@@ -532,7 +532,7 @@ class EmbedCustomisation(discord.ui.View):
             await interaction.response.send_modal(modal)
             await modal.wait()
             self.modal = modal
-            await interaction.message.edit(content=modal.name.value
+            await interaction.message.edit(content=modal.name.value)
 
     @discord.ui.button(label='Remove Embed', style=discord.ButtonStyle.secondary, emoji="<:ArrowRight:1035003246445596774>")
     async def remove_embed(self, interaction: discord.Interaction, button: discord.ui.Button):
