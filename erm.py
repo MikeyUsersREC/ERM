@@ -6671,14 +6671,16 @@ async def manage(ctx):
             await msg.edit(embed=successEmbed, view=None)
     elif view.value == "off":
         break_seconds = 0
-        if 'breaks' in shift.keys():
-            for item in shift["breaks"]:
-                if item['ended'] == None:
-                    item['ended'] = ctx.message.created_at.replace(tzinfo=None).timestamp()
-                startTimestamp = item['started']
-                endTimestamp = item['ended']
-                break_seconds += int(endTimestamp - startTimestamp)
-
+        if shift:
+            if 'breaks' in shift.keys():
+                for item in shift["breaks"]:
+                    if item['ended'] == None:
+                        item['ended'] = ctx.message.created_at.replace(tzinfo=None).timestamp()
+                    startTimestamp = item['started']
+                    endTimestamp = item['ended']
+                    break_seconds += int(endTimestamp - startTimestamp)
+        else:
+            return await invis_embed(ctx, "You are not on-duty. You can go on-duty by selecting **On-Duty**.")
         if status == "off":
             return await invis_embed(ctx, "You are already off-duty. You can go on-duty by selecting **On-Duty**.")
 
