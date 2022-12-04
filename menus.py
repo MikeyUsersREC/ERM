@@ -884,7 +884,7 @@ class RobloxUsername(discord.ui.Modal, title="Verification"):
     name = discord.ui.TextInput(label='Roblox Username', placeholder="e.g. RoyalCrests", max_length=32, style=discord.TextStyle.short)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await int_invis_embed(interaction, "Your response has been submitted.", ephemeral=True, delete_after=2)
+        await interaction.response.defer()
         self.stop()
 
 class SetTitle(discord.ui.Modal, title="Set Embed Title"):
@@ -1186,6 +1186,7 @@ class EnterRobloxUsername(discord.ui.View):
         self.modal = RobloxUsername()
         await interaction.response.send_modal(self.modal)
         await self.modal.wait()
+        self.stop()
 
 
 class Verification(discord.ui.View):

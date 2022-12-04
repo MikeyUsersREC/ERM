@@ -1080,6 +1080,7 @@ async def verify(ctx, user: str = None):
         else:
             user = user
 
+    print('1083')
     async def after_verified(roblox_user):
         if not verified:
             await bot.verification.insert({
@@ -1130,6 +1131,7 @@ async def verify(ctx, user: str = None):
                             roblox_user = await r.json()
                             roblox_id = roblox_user['id']
                             roblox_user['Username'] = roblox_user['name']
+                            print('1138')
                         else:
                             return await invis_embed(ctx, 'That is not a valid roblox username. Please try again.')
 
@@ -1143,7 +1145,6 @@ async def verify(ctx, user: str = None):
         embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['Username']}, let's get you verified!"
         embed.description = f"<:ArrowRight:1035003246445596774> Go to [your ROBLOX account](https://www.roblox.com/users/profile)\n<:ArrowRight:1035003246445596774> Next to **About**, you will see an icon similar to <:EditIcon:1042550862834323597>.\n<:ArrowRight:1035003246445596774> Put `{system_code}` in your description.\n<:ArrowRight:1035003246445596774> Click **Done**!"
         embed.set_footer(text=f'ROBLOX Verification provided by Emergency Response Management')
-
         view = Verification(ctx.author.id, system_code)
         await ctx.send(embed=embed, view=view)
         await view.wait()
@@ -1319,6 +1320,7 @@ async def activity_report(ctx):
                                             item['total_seconds'] = total_seconds
 
     loa_staff = []
+    print(all_staff)
 
     for document in await bot.loas.get_all():
         if document['guild_id'] == ctx.guild.id:
@@ -1401,6 +1403,7 @@ async def activity_report(ctx):
         splitted_str.append(string)
 
     embeds.append(embed)
+
     for string_obj in splitted_str:
         if len(embeds[-1].fields) == 0:
             embeds[-1].add_field(name="<:Clock:1035308064305332224> Shifts", value=string_obj)
@@ -1420,7 +1423,7 @@ async def activity_report(ctx):
         color=0x2E3136
     )
 
-    embed2.set_footer(text="Click 'Next' to see users who are on shifts.")
+    embed2.set_footer(text="Click 'Next' to see more information.")
 
     print(loa_str)
     embeds.append(embed2)
