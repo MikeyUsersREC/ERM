@@ -6487,17 +6487,18 @@ async def manage(ctx):
 
     for index, value in enumerate(sorted_staff):
         member = discord.utils.get(ctx.guild.members, id=value['id'])
-        if member.id == ctx.author.id:
-            member_seconds = value['total_seconds']
-            if quota_seconds is not None:
-                if value['total_seconds'] > quota_seconds:
-                    met_quota = "Met "
+        if member:
+            if member.id == ctx.author.id:
+                member_seconds = value['total_seconds']
+                if quota_seconds is not None:
+                    if value['total_seconds'] > quota_seconds:
+                        met_quota = "Met "
+                    else:
+                        met_quota = "Not met"
+                    ordinal_place = index + 1
                 else:
                     met_quota = "Not met"
-                ordinal_place = index + 1
-            else:
-                met_quota = "Not met"
-                ordinal_place = index + 1
+                    ordinal_place = index + 1
 
     ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4])  # NOQA: E731
     ms_delta = datetime.timedelta(seconds=member_seconds)
