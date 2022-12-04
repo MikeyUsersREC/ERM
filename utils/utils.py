@@ -1,7 +1,10 @@
+import datetime
+
 from discord.ext import commands
 import discord
 import typing
 from discord import Embed
+
 
 def removesuffix(input_string: str, suffix: str):
     if suffix and input_string.endswith(suffix):
@@ -15,6 +18,47 @@ def get_guild_icon(bot: typing.Union[commands.Bot, commands.AutoShardedBot], gui
     else:
         return guild.icon.url
 
+
+async def interpret_embed(bot, ctx, channel, embed: dict):
+
+    embed = discord.Embed.from_dict(embed)
+    try:
+        embed.title = await sub_vars(bot, ctx, channel, embed.title)
+    except:
+        pass
+    try:
+        embed.set_author(name=await sub_vars(bot, ctx, channel, embed.author.name))
+    except:
+        pass
+    try:
+        embed.description = await sub_vars(bot, ctx, channel, embed.description)
+    except:
+        pass
+    try:
+        embed.set_footer(text=await sub_vars(bot, ctx, channel, embed.footer.text), icon_url=embed.footer.icon_url)
+    except:
+        pass
+    for i in embed.fields:
+        i.name = await sub_vars(bot, ctx, i.name)
+        i.value = await sub_vars(bot, ctx, i.value)
+
+    return embed
+
+async def interpret_content(bot, ctx, channel, content: str):
+    return await sub_vars(bot, ctx, channel, content)
+
+
+async def sub_vars(bot, ctx, channel, string, **kwargs):
+    string = string.replace('{user}', ctx.author.mention)
+    string = string.replace('{username}', ctx.author.name)
+    string = string.replace('{display_name}', ctx.author.name)
+    string = string.replace('{time}', f"<t:{int(datetime.datetime.now().timestamp())}>")
+    string = string.replace('{server}', ctx.guild.name)
+    string = string.replace('{channel}', channel.mention)
+    string = string.replace('{prefix}', list(await get_prefix(bot, ctx))[-1])
+    return string
+
+
 async def get_prefix(bot, message):
     if not message.guild:
         return commands.when_mentioned_or('>')(bot, message)
@@ -27,6 +71,7 @@ async def get_prefix(bot, message):
 
     return commands.when_mentioned_or(prefix)(bot, message)
 
+
 async def invis_embed(ctx: commands.Context, content: str, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     await ctx.send(embed=embed, **kwargs)
@@ -34,15 +79,22 @@ async def invis_embed(ctx: commands.Context, content: str, **kwargs):
 
 async def int_invis_embed(interaction, content, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
-    await interaction.response.send_message(embed=embed, **kwargs)
+    try:
+        await interaction.response.send_message(embed=embed, **kwargs)
+    except discord.InteractionResponded:
+        await interaction.edit_original_response(embed=embed, **kwargs)
 
 async def coloured_embed(ctx: commands.Context, content: str, **kwargs):
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     await ctx.send(embed=embed, **kwargs)
+
+
 async def int_coloured_embed(interaction, content, **kwargs):
     embed = Embed(color=0x2E3136, description=f"{content}")
-    await interaction.response.send_message(embed=embed, **kwargs)
-
+    try:
+        await interaction.response.send_message(embed=embed, **kwargs)
+    except discord.InteractionResponded:
+        await interaction.edit_original_response(embed=embed, **kwargs)
 
 async def request_response(bot, ctx, question, **kwargs):
     embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
