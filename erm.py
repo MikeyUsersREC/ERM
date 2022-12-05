@@ -1376,14 +1376,18 @@ async def activity_report(ctx):
 
     for index, value in enumerate(sorted_staff):
         print(value)
-        member = discord.utils.get(ctx.guild.members, id=value['id'])
+        try:
+            member = await ctx.guild.fetch_member(value['id'])
+        except discord.NotFound:
+            member = None
         if value['total_seconds'] > quota:
             met_quota = "<:CheckIcon:1035018951043842088>"
         else:
             met_quota = "<:ErrorIcon:1035000018165321808>"
         if member:
             string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
-
+        else:
+            string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** `{value['id']}` - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
     for index, value in enumerate(loa_staff):
         if value['member'] in [item['id'] for item in all_staff]:
             item = None
