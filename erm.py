@@ -3546,25 +3546,25 @@ async def tempban(ctx, user, time: str, *, reason):
     timeObj = list(reason)[-1]
     reason = list(reason)
 
-    if not time.endswith(('h', 'm', 's', 'd', 'w')):
+    if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
-        if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
+        if not timeObj.lower().endswith(('h', 'm', 's', 'd', 'w')):
             return await invis_embed(ctx,
                                      'A time must be provided at the **start** of your reason. Example: >tban i_iMikey 12h LTAP')
         else:
             time = timeObj
             reason.pop()
 
-    if time.endswith('s'):
-        time = int(removesuffix(time, 's'))
-    elif time.endswith('m'):
-        time = int(removesuffix(time, 'm')) * 60
-    elif time.endswith('h'):
-        time = int(removesuffix(time, 'h')) * 60 * 60
-    elif time.endswith('d'):
-        time = int(removesuffix(time, 'd')) * 60 * 60 * 24
-    elif time.endswith('w'):
-        time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+    if time.lower().endswith('s'):
+        time = int(removesuffix(time.lower(), 's'))
+    elif time.lower().endswith('m'):
+        time = int(removesuffix(time.lower(), 'm')) * 60
+    elif time.lower().endswith('h'):
+        time = int(removesuffix(time.lower(), 'h')) * 60 * 60
+    elif time.lower().endswith('d'):
+        time = int(removesuffix(time.lower(), 'd')) * 60 * 60 * 24
+    elif time.lower().endswith('w'):
+        time = int(removesuffix(time.lower(), 'w')) * 60 * 60 * 24 * 7
 
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
@@ -6286,25 +6286,25 @@ async def loarequest(ctx, time, *, reason):
         timeObj = ""
     reason = list(reason)
 
-    if not time.endswith(('h', 'm', 's', 'd', 'w')):
+    if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
-        if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
+        if not timeObj.lower().endswith(('h', 'm', 's', 'd', 'w')):
             return await invis_embed(ctx,
                                      'A time must be provided at the start or at the end of the command. Example: `/loa 12h Going to walk my shark` / `/loa Mopping the ceiling 12h`')
         else:
             time = timeObj
             reason.pop()
 
-    if time.endswith('s'):
-        time = int(removesuffix(time, 's'))
-    elif time.endswith('m'):
-        time = int(removesuffix(time, 'm')) * 60
-    elif time.endswith('h'):
-        time = int(removesuffix(time, 'h')) * 60 * 60
-    elif time.endswith('d'):
-        time = int(removesuffix(time, 'd')) * 60 * 60 * 24
-    elif time.endswith('w'):
-        time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+    if time.lower().endswith('s'):
+        time = int(removesuffix(time.lower(), 's'))
+    elif time.lower().endswith('m'):
+        time = int(removesuffix(time.lower(), 'm')) * 60
+    elif time.lower().endswith('h'):
+        time = int(removesuffix(time.lower(), 'h')) * 60 * 60
+    elif time.lower().endswith('d'):
+        time = int(removesuffix(time.lower(), 'd')) * 60 * 60 * 24
+    elif time.lower().endswith('w'):
+        time = int(removesuffix(time.lower(), 'w')) * 60 * 60 * 24 * 7
 
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
@@ -6983,25 +6983,25 @@ async def rarequest(ctx, time, *, reason):
         timeObj = ""
     reason = list(reason)
 
-    if not time.endswith(('h', 'm', 's', 'd', 'w')):
+    if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
-        if not timeObj.endswith(('h', 'm', 's', 'd', 'w')):
+        if not timeObj.lower().endswith(('h', 'm', 's', 'd', 'w')):
             return await invis_embed(ctx,
                                      'A time must be provided at the start or at the end of the command. Example: `/ra 12h Going to walk my shark` / `/ra Mopping the ceiling 12h`')
         else:
             time = timeObj
             reason.pop()
 
-    if time.endswith('s'):
-        time = int(removesuffix(time, 's'))
-    elif time.endswith('m'):
-        time = int(removesuffix(time, 'm')) * 60
-    elif time.endswith('h'):
-        time = int(removesuffix(time, 'h')) * 60 * 60
-    elif time.endswith('d'):
-        time = int(removesuffix(time, 'd')) * 60 * 60 * 24
-    elif time.endswith('w'):
-        time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+    if time.lower().endswith('s'):
+        time = int(removesuffix(time.lower(), 's'))
+    elif time.lower().endswith('m'):
+        time = int(removesuffix(time.lower(), 'm')) * 60
+    elif time.lower().endswith('h'):
+        time = int(removesuffix(time.lower(), 'h')) * 60 * 60
+    elif time.lower().endswith('d'):
+        time = int(removesuffix(time.lower(), 'd')) * 60 * 60 * 24
+    elif time.lower().endswith('w'):
+        time = int(removesuffix(time.lower(), 'w')) * 60 * 60 * 24 * 7
 
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
@@ -7373,17 +7373,16 @@ async def add(ctx):
 
         time = (await request_response(bot, ctx,
                                        "What would you like you like the interval to be? (e.g. 5m)")).content
-
-        if time.endswith('s'):
-            time = int(removesuffix(time, 's'))
-        elif time.endswith('m'):
-            time = int(removesuffix(time, 'm')) * 60
-        elif time.endswith('h'):
-            time = int(removesuffix(time, 'h')) * 60 * 60
-        elif time.endswith('d'):
-            time = int(removesuffix(time, 'd')) * 60 * 60 * 24
-        elif time.endswith('w'):
-            time = int(removesuffix(time, 'w')) * 60 * 60 * 24 * 7
+        if time.lower().endswith('s'):
+            time = int(removesuffix(time.lower(), 's'))
+        elif time.lower().endswith('m'):
+            time = int(removesuffix(time.lower(), 'm')) * 60
+        elif time.lower().endswith('h'):
+            time = int(removesuffix(time.lower(), 'h')) * 60 * 60
+        elif time.lower().endswith('d'):
+            time = int(removesuffix(time.lower(), 'd')) * 60 * 60 * 24
+        elif time.lower().endswith('w'):
+            time = int(removesuffix(time.lower(), 'w')) * 60 * 60 * 24 * 7
         else:
             return await invis_embed(ctx, 'You have not provided a correct suffix. (s/m/h/d)')
 
