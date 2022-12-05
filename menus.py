@@ -1190,9 +1190,8 @@ class EnterRobloxUsername(discord.ui.View):
 
 
 class Verification(discord.ui.View):
-    def __init__(self, user_id, system_code: str):
+    def __init__(self, user_id):
         super().__init__()
-        self.system_code = system_code
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, RobloxUsername] = None
@@ -1212,12 +1211,6 @@ class Verification(discord.ui.View):
 
         self.value = "done"
         self.stop()
-
-    @discord.ui.button(label='Verification Code', style=discord.ButtonStyle.secondary, emoji="<:LinkIcon:1044004006109904966>")
-    async def code(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            return
-        await interaction.response.send_message(f"{self.system_code}", ephemeral=True)
 
 
 class CustomSelectMenu(discord.ui.View):

@@ -1047,6 +1047,16 @@ async def verify(ctx, user: str = None):
 
     verified = False
     verified_user = await bot.verification.find_by_id(ctx.author.id)
+    
+    if verified_user:
+        if 'isVerified' in verified_user.keys():
+            if verified_user['isVerified']:
+                verified = True
+            else:
+                verified_user = None
+        else:
+            verified = True
+    
     if user is None and verified_user is None:
         if ctx.interaction:
             modal = RobloxUsername()
@@ -1079,25 +1089,29 @@ async def verify(ctx, user: str = None):
             verified = True
         else:
             user = user
+            verified = False
 
-    print('1083')
     async def after_verified(roblox_user):
-        if not verified:
+        try:
             await bot.verification.insert({
                 "_id": ctx.author.id,
-                "roblox": roblox_id
+                "roblox": roblox_id,
+                "isVerified": True,
             })
-        else:
+        except:
             await bot.verification.upsert({
                 "_id": ctx.author.id,
-                "roblox": roblox_id
+                "roblox": roblox_id,
+                "isVerified": True,
             })
         settings = await bot.settings.find_by_id(ctx.guild.id)
         verification_role = settings['verification']['role']
         if isinstance(verification_role, list):
             verification_role = [discord.utils.get(ctx.guild.roles, id=int(role)) for role in verification_role]
-        else:
+        elif isinstance(verification_role, int):
             verification_role = [discord.utils.get(ctx.guild.roles, id=int(verification_role))]
+        else:
+            verification_role = []
         for role in verification_role:
             try:
                 await ctx.author.add_roles(role)
@@ -1107,9 +1121,9 @@ async def verify(ctx, user: str = None):
             await ctx.author.edit(nick=f"{roblox_user['Username']}")
         except:
             pass
-        success_embed = discord.Embed(title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['name']}!",
+        success_embed = discord.Embed(title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['Username']}!",
                                       color=0x2E3136)
-        success_embed.description = f"<:ArrowRight:1035003246445596774> You've been verified as <:LinkIcon:1044004006109904966> **{roblox_user['name']}** in **{ctx.guild.name}**."
+        success_embed.description = f"<:ArrowRight:1035003246445596774> You've been verified as <:LinkIcon:1044004006109904966> **{roblox_user['Username']}** in **{ctx.guild.name}**."
         success_embed.set_footer(text="ROBLOX Verification provided to you by Emergency Response Management (ERM)")
         return await ctx.send(embed=success_embed)
 
@@ -1131,7 +1145,6 @@ async def verify(ctx, user: str = None):
                             roblox_user = await r.json()
                             roblox_id = roblox_user['id']
                             roblox_user['Username'] = roblox_user['name']
-                            print('1138')
                         else:
                             return await invis_embed(ctx, 'That is not a valid roblox username. Please try again.')
 
@@ -1140,30 +1153,45 @@ async def verify(ctx, user: str = None):
                 roblox_id = roblox_user['Id']
 
     if not verified:
-        system_code = system_code_gen()
+        await bot.verification.upsert({
+            "_id": ctx.author.id,
+            "roblox": roblox_id,
+            "isVerified": False,
+        })
+
         embed = discord.Embed(color=0x2E3136)
         embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['Username']}, let's get you verified!"
-        embed.description = f"<:ArrowRight:1035003246445596774> Go to [your ROBLOX account](https://www.roblox.com/users/profile)\n<:ArrowRight:1035003246445596774> Next to **About**, you will see an icon similar to <:EditIcon:1042550862834323597>.\n<:ArrowRight:1035003246445596774> Put `{system_code}` in your description.\n<:ArrowRight:1035003246445596774> Click **Done**!"
+        embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
         embed.set_footer(text=f'ROBLOX Verification provided by Emergency Response Management')
-        view = Verification(ctx.author.id, system_code)
+        view = Verification(ctx.author.id)
         await ctx.send(embed=embed, view=view)
         await view.wait()
         if view.value:
             if view.value == "done":
-                async with aiohttp.ClientSession() as session:
-                    # use https://users.roblox.com/v1/users/{userId} to get description
-                    async with session.get(f'https://users.roblox.com/v1/users/{roblox_id}') as r:
-                        if r.status == 200:
-                            roblox_user = await r.json()
-                            description = roblox_user['description']
-                        else:
-                            return await invis_embed(ctx,
-                                                     'There was an error fetching your roblox profile. Please try again later.')
-
-                if system_code in description:
-                    return await after_verified(roblox_user)
+                # async with aiohttp.ClientSession() as session:
+                #     # use https://users.roblox.com/v1/users/{userId} to get description
+                #     async with session.get(f'https://users.roblox.com/v1/users/{roblox_id}') as r:
+                #         if r.status == 200:
+                #             roblox_user = await r.json()
+                #             description = roblox_user['description']
+                #         else:
+                #             return await invis_embed(ctx,
+                #                                      'There was an error fetching your roblox profile. Please try again later.')
+                #
+                # if system_code in description:
+                #     return await after_verified(roblox_user)
+                # else:
+                #     await invis_embed(ctx, 'You have not put the system code in your description. Please try again.')
+                new_data = await bot.verification.find_by_id(ctx.author.id)
+                print(new_data)
+                if 'isVerified' in new_data.keys():
+                    if new_data['isVerified']:
+                        return await after_verified(roblox_user)
+                    else:
+                        return await invis_embed(ctx, 'You have not verified using the verification game. Please retry by running `/verify` again.')
                 else:
-                    await invis_embed(ctx, 'You have not put the system code in your description. Please try again.')
+                    return await invis_embed(ctx,
+                                             'You have not verified using the verification game. Please retry by running `/verify` again.')
 
 
 @bot.event
@@ -1394,13 +1422,21 @@ async def activity_report(ctx):
     splitted_str = []
     resplit = string.splitlines()
 
+    strAR = ""
     for index, i in enumerate(resplit):
+        strAR += f"{i}\n"
         if index % 4 == 0:
             splitted_str.append(i)
         else:
             splitted_str[-1] += f"\n{i}"
     if splitted_str == []:
         splitted_str.append(string)
+
+    try:
+        bbytes = strAR.encode('utf-8')
+    except:
+        return await invis_embed('No shift data has been found.')
+
 
     embeds.append(embed)
 
@@ -1466,9 +1502,27 @@ async def activity_report(ctx):
     menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
     menu.add_pages(embeds)
     menu.add_buttons([ViewButton.back(), ViewButton.next()])
+    print(bbytes)
+    raw_embed = discord.Embed(title="<:Clock:1035308064305332224> Raw Activity Report", color=0x2E3136)
+    file = discord.File(fp=BytesIO(bbytes), filename='raw_activity_report.txt')
 
+    async def task():
+
+        await ctx.send(file=file)
+
+    def taskWrapper():
+        bot.loop.create_task(
+            task()
+        )
+
+    followUp = ViewButton.Followup(
+        details=ViewButton.Followup.set_caller_details(
+            taskWrapper
+        )
+    )
+    menu.add_button(ViewButton(style=discord.ButtonStyle.secondary, label='Not your expected result?', custom_id=ViewButton.ID_CALLER,
+                               followup=followUp))
     await menu.start()
-
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -6846,6 +6900,22 @@ async def manage(ctx):
                 color=0x71c15f
             )
             await msg.edit(embed=success, view=None)
+            
+            if configItem['shift_management']['role']:
+                if not isinstance(configItem['shift_management']['role'], list):
+                    role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+                else:
+                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in
+                            configItem['shift_management']['role']]
+
+            if role:
+                for rl in role:
+                    if rl in ctx.author.roles:
+                        try:
+                            await ctx.author.remove_roles(rl)
+                        except:
+                            await invis_embed(ctx, f'Could not remove {rl.name} from {ctx.author.mention}')
+
         else:
             for item in shift['breaks']:
                 if item['ended'] is None:
@@ -6862,6 +6932,21 @@ async def manage(ctx):
                 color=0x71c15f
             )
             await msg.edit(embed=success, view=None)
+            if configItem['shift_management']['role']:
+                if not isinstance(configItem['shift_management']['role'], list):
+                    role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
+                else:
+                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in
+                            configItem['shift_management']['role']]
+
+            if role:
+                for rl in role:
+                    if not rl in ctx.author.roles:
+                        try:
+                            await ctx.author.add_roles(rl)
+                        except:
+                            await invis_embed(ctx, f'Could not add {rl.name} to {ctx.author.mention}')
+
 
 @bot.hybrid_group(
     name='ra',
@@ -8192,7 +8277,6 @@ async def clearall(ctx):
     if view.value is False:
         return await invis_embed(ctx, 'Successfully cancelled.')
 
-    shifts_deleted = 0
     for document in await bot.shift_storage.get_all():
         if "shifts" in document.keys():
             doc_shifts = document['shifts']
@@ -8202,23 +8286,19 @@ async def clearall(ctx):
                     if isinstance(shift, dict):
                         if shift['guild'] == ctx.guild.id:
                             for i in document['shifts']:
-                                shifts_deleted += 1
                                 doc_shifts.remove(i)
 
                 for index, shift in enumerate(doc_shifts):
-                    if shift == None:
-                        shifts_deleted += 1
-                        doc_shifts[index] = None
-                    elif shift['guild'] == ctx.guild.id:
-                        shifts_deleted += 1
-                        doc_shifts[index] = None
+                    if isinstance(shift, dict):
+                        if shift['guild'] == ctx.guild.id:
+                            doc_shifts[index] = None
                 print(doc_shifts)
                 document['shifts'] = doc_shifts
                 await bot.shift_storage.update_by_id(document)
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Success!",
-        description=f"<:ArrowRight:1035003246445596774> {shifts_deleted} shifts have been cleared.",
+        description=f"<:ArrowRight:1035003246445596774> All shifts from your server have been cleared.",
         color=0x71c15f
     )
 
