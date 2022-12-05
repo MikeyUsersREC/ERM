@@ -613,6 +613,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
                     <:ArrowRightW:1035023450592514048>**Kicks:** {kicks}
                     <:ArrowRightW:1035023450592514048>**Bans:** {bans}
                     <:ArrowRightW:1035023450592514048>**Custom:** {custom}
+                    
                     <:WarningIcon:1035258528149033090> **BOLOs:**
                     <:ArrowRightW:1035023450592514048> There is currently a BOLO on this user. Please check their reason with `/bolo lookup` before continuing.
 
@@ -696,10 +697,11 @@ async def punish(ctx, user: str, type: str, *, reason: str):
             dataset['warnings'].append(singular_warning_item)
             await bot.warnings.update_by_id(dataset)
 
-        shift = await bot.shifts.find_by_id(ctx.guild.id)
+        shift = await bot.shifts.find_by_id(ctx.author.id)
+        
         if shift is not None:
             if 'data' in shift.keys():
-                for item in shift['data']:
+                for index, item in enumerate(shift['data']):
                     if isinstance(item, dict):
                         if item['guild'] == ctx.guild.id:
                             if 'moderations' in item.keys():
@@ -720,6 +722,8 @@ async def punish(ctx, user: str, type: str, *, reason: str):
                                     "Time": ctx.message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
                                     "Guild": ctx.guild.id
                                 }]
+                            shift['data'][index] = item
+                            await bot.shifts.update_by_id(shift)
 
         success = discord.Embed(
             title=f"<:CheckIcon:1035018951043842088> {type.lower().title()} Logged",
@@ -6289,7 +6293,7 @@ async def loarequest(ctx, time, *, reason):
                                      'A time must be provided at the start or at the end of the command. Example: `/loa 12h Going to walk my shark` / `/loa Mopping the ceiling 12h`')
         else:
             time = timeObj
-            await reason.pop()
+            reason.pop()
 
     if time.endswith('s'):
         time = int(removesuffix(time, 's'))
@@ -6986,7 +6990,7 @@ async def rarequest(ctx, time, *, reason):
                                      'A time must be provided at the start or at the end of the command. Example: `/ra 12h Going to walk my shark` / `/ra Mopping the ceiling 12h`')
         else:
             time = timeObj
-            await reason.pop()
+            reason.pop()
 
     if time.endswith('s'):
         time = int(removesuffix(time, 's'))
