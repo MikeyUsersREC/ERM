@@ -2113,7 +2113,13 @@ async def viewconfig(ctx):
     minimum_shift_time = 0
 
     try:
-        verification_role = ctx.guild.get_role(settingContents['staff_management']['verification_role']).mention
+        if isinstance(settingContents['verification']['role'], int):
+            verification_role = ctx.guild.get_role(settingContents['verification']['role']).mention
+        elif isinstance(settingContents['verification']['role'], list):
+            verification_role = ''
+            for role in settingContents['verification']['role']:
+                verification_role += ctx.guild.get_role(role).mention + ', '
+            verification_role = verification_role[:-2]
     except:
         verification_role = 'None'
     try:
@@ -2330,12 +2336,19 @@ async def viewconfig(ctx):
         ),
         inline=False
     )
+    game_security_enabled = False
+    if 'game_security' in settingContents.keys():
+        if 'enabled' in settingContents['game_security'].keys():
+            game_security_enabled = settingContents['game_security']['enabled'] 
+        else:
+            game_security_enabled = 'False'
+    else: game_security_enabled = 'False'
 
     embed.add_field(
         name='<:WarningIcon:1035258528149033090> Game Security',
         value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Webhook Channel:** {}'
         .format(
-            settingContents['game_security']['enabled'] if 'game_security' in settingContents.keys() else 'False',
+            game_security_enabled,
             aa_channel,
             aa_role,
             webhook_channel
@@ -2387,10 +2400,10 @@ async def changeconfig(ctx):
         elif content == 'disable':
             settingContents['verification']['enabled'] = False
         elif content == 'role':
-            view = RoleSelect(ctx.author.id, limit=1)
+            view = RoleSelect(ctx.author.id)
             await invis_embed(ctx, 'What role do you want to use for verification? (e.g. `@Verified`)', view=view)
             await view.wait()
-            settingContents['verification']['role'] = view.value[0].id
+            settingContents['verification']['role'] = [role.id for role in view.value]
         else:
             return await invis_embed(ctx,
                                      'Please pick one of the options. `enable`, `disable`, `role`. Please run this command again with correct parameters.')
