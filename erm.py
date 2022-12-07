@@ -1651,6 +1651,9 @@ async def on_message(message: discord.Message):
 
                                     print('4')
                                     print(pings)
+                                    print(message)
+                                    print(message.embeds)
+                                    print(aa_detection_channel)
                                     await aa_detection_channel.send(','.join(pings) if pings != [] else '', embed=embed)
                                 if " all" in command:
                                     embed = discord.Embed(
