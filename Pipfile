@@ -16,7 +16,7 @@ requests = "*"
 roblox = "*"
 sanic = "*"
 zuid = "*"
-pytest = "~=7.2.0"
+pytest = "*"
 
 [dev-packages]
 
