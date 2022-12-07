@@ -884,7 +884,7 @@ async def change_status():
     for guild in bot.guilds:
         users += guild.member_count
 
-    status = "{} users".format(users)
+    status = f"{users:,} users"
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=status))
 
 
