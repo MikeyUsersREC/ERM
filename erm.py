@@ -1,4 +1,6 @@
 import datetime
+from dataclasses import MISSING
+
 import discord.mentions
 import json
 import logging
@@ -102,8 +104,6 @@ class Bot(commands.AutoShardedBot):
 
         if not bot.is_synced:  # check if slash commands have been synced
             bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
-            for item in bot.tree._get_all_commands():
-                logging.info(item.name)
         if environment == 'DEVELOPMENT':
             await bot.tree.sync(guild=discord.Object(id=987798554972143728))
 
@@ -111,6 +111,11 @@ class Bot(commands.AutoShardedBot):
             await bot.tree.sync()
             # guild specific: leave blank if global (global registration can take 1-24 hours)
         bot.is_synced = True
+        check_reminders.start()
+        check_loa.start()
+        GDPR.start()
+        change_status.start()
+        logging.info('Setup_hook complete! All tasks are now running!')
 
 
 bot = Bot(command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None)
@@ -118,6 +123,15 @@ bot.is_synced = False
 bot.bloxlink_api_key = bloxlink_api_key
 environment = config('ENVIRONMENT', default='DEVELOPMENT')
 
+
+def running():
+    if bot:
+        if bot._ready != MISSING:
+            return 1
+        else:
+            return -1
+    else:
+        return -1
 
 @bot.before_invoke
 async def Analytics(ctx: commands.Context):
@@ -131,11 +145,7 @@ async def Analytics(ctx: commands.Context):
 
 @bot.event
 async def on_ready():
-    await check_reminders.start()
-    await check_loa.start()
-    await update_bot_status.start()
-    await GDPR.start()
-    print('Bot is now online!')
+    logging.info('{} has connected to gateway!'.format(bot.user.name))
 
 
 client = roblox.Client()
@@ -698,7 +708,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
             await bot.warnings.update_by_id(dataset)
 
         shift = await bot.shifts.find_by_id(ctx.author.id)
-        
+
         if shift is not None:
             if 'data' in shift.keys():
                 for index, item in enumerate(shift['data']):
@@ -842,13 +852,20 @@ async def update_bot_status():
         logging.info('Failing updating the status.')
 
 
+@tasks.loop(minutes=1)
+async def change_status():
+    logging.info('Changing status')
+
+    users = 0
+    for guild in bot.guilds:
+        users += guild.member_count
+
+    status = "{} users".format(users)
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=status))
+
+
 @tasks.loop(hours=24)
 async def GDPR():
-    try:
-        if bot.reminders is not None:
-            pass
-    except:
-        return
     # if the date in each warning is more than 30 days ago, redact the staff's username and tag
     # using mongodb (warnings)
     # get all warnings
@@ -911,11 +928,6 @@ async def check_reminders():
 
 @tasks.loop(minutes=1)
 async def check_loa():
-    try:
-        if bot.reminders is not None:
-            pass
-    except:
-        return
     loas = bot.loas
 
     for loaObject in await loas.get_all():
@@ -947,13 +959,14 @@ async def check_loa():
                     for role in roles:
                         if role:
                             for rl in roles:
-                                if rl in member.roles:
-                                    try:
-                                        await member.remove_roles(rl)
-                                    except:
-                                        pass
-
-                await member.send(embed=embed)
+                                if member:
+                                    if rl in member.roles:
+                                        try:
+                                            await member.remove_roles(rl)
+                                        except:
+                                            pass
+                if member:
+                    await member.send(embed=embed)
 
 
 @bot.event
@@ -1051,7 +1064,7 @@ async def verify(ctx, user: str = None):
 
     verified = False
     verified_user = await bot.verification.find_by_id(ctx.author.id)
-    
+
     if verified_user:
         if 'isVerified' in verified_user.keys():
             if verified_user['isVerified']:
@@ -1060,7 +1073,7 @@ async def verify(ctx, user: str = None):
                 verified_user = None
         else:
             verified = True
-    
+
     if user is None and verified_user is None:
         if ctx.interaction:
             modal = RobloxUsername()
@@ -1073,7 +1086,7 @@ async def verify(ctx, user: str = None):
         else:
             view = EnterRobloxUsername(ctx.author.id)
             embed = discord.Embed(
-                title = "<:LinkIcon:1044004006109904966> ERM Verification",
+                title="<:LinkIcon:1044004006109904966> ERM Verification",
                 description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
                 color=0x2E3136
             )
@@ -1192,7 +1205,8 @@ async def verify(ctx, user: str = None):
                     if new_data['isVerified']:
                         return await after_verified(roblox_user)
                     else:
-                        return await invis_embed(ctx, 'You have not verified using the verification game. Please retry by running `/verify` again.')
+                        return await invis_embed(ctx,
+                                                 'You have not verified using the verification game. Please retry by running `/verify` again.')
                 else:
                     return await invis_embed(ctx,
                                              'You have not verified using the verification game. Please retry by running `/verify` again.')
@@ -1260,7 +1274,6 @@ async def activity_report(ctx):
     # return await invis_embed(ctx,  "This feature has not been released yet.")
     if ctx.interaction:
         await ctx.interaction.response.defer()
-
 
     view = CustomSelectMenu(ctx.author.id, [
         discord.SelectOption(
@@ -1445,7 +1458,6 @@ async def activity_report(ctx):
     except:
         return await invis_embed('No shift data has been found.')
 
-
     embeds.append(embed)
 
     for string_obj in splitted_str:
@@ -1528,9 +1540,11 @@ async def activity_report(ctx):
             taskWrapper
         )
     )
-    menu.add_button(ViewButton(style=discord.ButtonStyle.secondary, label='Not your expected result?', custom_id=ViewButton.ID_CALLER,
+    menu.add_button(ViewButton(style=discord.ButtonStyle.secondary, label='Not your expected result?',
+                               custom_id=ViewButton.ID_CALLER,
                                followup=followUp))
     await menu.start()
+
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -1541,7 +1555,6 @@ async def on_message(message: discord.Message):
 
     if message.author == bot.user:
         return
-
 
     if not message.guild:
         await bot.process_commands(message)
@@ -1591,85 +1604,88 @@ async def on_message(message: discord.Message):
     if aa_detection is True:
         if webhook_channel is not None:
             if message.channel.id == webhook_channel.id:
+                print('1')
                 for embed in message.embeds:
-                    if ":kick" in embed.description or ":ban" in embed.description:
-                        if 'Command Usage' in embed.title or 'Kick/Ban Command Usage' in embed.title:
-                            raw_content = embed.description
-                            user, command = raw_content.split('used the command: ')
-                            code = embed.footer.text.split('Server: ')[1]
+                    print(embed)
+                    if embed.description and embed.title:
+                        if ":kick" in embed.description or ":ban" in embed.description:
+                            print('2')
+                            if 'Command Usage' in embed.title or 'Kick/Ban Command Usage' in embed.title:
+                                raw_content = embed.description
+                                print(raw_content)
+                                user, command = raw_content.split('used the command: ')
+                                code = embed.footer.text.split('Server: ')[1]
+                                print('3')
+                                if command.count(',') + 1 >= 5:
+                                    embed = discord.Embed(
+                                        title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
+                                        description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
+                                        color=0x2E3136
+                                    )
 
-                            if command.count(',') + 1 >= 5:
-                                embed = discord.Embed(
-                                    title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
-                                    description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                    color=0x2E3136
-                                )
+                                    embed.add_field(
+                                        name="<:Search:1035353785184288788> Staff Member:",
+                                        value=f"<:ArrowRight:1035003246445596774> {user}",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:Search:1035353785184288788> Staff Member:",
-                                    value=f"<:ArrowRight:1035003246445596774> {user}",
-                                    inline=False
-                                )
+                                    embed.add_field(
+                                        name="<:MalletWhite:1035258530422341672> Trigger:",
+                                        value=f"<:ArrowRight:1035003246445596774> **{command.count(',') + 1}** kicks/bans in a single command.",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:MalletWhite:1035258530422341672> Trigger:",
-                                    value=f"<:ArrowRight:1035003246445596774> **{command.count(',') + 1}** kicks/bans in a single command.",
-                                    inline=False
-                                )
+                                    embed.add_field(
+                                        name="<:EditIcon:1042550862834323597> Explanation",
+                                        value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[', '').replace(']', '')} simultaneously kicked/banned {command.count(',') + 1} people from **{code}**",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:EditIcon:1042550862834323597> Explanation",
-                                    value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[', '').replace(']', '')} simultaneously kicked/banned {command.count(',') + 1} people from **{code}**",
-                                    inline=False
-                                )
+                                    pings = []
+                                    if 'role' in dataset['game_security'].keys():
+                                        if dataset['game_security']['role'] is not None:
+                                            if isinstance(dataset['game_security']['role'], list):
+                                                for role in dataset['game_security']['role']:
+                                                    role = discord.utils.get(message.guild.roles, id=role)
+                                                    pings.append(role.mention)
 
-                                pings = []
-                                if 'role' in dataset['game_security'].keys():
-                                    if dataset['game_security']['role'] is not None:
-                                        if isinstance(dataset['game_security']['role'], list):
-                                            for role in dataset['game_security']['role']:
-                                                role = discord.utils.get(message.guild.roles, id=role)
-                                                pings.append(role.mention)
+                                    print('4')
+                                    print(pings)
+                                    await aa_detection_channel.send(','.join(pings) if pings != [] else '', embed=embed)
+                                if " all" in command:
+                                    embed = discord.Embed(
+                                        title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
+                                        description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
+                                        color=0x2E3136
+                                    )
 
-                                await aa_detection_channel.send(','.join(pings), embed=embed)
-                            if " all" in command:
-                                embed = discord.Embed(
-                                    title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
-                                    description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                    color=0x2E3136
-                                )
+                                    embed.add_field(
+                                        name="<:Search:1035353785184288788> Staff Member:",
+                                        description=f"<:ArrowRight:1035003246445596774> {user}",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:Search:1035353785184288788> Staff Member:",
-                                    description=f"<:ArrowRight:1035003246445596774> {user}",
-                                    inline=False
-                                )
+                                    embed.add_field(
+                                        name="<:MalletWhite:1035258530422341672> Trigger:",
+                                        value=f"<:ArrowRight:1035003246445596774> Kicking/banning everyone in the server.",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:MalletWhite:1035258530422341672> Trigger:",
-                                    value=f"<:ArrowRight:1035003246445596774> Kicking/banning everyone in the server.",
-                                    inline=False
-                                )
+                                    embed.add_field(
+                                        name="<:EditIcon:1042550862834323597> Explanation",
+                                        value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[').replace(']')} kicked/banned everyone from **{code}**",
+                                        inline=False
+                                    )
 
-                                embed.add_field(
-                                    name="<:EditIcon:1042550862834323597> Explanation",
-                                    value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[').replace(']')} kicked/banned everyone from **{code}**",
-                                    inline=False
-                                )
+                                    pings = []
+                                    if 'role' in dataset['game_security'].keys():
+                                        if dataset['game_security']['role'] is not None:
+                                            if isinstance(dataset['game_security']['role'], list):
+                                                for role in dataset['game_security']['role']:
+                                                    role = discord.utils.get(message.guild.roles, id=role)
+                                                    pings.append(role.mention)
 
-                                pings = []
-                                if 'role' in dataset['game_security'].keys():
-                                    if dataset['game_security']['role'] is not None:
-                                        if isinstance(dataset['game_security']['role'], list):
-                                            for role in dataset['game_security']['role']:
-                                                role = discord.utils.get(message.guild.roles, id=role)
-                                                pings.append(role.mention)
-
-                                await aa_detection_channel.send(','.join(pings), embed=embed)
-
-
-
-
+                                    await aa_detection_channel.send(','.join(pings) if pings != [] else '', embed=embed)
 
     if message.author.bot:
         return
@@ -2165,7 +2181,6 @@ async def viewconfig(ctx):
     except:
         aa_role = 'None'
 
-
     try:
         staff_management_channel = ctx.guild.get_channel(settingContents['staff_management']['channel']).mention
     except:
@@ -2339,10 +2354,11 @@ async def viewconfig(ctx):
     game_security_enabled = False
     if 'game_security' in settingContents.keys():
         if 'enabled' in settingContents['game_security'].keys():
-            game_security_enabled = settingContents['game_security']['enabled'] 
+            game_security_enabled = settingContents['game_security']['enabled']
         else:
             game_security_enabled = 'False'
-    else: game_security_enabled = 'False'
+    else:
+        game_security_enabled = 'False'
 
     embed.add_field(
         name='<:WarningIcon:1035258528149033090> Game Security',
@@ -2650,7 +2666,9 @@ async def changeconfig(ctx):
             settingContents['game_security']['enabled'] = False
         elif content == 'role':
             view = RoleSelect(ctx.author.id)
-            await invis_embed(ctx, 'What roles do you want to be mentioned when abuse is detected? (e.g. `@Leadership`)', view=view)
+            await invis_embed(ctx,
+                              'What roles do you want to be mentioned when abuse is detected? (e.g. `@Leadership`)',
+                              view=view)
             await view.wait()
             settingContents['game_security']['role'] = [role.id for role in view.value]
         elif content == 'webhook_channel':
@@ -2660,7 +2678,8 @@ async def changeconfig(ctx):
             settingContents['game_security']['webhook_channel'] = view.value[0].id
         elif content == 'channel':
             view = ChannelSelect(ctx.author.id, limit=1)
-            await invis_embed(ctx, 'What channel do you want Anti-Abuse reports to go to? (e.g. `#admin-abuse`)', view=view)
+            await invis_embed(ctx, 'What channel do you want Anti-Abuse reports to go to? (e.g. `#admin-abuse`)',
+                              view=view)
             await view.wait()
             settingContents['game_security']['channel'] = view.value[0].id
         else:
@@ -2723,19 +2742,57 @@ async def uptime(ctx):
 async def warn(ctx, user, *, reason):
     await invis_embed(ctx, 'This command is now a legacy command. We recommend that you now use `/punish` instead.')
 
-    request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
-    if request.status_code != 200:
-        oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
-        oldRequestJSON = oldRequest.json()
-        if not oldRequest.status_code == 200:
-            return await invis_embed(ctx, 'User does not exist.')
-        Id = oldRequestJSON['Id']
-        request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
-        requestJson = request.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10') as r:
+            if r.status == 200:
+                robloxUser = await r.json()
+                if len(robloxUser['data']) == 0:
+                    return await invis_embed(ctx, f'No user found with the name `{user}`')
+                robloxUser = robloxUser['data'][0]
+                Id = robloxUser['id']
+                async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                    requestJson = await r.json()
+            else:
+                async with session.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}') as r:
+                    robloxUser = await r.json()
+                    if 'success' not in robloxUser.keys():
+                        Id = robloxUser['Id']
+                        async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                            requestJson = await r.json()
+                    else:
+                        try:
+                            userConverted = await (discord.ext.commands.MemberConverter()).convert(ctx,
+                                                                                                   user.replace(' ',
+                                                                                                                ''))
+                            if userConverted:
+                                verified_user = await bot.verification.find_by_id(userConverted.id)
+                                if verified_user:
+                                    Id = verified_user['roblox']
+                                    async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                        requestJson = await r.json()
+                                else:
+                                    async with aiohttp.ClientSession(headers={
+                                        "api-key": bot.bloxlink_api_key
+                                    }) as newSession:
+                                        async with newSession.get(
+                                                f"https://v3.blox.link/developer/discord/{userConverted.id}") as r:
+                                            tempRBXUser = await r.json()
+                                            if tempRBXUser['success']:
+                                                tempRBXID = tempRBXUser['user']['robloxId']
+                                            else:
+                                                return await invis_embed(ctx,
+                                                                         f'No user found with the name `{userConverted.display_name}`')
+                                            Id = tempRBXID
+                                            async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                                requestJson = await r.json()
+                        except discord.ext.commands.MemberNotFound:
+                            return await invis_embed(ctx, f'No member found with the query: `{user}`')
 
-    else:
-        requestJson = request.json()
+    print(requestJson)
+    try:
         data = requestJson['data']
+    except KeyError:
+        data = [requestJson]
 
     if not 'data' in locals():
         data = [requestJson]
@@ -2808,7 +2865,7 @@ async def warn(ctx, user, *, reason):
         Embeds.append(embed)
 
     if ctx.interaction:
-        interaction = ctx.interaction
+        interaction = ctx
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
@@ -2899,7 +2956,6 @@ async def warn(ctx, user, *, reason):
                                     "Guild": ctx.guild.id
                                 }]
 
-
         success = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Warning Logged",
             description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s warning has been logged.",
@@ -2961,7 +3017,8 @@ async def warn(ctx, user, *, reason):
     try:
         menu.add_pages(Embeds)
         await menu.start()
-    except:
+    except Exception as e:
+        print(e)
         return await invis_embed(ctx,
                                  'This user does not exist on the Roblox platform. Please try again with a valid username.')
 
@@ -2981,18 +3038,57 @@ async def kick(ctx, user, *, reason):
     await invis_embed(ctx, 'This command is now a legacy command. We recommend that you now use `/punish` instead.')
 
     request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
-    if request.status_code != 200:
-        oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
-        oldRequestJSON = oldRequest.json()
-        if not oldRequest.status_code == 200:
-            return await invis_embed(ctx, 'User does not exist.')
-        Id = oldRequestJSON['Id']
-        request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
-        requestJson = request.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10') as r:
+            if r.status == 200:
+                robloxUser = await r.json()
+                if len(robloxUser['data']) == 0:
+                    return await invis_embed(ctx, f'No user found with the name `{user}`')
+                robloxUser = robloxUser['data'][0]
+                Id = robloxUser['id']
+                async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                    requestJson = await r.json()
+            else:
+                async with session.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}') as r:
+                    robloxUser = await r.json()
+                    if 'success' not in robloxUser.keys():
+                        Id = robloxUser['Id']
+                        async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                            requestJson = await r.json()
+                    else:
+                        try:
+                            userConverted = await (discord.ext.commands.MemberConverter()).convert(ctx,
+                                                                                                   user.replace(' ',
+                                                                                                                ''))
+                            if userConverted:
+                                verified_user = await bot.verification.find_by_id(userConverted.id)
+                                if verified_user:
+                                    Id = verified_user['roblox']
+                                    async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                        requestJson = await r.json()
+                                else:
+                                    async with aiohttp.ClientSession(headers={
+                                        "api-key": bot.bloxlink_api_key
+                                    }) as newSession:
+                                        async with newSession.get(
+                                                f"https://v3.blox.link/developer/discord/{userConverted.id}") as r:
+                                            tempRBXUser = await r.json()
+                                            if tempRBXUser['success']:
+                                                tempRBXID = tempRBXUser['user']['robloxId']
+                                            else:
+                                                return await invis_embed(ctx,
+                                                                         f'No user found with the name `{userConverted.display_name}`')
+                                            Id = tempRBXID
+                                            async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                                requestJson = await r.json()
+                        except discord.ext.commands.MemberNotFound:
+                            return await invis_embed(ctx, f'No member found with the query: `{user}`')
 
-    else:
-        requestJson = request.json()
+    print(requestJson)
+    try:
         data = requestJson['data']
+    except KeyError:
+        data = [requestJson]
 
     if not 'data' in locals():
         data = [requestJson]
@@ -3065,7 +3161,7 @@ async def kick(ctx, user, *, reason):
         Embeds.append(embed)
 
     if ctx.interaction:
-        interaction = ctx.interaction
+        interaction = ctx
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
@@ -3241,19 +3337,57 @@ async def kick(ctx, user, *, reason):
 async def ban(ctx, user, *, reason):
     await invis_embed(ctx, 'This command is now a legacy command. We recommend that you now use `/punish` instead.')
 
-    request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
-    if request.status_code != 200:
-        oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
-        oldRequestJSON = oldRequest.json()
-        if not oldRequest.status_code == 200:
-            return await invis_embed(ctx, 'User does not exist.')
-        Id = oldRequestJSON['Id']
-        request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
-        requestJson = request.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10') as r:
+            if r.status == 200:
+                robloxUser = await r.json()
+                if len(robloxUser['data']) == 0:
+                    return await invis_embed(ctx, f'No user found with the name `{user}`')
+                robloxUser = robloxUser['data'][0]
+                Id = robloxUser['id']
+                async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                    requestJson = await r.json()
+            else:
+                async with session.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}') as r:
+                    robloxUser = await r.json()
+                    if 'success' not in robloxUser.keys():
+                        Id = robloxUser['Id']
+                        async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                            requestJson = await r.json()
+                    else:
+                        try:
+                            userConverted = await (discord.ext.commands.MemberConverter()).convert(ctx,
+                                                                                                   user.replace(' ',
+                                                                                                                ''))
+                            if userConverted:
+                                verified_user = await bot.verification.find_by_id(userConverted.id)
+                                if verified_user:
+                                    Id = verified_user['roblox']
+                                    async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                        requestJson = await r.json()
+                                else:
+                                    async with aiohttp.ClientSession(headers={
+                                        "api-key": bot.bloxlink_api_key
+                                    }) as newSession:
+                                        async with newSession.get(
+                                                f"https://v3.blox.link/developer/discord/{userConverted.id}") as r:
+                                            tempRBXUser = await r.json()
+                                            if tempRBXUser['success']:
+                                                tempRBXID = tempRBXUser['user']['robloxId']
+                                            else:
+                                                return await invis_embed(ctx,
+                                                                         f'No user found with the name `{userConverted.display_name}`')
+                                            Id = tempRBXID
+                                            async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                                requestJson = await r.json()
+                        except discord.ext.commands.MemberNotFound:
+                            return await invis_embed(ctx, f'No member found with the query: `{user}`')
 
-    else:
-        requestJson = request.json()
+    print(requestJson)
+    try:
         data = requestJson['data']
+    except KeyError:
+        data = [requestJson]
 
     if not 'data' in locals():
         data = [requestJson]
@@ -3328,7 +3462,7 @@ async def ban(ctx, user, *, reason):
         Embeds.append(Embed)
 
     if ctx.interaction:
-        interaction = ctx.interaction
+        interaction = ctx
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
@@ -3519,7 +3653,8 @@ async def mlog(ctx, *, message):
     embed.add_field(name="<:staff:1035308057007230976> Staff Member",
                     value=f"<:ArrowRightW:1035023450592514048> {ctx.author.mention}",
                     inline=False)
-    embed.add_field(name="<:MessageIcon:1035321236793860116> Message", value=f"<:ArrowRight:1035003246445596774> {message}", inline=False)
+    embed.add_field(name="<:MessageIcon:1035321236793860116> Message",
+                    value=f"<:ArrowRight:1035003246445596774> {message}", inline=False)
     channel = None
     if 'm_channel' in configItem['staff_management'].keys():
         if configItem['staff_management']['m_channel'] is not None:
@@ -3583,20 +3718,57 @@ async def tempban(ctx, user, time: str, *, reason):
     endTimestamp = int(startTimestamp + time)
 
     reason = ''.join([str(item) for item in reason])
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10') as r:
+            if r.status == 200:
+                robloxUser = await r.json()
+                if len(robloxUser['data']) == 0:
+                    return await invis_embed(ctx, f'No user found with the name `{user}`')
+                robloxUser = robloxUser['data'][0]
+                Id = robloxUser['id']
+                async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                    requestJson = await r.json()
+            else:
+                async with session.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}') as r:
+                    robloxUser = await r.json()
+                    if 'success' not in robloxUser.keys():
+                        Id = robloxUser['Id']
+                        async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                            requestJson = await r.json()
+                    else:
+                        try:
+                            userConverted = await (discord.ext.commands.MemberConverter()).convert(ctx,
+                                                                                                   user.replace(' ',
+                                                                                                                ''))
+                            if userConverted:
+                                verified_user = await bot.verification.find_by_id(userConverted.id)
+                                if verified_user:
+                                    Id = verified_user['roblox']
+                                    async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                        requestJson = await r.json()
+                                else:
+                                    async with aiohttp.ClientSession(headers={
+                                        "api-key": bot.bloxlink_api_key
+                                    }) as newSession:
+                                        async with newSession.get(
+                                                f"https://v3.blox.link/developer/discord/{userConverted.id}") as r:
+                                            tempRBXUser = await r.json()
+                                            if tempRBXUser['success']:
+                                                tempRBXID = tempRBXUser['user']['robloxId']
+                                            else:
+                                                return await invis_embed(ctx,
+                                                                         f'No user found with the name `{userConverted.display_name}`')
+                                            Id = tempRBXID
+                                            async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                                requestJson = await r.json()
+                        except discord.ext.commands.MemberNotFound:
+                            return await invis_embed(ctx, f'No member found with the query: `{user}`')
 
-    request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
-    if request.status_code != 200:
-        oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
-        oldRequestJSON = oldRequest.json()
-        if not oldRequest.status_code == 200:
-            return await invis_embed(ctx, 'User does not exist.')
-        Id = oldRequestJSON['Id']
-        request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
-        requestJson = request.json()
-
-    else:
-        requestJson = request.json()
+    print(requestJson)
+    try:
         data = requestJson['data']
+    except KeyError:
+        data = [requestJson]
 
     if not 'data' in locals():
         data = [requestJson]
@@ -3781,7 +3953,7 @@ async def tempban(ctx, user, time: str, *, reason):
         await channel.send(embed=embed)
 
     if ctx.interaction:
-        interaction = ctx.interaction
+        interaction = ctx
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
@@ -3850,7 +4022,8 @@ async def tempban(ctx, user, time: str, *, reason):
     with_app_command=True,
 )
 @is_staff()
-@app_commands.describe(query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username.")
+@app_commands.describe(
+    query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username.")
 async def search(ctx, *, query):
     if ctx.interaction:
         await int_coloured_embed(ctx.interaction,
@@ -4137,7 +4310,8 @@ async def search(ctx, *, query):
     with_app_command=True,
 )
 @is_staff()
-@app_commands.describe(query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username.")
+@app_commands.describe(
+    query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username.")
 async def globalsearch(ctx, *, query):
     if ctx.interaction:
         await int_coloured_embed(ctx.interaction,
@@ -4441,7 +4615,8 @@ async def globalsearch(ctx, *, query):
     with_app_command=True,
 )
 @is_staff()
-@app_commands.describe(id="What is the ID of the punishment you would like to void? You can find this by running /search.")
+@app_commands.describe(
+    id="What is the ID of the punishment you would like to void? You can find this by running /search.")
 async def removewarning(ctx, id: str):
     if ctx.interaction:
         await int_coloured_embed(ctx.interaction,
@@ -4505,7 +4680,8 @@ async def removewarning(ctx, id: str):
     with_app_command=True,
 )
 @is_staff()
-@app_commands.describe(id="What is the ID of the punishment you would like to modify? You can find this by running /search.")
+@app_commands.describe(
+    id="What is the ID of the punishment you would like to modify? You can find this by running /search.")
 async def punishment_modify(ctx, id: str):
     if ctx.interaction:
         await int_coloured_embed(ctx.interaction,
@@ -4556,7 +4732,7 @@ async def punishment_modify(ctx, id: str):
     if punishment_types:
         punishment_types = punishment_types['types']
     view = EditWarning(bot, ctx.author.id, punishment_types or [])
-    await ctx.send(embed=embed, view=view)
+    msg = await ctx.send(embed=embed, view=view)
     await view.wait()
 
     if view.value == "edit":
@@ -4584,10 +4760,10 @@ async def punishment_modify(ctx, id: str):
         return await invis_embed(ctx, "You have not selected an option.")
     success = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Punishment Modified",
-        description=f"<:ArrowRightW:1035023450592514048>This punishment has been modified.",
+        description=f"<:ArrowRightW:1035023450592514048>This punishment has been modified successfully.",
         color=0x71c15f
     )
-    await ctx.send(embed=success)
+    msg.edit(embed=success)
 
 
 @bot.hybrid_command(
@@ -4756,19 +4932,57 @@ async def bolo(ctx):
 @app_commands.describe(user="What's their ROBLOX username?")
 @app_commands.describe(reason="What is your reason for punishing this user?")
 async def bolo_create(ctx, user, *, reason):
-    request = requests.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10')
-    if request.status_code != 200:
-        oldRequest = requests.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}')
-        oldRequestJSON = oldRequest.json()
-        if not oldRequest.status_code == 200:
-            return await invis_embed(ctx, 'User does not exist.')
-        Id = oldRequestJSON['Id']
-        request = requests.get(f'https://users.roblox.com/v1/users/{Id}')
-        requestJson = request.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://users.roblox.com/v1/users/search?keyword={user}&limit=10') as r:
+            if r.status == 200:
+                robloxUser = await r.json()
+                if len(robloxUser['data']) == 0:
+                    return await invis_embed(ctx, f'No user found with the name `{user}`')
+                robloxUser = robloxUser['data'][0]
+                Id = robloxUser['id']
+                async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                    requestJson = await r.json()
+            else:
+                async with session.get(f'https://api.roblox.com/users/get-by-username?username={user.lower()}') as r:
+                    robloxUser = await r.json()
+                    if 'success' not in robloxUser.keys():
+                        Id = robloxUser['Id']
+                        async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                            requestJson = await r.json()
+                    else:
+                        try:
+                            userConverted = await (discord.ext.commands.MemberConverter()).convert(ctx,
+                                                                                                   user.replace(' ',
+                                                                                                                ''))
+                            if userConverted:
+                                verified_user = await bot.verification.find_by_id(userConverted.id)
+                                if verified_user:
+                                    Id = verified_user['roblox']
+                                    async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                        requestJson = await r.json()
+                                else:
+                                    async with aiohttp.ClientSession(headers={
+                                        "api-key": bot.bloxlink_api_key
+                                    }) as newSession:
+                                        async with newSession.get(
+                                                f"https://v3.blox.link/developer/discord/{userConverted.id}") as r:
+                                            tempRBXUser = await r.json()
+                                            if tempRBXUser['success']:
+                                                tempRBXID = tempRBXUser['user']['robloxId']
+                                            else:
+                                                return await invis_embed(ctx,
+                                                                         f'No user found with the name `{userConverted.display_name}`')
+                                            Id = tempRBXID
+                                            async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
+                                                requestJson = await r.json()
+                        except discord.ext.commands.MemberNotFound:
+                            return await invis_embed(ctx, f'No member found with the query: `{user}`')
 
-    else:
-        requestJson = request.json()
+    print(requestJson)
+    try:
         data = requestJson['data']
+    except KeyError:
+        data = [requestJson]
 
     if not 'data' in locals():
         data = [requestJson]
@@ -4813,7 +5027,7 @@ async def bolo_create(ctx, user, *, reason):
         Embeds.append(embed)
 
     if ctx.interaction:
-        interaction = ctx.interaction
+        interaction = ctx
     else:
         interaction = ctx
     menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
@@ -5028,7 +5242,8 @@ async def bolo_lookup(ctx, *, user: str):
 )
 @is_staff()
 async def dutyon(ctx):
-    await invis_embed(ctx, 'This command is now a legacy command. We recommend that you now use `/duty manage` instead.')
+    await invis_embed(ctx,
+                      'This command is now a legacy command. We recommend that you now use `/duty manage` instead.')
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
         return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
@@ -5149,7 +5364,8 @@ async def dutyon(ctx):
     with_app_command=True
 )
 @is_staff()
-@app_commands.describe(id="What is the ID of the BOLO you would like to void? You can find this by running /bolo lookup.")
+@app_commands.describe(
+    id="What is the ID of the BOLO you would like to void? You can find this by running /bolo lookup.")
 async def bolo_void(ctx, id: str):
     if ctx.interaction:
         await int_coloured_embed(ctx.interaction,
@@ -5214,7 +5430,8 @@ async def bolo_void(ctx, id: str):
 )
 @is_staff()
 async def dutyoff(ctx):
-    await invis_embed(ctx, 'This command is now a legacy command. We recommend that you now use `/duty manage` instead.')
+    await invis_embed(ctx,
+                      'This command is now a legacy command. We recommend that you now use `/duty manage` instead.')
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
         return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
@@ -5299,8 +5516,6 @@ async def dutyoff(ctx):
         value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
         inline=False
     )
-
-
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Shift Ended",
@@ -5486,8 +5701,9 @@ async def dutytime(ctx):
         name="<:Clock:1035308064305332224> Elapsed Time",
         value="<:ArrowRight:1035003246445596774>" +
               str(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
-                  shift['startTimestamp']).replace(tzinfo=None)).split('.')[0] + " (" + str(datetime.timedelta(seconds=break_seconds)) + " on break)"
-        )
+                  shift['startTimestamp']).replace(tzinfo=None)).split('.')[0] + " (" + str(
+            datetime.timedelta(seconds=break_seconds)) + " on break)"
+    )
 
     await ctx.send(embed=embed)
 
@@ -5872,9 +6088,39 @@ async def modify(ctx, member: discord.Member):
                     shift = tempShift
 
     view = ShiftModify(ctx.author.id)
-    embed = discord.Embed(
-        description=f"<:Clock:1035308064305332224> **What would you like to do to {member.display_name}'s current shift?**",
-        color=0x2E3136
+
+    embed = discord.Embed(color=0x2E3136, title="<:Setup:1035006520817090640> Modify {}#{}'s Shift Data".format(member.name, member.discriminator))
+    embed.description = "*You are currently editing {}'s shift. This is not reversible.*".format(member.name)
+    embed.set_thumbnail(url=member.display_avatar.url)
+
+
+    shifts = []
+    storage_item = await bot.shift_storage.find_by_id(ctx.author.id)
+    if storage_item:
+        for shift in storage_item['shifts']:
+            if isinstance(shift, dict):
+                if shift['guild'] == ctx.guild.id:
+                    shifts.append(shift)
+
+    all_shift_times = [s['totalSeconds'] for s in shifts]
+    total_time = sum(all_shift_times)
+    settings = await bot.settings.find_by_id(ctx.guild.id)
+    quota = 0
+    metquota = ''
+    if settings:
+        if 'shift_management' in settings.keys():
+            if 'quota' in settings['shift_management'].keys():
+                quota = settings['shift_management']['quota']
+
+    if total_time >= quota:
+        metquota = "Met"
+    else:
+        metquota = "Not Met"
+
+    embed.add_field(
+        name="<:Clock:1035308064305332224> Total Shift Data",
+        value="<:ArrowRight:1035003246445596774> {}\n<:ArrowRight:1035003246445596774> {} Quota {}".format(td_format(datetime.timedelta(seconds=total_time)), metquota, td_format(datetime.timedelta(seconds=quota))),
+        inline=False
     )
 
     msg = await ctx.send(embed=embed, view=view)
@@ -5919,7 +6165,6 @@ async def modify(ctx, member: discord.Member):
             value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
             inline=False
         )
-
 
         successEmbed = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Shift Ended",
@@ -6604,13 +6849,12 @@ async def manage(ctx):
     else:
         status = "off"
 
-
     embed.add_field(
         name="<:Setup:1035006520817090640> Shift Management",
         value=f"<:CurrentlyOnDuty:1045079678353932398> **On-Duty** {'(Current)' if status == 'on' else ''}\n<:Break:1045080685012062329> **On-Break** {'(Current)' if status == 'break' else ''}\n<:OffDuty:1045081161359183933> **Off-Duty** {'(Current)' if status == 'off' else ''}",
     )
     if status == "on" or status == "break":
-        warnings = 0 
+        warnings = 0
         kicks = 0
         bans = 0
         ban_bolos = 0
@@ -6637,7 +6881,8 @@ async def manage(ctx):
 
         embed2.add_field(
             name="<:Search:1035353785184288788> Moderation Details",
-            value="<:ArrowRight:1035003246445596774> {} Warnings\n<:ArrowRight:1035003246445596774> {} Kicks\n<:ArrowRight:1035003246445596774> {} Bans\n<:ArrowRight:1035003246445596774> {} Ban BOLOs\n<:ArrowRight:1035003246445596774> {} Custom".format(warnings, kicks, bans, ban_bolos, custom),
+            value="<:ArrowRight:1035003246445596774> {} Warnings\n<:ArrowRight:1035003246445596774> {} Kicks\n<:ArrowRight:1035003246445596774> {} Bans\n<:ArrowRight:1035003246445596774> {} Ban BOLOs\n<:ArrowRight:1035003246445596774> {} Custom".format(
+                warnings, kicks, bans, ban_bolos, custom),
             inline=False
         )
 
@@ -6776,7 +7021,6 @@ async def manage(ctx):
             inline=False
         )
 
-
         time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
             shift['startTimestamp']).replace(tzinfo=None)
 
@@ -6889,7 +7133,8 @@ async def manage(ctx):
                         await invis_embed(ctx, f'Could not remove {rl.name} from {ctx.author.mention}')
     elif view.value == "break":
         if status == "off":
-            return await invis_embed(ctx, 'You cannot be on break if you are not currently on-duty. If you would like to be on-duty, pick **On-Duty**')
+            return await invis_embed(ctx,
+                                     'You cannot be on break if you are not currently on-duty. If you would like to be on-duty, pick **On-Duty**')
         toggle = "on"
 
         if 'breaks' in shift.keys():
@@ -6921,7 +7166,7 @@ async def manage(ctx):
                 color=0x71c15f
             )
             await msg.edit(embed=success, view=None)
-            
+
             if configItem['shift_management']['role']:
                 if not isinstance(configItem['shift_management']['role'], list):
                     role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
@@ -7237,7 +7482,6 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
             value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
             inline=False
         )
-
 
         if not await bot.shift_storage.find_by_id(member.id):
             await bot.shift_storage.insert({
@@ -7932,7 +8176,8 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
                 endTimestamp = item['ended']
                 break_seconds += int(endTimestamp - startTimestamp)
 
-        time_delta = interaction.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None)
+        time_delta = interaction.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+            shift['startTimestamp']).replace(tzinfo=None)
 
         time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
 
@@ -7944,7 +8189,6 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
             value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
             inline=False
         )
-
 
         successEmbed = discord.Embed(
             title="<:CheckIcon:1035018951043842088> Success!",
@@ -8001,7 +8245,6 @@ async def clockedin(ctx):
     except:
         pass
 
-
     for shift in await bot.shifts.get_all():
         if 'data' in shift.keys():
             for s in shift['data']:
@@ -8021,17 +8264,18 @@ async def clockedin(ctx):
                     if 'breaks' in shift.keys():
                         for item in shift["breaks"]:
                             if item['ended'] == None:
-                                break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item['started']
+                                break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item[
+                                    'started']
 
                     time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
                     if break_seconds >= 0:
                         embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {datetime.timedelta(seconds=break_seconds)})",
-                                    inline=False)
+                                        value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {datetime.timedelta(seconds=break_seconds)})",
+                                        inline=False)
                     else:
                         embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
-                                    inline=False)
+                                        value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
+                                        inline=False)
 
     await ctx.send(embed=embed)
 
@@ -8242,7 +8486,6 @@ async def clearmember(ctx, member: discord.Member = None):
         embed = discord.Embed(
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear your shift data?** This is irreversible.',
             color=0x2E3136)
-        await embed
 
         await ctx.send(embed=embed, view=view)
     else:

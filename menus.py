@@ -1064,7 +1064,7 @@ class EditWarningSelect(discord.ui.Select):
                 label="Delete punishment",
                 value="delete",
                 emoji="<:TrashIcon:1042550860435181628>",
-                description="Change the punishment type to a higher or lower severity"
+                description="Delete the punishment from the database. This is irreversible."
             )
         ]
 
@@ -1106,7 +1106,7 @@ class EditWarningSelect(discord.ui.Select):
                 for item in self.view.children:
                     item.disabled = True
                 self.value = "delete"
-                await interaction.response.edit_original_response(view=self.view)
+                await interaction.edit_original_response(view=self.view)
                 self.view.stop()
             else:
                 await int_invis_embed(interaction, "You have not picked an option.")

@@ -6,7 +6,7 @@
 
 [Bot Invite](https://canary.discord.com/api/oauth2/authorize?client_id=978662093408591912&permissions=8&scope=applications.commands%20bot)
 
-[Support Server](https://discord.gg/erm)
+[Support Server](https://discord.gg/BGfyfqU5fx)
 
 [Website](https://ermbot.xyz/)
 

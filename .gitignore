@@ -4,3 +4,5 @@ __pycache__
 .idea
 requirements.txt
 cache/*
+.pytest_cache
+Pipfile.lock

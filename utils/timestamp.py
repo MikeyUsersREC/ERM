@@ -18,4 +18,6 @@ def td_format(td_object):
     if strings is not []:
         return ", ".join(strings)
     else:
+        if seconds == 0:
+            return "0 seconds"
         raise ValueError("Time delta is too small")
