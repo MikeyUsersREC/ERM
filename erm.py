@@ -526,7 +526,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
 
     if designated_channel is None:
         try:
-            designated_channel = settings['punishments']['channel']
+            designated_channel = bot.get_channel(settings['punishments']['channel'])
         except KeyError:
             return await invis_embed(ctx, 'I could not find a designated channel for logging punishments. Ask a server administrator to use `/config change`.')
     if type.lower() == "tempban":
