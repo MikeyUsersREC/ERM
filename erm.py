@@ -1609,6 +1609,9 @@ async def on_message(message: discord.Message):
         if webhook_channel is not None:
             if message.channel.id == webhook_channel.id:
                 print('1')
+                print(embeds)
+                if embeds:
+                    print(f"Title: {embeds[0].title}")
                 for embed in message.embeds:
                     print(embed)
                     print(embed.title)
