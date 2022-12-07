@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade discord.py discord hikari dnspython motor python-dateutil pytz quart requests aiohttp roblox sanic zuid pytest typing_extensions
+          python -m pip install --upgrade discord.py discord hikari dnspython motor python-dateutil pytz quart requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
 
 
       - name: Install later dependencies
