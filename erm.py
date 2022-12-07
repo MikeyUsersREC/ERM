@@ -8,7 +8,6 @@ import pprint
 import time
 from io import BytesIO
 from typing import Union
-
 import aiohttp
 import dns.resolver
 import motor.motor_asyncio
@@ -39,9 +38,12 @@ from utils.utils import *
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ['8.8.8.8']
 
-sentry_url = config('SENTRY_URL')
-bloxlink_api_key = config('BLOXLINK_API_KEY')
-
+try:
+    sentry_url = config('SENTRY_URL')
+    bloxlink_api_key = config('BLOXLINK_API_KEY')
+except:
+    sentry_url = ""
+    bloxlink_api_key = ""
 discord.utils.setup_logging()
 
 intents = discord.Intents.default()
