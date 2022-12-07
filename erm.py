@@ -495,6 +495,8 @@ async def punish(ctx, user: str, type: str, *, reason: str):
         "Ban",
         "BOLO"
     ]
+
+
     warning_types = await bot.punishment_types.find_by_id(ctx.guild.id)
     if warning_types is None:
         warning_types = {
@@ -506,6 +508,27 @@ async def punish(ctx, user: str, type: str, *, reason: str):
     else:
         warning_types = warning_types['types']
 
+    designated_channel = None
+    settings = await bot.settings.find_by_id(ctx.guild.id)
+    if settings:
+        if settings['customisation'].get('kick_channel'):
+            if settings['customisation']['kick_channel'] != "None":
+                if type.lower() == "kick":
+                    designated_channel = bot.get_channel(settings['customisation']['kick_channel'])
+        if settings['customisation'].get('ban_channel'):
+            if settings['customisation']['ban_channel'] != "None":
+                if type.lower() == "ban":
+                    designated_channel = bot.get_channel(settings['customisation']['ban_channel'])
+        if settings['customisation'].get('bolo_channel'):
+            if settings['customisation']['bolo_channel'] != "None":
+                if type.lower() == "bolo":
+                    designated_channel = bot.get_channel(settings['customisation']['bolo_channel'])
+
+    if designated_channel is None:
+        try:
+            designated_channel = settings['punishments']['channel']
+        except KeyError:
+            return await invis_embed(ctx, 'I could not find a designated channel for logging punishments. Ask a server administrator to use `/config change`.')
     if type.lower() == "tempban":
         return await invis_embed(ctx,
                                  f'Tempbans are currently not possible due to discord limitations. Please use the corresponding command `/tempban` for an alternative.')
@@ -647,7 +670,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
 
     menu = ViewMenu(ctx, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
 
-    async def warn_function(ctx, menu):
+    async def warn_function(ctx, menu, designated_channel=None):
         user = menu.message.embeds[0].title
         await menu.stop(disable_items=True)
         default_warning_item = {
@@ -697,10 +720,9 @@ async def punish(ctx, user: str, type: str, *, reason: str):
         embed.add_field(name="<:QMark:1035308059532202104> Reason", value=f"<:ArrowRight:1035003246445596774> {reason}",
                         inline=False)
 
-        channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
-        if not channel:
-            return await invis_embed(ctx,
-                                     'The channel in the configuration does not exist. Please tell the server owner to run `/config change` for the channel to be changed.')
+        if designated_channel is None:
+            designated_channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
+
 
         if not await bot.warnings.find_by_id(user.lower()):
             await bot.warnings.insert(default_warning_item)
@@ -745,10 +767,10 @@ async def punish(ctx, user: str, type: str, *, reason: str):
 
         await menu.message.edit(embed=success)
 
-        await channel.send(embed=embed)
+        await designated_channel.send(embed=embed)
 
     async def task():
-        await warn_function(ctx, menu)
+        await warn_function(ctx, menu, designated_channel)
 
     def taskWrapper():
         bot.loop.create_task(
@@ -1609,9 +1631,9 @@ async def on_message(message: discord.Message):
         if webhook_channel is not None:
             if message.channel.id == webhook_channel.id:
                 print('1')
-                print(embeds)
-                if embeds:
-                    print(f"Title: {embeds[0].title}")
+                print(message.embeds)
+                if message.embeds:
+                    print(f"Title: {message.embeds[0].title}")
                 for embed in message.embeds:
                     print(embed)
                     print(embed.title)
