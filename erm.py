@@ -360,12 +360,19 @@ if environment == "PRODUCTION":
     bot_token = config('PRODUCTION_BOT_TOKEN')
     logging.info('Using production token...')
 elif environment == "DEVELOPMENT":
-    bot_token = config('DEVELOPMENT_BOT_TOKEN')
+    try:
+        bot_token = config('DEVELOPMENT_BOT_TOKEN')
+    except:
+        bot_token = ""
     logging.info('Using development token...')
 else:
     raise Exception("Invalid environment")
-mongo_url = config('MONGO_URL')
-github_token = config('GITHUB_TOKEN')
+try:
+    mongo_url = config('MONGO_URL')
+    github_token = config('GITHUB_TOKEN')
+except:
+    mongo_url = ""
+    github_token = ""
 generator = SnowflakeGenerator(192)
 error_gen = ZUID(prefix="error_", length=10)
 system_code_gen = ZUID(prefix="erm-systems-", length=7)
