@@ -968,8 +968,10 @@ async def check_loa():
                                         except:
                                             pass
                 if member:
-                    await member.send(embed=embed)
-
+                    try:
+                        await member.send(embed=embed)
+                    except discord.Forbidden:
+                        pass
 
 @bot.event
 async def on_command_error(ctx, error):
