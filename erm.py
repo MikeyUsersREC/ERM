@@ -6028,6 +6028,10 @@ async def forcevoid(ctx, member: discord.Member):
 )
 @is_management()
 async def modify(ctx, member: discord.Member):
+    if ctx.interaction:
+        await int_coloured_embed(ctx.interaction,
+                                 '<a:Loading:1044067865453670441> Your command is loading! We are currently taking our time to ensure that your ERM experience is bug-free!',
+                                 ephemeral=True, delete_after=5)
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     has_started = True
     if configItem is None:
