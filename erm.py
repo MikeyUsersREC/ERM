@@ -41,13 +41,6 @@ dns.resolver.default_resolver.nameservers = ['8.8.8.8']
 
 sentry_url = config('SENTRY_URL')
 bloxlink_api_key = config('BLOXLINK_API_KEY')
-sentry_sdk.init(
-    sentry_url,
-    traces_sample_rate=1.0,
-    _experiments={
-        "profiles_sample_rate": 1.0,
-    }
-)
 
 discord.utils.setup_logging()
 
@@ -8572,4 +8565,12 @@ async def clearall(ctx):
 
 
 if __name__ == "__main__":
+    sentry_sdk.init(
+        sentry_url,
+        traces_sample_rate=1.0,
+        _experiments={
+            "profiles_sample_rate": 1.0,
+        }
+    )
+
     bot.run(bot_token)
