@@ -8591,11 +8591,6 @@ async def clearall(ctx):
                         if shift['guild'] == ctx.guild.id:
                             for i in document['shifts']:
                                 doc_shifts.remove(i)
-
-                for index, shift in enumerate(doc_shifts):
-                    if isinstance(shift, dict):
-                        if shift['guild'] == ctx.guild.id:
-                            doc_shifts[index] = None
                 print(doc_shifts)
                 document['shifts'] = doc_shifts
                 await bot.shift_storage.update_by_id(document)
