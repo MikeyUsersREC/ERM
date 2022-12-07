@@ -1611,7 +1611,9 @@ async def on_message(message: discord.Message):
                 print('1')
                 for embed in message.embeds:
                     print(embed)
-                    if embed.description and embed.title:
+                    print(embed.title)
+                    print(embed.description)
+                    if embed.description not in ["", None] and embed.title not in ["", None]:
                         if ":kick" in embed.description or ":ban" in embed.description:
                             print('2')
                             if 'Command Usage' in embed.title or 'Kick/Ban Command Usage' in embed.title:
