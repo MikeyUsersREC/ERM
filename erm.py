@@ -30,7 +30,7 @@ import utils.utils
 from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
     AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, RemoveBOLO, EditWarning, \
     AddCustomCommand, RemoveCustomCommand, CustomisePunishmentType, RobloxUsername, EnterRobloxUsername, Verification, \
-    ModificationSelectMenu
+    ModificationSelectMenu, PartialShiftModify
 from utils.mongo import Document
 from utils.timestamp import td_format
 from utils.utils import *
@@ -979,16 +979,27 @@ async def check_loa():
                                          settings['staff_management']['loa_role']]
                         except:
                             pass
-                if roles is not [None]:
-                    for role in roles:
-                        if role:
-                            for rl in roles:
-                                if member:
-                                    if rl in member.roles:
-                                        try:
-                                            await member.remove_roles(rl)
-                                        except:
-                                            pass
+
+                docs = bot.loas.db.find({'user_id': loaObject['user_id'], 'guild_id': loaObject['guild_id']})
+                should_remove_roles = True
+                async for doc in docs:
+                    if doc['type'] == loaObject['type']:
+                        if not doc['expired']:
+                            if not doc == loaObject:
+                                should_remove_roles = False
+                                break
+                            
+                if should_remove_roles:
+                    if roles is not [None]:
+                        for role in roles:
+                            if role:
+                                for rl in roles:
+                                    if member:
+                                        if rl in member.roles:
+                                            try:
+                                                await member.remove_roles(rl)
+                                            except:
+                                                pass
                 if member:
                     try:
                         await member.send(embed=embed)
@@ -6110,11 +6121,12 @@ async def modify(ctx, member: discord.Member):
                             }
                         ]
                     })
+
+        has_started = False
         shift = {
             "guild": ctx.guild.id,
             "startTimestamp": ctx.message.created_at.replace(tzinfo=None).timestamp(),
         }
-        has_started = False
     if global_check == 1:
         tempShift = await bot.shifts.find_by_id(member.id)
         if tempShift:
@@ -6128,8 +6140,13 @@ async def modify(ctx, member: discord.Member):
                 if tempShift['guild'] == ctx.guild.id:
                     shift = tempShift
 
-    view = ShiftModify(ctx.author.id)
-
+    view = None
+    print(has_started)
+    if has_started:
+        view = ShiftModify(ctx.author.id)
+    else:
+        view = PartialShiftModify(ctx.author.id)
+        
     embed = discord.Embed(color=0x2E3136, title="<:Setup:1035006520817090640> Modify {}#{}'s Shift Data".format(member.name, member.discriminator))
     embed.description = "*You are currently editing {}'s shift. This is not reversible.*".format(member.name)
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -6160,7 +6177,7 @@ async def modify(ctx, member: discord.Member):
 
     embed.add_field(
         name="<:Clock:1035308064305332224> Total Shift Data",
-        value="<:ArrowRight:1035003246445596774> {}\n<:ArrowRight:1035003246445596774> {} Quota {}".format(td_format(datetime.timedelta(seconds=total_time)), metquota, td_format(datetime.timedelta(seconds=quota))),
+        value="<:ArrowRight:1035003246445596774> {}\n<:ArrowRight:1035003246445596774> {} Quota ({})".format(td_format(datetime.timedelta(seconds=total_time)) if td_format(datetime.timedelta(seconds=total_time)) != "" else "0 seconds", metquota, td_format(datetime.timedelta(seconds=quota))),
         inline=False
     )
 
