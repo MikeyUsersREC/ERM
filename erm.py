@@ -1618,15 +1618,18 @@ async def on_message(message: discord.Message):
     webhook_channel = None
 
     if 'game_security' in dataset.keys():
+        print('-4')
         if 'enabled' in dataset['game_security'].keys():
+            print('-3')
             if 'channel' in dataset['game_security'].keys() and 'webhook_channel' in dataset['game_security'].keys():
+                print('-2')
                 if dataset['game_security']['enabled'] is True:
                     aa_detection = True
                     webhook_channel = dataset['game_security']['webhook_channel']
                     webhook_channel = discord.utils.get(message.guild.channels, id=webhook_channel)
                     aa_detection_channel = dataset['game_security']['channel']
                     aa_detection_channel = discord.utils.get(message.guild.channels, id=aa_detection_channel)
-
+                    print('-1')
     if aa_detection is True:
         if webhook_channel is not None:
             if message.channel.id == webhook_channel.id:
