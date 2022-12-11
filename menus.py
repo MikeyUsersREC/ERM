@@ -492,6 +492,7 @@ class LOAMenu(discord.ui.View):
             if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
                 s_loa = loa
             if s_loa != None:
+                print(s_loa)
                 s_loa['denied'] = True
 
                 try:

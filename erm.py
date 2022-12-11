@@ -1,12 +1,12 @@
-from dataclasses import MISSING
-
-import discord.mentions
 import json
 import logging
 import pprint
 import time
+from dataclasses import MISSING
 from io import BytesIO
+
 import aiohttp
+import discord.mentions
 import dns.resolver
 import motor.motor_asyncio
 import pytz
@@ -22,6 +22,7 @@ from roblox import client as roblox
 from sentry_sdk import capture_exception, push_scope
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
+
 from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
     AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, RemoveBOLO, EditWarning, \
     AddCustomCommand, RemoveCustomCommand, CustomisePunishmentType, RobloxUsername, EnterRobloxUsername, Verification, \
@@ -45,7 +46,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.voice_states = True
-
 
 
 class Bot(commands.AutoShardedBot):
@@ -122,6 +122,7 @@ def running():
     else:
         return -1
 
+
 @bot.before_invoke
 async def Analytics(ctx: commands.Context):
     analytics = await bot.analytics.find_by_id(ctx.command.full_parent_name + f" {ctx.command.name}")
@@ -191,7 +192,6 @@ async def check_privacy(guild: int, setting: str):
 
 
 async def warning_json_to_mongo(jsonName: str, guildId: int):
-    f = None
     with open(f'{jsonName}', 'r') as f:
         logging.info(f)
         f = json.load(f)
@@ -458,6 +458,7 @@ async def punishment_autocomplete(
                 commandList.append(discord.app_commands.Choice(name=command, value=command))
         return commandList
 
+
 async def user_autocomplete(
         interaction: discord.Interaction,
         current: str) -> typing.List[app_commands.Choice[str]]:
@@ -484,6 +485,8 @@ async def user_autocomplete(
                     async for search in searches:
                         choices.append(discord.app_commands.Choice(name=search['_id'], value=search['_id']))
                     return choices
+
+
 @bot.hybrid_command(
     name="punish",
     description="Punish a user [Punishments]",
@@ -506,7 +509,6 @@ async def punish(ctx, user: str, type: str, *, reason: str):
         "Ban",
         "BOLO"
     ]
-
 
     warning_types = await bot.punishment_types.find_by_id(ctx.guild.id)
     if warning_types is None:
@@ -539,7 +541,8 @@ async def punish(ctx, user: str, type: str, *, reason: str):
         try:
             designated_channel = bot.get_channel(settings['punishments']['channel'])
         except KeyError:
-            return await invis_embed(ctx, 'I could not find a designated channel for logging punishments. Ask a server administrator to use `/config change`.')
+            return await invis_embed(ctx,
+                                     'I could not find a designated channel for logging punishments. Ask a server administrator to use `/config change`.')
     if type.lower() == "tempban":
         return await invis_embed(ctx,
                                  f'Tempbans are currently not possible due to discord limitations. Please use the corresponding command `/tempban` for an alternative.')
@@ -733,7 +736,6 @@ async def punish(ctx, user: str, type: str, *, reason: str):
 
         if designated_channel is None:
             designated_channel = discord.utils.get(ctx.guild.channels, id=configItem['punishments']['channel'])
-
 
         if not await bot.warnings.find_by_id(user.lower()):
             await bot.warnings.insert(default_warning_item)
@@ -999,7 +1001,7 @@ async def check_loa():
                             if not doc == loaObject:
                                 should_remove_roles = False
                                 break
-                            
+
                 if should_remove_roles:
                     if roles is not [None]:
                         for role in roles:
@@ -1016,6 +1018,7 @@ async def check_loa():
                         await member.send(embed=embed)
                     except discord.Forbidden:
                         pass
+
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -5738,8 +5741,18 @@ async def dutytime(ctx):
             endTimestamp = item['ended']
             break_seconds += int(endTimestamp - startTimestamp)
 
-    string = str(ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None) + (sum(shift.get('added_time')) if shift.get('added_time') != None else 0) - (sum(shift.get('removed_time')) if shift.get('removed_time') != None else 0)).split('.')[0]
-    breakstr = "(" + str(datetime.timedelta(seconds=break_seconds)) + " on break)"
+    string = str(
+        ctx.message.created_at.replace(tzinfo=None) -
+        datetime.datetime.fromtimestamp(shift['startTimestamp']).replace(tzinfo=None) +
+        (datetime.timedelta(seconds=sum(shift.get('added_time'))) if shift.get(
+            'added_time') != None else datetime.timedelta(seconds=0))
+        - (datetime.timedelta(seconds=sum(shift.get('removed_time'))) if shift.get(
+            'removed_time') != None else datetime.timedelta(seconds=0)
+           )
+    ).split('.')[0]
+
+    breakstr = "(" + str(datetime.timedelta(seconds=break_seconds)).split('.')[
+        0] + " on break)" if break_seconds > 0 else ""
 
     if break_seconds > 0:
         string += " " + breakstr
@@ -6096,11 +6109,12 @@ async def modify(ctx, member: discord.Member):
         view = ShiftModify(ctx.author.id)
     else:
         view = PartialShiftModify(ctx.author.id)
-        
-    embed = discord.Embed(color=0x2E3136, title="<:Setup:1035006520817090640> Modify {}#{}'s Shift Data".format(member.name, member.discriminator))
+
+    embed = discord.Embed(color=0x2E3136,
+                          title="<:Setup:1035006520817090640> Modify {}#{}'s Shift Data".format(member.name,
+                                                                                                member.discriminator))
     embed.description = "*You are currently editing {}'s shift. This is not reversible.*".format(member.name)
     embed.set_thumbnail(url=member.display_avatar.url)
-
 
     shifts = []
     storage_item = await bot.shift_storage.find_by_id(member.id)
@@ -6130,9 +6144,11 @@ async def modify(ctx, member: discord.Member):
     embed.add_field(
         name="<:Clock:1035308064305332224> Total Shift Data",
         value="<:ArrowRight:1035003246445596774> {}\n<:ArrowRight:1035003246445596774> {} Quota ({})".format(
-            td_format(datetime.timedelta(seconds=total_time)) if td_format(datetime.timedelta(seconds=total_time)) != "" else "0 seconds", 
-            metquota, 
-            td_format(datetime.timedelta(seconds=quota)) if td_format(datetime.timedelta(seconds=quota)) != '' else '0 seconds'
+            td_format(datetime.timedelta(seconds=total_time)) if td_format(
+                datetime.timedelta(seconds=total_time)) != "" else "0 seconds",
+            metquota,
+            td_format(datetime.timedelta(seconds=quota)) if td_format(
+                datetime.timedelta(seconds=quota)) != '' else '0 seconds'
         ),
         inline=False
     )
@@ -6142,8 +6158,13 @@ async def modify(ctx, member: discord.Member):
         embed.add_field(
             name="<:Clock:1035308064305332224> Current Shift Data",
             value="<:ArrowRight:1035003246445596774> {}".format(
-                td_format(datetime.timedelta(seconds=ctx.message.created_at.replace(tzinfo=None).timestamp() - shift['startTimestamp'] + (sum(shift.get('added_time')) if shift.get('added_time') != None else 0) - (sum(shift.get('removed_time')) if shift.get('removed_time') != None else 0))) if td_format(
-                    datetime.timedelta(seconds=ctx.message.created_at.replace(tzinfo=None).timestamp() - shift['startTimestamp'])) != "" else "0 seconds"
+                td_format(datetime.timedelta(
+                    seconds=ctx.message.created_at.replace(tzinfo=None).timestamp() - shift['startTimestamp'] + (
+                        sum(shift.get('added_time')) if shift.get('added_time') != None else 0) - (
+                                sum(shift.get('removed_time')) if shift.get(
+                                    'removed_time') != None else 0))) if td_format(
+                    datetime.timedelta(seconds=ctx.message.created_at.replace(tzinfo=None).timestamp() - shift[
+                        'startTimestamp'])) != "" else "0 seconds"
             ),
             inline=False
         )
@@ -6822,6 +6843,9 @@ async def loarequest(ctx, time, *, reason):
 @is_management()
 @app_commands.describe(user="Who's LoA are you voiding? Specify a Discord user.")
 async def loavoid(ctx, user: discord.Member = None):
+    if ctx.interaction:
+        await ctx.defer()
+
     if user == None:
         user = ctx.author
 
@@ -7108,7 +7132,6 @@ async def manage(ctx):
                         except:
                             await invis_embed(ctx, f'Could not add {rl.name} to {ctx.author.mention}')
 
-
             success = discord.Embed(
                 title="<:CheckIcon:1035018951043842088> Break Ended",
                 description="<:ArrowRight:1035003246445596774> You are no longer on break.",
@@ -7227,7 +7250,6 @@ async def manage(ctx):
 
         time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
         time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-
 
         if break_seconds > 0:
             embed.add_field(
@@ -7556,6 +7578,9 @@ async def rarequest(ctx, time, *, reason):
 @is_management()
 @app_commands.describe(user="Who's RA are you trying to void?")
 async def ravoid(ctx, user: discord.Member = None):
+    if ctx.interaction:
+        await ctx.defer()
+
     if user == None:
         user = ctx.author
 
@@ -8333,14 +8358,15 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
         return await int_invis_embed(interaction, 'This member is not currently on shift.', ephemeral=True)
 
     timedelta = datetime.datetime.now() - datetime.datetime.fromtimestamp(shift["startTimestamp"])
-    
+
     if 'added_time' in shift.keys():
         timedelta += datetime.timedelta(seconds=shift['added_time'])
-        
+
     if 'removed_time' in shift.keys():
         timedelta -= datetime.timedelta(seconds=shift['removed_time'])
 
-    await int_invis_embed(interaction, f'{member.display_name} has been on-shift for {td_format(timedelta)}.', ephemeral=True)
+    await int_invis_embed(interaction, f'{member.display_name} has been on-shift for {td_format(timedelta)}.',
+                          ephemeral=True)
 
 
 # context menus
@@ -8502,7 +8528,7 @@ async def clockedin(ctx):
     except:
         pass
 
-    async for shift in bot.shifts.db.find({ "data": {"$elemMatch": {"guild": ctx.guild.id}} }):
+    async for shift in bot.shifts.db.find({"data": {"$elemMatch": {"guild": ctx.guild.id}}}):
         if 'data' in shift.keys():
             for s in shift['data']:
                 if s['guild'] == ctx.guild.id:
@@ -8533,15 +8559,19 @@ async def clockedin(ctx):
                         time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
                         time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
 
-                        if f"<:staff:1035308057007230976> {member.name}#{member.discriminator}" not in [field.name for field in embed.fields]:
+                        if f"<:staff:1035308057007230976> {member.name}#{member.discriminator}" not in [field.name for
+                                                                                                        field in
+                                                                                                        embed.fields]:
                             if break_seconds > 0:
-                                embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                                value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {td_format(datetime.timedelta(seconds=break_seconds))})",
-                                                inline=False)
+                                embed.add_field(
+                                    name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {td_format(datetime.timedelta(seconds=break_seconds))})",
+                                    inline=False)
                             else:
-                                embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                                value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
-                                                inline=False)
+                                embed.add_field(
+                                    name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
+                                    inline=False)
 
         elif 'guild' in shift.keys():
             if shift['guild'] == ctx.guild.id:
