@@ -56,7 +56,7 @@ class Server(commands.Cog):
 
         cors.add(
             cors.add(app.router.add_resource('/guilds')).add_route('POST', self.get_mutual_guilds), {
-                "localhost:8000": aiohttp_cors.ResourceOptions(
+                "localhost": aiohttp_cors.ResourceOptions(
                     allow_credentials=True,
                     expose_headers="*",
                     allow_headers="*"
