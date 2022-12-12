@@ -8689,13 +8689,14 @@ async def shift_leaderboard(ctx):
         for shift in document['shifts']:
             if isinstance(shift, dict):
                 if shift['guild'] == ctx.guild.id:
-                    total_seconds += int(shift['totalSeconds'])
-                    if document['_id'] not in [item['id'] for item in all_staff]:
-                        all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-                    else:
-                        for item in all_staff:
-                            if item['id'] == document['_id']:
-                                item['total_seconds'] = total_seconds
+                    if shift['totalSeconds'] > 0:
+                        total_seconds += int(shift['totalSeconds'])
+                        if document['_id'] not in [item['id'] for item in all_staff]:
+                            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+                        else:
+                            for item in all_staff:
+                                if item['id'] == document['_id']:
+                                    item['total_seconds'] = total_seconds
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
@@ -8838,17 +8839,8 @@ async def clearmember(ctx, member: discord.Member = None):
                 print(shift)
                 if isinstance(shift, dict):
                     if shift['guild'] == ctx.guild.id:
-                        for i in document['shifts']:
-                            doc_shifts.remove(i)
-
-            for index, shift in enumerate(doc_shifts):
-                if shift == None:
-                    doc_shifts[index] = None
-                elif shift['guild'] == ctx.guild.id:
-                    doc_shifts[index] = None
-            print(doc_shifts)
-            document['shifts'] = doc_shifts
-            await bot.shift_storage.update_by_id(document)
+                        document['shifts'].remove(shift)
+                        await bot.shift_storage.update_by_id(document)
 
     await invis_embed(ctx, f'{member.display_name}\'s shift data has been cleared.')
 
@@ -8880,11 +8872,9 @@ async def clearall(ctx):
                 print(shift)
                 if isinstance(shift, dict):
                     if shift['guild'] == ctx.guild.id:
-                        for i in document['shifts']:
-                            doc_shifts.remove(i)
-            print(doc_shifts)
-            document['shifts'] = doc_shifts
-            await bot.shift_storage.update_by_id(document)
+                        document['shifts'].remove(shift)
+                        print('REMOVED')
+                        await bot.shift_storage.update_by_id(document)
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Success!",
