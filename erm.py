@@ -8867,16 +8867,12 @@ async def clearall(ctx):
         return await invis_embed(ctx, 'Successfully cancelled.')
 
     async for document in bot.shift_storage.db.find({"shifts": {"$elemMatch": {"guild": ctx.guild.id}}}):
-        doc_shifts = document['shifts']
-        if isinstance(document['shifts'], list):
+        if 'shifts' in document.keys():
             for shift in document['shifts']:
-                print(shift)
                 if isinstance(shift, dict):
                     if shift['guild'] == ctx.guild.id:
                         document['shifts'].remove(shift)
-                        print('REMOVED')
-                        if '_id' in document.keys():
-                            await bot.shift_storage.update_by_id(document)
+            await bot.shift_storage.db.replace_one({'_id': document['_id']}, document)
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Success!",
