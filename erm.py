@@ -4743,7 +4743,7 @@ async def punishment_modify(ctx, id: str):
     item_index = 0
 
     for item in await bot.warnings.get_all():
-        for index, _item in enumerate(item['warnnings']):
+        for index, _item in enumerate(item['warnings']):
             if _item['id'] == id:
                 selected_item = _item
                 selected_items.append(_item)
