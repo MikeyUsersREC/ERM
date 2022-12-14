@@ -386,9 +386,14 @@ async def punishment_types(ctx):
 
     embed = discord.Embed(title="<:MalletWhite:1035258530422341672> Punishment Types", color=0x2E3136)
     for item in Data['types']:
-        embed.add_field(name=f"<:WarningIcon:1035258528149033090> {item}",
-                        value=f"<:ArrowRightW:1035023450592514048> **Generic:** {'<:CheckIcon:1035018951043842088>' if item.lower() in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Custom:** {'<:CheckIcon:1035018951043842088>' if item.lower() not in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}",
-                        inline=False)
+        if isinstance(item, str):
+            embed.add_field(name=f"<:WarningIcon:1035258528149033090> {item}",
+                            value=f"<:ArrowRight:1035003246445596774> Generic: {'<:CheckIcon:1035018951043842088>' if item.lower() in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRight:1035003246445596774> Custom: {'<:CheckIcon:1035018951043842088>' if item.lower() not in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}",
+                            inline=False)
+        elif isinstance(item, dict):
+            embed.add_field(name=f"<:WarningIcon:1035258528149033090> {item['name'].lower().title()}",
+                            value=f"<:ArrowRight:1035003246445596774> Generic: {'<:CheckIcon:1035018951043842088>' if item['name'].lower() in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRight:1035003246445596774> Custom: {'<:CheckIcon:1035018951043842088>' if item['name'].lower() not in ['warning', 'kick', 'ban', 'temporary ban', 'bolo'] else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRight:1035003246445596774> Channel: {bot.get_channel(item['channel']).mention if item['channel'] is not None else 'None'}",
+                            inline=False)
 
     if len(embed.fields) == 0:
         embed.add_field(name="<:WarningIcon:1035258528149033090> No types",
@@ -401,22 +406,61 @@ async def punishment_types(ctx):
 
     if view.value == "create":
         typeName = view.modal.name.value
-        if typeName.lower() in [type.lower() for type in Data['types']]:
+
+        # send a view for the channel of the type
+        already_types = []
+        for item in Data['types']:
+            if isinstance(item, dict):
+                already_types.append(item['name'].lower())
+            else:
+                already_types.append(item.lower())
+
+        if typeName.lower() in already_types:
             return await invis_embed(ctx, 'This punishment type already exists.')
-        Data['types'].append(typeName.lower().title())
+
+        embed = discord.Embed(
+            title="<:MalletWhite:1035258530422341672> Create a Punishment Type",
+            color=0x2E3136,
+            description=f"<:ArrowRight:1035003246445596774> What channel do you want this punishment type to be logged in?"
+        )
+        newview = ChannelSelect(ctx.author.id, limit=1)
+        await msg.edit(embed=embed, view=newview)
+        await newview.wait()
+
+        data = {
+            "name": typeName.lower().title(),
+            "channel": newview.value[0].id
+        }
+
+        Data['types'].append(data)
         await bot.punishment_types.upsert(Data)
         success = discord.Embed(
             title=f"<:CheckIcon:1035018951043842088> {typeName.lower().title()} Added",
             description=f"<:ArrowRightW:1035023450592514048>**{typeName.lower().title()}** has been added as a punishment type.",
             color=0x71c15f
         )
-        await msg.edit(embed=success)
+        await msg.edit(embed=success, view=None)
     else:
         if view.value == "delete":
             typeName = view.modal.name.value
-            if typeName.lower() not in [type.lower() for type in Data['types']]:
+            already_types = []
+            for item in Data['types']:
+                if isinstance(item, dict):
+                    already_types.append(item['name'].lower())
+                else:
+                    already_types.append(item.lower())
+            if typeName.lower() not in already_types:
                 return await invis_embed(ctx, 'This punishment type doesn\'t exist.')
-            Data['types'].remove(typeName.lower().title())
+            try:
+                Data['types'].remove(typeName.lower().title())
+            except ValueError:
+                for item in Data['types']:
+                    if isinstance(item, dict):
+                        if item['name'].lower() == typeName.lower():
+                            Data['types'].remove(item)
+                    elif isinstance(item, str):
+                        if item.lower() == typeName.lower():
+                            Data['types'].remove(item)
             await bot.punishment_types.upsert(Data)
             success = discord.Embed(
                 title=f"<:CheckIcon:1035018951043842088> {typeName.lower().title()} Removed",
@@ -442,12 +486,21 @@ async def punishment_autocomplete(
         for command in Data['types']:
             if current not in ["", " "]:
                 print(current)
-                if command.lower().startswith(
-                        current.lower()) or current.lower() in command.lower() or command.lower().endswith(
-                    current.lower()):
-                    commands.append(command)
+                if isinstance(command, str):
+                    if command.lower().startswith(
+                            current.lower()) or current.lower() in command.lower() or command.lower().endswith(
+                        current.lower()):
+                        commands.append(command)
+                elif isinstance(command, dict):
+                    if command['name'].lower().startswith(current) or current.lower() in command['name'].lower() or \
+                            command['name'].lower().endswith(current.lower()) or current in command['name'].lower():
+                        commands.append(command['name'])
             else:
-                commands.append(command)
+                if isinstance(command, str):
+                    commands.append(command)
+                elif isinstance(command, dict):
+                    commands.append(command['name'])
+
         if len(commands) == 0:
             return [discord.app_commands.Choice(name='No punishment types found', value="NULL")]
 
@@ -480,10 +533,17 @@ async def user_autocomplete(
                             choices.append(discord.app_commands.Choice(name=user['name'], value=user['name']))
                         return choices
                 else:
-                    searches = bot.warnings.db.find().sort([("$natural", -1)]).limit(25)
+                    searches = bot.warnings.db.find({'_id': {'$regex': f'{current.lower()}/i'}}).sort(
+                        [("$natural", -1)]).limit(25)
+
                     choices = []
                     async for search in searches:
                         choices.append(discord.app_commands.Choice(name=search['_id'], value=search['_id']))
+                    if not choices:
+                        searches = bot.warnings.db.find().sort(
+                            [("$natural", -1)]).limit(25)
+                        async for search in searches:
+                            choices.append(discord.app_commands.Choice(name=search['_id'], value=search['_id']))
                     return choices
 
 
@@ -524,19 +584,34 @@ async def punish(ctx, user: str, type: str, *, reason: str):
     designated_channel = None
     settings = await bot.settings.find_by_id(ctx.guild.id)
     if settings:
-        if settings['customisation'].get('kick_channel'):
-            if settings['customisation']['kick_channel'] != "None":
-                if type.lower() == "kick":
-                    designated_channel = bot.get_channel(settings['customisation']['kick_channel'])
-        if settings['customisation'].get('ban_channel'):
-            if settings['customisation']['ban_channel'] != "None":
-                if type.lower() == "ban":
-                    designated_channel = bot.get_channel(settings['customisation']['ban_channel'])
-        if settings['customisation'].get('bolo_channel'):
-            if settings['customisation']['bolo_channel'] != "None":
-                if type.lower() == "bolo":
-                    designated_channel = bot.get_channel(settings['customisation']['bolo_channel'])
+        warning_type = None
+        for warning in warning_types:
+            if isinstance(warning, str):
+                if warning.lower() == type.lower():
+                    warning_type = warning
+            elif isinstance(warning, dict):
+                if warning['name'].lower() == type.lower():
+                    warning_type = warning
 
+        if isinstance(warning_type, str):
+            if settings['customisation'].get('kick_channel'):
+                if settings['customisation']['kick_channel'] != "None":
+                    if type.lower() == "kick":
+                        designated_channel = bot.get_channel(settings['customisation']['kick_channel'])
+            if settings['customisation'].get('ban_channel'):
+                if settings['customisation']['ban_channel'] != "None":
+                    if type.lower() == "ban":
+                        designated_channel = bot.get_channel(settings['customisation']['ban_channel'])
+            if settings['customisation'].get('bolo_channel'):
+                if settings['customisation']['bolo_channel'] != "None":
+                    if type.lower() == "bolo":
+                        designated_channel = bot.get_channel(settings['customisation']['bolo_channel'])
+        else:
+            if 'channel' in warning_type.keys():
+                if warning_type['channel'] != "None":
+                    designated_channel = bot.get_channel(warning_type['channel'])
+
+    print(designated_channel)
     if designated_channel is None:
         try:
             designated_channel = bot.get_channel(settings['punishments']['channel'])
@@ -550,7 +625,14 @@ async def punish(ctx, user: str, type: str, *, reason: str):
     if type.lower() == "warn":
         type = "Warning" if "Warning" in warning_types else "Warning"
 
-    if type.lower() not in [t.lower() for t in warning_types]:
+    already_types = []
+    for item in warning_types:
+        if isinstance(item, dict):
+            already_types.append(item['name'].lower())
+        else:
+            already_types.append(item.lower())
+
+    if type.lower() not in already_types:
         return await invis_embed(ctx,
                                  f"`{type}` is an invalid punishment type. Ask your server administrator to add this type via `/punishment types`")
 
@@ -959,7 +1041,8 @@ async def check_reminders():
                     await bot.reminders.update_by_id(guildObj)
 
                     await channel.send(" ".join(roles), embed=embed)
-            except:
+            except Exception as e:
+                print('Could not send reminder: {}'.format(e))
                 pass
 
 
@@ -1398,7 +1481,9 @@ async def activity_report(ctx):
 
     all_staff = [{"id": None, "total_seconds": 0}]
 
-    for document in await bot.shift_storage.get_all():
+    async for document in bot.shift_storage.db.find({'shifts': {
+        '$elemMatch': {'startTimestamp': {'$gte': starting_period.timestamp(), '$lte': ending_period.timestamp(),
+                                          'guild': ctx.guild.id}}}}):
         total_seconds = 0
         if "shifts" in document.keys():
             if isinstance(document['shifts'], list):
@@ -4677,7 +4762,7 @@ async def removewarning(ctx, id: str):
     selected_items = []
     item_index = 0
 
-    for item in await bot.warnings.get_all():
+    async for item in bot.warnings.db.find({'warnings': {'$elemMatch': {'id': id}}}):
         for index, _item in enumerate(item['warnings']):
             if _item['id'] == id:
                 selected_item = _item
@@ -4742,7 +4827,7 @@ async def punishment_modify(ctx, id: str):
     selected_items = []
     item_index = 0
 
-    for item in await bot.warnings.get_all():
+    async for item in bot.warnings.db.find({'warnings': {'$elemMatch': {'id': id}}}):
         for index, _item in enumerate(item['warnings']):
             if _item['id'] == id:
                 selected_item = _item
@@ -4808,7 +4893,7 @@ async def punishment_modify(ctx, id: str):
         description=f"<:ArrowRightW:1035023450592514048>This punishment has been modified successfully.",
         color=0x71c15f
     )
-    msg.edit(embed=success)
+    await msg.edit(embed=success)
 
 
 @bot.hybrid_command(
@@ -5427,7 +5512,7 @@ async def bolo_void(ctx, id: str):
     selected_items = []
     item_index = 0
 
-    for item in await bot.warnings.get_all():
+    async for item in bot.warnings.db.find({'warnings': {'$elemMatch': {'id': id}}}):
         for index, _item in enumerate(item['warnings']):
             if _item['id'] == id:
                 if _item['Type'] == "BOLO":
