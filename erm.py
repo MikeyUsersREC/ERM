@@ -1714,10 +1714,6 @@ async def on_message(message: discord.Message):
     if "bypass_role" in dataset['antiping'].keys():
         bypass_role = dataset['antiping']['bypass_role']
 
-    if dataset['antiping']['enabled'] is False or dataset['antiping']['role'] is None:
-        await bot.process_commands(message)
-        return
-
     if isinstance(bypass_role, list):
         bypass_roles = [discord.utils.get(message.guild.roles, id=role) for role in bypass_role]
     else:
@@ -1743,7 +1739,6 @@ async def on_message(message: discord.Message):
                     webhook_channel = discord.utils.get(message.guild.channels, id=webhook_channel)
                     aa_detection_channel = dataset['game_security']['channel']
                     aa_detection_channel = discord.utils.get(message.guild.channels, id=aa_detection_channel)
-    print(f"{aa_detection} - {message.guild.name} # This is a temporary test")
     if aa_detection == True:
         if webhook_channel != None:
             print('webhook channel')
@@ -1832,6 +1827,10 @@ async def on_message(message: discord.Message):
         return
 
     if antiping_roles is None:
+        await bot.process_commands(message)
+        return
+
+    if dataset['antiping']['enabled'] is False or dataset['antiping']['role'] is None:
         await bot.process_commands(message)
         return
 
