@@ -1023,7 +1023,12 @@ async def check_reminders():
 
                 if tD.timestamp() - item['lastTriggered'] >= interval:
                     guild = bot.get_guild(int(guildObj['_id']))
+                    if not guild:
+                        raise discord.NotFound("Guild not found")
                     channel = guild.get_channel(int(item['channel']))
+                    if not channel:
+                        raise discord.NotFound("Channel not found")
+
                     roles = []
                     try:
                         for role in item['role']:
@@ -1736,13 +1741,19 @@ async def on_message(message: discord.Message):
                     webhook_channel = discord.utils.get(message.guild.channels, id=webhook_channel)
                     aa_detection_channel = dataset['game_security']['channel']
                     aa_detection_channel = discord.utils.get(message.guild.channels, id=aa_detection_channel)
-    if aa_detection is True:
-        if webhook_channel is not None:
+    print(aa_detection)
+    if aa_detection == True:
+        if webhook_channel != None:
+            print('webhook channel')
             if message.channel.id == webhook_channel.id:
                 for embed in message.embeds:
+                    print('embed found')
                     if embed.description not in ["", None] and embed.title not in ["", None]:
+                        print('embed desc')
                         if ":kick" in embed.description or ":ban" in embed.description:
+                            print('used kick/ban command')
                             if 'Command Usage' in embed.title or 'Kick/Ban Command Usage' in embed.title:
+                                print('command usage')
                                 raw_content = embed.description
                                 user, command = raw_content.split('used the command: ')
                                 code = embed.footer.text.split('Server: ')[1]
