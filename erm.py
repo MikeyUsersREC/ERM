@@ -1024,10 +1024,10 @@ async def check_reminders():
                 if tD.timestamp() - item['lastTriggered'] >= interval:
                     guild = bot.get_guild(int(guildObj['_id']))
                     if not guild:
-                        raise discord.NotFound("Guild not found")
+                        raise Exception
                     channel = guild.get_channel(int(item['channel']))
                     if not channel:
-                        raise discord.NotFound("Channel not found")
+                        raise Exception
 
                     roles = []
                     try:
@@ -1391,8 +1391,10 @@ async def on_guild_join(guild: discord.Guild):
         <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
         <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
         """
-        embed.set_footer(icon_url=guild.icon.url, text=guild.name)
-
+        try:
+            embed.set_footer(icon_url=guild.icon.url, text=guild.name)
+        except AttributeError:
+            pass
         await channel.send(embed=embed)
         logging.info('Server has been sent welcome sequence.')
 
@@ -1487,8 +1489,8 @@ async def activity_report(ctx):
     all_staff = [{"id": None, "total_seconds": 0}]
 
     async for document in bot.shift_storage.db.find({'shifts': {
-        '$elemMatch': {'startTimestamp': {'$gte': starting_period.timestamp(), '$lte': ending_period.timestamp(),
-                                          'guild': ctx.guild.id}}}}):
+        '$elemMatch': {'startTimestamp': {'$gte': starting_period.timestamp(), '$lte': ending_period.timestamp()},
+                       'guild': ctx.guild.id}}}):
         total_seconds = 0
         if "shifts" in document.keys():
             if isinstance(document['shifts'], list):
