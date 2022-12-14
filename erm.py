@@ -1743,7 +1743,7 @@ async def on_message(message: discord.Message):
                     webhook_channel = discord.utils.get(message.guild.channels, id=webhook_channel)
                     aa_detection_channel = dataset['game_security']['channel']
                     aa_detection_channel = discord.utils.get(message.guild.channels, id=aa_detection_channel)
-    print(aa_detection)
+    print(f"{aa_detection} - {message.guild.name} # This is a temporary test")
     if aa_detection == True:
         if webhook_channel != None:
             print('webhook channel')
