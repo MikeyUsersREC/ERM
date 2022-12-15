@@ -607,9 +607,10 @@ async def punish(ctx, user: str, type: str, *, reason: str):
                     if type.lower() == "bolo":
                         designated_channel = bot.get_channel(settings['customisation']['bolo_channel'])
         else:
-            if 'channel' in warning_type.keys():
-                if warning_type['channel'] != "None":
-                    designated_channel = bot.get_channel(warning_type['channel'])
+            if isinstance(warning_type, dict):
+                if 'channel' in warning_type.keys():
+                    if warning_type['channel'] != "None":
+                        designated_channel = bot.get_channel(warning_type['channel'])
 
     print(designated_channel)
     if designated_channel is None:
