@@ -1056,7 +1056,7 @@ async def check_loa():
     loas = bot.loas
 
     for loaObject in await loas.get_all():
-        if datetime.datetime.now(tz=None).timestamp() > loaObject['expiry'] and loaObject["expired"] == False:
+        if datetime.datetime.utcnow().timestamp() > loaObject['expiry'] and loaObject["expired"] == False:
             loaObject['expired'] = True
             print(loaObject)
             await bot.loas.update_by_id(loaObject)
@@ -1149,7 +1149,7 @@ async def on_command_error(ctx, error):
             await bot.errors.insert({
                 "_id": error_id,
                 "error": str(error),
-                "time": datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+                "time": datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
                 "channel": ctx.channel.id,
                 "guild": ctx.guild.id
             })
@@ -1456,7 +1456,7 @@ async def activity_report(ctx):
     if view.value.endswith('d'):
         amount_of_days = view.value.removesuffix('d')
         amount = int(amount_of_days)
-        datetime_obj = datetime.datetime.now()
+        datetime_obj = datetime.datetime.utcnow()
         ending_period = datetime_obj
         starting_period = datetime_obj - datetime.timedelta(days=amount)
     elif view.value == "custom":
@@ -4254,7 +4254,7 @@ async def search(ctx, *, query):
 
         if User.is_banned:
             triggered_alerts.append('IsBanned')
-        if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+        if (pytz.utc.localize(datetime.datetime.utcnow()) - User.created).days < 100:
             triggered_alerts.append('AccountAge')
         if not User:
             triggered_alerts.append('UserDoesNotExist')
@@ -4316,7 +4316,7 @@ async def search(ctx, *, query):
 
         if User.is_banned:
             triggered_alerts.append('IsBanned')
-        if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+        if (pytz.utc.localize(datetime.datetime.utcnow()) - User.created).days < 100:
             triggered_alerts.append('AccountAge')
         if not User:
             triggered_alerts.append('UserDoesNotExist')
@@ -4539,7 +4539,7 @@ async def globalsearch(ctx, *, query):
 
         if User.is_banned:
             triggered_alerts.append('IsBanned')
-        if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+        if (pytz.utc.localize(datetime.datetime.utcnow()) - User.created).days < 100:
             triggered_alerts.append('AccountAge')
         if not User:
             triggered_alerts.append('UserDoesNotExist')
@@ -4601,7 +4601,7 @@ async def globalsearch(ctx, *, query):
 
             if User.is_banned:
                 triggered_alerts.append('IsBanned')
-            if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+            if (pytz.utc.localize(datetime.datetime.utcnow()) - User.created).days < 100:
                 triggered_alerts.append('AccountAge')
             if not User:
                 triggered_alerts.append('UserDoesNotExist')
@@ -4635,7 +4635,7 @@ async def globalsearch(ctx, *, query):
 
         if User.is_banned:
             triggered_alerts.append('IsBanned')
-        if (pytz.utc.localize(datetime.datetime.now()) - User.created).days < 100:
+        if (pytz.utc.localize(datetime.datetime.utcnow()) - User.created).days < 100:
             triggered_alerts.append('AccountAge')
         if not User:
             triggered_alerts.append('UserDoesNotExist')
@@ -4890,7 +4890,7 @@ async def punishment_modify(ctx, id: str):
 
         selected_item['Type'] = type
         try:
-            selected_item['Until'] = datetime.datetime.now().timestamp() + seconds
+            selected_item['Until'] = datetime.datetime.utcnow().timestamp() + seconds
         except:
             pass
         parent_item['warnings'][item_index] = selected_item
@@ -7064,7 +7064,7 @@ async def manage(ctx):
 
     all_staff = [{"id": None, "total_seconds": 0, "quota_seconds": 0}]
 
-    datetime_obj = datetime.datetime.now()
+    datetime_obj = datetime.datetime.utcnow()
     ending_period = datetime_obj
     starting_period = datetime_obj - datetime.timedelta(days=7)
 
@@ -7165,7 +7165,9 @@ async def manage(ctx):
                 else:
                     custom += 1
 
-        time_delta = datetime.datetime.now() - datetime.datetime.fromtimestamp(shift['startTimestamp'])
+        print(datetime.datetime.fromtimestamp(shift['startTimestamp']))
+        time_delta = datetime.datetime.utcnow() - datetime.datetime.fromtimestamp(
+            shift['startTimestamp'])
 
         embed2 = discord.Embed(
             title=f"<:Clock:1035308064305332224> {ctx.author.name}#{ctx.author.discriminator}'s Current Shift",
@@ -7185,13 +7187,13 @@ async def manage(ctx):
                 if item['ended']:
                     break_seconds += item['ended'] - item['started']
                 else:
-                    break_seconds += datetime.datetime.now().timestamp() - item['started']
+                    break_seconds += datetime.datetime.utcnow().timestamp() - item['started']
 
         break_seconds = int(break_seconds)
 
         embed2.add_field(
             name="<:Setup:1035006520817090640> Shift Status",
-            value=f"<:ArrowRight:1035003246445596774> {'On-Duty' if status == 'on' else 'On-Break'} {'<:CurrentlyOnDuty:1045079678353932398>' if status == 'on' else '<:Break:1045080685012062329>'}\n<:ArrowRight:1035003246445596774> {td_format(time_delta)} on shift\n<:ArrowRight:1035003246445596774> {len(shift['breaks']) if 'breaks' in shift.keys() else '0'} breaks\n<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else 0} on break",
+            value=f"<:ArrowRight:1035003246445596774> {'On-Duty' if status == 'on' else 'On-Break'} {'<:CurrentlyOnDuty:1045079678353932398>' if status == 'on' else '<:Break:1045080685012062329>'}\n<:ArrowRight:1035003246445596774> {td_format(time_delta)} on shift\n<:ArrowRight:1035003246445596774> {len(shift['breaks']) if 'breaks' in shift.keys() else '0'} breaks\n<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else '0 seconds'} on break",
         )
         msg = await ctx.send(embeds=[embed, embed2], view=view)
     else:
@@ -8454,7 +8456,8 @@ async def get_shift_time(interaction: discord.Interaction, member: discord.Membe
     if not in_guild:
         return await int_invis_embed(interaction, 'This member is not currently on shift.', ephemeral=True)
 
-    timedelta = datetime.datetime.now() - datetime.datetime.fromtimestamp(shift["startTimestamp"])
+    timedelta = datetime.datetime.utcnow().replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+        shift["startTimestamp"])
 
     if 'added_time' in shift.keys():
         timedelta += datetime.timedelta(seconds=shift['added_time'])
@@ -8788,12 +8791,13 @@ async def shift_leaderboard(ctx):
                 if shift['guild'] == ctx.guild.id:
                     if shift['totalSeconds'] > 0:
                         total_seconds += int(shift['totalSeconds'])
-                        if document['_id'] not in [item['id'] for item in all_staff]:
-                            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
-                        else:
-                            for item in all_staff:
-                                if item['id'] == document['_id']:
-                                    item['total_seconds'] = total_seconds
+
+        if document['_id'] not in [item['id'] for item in all_staff]:
+            all_staff.append({'id': document['_id'], 'total_seconds': total_seconds})
+        else:
+            for item in all_staff:
+                if item['id'] == document['_id']:
+                    item['total_seconds'] = total_seconds
 
     if len(all_staff) == 0:
         return await invis_embed(ctx, 'No shifts were made in your server.')
@@ -8913,34 +8917,37 @@ async def clearmember(ctx, member: discord.Member = None):
 
     view = YesNoMenu(ctx.author.id)
 
+    msg: typing.Union[discord.Message, None] = None
     if ctx.author == member:
         embed = discord.Embed(
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear your shift data?** This is irreversible.',
             color=0x2E3136)
 
-        await ctx.send(embed=embed, view=view)
+        msg = await ctx.send(embed=embed, view=view)
     else:
         embed = discord.Embed(
             description=f'<:WarningIcon:1035258528149033090> **Are you sure you would like to clear {member.display_name}\'s shift data?** This is irreversible.',
             color=0x2E3136)
-        await ctx.send(embed=embed, view=view)
+        msg = await ctx.send(embed=embed, view=view)
     await view.wait()
     if view.value is False:
         return await invis_embed(ctx, 'Successfully cancelled.')
 
     document = await bot.shift_storage.find_by_id(member.id)
-    if "shifts" in document.keys():
-        doc_shifts = document['shifts']
-        if isinstance(document['shifts'], list):
-            for shift in document['shifts']:
-                print(shift)
-                if isinstance(shift, dict):
-                    if shift['guild'] == ctx.guild.id:
-                        document['shifts'].remove(shift)
-                        if '_id' in document.keys():
-                            await bot.shift_storage.update_by_id(document)
+    if 'shifts' in document.keys():
+        for shift in document['shifts'].copy():
+            if isinstance(shift, dict):
+                if shift['guild'] == ctx.guild.id:
+                    document['shifts'].remove(shift)
+        await bot.shift_storage.db.replace_one({'_id': document['_id']}, document)
 
-    await invis_embed(ctx, f'{member.display_name}\'s shift data has been cleared.')
+    successEmbed = discord.Embed(
+        title="<:CheckIcon:1035018951043842088> Success!",
+        description=f"<:ArrowRight:1035003246445596774> {member.display_name}'s shifts in your server have been cleared.",
+        color=0x71c15f
+    )
+
+    await msg.edit(embed=successEmbed, view=None)
 
 
 @duty.command(name='clearall',
@@ -8958,14 +8965,14 @@ async def clearall(ctx):
         description='<:WarningIcon:1035258528149033090> **Are you sure you would like to clear ALL shift data?** This is irreversible.',
         color=0x2E3136)
 
-    await ctx.send(view=view, embed=embed)
+    msg = await ctx.send(view=view, embed=embed)
     await view.wait()
     if view.value is False:
         return await invis_embed(ctx, 'Successfully cancelled.')
 
     async for document in bot.shift_storage.db.find({"shifts": {"$elemMatch": {"guild": ctx.guild.id}}}):
         if 'shifts' in document.keys():
-            for shift in document['shifts']:
+            for shift in document['shifts'].copy():
                 if isinstance(shift, dict):
                     if shift['guild'] == ctx.guild.id:
                         document['shifts'].remove(shift)
@@ -8973,11 +8980,11 @@ async def clearall(ctx):
 
     successEmbed = discord.Embed(
         title="<:CheckIcon:1035018951043842088> Success!",
-        description=f"<:ArrowRight:1035003246445596774> All shifts from your server have been cleared.",
+        description=f"<:ArrowRight:1035003246445596774> All shifts in your server have been cleared.",
         color=0x71c15f
     )
 
-    await ctx.send(embed=successEmbed)
+    await msg.edit(embed=successEmbed, view=None)
 
 
 if __name__ == "__main__":
