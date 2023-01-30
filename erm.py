@@ -5904,7 +5904,8 @@ async def help(ctx, *, command=None):
             "Reminders": "<:Resume:1035269012445216858>",
             "Activity Management": "<:Pause:1035308061679689859>",
             "Custom Commands": "<:QMark:1035308059532202104>",
-            "Verification": "<:SettingIcon:1035353776460152892>"
+            "Verification": "<:SettingIcon:1035353776460152892>",
+            "Game Logging": "<:SConductTitle:1053359821308567592>"
         }
 
         for command in bot.walk_commands():
