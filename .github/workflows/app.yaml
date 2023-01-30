@@ -28,12 +28,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade discord.py num2words gitpython git sentry_sdk[pymongo] discord hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
+          pip3 install --upgrade discord.py num2words gitpython git sentry_sdk[pymongo] discord hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
 
 
       - name: Install later dependencies
         run: |
-          python -m pip install --upgrade reactionmenu jishaku oauth2client gspread
+          pip3 install --upgrade reactionmenu jishaku oauth2client gspread
 
       - name: Run test suite
         run: |
