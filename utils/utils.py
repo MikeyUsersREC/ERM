@@ -72,9 +72,10 @@ async def get_prefix(bot, message):
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
-async def invis_embed(ctx: commands.Context, content: str, **kwargs):
+async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
-    await ctx.send(embed=embed, **kwargs)
+    msg = await ctx.send(embed=embed, **kwargs)
+    return msg
 
 
 async def int_invis_embed(interaction, content, **kwargs):
@@ -84,9 +85,10 @@ async def int_invis_embed(interaction, content, **kwargs):
     except discord.InteractionResponded:
         await interaction.edit_original_response(embed=embed, **kwargs)
 
-async def coloured_embed(ctx: commands.Context, content: str, **kwargs):
-    embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
-    await ctx.send(embed=embed, **kwargs)
+async def coloured_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
+    embed = Embed(color=0x2E3136, description=f"{content}")
+    msg = await ctx.send(embed=embed, **kwargs)
+    return msg
 
 
 async def int_coloured_embed(interaction, content, **kwargs):
@@ -105,3 +107,21 @@ async def request_response(bot, ctx, question, **kwargs):
     except:
         raise Exception('No response')
     return response
+
+def make_ordinal(n):
+    """
+    Convert an integer into its ordinal representation::
+
+        make_ordinal(0)   => '0th'
+        make_ordinal(3)   => '3rd'
+        make_ordinal(122) => '122nd'
+        make_ordinal(213) => '213th'
+    """
+    n = int(n)
+    if 11 <= (n % 100) <= 13:
+        suffix = 'th'
+    else:
+        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+    return str(n) + suffix
+
+

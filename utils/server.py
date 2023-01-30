@@ -40,6 +40,55 @@ class Server(commands.Cog):
 
         return web.json_response({"guilds": guilds})
 
+    async def get_guild_settings(self, request):
+        json_data = await request.json()
+        guild_id = json_data.get('guild')
+        if not guild_id:
+            return web.json_response({"error": "Invalid guild"}, status=400)
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return web.json_response({"error": "Guild not found"}, status=404)
+
+        return web.json_response(settings)
+
+    async def update_guild_settings(self, request):
+        json_data = await request.json()
+        guild_id = json_data.get('guild')
+
+        for key, value in json_data.items():
+            if key == "guild":
+                continue
+            if isinstance(value, dict):
+                settings = await self.bot.settings.find_by_id(guild_id)
+                if not settings:
+                    return web.json_response({"error": "Guild not found"}, status=404)
+                for k, v in value.items():
+                    settings[key][k] = v
+        await self.bot.settings.update_by_id(settings)
+
+        if not guild_id:
+            return web.json_response({"error": "Invalid guild"}, status=400)
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return web.json_response({"error": "Guild not found"}, status=404)
+
+        return web.json_response(settings)
+
+
+    async def get_last_warnings(self, request):
+        json_data = await request.json()
+        guild_id = json_data.get('guild')
+
+        warning_objects = {}
+        async for document in self.bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": guild_id}}}).sort([("$natural", -1)]).limit(10):
+            warning_objects[document["_id"]] = list(filter(lambda x: x["Guild"] == guild_id, document["warnings"]))
+
+        return web.json_response(warning_objects)
+
+
+
     async def start_server(self):
         app = web.Application()
         cors = aiohttp_cors.setup(app)
@@ -56,6 +105,36 @@ class Server(commands.Cog):
 
         cors.add(
             cors.add(app.router.add_resource('/guilds')).add_route('POST', self.get_mutual_guilds), {
+                "localhost": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*"
+                )
+            }
+        )
+
+        cors.add(
+            cors.add(app.router.add_resource('/guild-settings')).add_route('GET', self.get_guild_settings), {
+                "localhost": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*"
+                )
+            }
+        )
+
+        cors.add(
+            cors.add(app.router.add_resource('/update-settings')).add_route('POST', self.update_guild_settings), {
+                "localhost": aiohttp_cors.ResourceOptions(
+                    allow_credentials=True,
+                    expose_headers="*",
+                    allow_headers="*"
+                )
+            }
+        )
+
+        cors.add(
+            cors.add(app.router.add_resource('/get-warnings')).add_route('GET', self.get_last_warnings), {
                 "localhost": aiohttp_cors.ResourceOptions(
                     allow_credentials=True,
                     expose_headers="*",
