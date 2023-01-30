@@ -2587,11 +2587,14 @@ async def setup(ctx):
                     if view.value == 'enable':
                         shift_types['enabled'] = True
                         settingContents['shift_types'] = shift_types
+                        settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
                         await bot.settings.update_by_id(settingContents)
                         await func()
                     elif view.value == 'disable':
                         shift_types['enabled'] = False
                         settingContents['shift_types'] = shift_types
+                        settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
+
                         await bot.settings.update_by_id(settingContents)
                         await func()
                     elif view.value == 'add':
@@ -2715,6 +2718,8 @@ async def setup(ctx):
                         })
 
                         settingContents['shift_types'] = shift_types
+                        settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
+
                         await bot.settings.update_by_id(settingContents)
                         await func()
                     elif view.value == 'edit':
@@ -2822,6 +2827,7 @@ async def setup(ctx):
                                 return
 
                             shift_type['name'] = name
+                            settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
 
                             await bot.settings.update_by_id(settingContents)
                         elif view.value == 'default':
@@ -2882,6 +2888,8 @@ async def setup(ctx):
                                 roles = []
 
                             shift_type['role'] = roles
+                            settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
+
                             await bot.settings.update_by_id(settingContents)
                         elif view.value == 'channel':
 
@@ -2917,6 +2925,8 @@ async def setup(ctx):
                                 channel = None
 
                             shift_type['channel'] = channel
+                            settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
+
                             await bot.settings.update_by_id(settingContents)
                         await func()
                     elif view.value == 'delete':
@@ -2949,6 +2959,7 @@ async def setup(ctx):
                         shift_type = shift_type[0]
 
                         shift_types.get('types').remove(shift_type)
+                        settingContents['_id'] = settingContents.get('_id') or ctx.guild.id
 
                         await bot.settings.update_by_id(settingContents)
                         await func()
