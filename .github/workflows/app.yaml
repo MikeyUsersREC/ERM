@@ -25,6 +25,11 @@ jobs:
         run: |
           flake8 --exit-zero 
 
+      - name: Update pip
+        run: |
+          pip3 install --upgrade pip
+
+
 
       - name: Install dependencies
         run: |
