@@ -31,7 +31,7 @@ jobs:
 
       - name: Install git
         run: |
-          apt-get install git
+          sudo apt-get install git
 
 
       - name: Install dependencies
