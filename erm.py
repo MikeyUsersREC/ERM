@@ -184,26 +184,25 @@ def is_staff():
 
     return commands.check(predicate)
 
+async def management_predicate(ctx):
+    guild_settings = await bot.settings.find_by_id(ctx.guild.id)
+    if guild_settings:
+        if 'management_role' in guild_settings['staff_management'].keys():
+            if guild_settings['staff_management']['management_role'] != "":
+                if isinstance(guild_settings['staff_management']['management_role'], list):
+                    for role in guild_settings['staff_management']['management_role']:
+                        if role in [role.id for role in ctx.author.roles]:
+                            return True
+                elif isinstance(guild_settings['staff_management']['management_role'], int):
+                    if guild_settings['staff_management']['management_role'] in [role.id for role in
+                                                                                 ctx.author.roles]:
+                        return True
+    if ctx.author.guild_permissions.manage_guild:
+        return True
+    return False
 
 def is_management():
-    async def predicate(ctx):
-        guild_settings = await bot.settings.find_by_id(ctx.guild.id)
-        if guild_settings:
-            if 'management_role' in guild_settings['staff_management'].keys():
-                if guild_settings['staff_management']['management_role'] != "":
-                    if isinstance(guild_settings['staff_management']['management_role'], list):
-                        for role in guild_settings['staff_management']['management_role']:
-                            if role in [role.id for role in ctx.author.roles]:
-                                return True
-                    elif isinstance(guild_settings['staff_management']['management_role'], int):
-                        if guild_settings['staff_management']['management_role'] in [role.id for role in
-                                                                                     ctx.author.roles]:
-                            return True
-        if ctx.author.guild_permissions.manage_guild:
-            return True
-        return False
-
-    return commands.check(predicate)
+    return commands.check(management_predicate)
 
 
 async def check_privacy(guild: int, setting: str):
@@ -408,7 +407,7 @@ async def punishment_manage(ctx):
         discord.SelectOption(label="Void a Punishment", value="void", emoji="<:TrashIcon:1042550860435181628>",
                              description="Remove a punishment from your server.")
     ])
-    await ctx.send(embed=embed, view=view)
+    msg = await ctx.send(embed=embed, view=view)
     timeout = await view.wait()
     if timeout:
         return
@@ -5308,7 +5307,7 @@ async def search(ctx, *, query):
         if len(triggered_alerts) == 0:
             triggered_alerts.append('NoAlerts')
 
-        embed1 = discord.Embed(title=query, color=0x2E3136)
+        embed1 = discord.Embed(title=f"{query} ({User.id})", color=0x2E3136)
         embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
         if await bot.flags.find_by_id(query.lower()):
             await staff_field(embed1, query.lower())
@@ -5337,8 +5336,6 @@ async def search(ctx, *, query):
 
         message = ctx.message
 
-        embed1 = discord.Embed(title=RESULTS[0][0]['name'], color=0x2E3136)
-        embed2 = discord.Embed(title=RESULTS[0][0]['name'], color=0x2E3136)
 
         result_var = None
         logging.info(message.content.lower())
@@ -5352,6 +5349,9 @@ async def search(ctx, *, query):
         triggered_alerts = []
 
         User = await client.get_user_by_username(result[0]['name'], expand=True, exclude_banned_users=False)
+
+        embed1 = discord.Embed(title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2E3136)
+        embed2 = discord.Embed(title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2E3136)
 
         listOfPerGuild = []
         for item in result:
@@ -10893,9 +10893,11 @@ async def shift_leaderboard(ctx):
         new_embeds = []
         for i in embeds:
             new_embeds.append(i)
-
-        view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined,
+        if management_predicate(ctx):
+            view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined,
                                         config("DUTY_LEADERBOARD_ID"))
+        else:
+            view = None
         await ctx.send(embeds=new_embeds, file=discord.File(fp=BytesIO(bbytes), filename='shift_leaderboard.txt'),
                        view=view)
     else:
@@ -10910,7 +10912,10 @@ async def shift_leaderboard(ctx):
             if embed is not None:
                 menu.add_pages([embed])
 
-        view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined, config("DUTY_LEADERBOARD_ID"))
+        if management_predicate(ctx):
+            view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined, config("DUTY_LEADERBOARD_ID"))
+        else:
+            view = None
         if len(menu.pages) == 1:
             return await ctx.send(embed=embed, file=file, view=view)
 
@@ -10970,6 +10975,7 @@ async def bolo(ctx):
                 aliases=['search', 'lookup'])
 @app_commands.autocomplete(user=user_autocomplete)
 @app_commands.describe(user="The user to search for.")
+@is_staff()
 async def active(ctx, user: str = None):
 
     if user is None:
