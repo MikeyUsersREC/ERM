@@ -2966,10 +2966,10 @@ async def setup(ctx):
 
                 await func()
 
-        privacyDefault = {
-            "_id": ctx.guild.id,
-            "global_warnings": True
-        }
+    privacyDefault = {
+        "_id": ctx.guild.id,
+        "global_warnings": True
+    }
 
     view = YesNoMenu(ctx.author.id)
     question = 'Do you want your server\'s warnings to be able to be queried across the bot? (e.g. `globalsearch`)'
