@@ -5224,7 +5224,7 @@ async def search(ctx, *, query):
                 async with session.post(f'https://users.roblox.com/v1/usernames/users',
                                         json={"usernames": [user]}) as r:
                     robloxUser = await r.json()
-                    if 'data' in robloxUser.keys():
+                    if 'data' in robloxUser.keys() and len(robloxUser['data']) == 1:
                         Id = robloxUser['data'][0]['id']
                         async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
                             requestJson = await r.json()
@@ -5603,7 +5603,7 @@ async def globalsearch(ctx, *, query):
                 async with session.post(f'https://users.roblox.com/v1/usernames/users',
                                         json={"usernames": [user]}) as r:
                     robloxUser = await r.json()
-                    if 'data' in robloxUser.keys():
+                    if 'data' in robloxUser.keys() and len(robloxUser['data']) == 1:
                         Id = robloxUser['data'][0]['id']
                         async with session.get(f'https://users.roblox.com/v1/users/{Id}') as r:
                             requestJson = await r.json()
