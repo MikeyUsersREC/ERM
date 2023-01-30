@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade discord.py num2words sentry_sdk[pymongo] discord hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
+          python -m pip install --upgrade discord.py num2words gspread oauth2client git sentry_sdk[pymongo] discord hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
 
 
       - name: Install later dependencies
