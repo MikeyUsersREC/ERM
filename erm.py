@@ -1498,7 +1498,8 @@ async def verify(ctx, user: str = None):
 
             else:
                 roblox_user = await r.json()
-                roblox_id = roblox_user['Id']
+                roblox_user = roblox_user['data'][0]
+                roblox_id = roblox_user['id']
 
     if not verified:
         await bot.verification.upsert({
