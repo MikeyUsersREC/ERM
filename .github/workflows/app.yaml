@@ -29,6 +29,9 @@ jobs:
         run: |
           pip3 install --upgrade pip
 
+      - name: Install git
+        run: |
+          apt-get install git
 
 
       - name: Install dependencies
