@@ -837,7 +837,6 @@ class ManageReminders(discord.ui.View):
     @discord.ui.button(label='Create a reminder', style=discord.ButtonStyle.green)
     async def create(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
-            await interaction.response.defer()
             for item in self.children:
                 item.disabled = True
             self.modal = CustomModal(f'Create a reminder', [
@@ -868,6 +867,7 @@ class ManageReminders(discord.ui.View):
                 )
             ])
             await interaction.response.send_modal(self.modal)
+            await self.modal.wait()
             self.value = "create"
             self.stop()
 
