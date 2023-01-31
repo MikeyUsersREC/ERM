@@ -154,6 +154,10 @@ async def Analytics(ctx: commands.Context):
 
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
+    if ctx.command:
+        if ctx.command.extras.get('ephemeral') is True:
+            if ctx.interaction:
+                return await ctx.defer(ephemeral=True)
     await ctx.defer()
 
 
@@ -1481,7 +1485,6 @@ async def verify(ctx, user: str = None):
                 if r.status == 200:
                     roblox_user = await r.json()
                     roblox_id = roblox_user['id']
-                    roblox_user['Username'] = roblox_user['name']
                     return await after_verified(roblox_user)
 
     async with aiohttp.ClientSession() as session:
@@ -1492,7 +1495,6 @@ async def verify(ctx, user: str = None):
                         if r.status == 200:
                             roblox_user = await r.json()
                             roblox_id = roblox_user['id']
-                            roblox_user['Username'] = roblox_user['name']
                         else:
                             return await invis_embed(ctx, 'That is not a valid roblox username. Please try again.')
 
@@ -1509,7 +1511,7 @@ async def verify(ctx, user: str = None):
         })
 
         embed = discord.Embed(color=0x2E3136)
-        embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['Username']}, let's get you verified!"
+        embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
         embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
         embed.set_footer(text=f'ROBLOX Verification provided by Emergency Response Management')
         view = Verification(ctx.author.id)
@@ -7272,7 +7274,7 @@ async def loa(ctx, time, *, reason):
 @loa.command(
     name='request',
     description="File a Leave of Absence request",
-    extras={"category": "Staff Management"},
+    extras={"category": "Staff Management", "ephemeral": True},
     with_app_command=True
 )
 @app_commands.describe(time="How long are you going to be on LoA for? (s/m/h/d)")
@@ -7386,7 +7388,7 @@ async def loarequest(ctx, time, *, reason):
     )
 
     if ctx.interaction:
-        await ctx.interaction.followup.send(embed=successEmbed, ephemeral=True)
+        await ctx.interaction.followup.send(embed=successEmbed)
     else:
         await ctx.send(embed=successEmbed)
 
@@ -8728,7 +8730,7 @@ async def ra(ctx, time, *, reason):
 @ra.command(
     name='request',
     description="File a Reduced Activity request",
-    extras={"category": "Staff Management"},
+    extras={"category": "Staff Management", "ephemeral": True},
     with_app_command=True
 )
 @app_commands.describe(time="How long are you going to be on RA for? (s/m/h/d)")
@@ -8843,7 +8845,7 @@ async def rarequest(ctx, time, *, reason):
     )
 
     if ctx.interaction:
-        await ctx.interaction.response.send_message(embed=successEmbed, ephemeral=True)
+        await ctx.interaction.followup.send(embed=successEmbed)
     else:
         await ctx.send(embed=successEmbed)
 
@@ -10089,7 +10091,7 @@ async def command_autocomplete(
 @custom.command(
     name="run",
     description="Run a custom command.",
-    extras={"category": "Custom Commands"},
+    extras={"category": "Custom Commands", "ephemeral": True},
 )
 @app_commands.autocomplete(command=command_autocomplete)
 @is_management()
@@ -10117,12 +10119,19 @@ async def run(ctx, command: str, channel: discord.TextChannel = None):
     for embed in selected['message']['embeds']:
         embeds.append(await interpret_embed(bot, ctx, channel, embed))
 
-    await channel.send(content=await interpret_content(bot, ctx, channel, selected['message']['content']),
-                       embeds=embeds)
     if ctx.interaction:
-        await int_invis_embed(ctx.interaction, "Successfully ran this custom command!", ephemeral=True)
+        embed = discord.Embed(
+            description='<:ArrowRight:1035003246445596774> Successfully ran this custom command!',
+            color=0x2e3136
+        )
+        
+        await ctx.interaction.followup.send(embed=embed)
+
     else:
         await invis_embed(ctx, "Successfully ran this custom command!")
+    await channel.send(content=await interpret_content(bot, ctx, channel, selected['message']['content']),
+                       embeds=embeds)
+
 
 
 @bot.tree.context_menu(name='Force start shift')
