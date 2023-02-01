@@ -8245,7 +8245,7 @@ async def manage(ctx):
                     else:
                         return
                 else:
-                    if settings['shift_types'].get('enabled') is True:
+                    if settings['shift_types'].get('enabled') is True and len(settings['shift_types'].get('types') or []) == 1:
                         shift_type = settings['shift_types']['types'][0]
                     else:
                         shift_type = None
