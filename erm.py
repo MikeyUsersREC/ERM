@@ -1459,7 +1459,7 @@ async def verify(ctx, user: str = None):
             await ctx.author.edit(nick=f"{roblox_user['name']}")
         except:
             pass
-        success_embed = discord.Embed(title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['Username']}!",
+        success_embed = discord.Embed(title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['name']}!",
                                       color=0x2E3136)
         success_embed.description = f"<:ArrowRight:1035003246445596774> You've been verified as <:LinkIcon:1044004006109904966> **{roblox_user['Username']}** in **{ctx.guild.name}**."
         success_embed.set_footer(text="ROBLOX Verification provided to you by Emergency Response Management (ERM)")
