@@ -85,6 +85,10 @@ async def int_invis_embed(interaction, content, **kwargs):
     except discord.InteractionResponded:
         await interaction.edit_original_response(embed=embed, **kwargs)
 
+def create_invis_embed(content: str, **kwargs) -> discord.Embed:
+    embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
+    return embed
+
 async def coloured_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
     embed = Embed(color=0x2E3136, description=f"{content}")
     msg = await ctx.send(embed=embed, **kwargs)

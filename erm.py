@@ -318,23 +318,18 @@ async def crp_data_to_mongo(jsonData, guildId: int):
                 await bot.warnings.insert(data)
 
 
-bot.staff_members = {
+bot.erm_team = {
     "i_imikey": "Bot Developer",
-    "kiper4k": "Support Team",
-    "mbrinkley": "Lead Support",
-    "ruru0303": "Support Team",
-    "myles_cbcb1421": "Support Team",
-    "theoneandonly_5567": "Manager",
-    "l0st_nations": "Junior Support",
-    "royalcrests": "Developer",
-    "quiverze": "Junior Support",
-    "jonylion": "Trial Support"
+    "mbrinkley": "Community Manager",
+    "theoneandonly_5567": "Executive Manager",
+    "royalcrests": "Website Developer & Asset Designer",
 }
 
 
 async def staff_field(embed, query):
+    flag = await bot.flags.find_by_id(query.lower())
     embed.add_field(name="<:FlagIcon:1035258525955395664> Flags",
-                    value="<:ArrowRight:1035003246445596774> ERM Staff",
+                    value=f"<:ArrowRight:1035003246445596774> {flag['rank']}",
                     inline=False)
     return embed
 
@@ -1410,31 +1405,22 @@ async def verify(ctx, user: str = None):
             verified = True
 
     if user is None and verified_user is None:
-        if ctx.interaction:
-            modal = RobloxUsername()
-            await ctx.interaction.response.send_modal(modal)
-            await modal.wait()
+        view = EnterRobloxUsername(ctx.author.id)
+        embed = discord.Embed(
+            title="<:LinkIcon:1044004006109904966> ERM Verification",
+            description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
+            color=0x2E3136
+        )
+        embed.set_footer(text="ROBLOX Verification provided by ERM")
+        await ctx.send(embed=embed, view=view)
+        await view.wait()
+        if view.modal:
             try:
-                user = modal.name.value
+                user = view.modal.name.value
             except:
                 return await invis_embed(ctx, 'You have not submitted a username. Please try again.')
         else:
-            view = EnterRobloxUsername(ctx.author.id)
-            embed = discord.Embed(
-                title="<:LinkIcon:1044004006109904966> ERM Verification",
-                description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
-                color=0x2E3136
-            )
-            embed.set_footer(text="ROBLOX Verification provided by ERM")
-            await ctx.send(embed=embed, view=view)
-            await view.wait()
-            if view.modal:
-                try:
-                    user = view.modal.name.value
-                except:
-                    return await invis_embed(ctx, 'You have not submitted a username. Please try again.')
-            else:
-                return await invis_embed(ctx, 'You have not submitted a username. Please try again.')
+            return await invis_embed(ctx, 'You have not submitted a username. Please try again.')
     else:
         if user is None:
             user = verified_user['roblox']
@@ -1470,7 +1456,7 @@ async def verify(ctx, user: str = None):
             except:
                 pass
         try:
-            await ctx.author.edit(nick=f"{roblox_user['Username']}")
+            await ctx.author.edit(nick=f"{roblox_user['name']}")
         except:
             pass
         success_embed = discord.Embed(title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['Username']}!",
@@ -1569,13 +1555,15 @@ async def on_guild_join(guild: discord.Guild):
     )
 
     try:
-        await guild.system_channel.send(
-            embed=embed
-        )
+        # await guild.system_channel.send(
+        #     embed=embed
+        # )
+        pass
     except:
-        await guild.owner.send(
-            embed=embed
-        )
+        # await guild.owner.send(
+        #     embed=embed
+        # )
+        pass
     finally:
         channel = bot.get_channel(1033021466381398086)
         embed = discord.Embed(color=0x2E3136)
@@ -3205,11 +3193,12 @@ async def viewconfig(ctx):
 
     embed.add_field(
         name='<:MessageIcon:1035321236793860116> Anti-ping',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}\n<:ArrowRightW:1035023450592514048>**Use Hierarchy:**'
         .format(
             settingContents['antiping']['enabled'],
             antiping_role,
-            bypass_role
+            bypass_role,
+            settingContents['antiping'].get('use_hierarchy') if settingContents['antiping'].get('use_hierarchy') is False else 'True'
         ),
         inline=False
     )
@@ -3295,13 +3284,22 @@ async def viewconfig(ctx):
         sts_logging_enabled = str(settingContents['game_logging']['sts']['enabled'])
         sts_logging_channel = str(settingContents['game_logging']['sts']['channel'])
 
-        message_logging_channel = ctx.guild.get_channel(int(message_logging_channel))
+        try:
+            message_logging_channel = ctx.guild.get_channel(int(message_logging_channel))
+        except TypeError:
+            message_logging_channel = None
+        
+        
         if message_logging_channel is None:
             message_logging_channel = 'None'
         else:
             message_logging_channel = message_logging_channel.mention
 
-        sts_logging_channel = ctx.guild.get_channel(int(sts_logging_channel))
+        try:
+            sts_logging_channel = ctx.guild.get_channel(int(sts_logging_channel))
+        except TypeError:
+            sts_logging_channel = None
+
         if sts_logging_channel is None:
             sts_logging_channel = 'None'
         else:
@@ -3495,6 +3493,16 @@ async def changeconfig(ctx):
             discord.SelectOption(
                 label="Set Bypass Roles",
                 description="Set the roles that can bypass antiping",
+                value="bypass_role",
+            ),
+            discord.SelectOption(
+                label="Enable Hierarchy",
+                description="Enable whether to apply antiping for roles higher than those selected",
+                value="bypass_role",
+            ),
+            discord.SelectOption(
+                label="Disable Hierarchy",
+                description="Disable whether to apply antiping for roles higher than those selected",
                 value="bypass_role",
             )
         ])
@@ -5418,7 +5426,7 @@ async def search(ctx, *, query):
                     if len(embeds[-1].fields) <= 2:
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                     else:
@@ -5427,14 +5435,14 @@ async def search(ctx, *, query):
                         embeds.append(new_embed)
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                 else:
                     if len(embeds[-1].fields) <= 2:
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                     else:
@@ -5443,7 +5451,7 @@ async def search(ctx, *, query):
                         embeds.append(new_embed)
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {action['Moderator']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
 
@@ -5767,16 +5775,15 @@ async def globalsearch(ctx, *, query):
             embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                              value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
             string = "\n".join([alerts[i] for i in triggered_alerts])
-            async with session.get(
-                    f'https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={User.id}&size=420x420&format=Png') as f:
-                if f.status == 200:
-                    avatar = await f.json()
-                    avatar = avatar['data'][0]['imageUrl']
-                else:
-                    avatar = ""
-            embed1.add_field(name='<:WarningIcon:1035258528149033090> Alerts', value=f'{string}', inline=False)
             async with aiohttp.ClientSession() as session:
-                pass
+                async with session.get(
+                        f'https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={User.id}&size=420x420&format=Png') as f:
+                    if f.status == 200:
+                        avatar = await f.json()
+                        avatar = avatar['data'][0]['imageUrl']
+                    else:
+                        avatar = ""
+            embed1.add_field(name='<:WarningIcon:1035258528149033090> Alerts', value=f'{string}', inline=False)
 
             embed1.set_thumbnail(url=avatar)
             return await ctx.send(embed=embed1)
@@ -5825,7 +5832,7 @@ async def globalsearch(ctx, *, query):
                     if len(embeds[-1].fields) <= 2:
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                     else:
@@ -5834,14 +5841,14 @@ async def globalsearch(ctx, *, query):
                         embeds.append(new_embed)
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **Until:** <t:{action['Until']}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                 else:
                     if len(embeds[-1].fields) <= 2:
                         embeds[-1].add_field(
                             name=f"<:WarningIcon:1035258528149033090> {action['Type']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp())}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
+                            value=f"<:ArrowRightW:1035023450592514048> **Reason:** {action['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(action['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(action['Time'], str) else int(action['Time'])}>\n<:ArrowRightW:1035023450592514048> **ID:** {action['id']}",
                             inline=False
                         )
                     else:
@@ -6150,6 +6157,7 @@ async def dutytime(ctx, member: discord.Member = None):
     description="Allows for you to administrate someone else's shift",
     extras={"category": "Shift Management"}
 )
+@is_management()
 async def duty_admin(ctx, member: discord.Member):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if configItem is None:
@@ -6461,7 +6469,7 @@ async def duty_admin(ctx, member: discord.Member):
                     else:
                         return
                 else:
-                    if settings['shift_types'].get('enabled') is True:
+                    if settings['shift_types'].get('enabled') is True and len(settings['shift_types'].get('types')) > 0:
                         shift_type = settings['shift_types']['types'][0]
                     else:
                         shift_type = None
@@ -8763,15 +8771,18 @@ async def rarequest(ctx, time, *, reason):
             reason.pop()
 
     if time.lower().endswith('s'):
-        time = int(removesuffix(time.lower(), 's'))
+        time = int(time.lower().replace('s', ''))
     elif time.lower().endswith('m'):
-        time = int(removesuffix(time.lower(), 'm')) * 60
+        time = int(time.lower().replace('m', '')) * 60
     elif time.lower().endswith('h'):
-        time = int(removesuffix(time.lower(), 'h')) * 60 * 60
+        time = int(time.lower().replace('h', '')) * 60 * 60
     elif time.lower().endswith('d'):
-        time = int(removesuffix(time.lower(), 'd')) * 60 * 60 * 24
+        time = int(time.lower().replace('d', '')) * 60 * 60 * 24
     elif time.lower().endswith('w'):
-        time = int(removesuffix(time.lower(), 'w')) * 60 * 60 * 24 * 7
+        time = int(time.lower().replace('w', '')) * 60 * 60 * 24 * 7
+    else:
+        return await invis_embed(ctx,
+                                    'A time must be provided at the start or at the end of the command. Example: `/ra 12h Going to walk my shark` / `/ra Mopping the ceiling 12h`')
 
     startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
     endTimestamp = int(startTimestamp + time)
@@ -10231,7 +10242,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
                 else:
                     return
             else:
-                if settings['shift_types'].get('enabled') is True:
+                if settings['shift_types'].get('enabled') is True and len(settings['shift_types'].get('types')) > 0:
                     shift_type = settings['shift_types']['types'][0]
                 else:
                     shift_type = None

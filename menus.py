@@ -2,7 +2,7 @@ import typing
 
 import discord
 
-from utils.utils import int_invis_embed
+from utils.utils import int_invis_embed, create_invis_embed
 
 REQUIREMENTS = ["gspread", "oauth2client"]
 try:
@@ -675,13 +675,15 @@ class LOAMenu(discord.ui.View):
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green, custom_id="loamenu:accept")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
 
         if not any(role in interaction.user.roles for role in self.roles):
             if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator:
-                return await int_invis_embed(interaction,
-                                             f'You do not have permissions to accept this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
-                                             ephemeral=True)
+                embed = discord.Embed(
+                    description=f'You do not have permissions to accept this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
+                    color=0x2e3136
+                )
+                await interaction.followup.send(embed=embed)
 
         for item in self.children:
             item.disabled = True
@@ -740,15 +742,17 @@ class LOAMenu(discord.ui.View):
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
-    @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger, custom_id="loamenu:deny")
+    @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger, custom_id="loamenu:deny-EPHEMERAL")
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
 
         if not any(role in interaction.user.roles for role in self.roles):
             if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator:
-                return await int_invis_embed(interaction,
-                                             'You do not have permissions to deny this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
-                                             ephemeral=True)
-
+                embed = discord.Embed(
+                    description=f'You do not have permissions to deny this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
+                    color=0x2e3136
+                )
+                await interaction.followup.send(embed=embed)
 
 
         modal = CustomModal(f'Reason for Denial', [
@@ -786,7 +790,7 @@ class LOAMenu(discord.ui.View):
                     user = guild.get_member(s_loa['user_id'])
                 except:
                     try:
-                        return await int_invis_embed(interaction, "User could not be found in the server.",
+                        return await interaction.followup.send(create_invis_embed(interaction, "User could not be found in the server."),
                                                      ephemeral=True)
                     except:
                         pass
