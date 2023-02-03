@@ -1773,6 +1773,10 @@ async def activity_report(ctx):
                     if isinstance(role_id, int):
                         staff_roles.append(ctx.guild.get_role(role_id))
 
+    for role in staff_roles.copy():
+        if role is None:
+            staff_roles.remove(role)
+
     for role in staff_roles:
         if isinstance(role, discord.Role):
             for member in role.members:
@@ -2241,11 +2245,13 @@ async def on_message(message: discord.Message):
             await bot.process_commands(message)
             return
 
-        for role in antiping_roles:
-            if role != None:
-                if message.author.top_role > role or message.author.top_role == role:
-                    await bot.process_commands(message)
-                    return
+
+        if dataset['antiping'].get('use_hierarchy') in [True, None]:
+            for role in antiping_roles:
+                if role != None:
+                    if message.author.top_role > role or message.author.top_role == role:
+                        await bot.process_commands(message)
+                        return
 
         if message.author == message.guild.owner:
             await bot.process_commands(message)
@@ -2255,30 +2261,56 @@ async def on_message(message: discord.Message):
             for role in antiping_roles:
                 print(antiping_roles)
                 print(role)
-                if role is not None:
-                    if mention.top_role > role or mention.top_role == role:
-                        embed = discord.Embed(
-                            title=f'Do not ping {role.name} or above!',
-                            color=discord.Color.red(),
-                            description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
-                        )
-                        try:
-                            msg = await message.channel.fetch_message(message.reference.message_id)
-                            if msg.author == mention:
-                                embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
-                        except:
-                            pass
+                if dataset['antiping'].get('use_hierarchy') in [True, None]:
+                    if role is not None:
+                        if mention.top_role > role or mention.top_role == role:
+                            embed = discord.Embed(
+                                title=f'Do not ping {role.name} or above!',
+                                color=discord.Color.red(),
+                                description=f'Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.'
+                            )
+                            try:
+                                msg = await message.channel.fetch_message(message.reference.message_id)
+                                if msg.author == mention:
+                                    embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                            except:
+                                pass
 
-                        embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                         icon_url=get_guild_icon(bot, message.guild))
+                            embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                             icon_url=get_guild_icon(bot, message.guild))
 
-                        ctx = await bot.get_context(message)
-                        await ctx.reply(f'{message.author.mention}', embed=embed)
+                            ctx = await bot.get_context(message)
+                            await ctx.reply(f'{message.author.mention}', embed=embed)
+                            return
+                        await bot.process_commands(message)
                         return
                     await bot.process_commands(message)
                     return
-                await bot.process_commands(message)
-                return
+                else:
+                    if role is not None:
+                        if role in mention.roles and not role in message.author.roles:
+                            embed = discord.Embed(
+                                title=f'Do not ping {role.name}!',
+                                color=discord.Color.red(),
+                                description=f'Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.'
+                            )
+                            try:
+                                msg = await message.channel.fetch_message(message.reference.message_id)
+                                if msg.author == mention:
+                                    embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                            except:
+                                pass
+
+                            embed.set_footer(text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                             icon_url=get_guild_icon(bot, message.guild))
+
+                            ctx = await bot.get_context(message)
+                            await ctx.reply(f'{message.author.mention}', embed=embed)
+                            return
+                        await bot.process_commands(message)
+                        return
+                    await bot.process_commands(message)
+                    return
     await bot.process_commands(message)
 
 
@@ -3193,12 +3225,12 @@ async def viewconfig(ctx):
 
     embed.add_field(
         name='<:MessageIcon:1035321236793860116> Anti-ping',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}\n<:ArrowRightW:1035023450592514048>**Use Hierarchy:**'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}\n<:ArrowRightW:1035023450592514048>**Use Hierarchy:** {}'
         .format(
             settingContents['antiping']['enabled'],
             antiping_role,
             bypass_role,
-            settingContents['antiping'].get('use_hierarchy') if settingContents['antiping'].get('use_hierarchy') is False else 'True'
+            settingContents['antiping'].get('use_hierarchy') if settingContents['antiping'].get('use_hierarchy') is not None else 'True'
         ),
         inline=False
     )
@@ -3498,12 +3530,12 @@ async def changeconfig(ctx):
             discord.SelectOption(
                 label="Enable Hierarchy",
                 description="Enable whether to apply antiping for roles higher than those selected",
-                value="bypass_role",
+                value="enable_hierarchy",
             ),
             discord.SelectOption(
                 label="Disable Hierarchy",
                 description="Disable whether to apply antiping for roles higher than those selected",
-                value="bypass_role",
+                value="disable_hierarchy",
             )
         ])
         embed = discord.Embed(
@@ -3544,6 +3576,11 @@ async def changeconfig(ctx):
 
             await view.wait()
             settingContents['antiping']['bypass_role'] = [role.id for role in view.value]
+
+        elif content == "enable_hierarchy" or content == "enable-hierarchy":
+            settingContents['antiping']['use_hierarchy'] = True
+        elif content == "disable_hierarchy" or content == "disable-hierarchy":
+            settingContents['antiping']['use_hierarchy'] = False
         else:
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == 'staff_management':
@@ -4761,17 +4798,37 @@ async def support_server(ctx):
 
 # uptime command
 # * Finally works, basic and uses the bot on_ready event
-@bot.hybrid_command(name='uptime', description="Shows the uptime of the bot.", extras={"category": "Utility"})
-async def uptime(ctx):
-    # using an embed
-    current_time = time.time()
-    difference = int(round(current_time - bot.start_time))
-    text = datetime.timedelta(seconds=difference)
-    embed = discord.Embed(color=0x2E3136)
-    embed.add_field(name='<:Resume:1035269012445216858> Started At',
-                    value=f"<:ArrowRight:1035003246445596774> <t:{int(bot.start_time)}>")
-    embed.add_field(name='<:UptimeIconW:1035269010272550932> Uptime',
-                    value=f"<:ArrowRight:1035003246445596774> {td_format(text)}")
+@bot.hybrid_command(name='ping', description="Shows information of the bot, such as uptime and latency", extras={"category": "Utility"})
+async def ping(ctx):
+    uptime = f"<t:{int(bot.start_time)}>"
+
+    latency = round(bot.latency * 1000)
+    embed = discord.Embed(title='<:SettingIcon:1035353776460152892> Service Status', color=0x2E3136, description="*This will go over the current status of ERM.*")
+    embed.add_field(
+        name="<:UptimeIconW:1035269010272550932> Latency",
+        value=f"{latency}ms"
+    )
+
+    embed.add_field(
+        name="<:MessageIcon:1035321236793860116> Uptime",
+        value=f"{uptime}"
+        )
+
+    data = await bot.db.command('ping')
+
+    status: str | None = None
+
+    if list(data.keys())[0] == "ok":
+        status = "Connected"
+    else:
+        status = "Not Connected"
+    embed.add_field(
+        name='<:Search:1035353785184288788> Database',
+        value=f"{status}"
+    )
+
+    embed.set_footer(text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}")
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
     await ctx.send(embed=embed)
 
@@ -7560,13 +7617,13 @@ async def loa_admin(ctx, member: discord.Member):
 
         reason = view.modal.reason.value
         duration = view.modal.duration.value
-        if duration[-1].lower() not in ['s', 'm', 'h', 'd']:
+        if duration[-1].lower() not in ['s', 'm', 'h', 'd', 'w']:
             error_embed = discord.Embed(
                 title=f"<:ErrorIcon:1042550862834323597> Error",
                 description=f"<:ArrowRight:1035003246445596774> Invalid duration. Please try again.",
                 color=0x2E3136
             )
-            await ctx.send(embed=error_embed)
+            return await ctx.send(embed=error_embed)
 
         if duration[-1].lower() == 's':
             duration = int(duration[:-1])
@@ -7576,6 +7633,8 @@ async def loa_admin(ctx, member: discord.Member):
             duration = int(duration[:-1]) * 60 * 60
         elif duration[-1].lower() == 'd':
             duration = int(duration[:-1]) * 60 * 60 * 24
+        elif duration[-1].lower() == 'w':
+            duration = int(duration[:-1]) * 60 * 60 * 24 * 7
 
         startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
         endTimestamp = int(startTimestamp + duration)
@@ -7648,7 +7707,7 @@ async def loa_admin(ctx, member: discord.Member):
         )
 
         if ctx.interaction:
-            await ctx.interaction.followup.send_message(embed=successEmbed, ephemeral=True)
+            await ctx.interaction.followup.send(embed=successEmbed, ephemeral=True)
         else:
             await ctx.send(embed=successEmbed)
 
@@ -8420,6 +8479,12 @@ async def manage(ctx):
                 value=f"<:ArrowRight:1035003246445596774> Clocking out. **({shift_type['name']})**",
                 inline=False
             )
+        else:
+            embed.add_field(
+                name="<:MalletWhite:1035258530422341672> Type",
+                value=f"<:ArrowRight:1035003246445596774> Clocking out.",
+                inline=False
+            )
 
         time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
             shift['startTimestamp']).replace(tzinfo=None)
@@ -9020,13 +9085,13 @@ async def ra_admin(ctx, member: discord.Member):
 
         reason = view.modal.reason.value
         duration = view.modal.duration.value
-        if duration[-1].lower() not in ['s', 'm', 'h', 'd']:
+        if duration[-1].lower() not in ['s', 'm', 'h', 'd', 'w']:
             error_embed = discord.Embed(
                 title=f"<:ErrorIcon:1042550862834323597> Error",
                 description=f"<:ArrowRight:1035003246445596774> Invalid duration. Please try again.",
                 color=0x2E3136
             )
-            await ctx.send(embed=error_embed)
+            return await ctx.send(embed=error_embed)
 
         if duration[-1].lower() == 's':
             duration = int(duration[:-1])
@@ -9036,6 +9101,8 @@ async def ra_admin(ctx, member: discord.Member):
             duration = int(duration[:-1]) * 60 * 60
         elif duration[-1].lower() == 'd':
             duration = int(duration[:-1]) * 60 * 60 * 24
+        elif duration[-1].lower() == 'w':
+            duration = int(duration[:-1]) * 60 * 60 * 24 * 7
 
         startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
         endTimestamp = int(startTimestamp + duration)
@@ -9108,7 +9175,7 @@ async def ra_admin(ctx, member: discord.Member):
         )
 
         if ctx.interaction:
-            await ctx.interaction.followup.send_message(embed=successEmbed, ephemeral=True)
+            await ctx.interaction.followup.send(embed=successEmbed, ephemeral=True)
         else:
             await ctx.send(embed=successEmbed)
 
@@ -10807,7 +10874,7 @@ async def shift_leaderboard(ctx):
     staff_roles = [ctx.guild.get_role(role) for role in staff_roles]
     added_staff = []
 
-    for role in staff_roles:
+    for role in staff_roles.copy():
         if role is None:
             staff_roles.remove(role)
 
@@ -11065,7 +11132,7 @@ async def active(ctx, user: str = None):
             print(f'Added to {embeds[-1]}')
             embeds[-1].add_field(
                 name=f"<:SConductTitle:1053359821308567592> {rbx['name']}",
-                value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
+                value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y, %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
                 inline=False
             )
             print('new field')
@@ -11127,7 +11194,7 @@ async def active(ctx, user: str = None):
                                 del warning['TARGET']
                             warning['Reason'] = f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {warning['Reason']}",
                             warning['Moderator'] = [ctx.author.name, ctx.author.id]
-                            warning['Time'] = datetime.datetime.utcnow().strftime('%m/%d/%Y %H:%M:%S')
+                            warning['Time'] = datetime.datetime.utcnow().strftime('%m/%d/%Y, %H:%M:%S')
 
                             doc['warnings'].append(warning)
                             doc['warnings'].pop(index)
@@ -11241,7 +11308,7 @@ async def active(ctx, user: str = None):
             print(f'Added to {embeds[-1]}')
             embeds[-1].add_field(
                 name=f"<:SConductTitle:1053359821308567592> {rbx['name']}",
-                value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
+                value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y, %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
                 inline=False
             )
 
@@ -11300,7 +11367,7 @@ async def active(ctx, user: str = None):
                             warning['Type'] = "Ban"
                             warning['Reason'] = f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {warning['Reason']}",
                             warning['Moderator'] = [ctx.author.name, ctx.author.id]
-                            warning['Time'] = datetime.datetime.utcnow().strftime('%m/%d/%Y %H:%M:%S')
+                            warning['Time'] = datetime.datetime.utcnow().strftime('%m/%d/%Y, %H:%M:%S')
 
                             doc['warnings'].append(warning)
                             doc['warnings'].pop(index)
