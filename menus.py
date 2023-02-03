@@ -732,9 +732,8 @@ class LOAMenu(discord.ui.View):
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green, custom_id="loamenu:accept")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True, thinking=True)
-
         if not any(role in interaction.user.roles for role in self.roles):
+            await interaction.response.defer(ephemeral=True, thinking=True)
             if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator and not interaction.user == interaction.guild.owner:
                 embed = discord.Embed(
                     description=f'You do not have permissions to accept this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
@@ -796,7 +795,9 @@ class LOAMenu(discord.ui.View):
         embed.set_footer(
             text=f'Staff Logging Module - Accepted by {interaction.user.name}#{interaction.user.discriminator}')
 
-        await interaction.edit_original_response(embed=embed, view=self)
+        await interaction.message.edit(embed=embed, view=self)
+        await interaction.followup.send(embed=create_invis_embed(
+            f'You have accepted this person\'s {s_loa["type"]} request! To extend, edit or modify this request, please use `/{s_loa["type"].lower()} admin`'))
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`

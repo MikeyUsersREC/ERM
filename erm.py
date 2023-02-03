@@ -3318,7 +3318,7 @@ async def viewconfig(ctx):
 
         try:
             message_logging_channel = ctx.guild.get_channel(int(message_logging_channel))
-        except TypeError:
+        except (TypeError, ValueError):
             message_logging_channel = None
         
         
@@ -3329,7 +3329,7 @@ async def viewconfig(ctx):
 
         try:
             sts_logging_channel = ctx.guild.get_channel(int(sts_logging_channel))
-        except TypeError:
+        except (TypeError, ValueError):
             sts_logging_channel = None
 
         if sts_logging_channel is None:
@@ -7356,12 +7356,11 @@ async def loarequest(ctx, time, *, reason):
     reason = list(reason)
 
     documents = [document async for document in bot.loas.db.find(
-        {'guild_id': ctx.guild.id, 'user_id': ctx.author.id, 'type': 'LoA', 'accepted': True, 'voided': False,
+        {'guild_id': ctx.guild.id, 'user_id': ctx.author.id, 'type': 'LoA', 'accepted': True,
          'expiry': {'$gt': datetime.datetime.utcnow().timestamp()}, 'denied': False, 'expired': False})]
     if len(documents) > 0:
         return await invis_embed(ctx,
-                                 f'You already have an active LoA request. Please wait until it expires before filing another one. If you would like to extend or cancel your LoA request, please ask a Management member to run `/loa admin`.')
-
+                                 f'You already have an active Leave of Absence request. Please wait until it expires before filing another one. If you would like to extend your LoA request, please ask a Management member to run `/ra admin`.')
     if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
         if not ''.join(reason).lower().endswith(('h', 'm', 's', 'd', 'w')):
@@ -8824,7 +8823,7 @@ async def rarequest(ctx, time, *, reason):
          'expiry': {'$gt': datetime.datetime.utcnow().timestamp()}, 'denied': False, 'expired': False})]
     if len(documents) > 0:
         return await invis_embed(ctx,
-                                 f'You already have an active Reduced Activity request. Please wait until it expires before filing another one. If you would like to extend your LoA request, please ask a Management member to run `/ra admin`.')
+                                 f'You already have an active Reduced Activity request. Please wait until it expires before filing another one. If you would like to extend your RA request, please ask a Management member to run `/ra admin`.')
 
     if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
@@ -10618,6 +10617,9 @@ async def clockedin(ctx):
     except:
         pass
 
+    embeds = []
+    embeds.append(embed)
+
     async for shift in bot.shifts.db.find({"data": {"$elemMatch": {"guild": ctx.guild.id}}}):
         if 'data' in shift.keys():
             for s in shift['data']:
@@ -10657,12 +10659,18 @@ async def clockedin(ctx):
                                                                                                         field in
                                                                                                         embed.fields]:
                             if break_seconds > 0:
-                                embed.add_field(
+                                if len(embed.fields) == 25:
+                                    new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
+                                    embeds.append(new_embed)
+                                embeds[-1].add_field(
                                     name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                     value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {td_format(datetime.timedelta(seconds=break_seconds))})",
                                     inline=False)
                             else:
-                                embed.add_field(
+                                if len(embed.fields) == 25:
+                                    new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
+                                    embeds.append(new_embed)
+                                embeds[-1].add_field(
                                     name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                     value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
                                     inline=False)
@@ -10702,15 +10710,23 @@ async def clockedin(ctx):
                     if f"<:staff:1035308057007230976> {member.name}#{member.discriminator}" not in [field.name for field
                                                                                                     in embed.fields]:
                         if break_seconds > 0:
-                            embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                            if len(embed.fields) == 25:
+                                new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift',
+                                                          color=0x2E3136)
+                                embeds.append(new_embed)
+                            embeds[-1].add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                             value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {datetime.timedelta(seconds=break_seconds)})",
                                             inline=False)
                         else:
-                            embed.add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
+                            if len(embed.fields) == 25:
+                                new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift',
+                                                          color=0x2E3136)
+                                embeds.append(new_embed)
+                            embeds[-1].add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
                                             value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
                                             inline=False)
 
-    await ctx.send(embed=embed)
+    await ctx.send(embeds=embeds)
 
 
 @duty.command(name='leaderboard',
