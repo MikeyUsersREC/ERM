@@ -10767,10 +10767,11 @@ async def shift_leaderboard(ctx):
             moderations = 0
             for shift in document['shifts']:
                 if isinstance(shift, dict):
-                    if shift['guild'] == ctx.guild.id and shift['type'] == shift_type['id']:
-                        if 'moderations' in shift.keys():
-                            moderations += len(shift['moderations'])
-                        total_seconds += int(shift['totalSeconds'])
+                    if shift.get('type'):
+                        if shift['guild'] == ctx.guild.id and shift['type'] == shift_type['id']:
+                            if 'moderations' in shift.keys():
+                                moderations += len(shift['moderations'])
+                            total_seconds += int(shift['totalSeconds'])
 
             if document['_id'] not in [item['id'] for item in all_staff]:
                 all_staff.append({'id': document['_id'], 'total_seconds': total_seconds, 'moderations': moderations})
