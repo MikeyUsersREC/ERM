@@ -100,6 +100,12 @@ class Dropdown(discord.ui.Select):
                 description="Punishing community members for rule infractions"
             ),
             discord.SelectOption(
+                label="Moderation Sync",
+                value="moderation_sync",
+                emoji="<:SyncIcon:1071821068551073892>",
+                description="Syncing moderation actions from Roblox to Discord"
+            ),
+            discord.SelectOption(
                 label="Shift Management",
                 value="shift_management",
                 emoji="<:Search:1035353785184288788>",
@@ -506,6 +512,9 @@ class ColouredButton(discord.ui.Button):
             await interaction.response.defer()
             self.view.value = self.label
             self.view.stop()
+        else:
+            await interaction.response.send_message(embed=create_invis_embed(
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
 class ColouredMenu(discord.ui.View):
     def __init__(self, user_id, buttons: list[str]):
         super().__init__(timeout=None)
@@ -550,6 +559,42 @@ class EnableDisableMenu(discord.ui.View):
         for item in self.children:
             item.disabled = True
         self.value = False
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+class LinkPathwayMenu(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=None)
+        self.value = None
+        self.user_id = user_id
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='ERM', style=discord.ButtonStyle.secondary)
+    async def ERM(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(embed=create_invis_embed(
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "erm"
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='Bloxlink', style=discord.ButtonStyle.danger)
+    async def Bloxlink(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(embed=create_invis_embed(
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = "bloxlink"
         await interaction.edit_original_response(view=self)
         self.stop()
 
@@ -716,7 +761,7 @@ class PartialShiftModify(discord.ui.View):
 
 
 class LOAMenu(discord.ui.View):
-    def __init__(self, bot, roles, loa_roles, user_id):
+    def __init__(self, bot, roles, loa_roles, user_id, code):
         super().__init__(timeout=None)
         self.value = None
         self.bot = bot
@@ -726,13 +771,14 @@ class LOAMenu(discord.ui.View):
             self.roles = [roles]
         self.loa_role = loa_roles
         self.user_id = user_id
+        self.id = code
 
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green, custom_id="loamenu:accept")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not any(role in interaction.user.roles for role in self.roles):
+        if not any(role in [r.id for r in interaction.user.roles] for role in self.roles):
             await interaction.response.defer(ephemeral=True, thinking=True)
             if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator and not interaction.user == interaction.guild.owner:
                 embed = discord.Embed(
@@ -749,6 +795,8 @@ class LOAMenu(discord.ui.View):
             else:
                 self.remove_item(item)
         s_loa = None
+        print(self)
+        print(self.bot)
         for loa in await self.bot.loas.get_all():
             if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
                 s_loa = loa
@@ -798,13 +846,16 @@ class LOAMenu(discord.ui.View):
         await interaction.message.edit(embed=embed, view=self)
         await interaction.followup.send(embed=create_invis_embed(
             f'You have accepted this person\'s {s_loa["type"]} request! To extend, edit or modify this request, please use `/{s_loa["type"].lower()} admin`'))
+
+
+        await self.bot.views.delete_by_id(self.id)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='Deny', style=discord.ButtonStyle.danger, custom_id="loamenu:deny-EPHEMERAL")
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-        if not any(role in interaction.user.roles for role in self.roles):
+        if not any(role in [r.id for r in interaction.user.roles] for role in self.roles):
             if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator and not interaction.user == interaction.guild.owner:
                 await interaction.response.defer(ephemeral=True, thinking=True)
                 embed = discord.Embed(
@@ -872,6 +923,8 @@ class LOAMenu(discord.ui.View):
 
         await interaction.edit_original_response(embed=embed, view=self)
         self.value = True
+        await self.bot.views.delete_by_id(self.id)
+
         self.stop()
 
 
@@ -1879,6 +1932,49 @@ class CustomModalView(discord.ui.View):
         self.stop()
 
 
+class GoogleSpreadsheetModification(discord.ui.View):
+    def __init__(self, config: dict, scopes: list, label: str, url: str):
+        super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(label=label, url=url))
+        self.config = config
+        self.scopes = scopes
+        self.url = url
+
+
+    @discord.ui.button(label="Request Ownership", style=discord.ButtonStyle.secondary)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = CustomModal("Request Ownership", [("email", discord.ui.TextInput(
+            placeholder="Email",
+            min_length=1,
+            max_length=100,
+            label="Email",
+            custom_id="email"
+        ))])
+
+        await interaction.response.send_modal(modal)
+
+        timeout = await modal.wait()
+        if timeout:
+            return
+
+        email = modal.email.value
+
+        client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes))
+        sheet = client.open_by_url(self.url)
+        sheet.share(email, perm_type='user', role='writer')
+        permission_id = sheet.list_permissions()[0]['id']
+
+        sheet.transfer_ownership(permission_id)
+
+        success = discord.Embed(
+            title="<:CheckIcon:1035018951043842088> Success!",
+            description=f"<:ArrowRightW:1035023450592514048>I have gave ownership to this email. This email now has **full access** to the document. You can view the spreadsheet [here]({self.url}).",
+            color=0x71c15f
+        )
+        self.remove_item(button)
+
+        await interaction.edit_original_response(embed=success, view=self)
+
 
 class LinkView(discord.ui.View):
     def __init__(self, label: str, url: str):
@@ -1915,12 +2011,13 @@ class RequestGoogleSpreadsheet(discord.ui.View):
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label="Google Spreadsheet", style=discord.ButtonStyle.secondary)
     async def googlespreadsheet(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(embed=create_invis_embed(
                 'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
-        await int_invis_embed(interaction, "We are currently creating the Google spreadsheet, please wait.",
-                              ephemeral=True)
+        await interaction.followup.send(embed=create_invis_embed("We are currently creating the Google spreadsheet, please wait."))
         client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes))
         sheet = client.copy(self.template, interaction.guild.name, copy_permissions=True)
         new_sheet = sheet.get_worksheet(0)
@@ -1960,7 +2057,7 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             description=f"<:ArrowRightW:1035023450592514048>I've successfully created a Google Spreadsheet for you. You can access it [here]({sheet.url}).",
             color=0x71c15f
         )
-        view = LinkView("Open Google Spreadsheet", sheet.url)
+        view = GoogleSpreadsheetModification(self.config, self.scopes, "Open Google Spreadsheet", sheet.url)
 
         await interaction.edit_original_response(embed=success, view=view)
 
@@ -1990,6 +2087,21 @@ class Verification(discord.ui.View):
         await interaction.edit_original_response(view=self)
 
         self.value = "done"
+        self.stop()
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(embed=create_invis_embed(
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+        await interaction.response.defer()
+
+        for item in self.children:
+            item.disabled = True
+        await interaction.edit_original_response(view=self)
+
+        self.value = "cancel"
         self.stop()
 
 
