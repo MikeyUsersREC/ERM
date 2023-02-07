@@ -7140,7 +7140,8 @@ async def help(ctx, *, command=None):
             "Activity Management": "<:Pause:1035308061679689859>",
             "Custom Commands": "<:QMark:1035308059532202104>",
             "Verification": "<:SettingIcon:1035353776460152892>",
-            "Game Logging": "<:SConductTitle:1053359821308567592>"
+            "Game Logging": "<:SConductTitle:1053359821308567592>",
+            "Moderation Sync": "<:SyncIcon:1071821068551073892>"
         }
 
         for command in bot.walk_commands():
@@ -7952,7 +7953,7 @@ async def duty_admin(ctx, member: discord.Member):
 
         embed.add_field(
             name="<:Search:1035353785184288788> Total Moderations",
-            value=f"<:ArrowRightW:1035023450592514048> **Warnings:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'warning'])}\n<:ArrowRightW:1035023450592514048> **Kicks:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'kick'])}\n<:ArrowRightW:1035023450592514048> **Bans:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'ban'])}\n<:ArrowRightW:1035023450592514048> **BOLO:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'bolo'])}\n<:ArrowRightW:1035023450592514048> **Custom:** {len([moderation for moderation in moderation_list if moderation['type'].lower() not in ['warning', 'kick', 'ban', 'bolo']])}",
+            value=f"<:ArrowRightW:1035023450592514048> **Warnings:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'warning'])}\n<:ArrowRightW:1035023450592514048> **Kicks:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'kick'])}\n<:ArrowRightW:1035023450592514048> **Bans:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'ban'])}\n<:ArrowRightW:1035023450592514048> **BOLO:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'bolo'])}\n<:ArrowRightW:1035023450592514048> **Custom:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() not in ['warning', 'kick', 'ban', 'bolo']])}",
             inline=False
         )
         dm_channel = (await member.create_dm())
@@ -10101,7 +10102,7 @@ async def manage(ctx):
 
         embed.add_field(
             name="<:Search:1035353785184288788> Total Moderations",
-            value=f"<:ArrowRightW:1035023450592514048> **Warnings:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'warning'])}\n<:ArrowRightW:1035023450592514048> **Kicks:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'kick'])}\n<:ArrowRightW:1035023450592514048> **Bans:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'ban'])}\n<:ArrowRightW:1035023450592514048> **BOLO:** {len([moderation for moderation in moderation_list if moderation['type'].lower() == 'bolo'])}\n<:ArrowRightW:1035023450592514048> **Custom:** {len([moderation for moderation in moderation_list if moderation['type'].lower() not in ['warning', 'kick', 'ban', 'bolo']])}",
+            value=f"<:ArrowRightW:1035023450592514048> **Warnings:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'warning'])}\n<:ArrowRightW:1035023450592514048> **Kicks:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'kick'])}\n<:ArrowRightW:1035023450592514048> **Bans:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'ban'])}\n<:ArrowRightW:1035023450592514048> **BOLO:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'bolo'])}\n<:ArrowRightW:1035023450592514048> **Custom:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() not in ['warning', 'kick', 'ban', 'bolo']])}",
             inline=False
         )
         new_ctx = copy.copy(ctx)
