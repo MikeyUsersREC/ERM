@@ -3429,7 +3429,7 @@ async def setup(ctx):
                                     discord.ui.TextInput(
                                         placeholder="Nickname Prefix",
                                         label="Nickname Prefix",
-                                        max_length=10
+                                        max_length=20
                                     ))
                             ])
 
@@ -3715,7 +3715,7 @@ async def setup(ctx):
                                                            label='Nickname Prefix',
                                                            required=True,
                                                            min_length=1,
-                                                           max_length=10
+                                                           max_length=20
                                                        ))
                                                    ])
 
@@ -4520,7 +4520,7 @@ async def changeconfig(ctx):
                 discord.ui.TextInput(
                     placeholder="Nickname Prefix",
                     min_length=1,
-                    max_length=10,
+                    max_length=20,
                     label="Nickname Prefix"
                 )
             )])
@@ -5126,7 +5126,7 @@ async def changeconfig(ctx):
                             discord.ui.TextInput(
                                 placeholder="Nickname Prefix",
                                 label="Nickname Prefix",
-                                max_length=10
+                                max_length=20
                         ))
                     ])
 
@@ -5408,7 +5408,7 @@ async def changeconfig(ctx):
                             label='Nickname Prefix',
                             required=True,
                             min_length=1,
-                            max_length=10
+                            max_length=20
                         ))
                     ])
 
