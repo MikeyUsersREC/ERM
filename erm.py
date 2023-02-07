@@ -4451,17 +4451,12 @@ async def changeconfig(ctx):
                                             discord.SelectOption(
                                                 label='Set Staff Roles',
                                                 description='Set the staff roles. These will allow access to staff commands.',
-                                                value='role'
+                                                value='staff_role'
                                             ),
                                             discord.SelectOption(
                                                 label='Set Management Roles',
                                                 description='Set the management roles. These will allow access to management commands.',
                                                 value='management_role'
-                                            ),
-                                            discord.SelectOption(
-                                                label='Set Nickname Prefix',
-                                                description='Set the nickname prefix. This will be put to people\'s nicknames on-duty.',
-                                                value='nickname_prefix'
                                             ),
                                             discord.SelectOption(
                                                 label='Set LOA Roles',
@@ -4514,26 +4509,7 @@ async def changeconfig(ctx):
             await ctx.send(embed=embed, view=view)
             await view.wait()
             settingContents['staff_management']['role'] = [role.id for role in view.value]
-        elif content == 'nickname_prefix':
-            view = CustomModalView(ctx.author.id, 'Nickname Prefix', 'Nickname Prefix', [(
-                "nickname",
-                discord.ui.TextInput(
-                    placeholder="Nickname Prefix",
-                    min_length=1,
-                    max_length=20,
-                    label="Nickname Prefix"
-                )
-            )])
-            question = "What do you want to use a Nickname Prefix? (e.g. `𝗦𝘁𝗮𝗳𝗳 |`)"
-            embed = discord.Embed(
-                title='<:EditIcon:1042550862834323597> Change Configuration',
-                description=f'<:ArrowRight:1035003246445596774> {question}',
-                color=0x2e3136
-            )
 
-            await ctx.send(embed=embed, view=view)
-            await view.wait()
-            settingContents['staff_management']['nickname_prefix'] = view.modal.nickname.value
         elif content == 'management_role':
             view = RoleSelect(ctx.author.id)
             question = "What roles do you want to use as management roles? (e.g. `@Management`)"
@@ -4787,6 +4763,11 @@ async def changeconfig(ctx):
                 value='channel'
             ),
             discord.SelectOption(
+                label='Set Nickname Prefix',
+                description='Set the nickname prefix. This will be put to people\'s nicknames on-duty.',
+                value='nickname_prefix'
+            ),
+            discord.SelectOption(
                 label='Set On Duty Role',
                 description='Set the role to be given when on duty.',
                 value='role'
@@ -4797,6 +4778,9 @@ async def changeconfig(ctx):
                 value="quota"
             )
         ])
+
+
+
         embed = discord.Embed(
             title='<:EditIcon:1042550862834323597> Change Configuration',
             description=f'<:ArrowRight:1035003246445596774> {question}',
@@ -4829,7 +4813,26 @@ async def changeconfig(ctx):
                 return await invis_embed(ctx, 'We could not translate your time. Remember to end it with s/m/h/d.')
 
             settingContents['shift_management']['quota'] = total_seconds
+        elif content == 'nickname_prefix':
+            view = CustomModalView(ctx.author.id, 'Nickname Prefix', 'Nickname Prefix', [(
+                "nickname",
+                discord.ui.TextInput(
+                    placeholder="Nickname Prefix",
+                    min_length=1,
+                    max_length=20,
+                    label="Nickname Prefix"
+                )
+            )])
+            question = "What do you want to use a Nickname Prefix? (e.g. `𝗦𝘁𝗮𝗳𝗳 |`)"
+            embed = discord.Embed(
+                title='<:EditIcon:1042550862834323597> Change Configuration',
+                description=f'<:ArrowRight:1035003246445596774> {question}',
+                color=0x2e3136
+            )
 
+            await ctx.send(embed=embed, view=view)
+            await view.wait()
+            settingContents['shift_management']['nickname_prefix'] = view.modal.nickname.value
         elif content == 'channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for shift management? (e.g. shift logons)"
