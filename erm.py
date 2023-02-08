@@ -888,11 +888,11 @@ async def link(ctx):
                     color=0x71c15f
                 )
                 if await bot.synced_users.find_by_id(ctx.author.id):
-                    await bot.synced_users.update_by_id({"_id": ctx.author.id, "roblox": verified_user})
+                    await bot.synced_users.update_by_id({"_id": ctx.author.id, "roblox": roblox_user})
                 else:
                     await bot.synced_users.insert({
                         "_id": ctx.author.id,
-                        "roblox": verified_user
+                        "roblox": roblox_user
                     })
                 await ctx.send(embed=embed)
             if verified:
@@ -1175,7 +1175,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
     menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
 
     async def warn_function(ctx, menu, designated_channel=None):
-        user = menu.message.embeds[0].title
+        user = menu.message.embeds[0].title.split(' ')[0]
         await menu.stop(disable_items=True)
         default_warning_item = {
             '_id': user.lower(),
@@ -1264,7 +1264,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
 
         success = discord.Embed(
             title=f"<:CheckIcon:1035018951043842088> {type.lower().title()} Logged",
-            description=f"<:ArrowRightW:1035023450592514048>**{menu.message.embeds[0].title}**'s {type.lower()} has been logged.",
+            description=f"<:ArrowRightW:1035023450592514048>**{user}**'s {type.lower()} has been logged.",
             color=0x71c15f
         )
 
@@ -2382,215 +2382,26 @@ async def on_message(message: discord.Message):
 
 
     if moderation_sync is True:
-        print('sync enabled')
-        print(message.channel.name)
-        print(sync_channels)
-        print(sync_channel)
-        print(kick_ban_sync_channel)
         if sync_channels is not None:
             if message.channel.id in sync_channels:
-                print('correct channels')
                 for embed in message.embeds:
                     if embed.description not in ["", None] and embed.title not in ["", None]:
-                        if ":kick" in embed.description or ":ban" in embed.description:
-                            if 'Command Usage' in embed.title or 'Kick/Ban Command Usage' in embed.title:
-                                print('sync enabled')
-                                raw_content = embed.description
-                                user, command = raw_content.split('used the command: ')
-                                profile_link = user.split('(')[1].split(')')[0]
-                                user = user.split('(')[0].replace('[', '').replace(']', '')
-                                punishment = ('kick' if ':kick' in command else 'ban').title()
-                                person = command.split(' ')[1]
-                                reason = ' '.join(command.split(' ')[2:]).replace('"', '')
-                                if person.count(',') > 0:
-                                    persons = person.split(',')
-                                else:
-                                    persons = [person]
-
-                                if persons.count(',') < 5:
-                                    print('2406')
-                                    for person in persons:
-                                        roblox_user = {}
-
-                                        if not any([i in person.lower() for i in string.ascii_lowercase]):
-                                            # Is a Roblox ID
-                                            async with aiohttp.ClientSession() as session:
-                                                async with session.post('https://users.roblox.com/v1/users', json={
-                                                    'userIds': [person],
-                                                    'excludeBannedUsers': False
-                                                }) as resp:
-                                                    print(resp)
-                                                    print('USER ID VERSION!!!')
-                                                    if resp.status == 200:
-                                                        data = await resp.json()
-                                                        if data['data']:
-                                                            roblox_user = data['data'][0]
-                                        else:
-                                            # Is a Roblox Username
-                                            async with aiohttp.ClientSession() as session:
-                                                async with session.post('https://users.roblox.com/v1/usernames/users', json={
-                                                    'usernames': [person],
-                                                    'excludeBannedUsers': False
-                                                }) as resp:
-                                                    print(resp)
-                                                    if resp.status == 200:
-                                                        data = await resp.json()
-                                                        if data['data']:
-                                                            roblox_user = data['data'][0]
-
-                                        print(roblox_user)
-                                        if not roblox_user:
-                                            return
-
-                                        designated_channel = None
-                                        settings = await bot.settings.find_by_id(message.guild.id)
-                                        if settings['customisation'].get('kick_channel'):
-                                            if settings['customisation']['kick_channel'] != "None":
-                                                if punishment.lower() == "kick":
-                                                    designated_channel = bot.get_channel(
-                                                        settings['customisation']['kick_channel'])
-                                        if settings['customisation'].get('ban_channel'):
-                                            if settings['customisation']['ban_channel'] != "None":
-                                                if punishment.lower() == "ban":
-                                                    designated_channel = bot.get_channel(
-                                                        settings['customisation']['ban_channel'])
-
-                                        print('2454 - Designated channel {}'.format(designated_channel))
-                                        if designated_channel is None:
-                                            try:
-                                                designated_channel = discord.utils.get(message.guild.channels,
-                                                                                   id=configItem['punishments']['channel'])
-                                            except KeyError:
-                                                print('2460 - Designated channel {}'.format(designated_channel))
-                                                return await message.add_reaction('❌')
-
-                                        if designated_channel is None:
-                                            return await message.add_reaction('❌')
-
-                                        discord_user = 0
-                                        async for document in bot.synced_users.db.find({"roblox": str(profile_link.split('/')[4])}):
-                                            discord_user = document['_id']
-
-                                        print(f'Discord User: {discord_user}')
-                                        if discord_user == 0:
-                                            return
-
-                                        user = discord.utils.get(message.guild.members, id=discord_user)
-                                        if not user:
-                                            user = await message.guild.fetch_member(discord_user)
-                                            if not user:
-                                                return
-
-
-
-                                        async with aiohttp.ClientSession() as session:
-                                            async with session.get(
-                                                    f'https://thumbnails.roblox.com/v1/users/avatar?userIds={roblox_user["id"]}&size=420x420&format=Png') as f:
-                                                if f.status == 200:
-                                                    avatar = await f.json()
-                                                    Headshot_URL = avatar['data'][0]['imageUrl']
-                                                else:
-                                                    Headshot_URL = ""
-
-
-                                        default_warning_item = {
-                                            '_id': roblox_user['name'].lower(),
-                                            'warnings': [{
-                                                'id': next(generator),
-                                                "Type": f"{punishment.lower().title()}",
-                                                "Reason": reason,
-                                                "Moderator": [user.name, user.id],
-                                                "Time": message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-                                                "Guild": message.guild.id
-                                            }]
-                                        }
-
-                                        singular_warning_item = {
-                                            'id': next(generator),
-                                            "Type": f"{punishment.lower().title()}",
-                                            "Reason": reason,
-                                            "Moderator": [user.name, user.id],
-                                            "Time": message.created_at.strftime('%m/%d/%Y, %H:%M:%S'),
-                                            "Guild": message.guild.id
-                                        }
-
-                                        configItem = await bot.settings.find_by_id(message.guild.id)
-
-                                        embed = discord.Embed(title=f"{roblox_user['name']} ({roblox_user['id']})", color=0x2E3136)
-                                        embed.set_thumbnail(url=Headshot_URL)
-
-                                        try:
-                                            embed.set_footer(text="Staff Logging Module")
-                                        except:
-                                            pass
-                                        embed.add_field(name="<:staff:1035308057007230976> Staff Member",
-                                                        value=f"<:ArrowRight:1035003246445596774> {user.mention}",
-                                                        inline=False)
-                                        embed.add_field(name="<:WarningIcon:1035258528149033090> Violator",
-                                                        value=f"<:ArrowRight:1035003246445596774> {person}",
-                                                        inline=False)
-                                        embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
-                                                        value=f"<:ArrowRight:1035003246445596774> {punishment.lower().title()}",
-                                                        inline=False)
-                                        embed.add_field(name="<:QMark:1035308059532202104> Reason",
-                                                        value=f"<:ArrowRight:1035003246445596774> {reason}",
-                                                        inline=False)
-
-                                        if designated_channel is None:
-                                            designated_channel = discord.utils.get(message.guild.channels,
-                                                                                   id=configItem['punishments']['channel'])
-
-                                        if not await bot.warnings.find_by_id(person.lower()):
-                                            await bot.warnings.insert(default_warning_item)
-                                        else:
-                                            dataset = await bot.warnings.find_by_id(person.lower())
-                                            dataset['warnings'].append(singular_warning_item)
-                                            await bot.warnings.update_by_id(dataset)
-
-                                        shift = await bot.shifts.find_by_id(user.id)
-
-                                        if shift is not None:
-                                            if 'data' in shift.keys():
-                                                for index, item in enumerate(shift['data']):
-                                                    if isinstance(item, dict):
-                                                        if item['guild'] == message.guild.id:
-                                                            if 'moderations' in item.keys():
-                                                                item['moderations'].append({
-                                                                    'id': next(generator),
-                                                                    "Type": f"{punishment.lower().title()}",
-                                                                    "Reason": reason,
-                                                                    "Moderator": [user.name, user.id],
-                                                                    "Time": message.created_at.strftime(
-                                                                        '%m/%d/%Y, %H:%M:%S'),
-                                                                    "Guild": message.guild.id,
-                                                                    "synced": True
-                                                                })
-                                                            else:
-                                                                item['moderations'] = [{
-                                                                    'id': next(generator),
-                                                                    "Type": f"{punishment.lower().title()}",
-                                                                    "Reason": reason,
-                                                                    "Moderator": [user.name, user.id],
-                                                                    "Time": message.created_at.strftime(
-                                                                        '%m/%d/%Y, %H:%M:%S'),
-                                                                    "Guild": message.guild.id,
-                                                                    "synced": True
-                                                                }]
-                                                            shift['data'][index] = item
-                                                            await bot.shifts.update_by_id(shift)
-
-
-                                        await designated_channel.send(embed=embed)
-                                    await message.add_reaction('📝')
                         if ":logs" in embed.description:
                             if 'Command Usage' in embed.title:
-                                print('sync enabled')
                                 raw_content = embed.description
-                                user, command = raw_content.split('used the command: ')
+                                user, command = raw_content.split('used the command: "')
+
                                 profile_link = user.split('(')[1].split(')')[0]
                                 user = user.split('(')[0].replace('[', '').replace(']', '')
                                 person = command.split(' ')[1]
-                                other = command.split(' ')[2:]
+                                try:
+                                    type, reason = (' '.join(command.split(' ')[2:])).split( 'for ')
+                                except:
+                                    return await message.add_reaction('❌')
+
+                                reason = reason.replace('"', '')
+
+
                                 generic_warning_types = [
                                     "Warning",
                                     "Kick",
@@ -2609,29 +2420,10 @@ async def on_message(message: discord.Message):
                                 else:
                                     warning_types = warning_types['types']
 
-                                combined = ""
-                                reason = ""
-                                index = 0
-                                for i in other:
-                                    if i.lower() not in [t.lower() if isinstance(t, str) else t['name'].lower() for t in warning_types] and combined.lower() not in [t.lower() if isinstance(t, str) else t['name'].lower() for t in warning_types]:
-                                        combined += f"{i} "
-                                        index += 1
-                                    else:
-                                        combined += f"{i} "
-                                        index += 1
-                                        reason = ' '.join(other[index:]).replace('"', '')
 
-                                        for index, v in enumerate([t.lower() if isinstance(t, str) else t['name'].lower() for t in warning_types]):
-                                            if v == combined.lower():
-                                                combined = warning_types[index]
-                                                break
-                                        break
-
-                                if combined == "":
-                                    return await message.add_reaction('❌')
-
-                                type = combined
-                                
+                                print('2619')
+                                t_lowered = type.lower()
+                                print(t_lowered)
 
                                 if person.count(',') > 0:
                                     persons = person.split(',')
@@ -2689,17 +2481,17 @@ async def on_message(message: discord.Message):
                                         if isinstance(warning_type, str):
                                             if settings['customisation'].get('kick_channel'):
                                                 if settings['customisation']['kick_channel'] != "None":
-                                                    if type.lower() == "kick":
+                                                    if warning_type.lower() == "kick":
                                                         designated_channel = bot.get_channel(
                                                             settings['customisation']['kick_channel'])
                                             if settings['customisation'].get('ban_channel'):
                                                 if settings['customisation']['ban_channel'] != "None":
-                                                    if type.lower() == "ban":
+                                                    if warning_type.lower() == "ban":
                                                         designated_channel = bot.get_channel(
                                                             settings['customisation']['ban_channel'])
                                             if settings['customisation'].get('bolo_channel'):
                                                 if settings['customisation']['bolo_channel'] != "None":
-                                                    if type.lower() == "bolo":
+                                                    if warning_type.lower() == "bolo":
                                                         designated_channel = bot.get_channel(
                                                             settings['customisation']['bolo_channel'])
                                         else:
@@ -2722,6 +2514,8 @@ async def on_message(message: discord.Message):
 
                                         return await message.add_reaction('❌')
 
+                                    if not warning_type:
+                                        return await message.add_reaction('❌')
 
 
                                     discord_user = 0
@@ -4049,8 +3843,8 @@ async def viewconfig(ctx):
 
     if settingContents.get('moderation_sync'):
         moderation_sync_enabled = str(settingContents['moderation_sync']['enabled'])
-        sync_webhook_channel = settingContents['game_logging']['message']['channel']
-        kick_ban_webhook_channel = str(settingContents['game_logging']['sts']['channel'])
+        sync_webhook_channel = settingContents['moderation_sync']['webhook_channel']
+        kick_ban_webhook_channel = settingContents['moderation_sync'].get('kick_ban_webhook_channel')
 
         try:
             sync_webhook_channel = ctx.guild.get_channel(int(sync_webhook_channel))
@@ -12897,6 +12691,9 @@ async def active(ctx, user: str = None):
                 )
                 embeds.append(new_embed)
                 print('new embed')
+
+            if rbx is None:
+                continue
 
             print(f'Added to {embeds[-1]}')
             embeds[-1].add_field(
