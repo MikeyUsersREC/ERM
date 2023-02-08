@@ -12693,13 +12693,14 @@ async def active(ctx, user: str = None):
                 print('new embed')
 
             if rbx not in [None, [], {}]:
-                print(f'Added to {embeds[-1]}')
-                embeds[-1].add_field(
-                    name=f"<:SConductTitle:1053359821308567592> {rbx['name']} ({rbx['id']})",
-                    value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y, %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
-                    inline=False
-                )
-                print('new field')
+                if 'id' in rbx.keys() and 'name' in rbx.keys():
+                    print(f'Added to {embeds[-1]}')
+                    embeds[-1].add_field(
+                        name=f"<:SConductTitle:1053359821308567592> {rbx['name']} ({rbx['id']})",
+                        value=f"<:ArrowRightW:1035023450592514048> **Reason:** {bolo['Reason']}\n<:ArrowRightW:1035023450592514048> **Staff:** {ctx.guild.get_member(bolo['Moderator'][1]).mention if ctx.guild.get_member(bolo['Moderator'][1]) is not None else bolo['Moderator'][1]}\n<:ArrowRightW:1035023450592514048> **Time:** {bolo['Time'] if isinstance(bolo['Time'], str) else datetime.datetime.fromtimestamp(bolo['Time']).strftime('%m/%d/%Y, %H:%M:%S')}\n<:ArrowRightW:1035023450592514048> **ID:** {bolo['id']}",
+                        inline=False
+                    )
+                    print('new field')
 
         if ctx.interaction:
             gtx = ctx.interaction
