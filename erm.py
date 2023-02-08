@@ -2400,7 +2400,8 @@ async def on_message(message: discord.Message):
                                 try:
                                     type, reason = (' '.join(command.split(' ')[2:])).split( 'for ')
                                 except:
-                                    return await message.add_reaction('❌')
+                                    await message.add_reaction('❌')
+                                    return await message.add_reaction('1️⃣')
 
                                 reason = reason.replace('"', '')
 
@@ -2466,7 +2467,8 @@ async def on_message(message: discord.Message):
 
                                     print(roblox_user)
                                     if not roblox_user:
-                                        return await message.add_reaction('❌')
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction("2️⃣")
 
 
                                     designated_channel = None
@@ -2510,15 +2512,16 @@ async def on_message(message: discord.Message):
                                                                                id=settings['punishments']['channel'])
                                         except KeyError:
                                             print('2713 - Designated channel {}'.format(designated_channel))
-                                            return await message.add_reaction('❌')
-
+                                            await message.add_reaction('❌')
+                                            return await message.add_reaction('3️⃣')
                                     if designated_channel is None:
                                         print('2715 - Designated channel {}'.format(designated_channel))
-
-                                        return await message.add_reaction('❌')
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('4️⃣')
 
                                     if not warning_type:
-                                        return await message.add_reaction('❌')
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('5️⃣')
 
 
                                     discord_user = 0
@@ -2527,13 +2530,15 @@ async def on_message(message: discord.Message):
 
                                     print(f'Discord User: {discord_user}')
                                     if discord_user == 0:
-                                        return await message.add_reaction('❌')
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('6️⃣')
 
                                     user = discord.utils.get(message.guild.members, id=discord_user)
                                     if not user:
                                         user = await message.guild.fetch_member(discord_user)
                                         if not user:
-                                            return await message.add_reaction('❌')
+                                            await message.add_reaction('❌')
+                                            return await message.add_reaction('7️⃣')
 
                                     async with aiohttp.ClientSession() as session:
                                         async with session.get(
