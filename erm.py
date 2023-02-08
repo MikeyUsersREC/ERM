@@ -2398,13 +2398,13 @@ async def on_message(message: discord.Message):
                                 user = user.split('(')[0].replace('[', '').replace(']', '')
                                 person = command.split(' ')[1]
                                 try:
-                                    type, reason = (' '.join(command.split(' ')[2:])).split( 'for ')
+                                    type, reason = (' '.join(command.split(' ')[2:])).split(' for ')
                                 except:
                                     await message.add_reaction('❌')
                                     return await message.add_reaction('1️⃣')
 
                                 reason = reason.replace('"', '')
-
+                                type = type.strip()
 
                                 generic_warning_types = [
                                     "Warning",
