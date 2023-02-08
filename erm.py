@@ -801,7 +801,10 @@ async def link(ctx):
                             f"https://v3.blox.link/developer/discord/{ctx.author.id}") as resp:
                         rbx = await resp.json()
                         if rbx['success']:
-                            verified_user = rbx['user']['primaryAccount']
+                            if rbx['user']['primaryAccount'] not in [None, 0]:
+                                verified_user = rbx['user']['primaryAccount']
+                            else:
+                                verified_user = rbx['user']['robloxId']
                             status = True
                         else:
                             status = False
@@ -888,11 +891,11 @@ async def link(ctx):
                     color=0x71c15f
                 )
                 if await bot.synced_users.find_by_id(ctx.author.id):
-                    await bot.synced_users.update_by_id({"_id": ctx.author.id, "roblox": roblox_user})
+                    await bot.synced_users.update_by_id({"_id": ctx.author.id, "roblox": str(roblox_user)})
                 else:
                     await bot.synced_users.insert({
                         "_id": ctx.author.id,
-                        "roblox": roblox_user
+                        "roblox": str(roblox_user)
                     })
                 await ctx.send(embed=embed)
             if verified:
@@ -901,7 +904,7 @@ async def link(ctx):
                         if r.status == 200:
                             roblox_user = await r.json()
                             roblox_id = roblox_user['id']
-                            return await after_verified(roblox_user)
+                            return await after_verified(roblox_user['id'])
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(f'https://users.roblox.com/v1/usernames/users',
@@ -941,7 +944,7 @@ async def link(ctx):
                         print(new_data)
                         if 'isVerified' in new_data.keys():
                             if new_data['isVerified']:
-                                return await after_verified(roblox_user)
+                                return await after_verified(roblox_user['id'])
                             else:
                                 await invis_embed(ctx,
                                                          'You have not verified using the verification game. Please retry.')
@@ -7879,7 +7882,10 @@ async def duty_admin(ctx, member: discord.Member):
 
         menu.add_button(ViewButton.back())
         menu.add_button(ViewButton.next())
-        await menu.start()
+        try:
+            await menu.start()
+        except:
+            pass
         print('9960')
 
         if shift.get('nickname'):
@@ -10016,7 +10022,11 @@ async def manage(ctx):
 
         menu.add_button(ViewButton.back())
         menu.add_button(ViewButton.next())
-        await menu.start()
+        try:
+            await menu.start()
+        except:
+            pass
+        
         print('9960')
 
         if not await bot.shift_storage.find_by_id(ctx.author.id):
