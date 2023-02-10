@@ -864,8 +864,6 @@ class LOAMenu(discord.ui.View):
                 )
                 await interaction.followup.send(embed=embed)
 
-        await interaction.response.defer()
-
         modal = CustomModal(f'Reason for Denial', [
             ('value', (
                 discord.ui.TextInput(
@@ -884,9 +882,11 @@ class LOAMenu(discord.ui.View):
         reason = modal.value.value
 
         for item in self.children:
+            item.disabled = True
             if item.label == button.label:
                 item.label = "Denied"
-            item.disabled = True
+            else:
+                self.remove_item(item)
         s_loa = None
         for loa in await self.bot.loas.get_all():
             if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
@@ -921,7 +921,7 @@ class LOAMenu(discord.ui.View):
         embed.set_footer(
             text=f'Staff Logging Module - Denied by {interaction.user.name}#{interaction.user.discriminator}')
 
-        await interaction.edit_original_response(embed=embed, view=self)
+        await interaction.message.edit(embed=embed, view=self)
         self.value = True
         await self.bot.views.delete_by_id(self.id)
 
