@@ -787,6 +787,10 @@ class LOAMenu(discord.ui.View):
                 )
                 await interaction.followup.send(embed=embed)
                 return
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+
 
         for item in self.children:
             item.disabled = True
@@ -794,6 +798,7 @@ class LOAMenu(discord.ui.View):
                 item.label = "Accepted"
             else:
                 self.remove_item(item)
+        await interaction.message.edit(view=self)
         s_loa = None
         print(self)
         print(self.bot)
@@ -847,7 +852,6 @@ class LOAMenu(discord.ui.View):
         await interaction.followup.send(embed=create_invis_embed(
             f'You have accepted this person\'s {s_loa["type"]} request! To extend, edit or modify this request, please use `/{s_loa["type"].lower()} admin`'))
 
-
         await self.bot.views.delete_by_id(self.id)
         self.stop()
 
@@ -862,7 +866,10 @@ class LOAMenu(discord.ui.View):
                     description=f'You do not have permissions to deny this person\'s request. If you believe to have received this message in error, please contact a server administrator.',
                     color=0x2e3136
                 )
-                await interaction.followup.send(embed=embed)
+                return await interaction.followup.send(embed=embed)
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
 
         modal = CustomModal(f'Reason for Denial', [
             ('value', (
@@ -887,6 +894,7 @@ class LOAMenu(discord.ui.View):
                 item.label = "Denied"
             else:
                 self.remove_item(item)
+        await interaction.message.edit(view=self)
         s_loa = None
         for loa in await self.bot.loas.get_all():
             if loa['message_id'] == interaction.message.id and loa['guild_id'] == interaction.guild.id:
@@ -1436,7 +1444,7 @@ class RemoveWarning(discord.ui.View):
                 'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
         await interaction.response.defer()
         for item in self.children:
-            item.disabled = True
+            self.remove_item(item)
         self.value = True
 
         success = discord.Embed(
@@ -1457,7 +1465,7 @@ class RemoveWarning(discord.ui.View):
                 'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
         await interaction.response.defer()
         for item in self.children:
-            item.disabled = True
+            self.remove_item(item)
         self.value = False
 
         success = discord.Embed(

@@ -568,7 +568,7 @@ async def punishment_manage(ctx):
         )
 
         view = RemoveWarning(bot, ctx.author.id)
-        await ctx.send(embed=embed, view=view)
+        await msg.edit(embed=embed, view=view)
         await view.wait()
 
         if view.value:
@@ -8561,7 +8561,7 @@ async def loarequest(ctx, time, *, reason):
          'expiry': {'$gt': datetime.datetime.utcnow().timestamp()}, 'denied': False, 'expired': False})]
     if len(documents) > 0:
         return await invis_embed(ctx,
-                                 f'You already have an active Leave of Absence request. Please wait until it expires before filing another one. If you would like to extend your LoA request, please ask a Management member to run `/ra admin`.')
+                                 f'You already have an active Leave of Absence request. Please wait until it expires before filing another one. If you would like to extend your LoA request, please ask a Management member to run `/loa admin`.')
     if not time.lower().endswith(('h', 'm', 's', 'd', 'w')):
         reason.insert(0, time)
         if not ''.join(reason).lower().endswith(('h', 'm', 's', 'd', 'w')):
