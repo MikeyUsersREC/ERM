@@ -469,6 +469,9 @@ async def punishment_manage(ctx):
             await msg.edit(embed=embed, view=newview)
             await newview.wait()
 
+            if not newview.value:
+                return await invis_embed(ctx, "A channel is required for a punishment type. Please try again.")
+
             data = {
                 "name": typeName.lower().title(),
                 "channel": newview.value[0].id
@@ -2463,7 +2466,7 @@ async def on_message(message: discord.Message):
                                 user = user.split('(')[0].replace('[', '').replace(']', '')
                                 person = command.split(' ')[1]
 
-                                if ' for ' not in command:
+                                if ' for ' not in command and any([(' ' + cmd.qualified_name.lower() + ' ') in command[1:len(cmd.qualified_name.split(' ')) + 1] for cmd in bot.commands]):
                                     combined = ""
                                     for word in command.split(' ')[1:]:
                                         if not bot.get_command(combined.strip()):
@@ -2544,9 +2547,14 @@ async def on_message(message: discord.Message):
                                             shift_channel = discord.utils.get(ctx.guild.channels,
                                                                               id=configItem['shift_management'][
                                                                                   'channel'])
+
+                                            if not shift_channel:
+                                                raise Exception()
                                         except:
                                             return await invis_embed(ctx,
                                                                      f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
+
+
 
                                         if not configItem['shift_management']['enabled']:
                                             return await invis_embed(ctx,
@@ -3695,6 +3703,46 @@ async def on_message(message: discord.Message):
 
 
                                     await designated_channel.send(embed=embed)
+
+                                discord_user = None
+                                async for document in bot.synced_users.db.find({"roblox": str(roblox_user["id"])}):
+                                    discord_user = document['_id']
+
+                                if discord_user:
+                                    try:
+                                        member = await message.guild.fetch_member(discord_user)
+                                    except discord.NotFound:
+                                        member = None
+
+                                    if member:
+                                        should_dm = True
+                                        if document.get('consent'):
+                                            if document['consent'].get('punishments') is False:
+                                                should_dm = False
+
+                                        if should_dm:
+                                            try:
+                                                personal_embed = discord.Embed(
+                                                    title="<:WarningIcon:1035258528149033090> You have been moderated!",
+                                                    description=f"***{message.guild.name}** has moderated you in-game*",
+                                                    color=0x2e3136
+                                                )
+                                                personal_embed.add_field(
+                                                    name="<:MalletWhite:1035258530422341672> Moderation Details",
+                                                    value=f"<:ArrowRightW:1035023450592514048> **Username:** {person}\n<:ArrowRightW:1035023450592514048> **Reason:** {reason}\n<:ArrowRightW:1035023450592514048> **Type:** {type.lower().title()}",
+                                                    inline=False)
+
+                                                try:
+                                                    personal_embed.set_author(name=message.guild.name,
+                                                                              icon_url=message.guild.icon.url)
+                                                except:
+                                                    personal_embed.set_author(name=message.guild.name)
+
+                                                await member.send(embed=personal_embed)
+
+                                            except:
+                                                pass
+
                                 await message.add_reaction('📝')
                         
                         if ':m' in embed.description:
@@ -4085,22 +4133,22 @@ async def setup(ctx):
         view = ChannelSelect(ctx.author.id, limit=1)
         await invis_embed(ctx, question, view=view)
         await view.wait()
-        convertedContent = view.value[0]
-        settingContents['staff_management']['channel'] = convertedContent.id
+        convertedContent = view.value
+        settingContents['staff_management']['channel'] = convertedContent[0].id if convertedContent else None
 
         question = 'What role would you like to use for your staff role? (e.g. @Staff)\n*You can select multiple roles.*'
         view = RoleSelect(ctx.author.id)
         await invis_embed(ctx, question, view=view)
         await view.wait()
         convertedContent = view.value
-        settingContents['staff_management']['role'] = [role.id for role in convertedContent]
+        settingContents['staff_management']['role'] = [role.id for role in convertedContent] if convertedContent else []
 
         question = 'What role would you like to use for your Management role? (e.g. @Management)\n*You can select multiple roles.*'
         view = RoleSelect(ctx.author.id)
         await invis_embed(ctx, question, view=view)
         await view.wait()
         convertedContent = view.value
-        settingContents['staff_management']['management_role'] = [role.id for role in convertedContent]
+        settingContents['staff_management']['management_role'] = [role.id for role in convertedContent] if convertedContent else []
 
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?'
@@ -4115,7 +4163,7 @@ async def setup(ctx):
                 await invis_embed(ctx, question, view=view)
                 await view.wait()
                 convertedContent = view.value
-                settingContents['staff_management']['loa_role'] = [role.id for role in convertedContent]
+                settingContents['staff_management']['loa_role'] = [role.id for role in convertedContent] if convertedContent else []
 
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?'
@@ -4130,21 +4178,21 @@ async def setup(ctx):
                 await invis_embed(ctx, question, view=view)
                 await view.wait()
                 convertedContent = view.value
-                settingContents['staff_management']['ra_role'] = [role.id for role in convertedContent]
+                settingContents['staff_management']['ra_role'] = [role.id for role in convertedContent] if convertedContent else []
     if settingContents['punishments']['enabled']:
         question = 'What channel do you want to use for punishments?'
         view = ChannelSelect(ctx.author.id, limit=1)
         await invis_embed(ctx, question, view=view)
         await view.wait()
-        convertedContent = view.value[0]
-        settingContents['punishments']['channel'] = convertedContent.id
+        convertedContent = view.value
+        settingContents['punishments']['channel'] = convertedContent[0].id if convertedContent else None
     if settingContents['shift_management']['enabled']:
         question = "What channel do you want to use for shift management? (e.g. shift signups, etc.)"
         view = ChannelSelect(ctx.author.id, limit=1)
         await invis_embed(ctx, question, view=view)
         await view.wait()
-        convertedContent = view.value[0]
-        settingContents['shift_management']['channel'] = convertedContent.id
+        convertedContent = view.value
+        settingContents['shift_management']['channel'] = convertedContent[0].id if convertedContent else None
 
         view = YesNoMenu(ctx.author.id)
         question = 'Do you want a role to be assigned to staff members when they are in game?'
@@ -4159,7 +4207,7 @@ async def setup(ctx):
                 await invis_embed(ctx, question, view=view)
                 await view.wait()
                 convertedContent = view.value
-                settingContents['shift_management']['role'] = [role.id for role in convertedContent]
+                settingContents['shift_management']['role'] = [role.id for role in convertedContent] if convertedContent else []
 
         view = YesNoMenu(ctx.author.id)
         question = 'Do you have a weekly quota? (e.g. `2h`, `90m`, `7h`)'
@@ -4437,7 +4485,11 @@ async def setup(ctx):
                             if timeout:
                                 return
 
-                            channel = view.value[0]
+                            channel = view.value
+                            if channel:
+                                channel = channel[0]
+                            else:
+                                return await ctx.send(embed=create_invis_embed("You must select a channel for successful shift type creation. Please try again."))
                         else:
                             channel = None
 
@@ -4625,7 +4677,7 @@ async def setup(ctx):
                                 if timeout:
                                     return
 
-                                roles = [role.id for role in view.value]
+                                roles = [role.id for role in view.value] if [role.id for role in view.value] else None
                             else:
                                 roles = []
 
@@ -4662,7 +4714,11 @@ async def setup(ctx):
                                 if timeout:
                                     return
 
-                                channel = view.value[0].id
+                                channel = view.value
+                                if channel                                    :
+                                    channel = channel[0].id
+                                else:
+                                    return await ctx.send(embed=create_invis_embed('You did not select a channel. Please try again.'))
                             else:
                                 channel = None
 
@@ -4961,6 +5017,29 @@ async def viewconfig(ctx):
     except:
         quota = '0 seconds'
 
+    for item in [
+        antiping_role,
+        bypass_role,
+        verification_role,
+        shift_role,
+        staff_management_channel,
+        staff_role,
+        management_role,
+        punishments_channel,
+        kick_channel,
+        ban_channel,
+        bolo_channel,
+        ra_role,
+        loa_role,
+        webhook_channel,
+        aa_channel,
+        aa_role,
+        minimum_shift_time,
+        quota
+    ]:
+        if item in ["", " "] or item is None:
+            item = "None"
+
     embed = discord.Embed(
         title='<:support:1035269007655321680> Server Configuration',
         description=f'<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:',
@@ -5109,6 +5188,7 @@ async def viewconfig(ctx):
     priority_logging_enabled = "False"
     priority_logging_channel = "None"
 
+
     if settingContents.get('game_logging'):
         message_logging_enabled = str(settingContents['game_logging']['message']['enabled'])
         message_logging_channel = settingContents['game_logging']['message']['channel']
@@ -5151,6 +5231,9 @@ async def viewconfig(ctx):
         else:
             sts_logging_channel = sts_logging_channel.mention
 
+    for item in [message_logging_enabled, message_logging_channel, sts_logging_enabled, sts_logging_channel, priority_logging_enabled, priority_logging_channel]:
+        if item in [" ", ""]:
+            item = "None"
 
 
     embed.add_field(
@@ -5316,7 +5399,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['verification']['role'] = [role.id for role in view.value]
+            settingContents['verification']['role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         else:
             return await invis_embed(ctx,
                                      'Please pick one of the options. `enable`, `disable`, `role`. Please run this command again with correct parameters.')
@@ -5378,7 +5461,7 @@ async def changeconfig(ctx):
             )
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['antiping']['role'] = [role.id for role in view.value]
+            settingContents['antiping']['role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         elif content == "bypass_role" or content == "bypass" or content == "bypass-role":
             view = RoleSelect(ctx.author.id)
             question = 'What roles do you want to use as a bypass role? (e.g. `@Antiping Bypass`)'
@@ -5391,7 +5474,7 @@ async def changeconfig(ctx):
             await ctx.send(embed=embed, view=view)
 
             await view.wait()
-            settingContents['antiping']['bypass_role'] = [role.id for role in view.value]
+            settingContents['antiping']['bypass_role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
 
         elif content == "enable_hierarchy" or content == "enable-hierarchy":
             settingContents['antiping']['use_hierarchy'] = True
@@ -5466,7 +5549,7 @@ async def changeconfig(ctx):
             )
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['staff_management']['channel'] = view.value[0].id
+            settingContents['staff_management']['channel'] = view.value[0].id if view.value else None
         elif content == 'staff_role':
             view = RoleSelect(ctx.author.id)
             question = "What roles do you want to use as staff roles? (e.g. `@Staff`)"
@@ -5478,7 +5561,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['staff_management']['role'] = [role.id for role in view.value]
+            settingContents['staff_management']['role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
 
         elif content == 'management_role':
             view = RoleSelect(ctx.author.id)
@@ -5491,7 +5574,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['staff_management']['management_role'] = [role.id for role in view.value]
+            settingContents['staff_management']['management_role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         elif content == 'loa_role':
             view = RoleSelect(ctx.author.id)
             question = "What roles do you want to use as a LOA role? (e.g. `@LOA`)"
@@ -5503,7 +5586,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['staff_management']['loa_role'] = [role.id for role in view.value]
+            settingContents['staff_management']['loa_role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         elif content == 'ra_role':
             view = RoleSelect(ctx.author.id)
             question = "What roles do you want to use as a RA role? (e.g. `@RA`)"
@@ -5515,7 +5598,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['staff_management']['ra_role'] = [role.id for role in view.value]
+            settingContents['staff_management']['ra_role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         elif content == 'privacy_mode':
             view = EnableDisableMenu(ctx.author.id)
             question = 'Do you want to enable Privacy Mode? This will anonymize the person who denies/accepts/voids a LoA/RA.'
@@ -5590,7 +5673,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents["punishments"]["channel"] = view.value[0].id
+            settingContents["punishments"]["channel"] = view.value[0].id if view.value else None
         elif content == 'ban_channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for bans? (e.g. `#bans`)"
@@ -5602,7 +5685,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents["customisation"]["ban_channel"] = view.value[0].id
+            settingContents["customisation"]["ban_channel"] = view.value[0].id if view.value else None
         elif content == 'kick_channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for kicks? (e.g. `#kicks`)"
@@ -5614,7 +5697,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents["customisation"]["kick_channel"] = view.value[0].id
+            settingContents["customisation"]["kick_channel"] = view.value[0].id if view.value else None
         elif content == 'bolo_channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for BOLOs? (e.g. `#bolos`)"
@@ -5626,7 +5709,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents["customisation"]["bolo_channel"] = view.value[0].id
+            settingContents["customisation"]["bolo_channel"] = view.value[0].id if view.value else None
         else:
             return await invis_embed(ctx, 'You have not selected one of the options. Please run this command again.')
     elif category == "moderation_sync":
@@ -5695,7 +5778,7 @@ async def changeconfig(ctx):
                     "webhook_channel": None,
                     "kick_ban_webhook_channel": None
                 }
-            settingContents["moderation_sync"]["webhook_channel"] = view.value[0].id
+            settingContents["moderation_sync"]["webhook_channel"] = view.value[0].id if view.value else None
         elif content == 'kick_channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for Moderation Sync? (e.g. `#kick-ban-logs`)\n*This channel is where the \"Kick/Ban Command Logs\" embeds are sent.*"
@@ -5713,7 +5796,7 @@ async def changeconfig(ctx):
                     "webhook_channel": None,
                     "kick_ban_webhook_channel": None
                 }
-            settingContents["moderation_sync"]["kick_ban_webhook_channel"] = view.value[0].id
+            settingContents["moderation_sync"]["kick_ban_webhook_channel"] = view.value[0].id if view.value else None
     elif category == 'shift_management':
         question = 'What do you want to do with shift management?'
         customselect = CustomSelectMenu(ctx.author.id, [
@@ -5885,7 +5968,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents["shift_management"]["channel"] = view.value[0].id
+            settingContents["shift_management"]["channel"] = view.value[0].id if view.value else None
         elif content == 'role':
             view = RoleSelect(ctx.author.id)
             question = "What roles do you want to use as a On-Duty role? (e.g. `@On-Duty`)"
@@ -5897,7 +5980,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['shift_management']['role'] = [role.id for role in view.value]
+            settingContents['shift_management']['role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         else:
             return await invis_embed(ctx,
                                      'Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.')
@@ -6210,7 +6293,12 @@ async def changeconfig(ctx):
                     if timeout:
                         return
 
-                    channel = view.value[0]
+                    channel = view.value
+                    if channel:
+                        channel = channel[0].id
+                    else:
+                        return await ctx.send(
+                            embed=create_invis_embed('You did not select a channel. Please try again.'))
                 else:
                     channel = None
 
@@ -6395,7 +6483,7 @@ async def changeconfig(ctx):
                         if timeout:
                             return
 
-                        roles = [role.id for role in view.value]
+                        roles = [role.id for role in view.value] if [role.id for role in view.value] else []
                     else:
                         roles = []
 
@@ -6432,7 +6520,12 @@ async def changeconfig(ctx):
                         if timeout:
                             return
 
-                        channel = view.value[0].id
+                        channel = view.value
+                        if channel:
+                            channel = channel[0].id
+                        else:
+                            return await ctx.send(
+                                embed=create_invis_embed('You did not select a channel. Please try again.'))
                     else:
                         channel = None
 
@@ -6732,8 +6825,8 @@ async def changeconfig(ctx):
                     return
 
                 if view.value:
-                    channel = view.value[0]
-                    settingContents['game_logging']['message']['channel'] = channel.id
+                    channel = view.value
+                    settingContents['game_logging']['message']['channel'] = channel[0].id if channel else None
         elif content == "sts":
             question = 'What would you like to change?'
 
@@ -6789,8 +6882,8 @@ async def changeconfig(ctx):
                 if not view.value:
                     return
 
-                channel = view.value[0]
-                settingContents['game_logging']['sts']['channel'] = channel.id
+                channel = view.value
+                settingContents['game_logging']['sts']['channel'] = channel[0].id if channel else None
         elif content == "priority":
             question = 'What would you like to change?'
 
@@ -6864,8 +6957,8 @@ async def changeconfig(ctx):
                         "enabled": False,
                         "channel": None
                     }
-                channel = view.value[0]
-                settingContents['game_logging']['priority']['channel'] = channel.id
+                channel = view.value
+                settingContents['game_logging']['priority']['channel'] = channel[0].id if channel else None
 
 
 
@@ -6939,7 +7032,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['game_security']['role'] = [role.id for role in view.value]
+            settingContents['game_security']['role'] = [role.id for role in view.value] if [role.id for role in view.value] else []
         elif content == 'webhook_channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel are ER:LC webhooks sent to? (e.g. `#kicks-and-bans`)"
@@ -6951,7 +7044,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['game_security']['webhook_channel'] = view.value[0].id
+            settingContents['game_security']['webhook_channel'] = view.value[0].id if view.value else None
         elif content == 'channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want Anti-Abuse reports to go to? (e.g. `#admin-abuse`)"
@@ -6963,7 +7056,7 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['game_security']['channel'] = view.value[0].id
+            settingContents['game_security']['channel'] = view.value[0].id if view.value else None
         else:
             return await invis_embed(ctx,
                                      'Please pick one of the options. `enable`, `disable`, `role`, `channel`, `webhook_channel`. Please run this command again with correct parameters.')
@@ -12772,7 +12865,9 @@ async def manage_reminders(ctx):
             if timeout:
                 return
 
-            channel = view.value[0]
+            channel = view.value[0] if view.value else None
+            if not channel:
+                return await invis_embed(ctx, 'You have not selected a channel. A channel is required for for reminder creation.')
 
             view = YesNoMenu(ctx.author.id)
 
@@ -12806,7 +12901,7 @@ async def manage_reminders(ctx):
                     "completion_ability": completed,
                     "message": message,
                     "channel": channel.id,
-                    "role": [role.id for role in roleObject],
+                    "role": [role.id for role in roleObject] if roleObject else [],
                     "lastTriggered": 0
                 })
             else:
@@ -12956,9 +13051,7 @@ async def custom_manage(ctx):
             await ctx.send(embed=embed, view=channel_view)
             await channel_view.wait()
             if channel_view.value:
-               channel = [ch.id for ch in channel_view.value][0]
-
-
+                channel = [ch.id for ch in channel_view.value][0]
 
         custom_command_data = {
             "_id": ctx.guild.id,
@@ -13134,6 +13227,7 @@ async def custom_manage(ctx):
             embed = discord.Embed(
                 title="<:Resume:1035269012445216858> Custom Commands",
                 description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command."
+                ,color=0x2e3136
             )
             channel_view = YesNoColourMenu(ctx.author.id)
             await ctx.send(embed=embed, view=channel_view)
@@ -13142,7 +13236,8 @@ async def custom_manage(ctx):
             if channel_view.value is True:
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Custom Commands",
-                    description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command."
+                    description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
+                    color=0x2e3136
                 )
 
                 channel_view = ChannelSelect(ctx.author.id, limit=1)
@@ -13183,6 +13278,12 @@ async def custom_manage(ctx):
                 Data = custom_command_data
 
             await bot.custom_commands.upsert(Data)
+            successEmbed = discord.Embed(
+                title="<:CheckIcon:1035018951043842088> Success!",
+                description=f"<:ArrowRight:1035003246445596774> Your custom command has been edited successfully.",
+                color=0x71c15f
+            )
+            await ctx.send(embed=successEmbed)
         elif view.value == "name":
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Edit a Custom Command",
@@ -13922,7 +14023,7 @@ async def duty_active(ctx):
                              icon_url=ctx.author.display_avatar.url)
             embeds.append(embed)
 
-        embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{' (Currently on break: {})'.format(staff['break_seconds']) if staff['break_seconds'] > 0 else ''}"
+        embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' (Currently on break: {})'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
 
 
     if ctx.interaction:
@@ -13937,9 +14038,14 @@ async def duty_active(ctx):
     menu._pc = _PageController(menu.pages)
     menu.add_buttons([ViewButton.back(), ViewButton.next()])
     if len(menu.pages) == 1:
-        return await msg.edit(embed=embed, view=None)
-    await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
-
+        try:
+            return await msg.edit(embed=embed, view=None)
+        except UnboundLocalError:
+            return await ctx.send(embed=embed)
+    try:
+        await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
+    except UnboundLocalError:
+        await ctx.send(embed=embeds[0], view=menu.__ViewMenu__view)
 
 
 @duty.command(name='leaderboard',
@@ -14261,7 +14367,7 @@ async def shift_leaderboard(ctx):
         new_embeds = []
         for i in embeds:
             new_embeds.append(i)
-        if management_predicate(ctx):
+        if await management_predicate(ctx):
             view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined,
                                         config("DUTY_LEADERBOARD_ID"))
         else:
@@ -14298,13 +14404,18 @@ async def shift_leaderboard(ctx):
             func=response_func
         ))
         if len(menu.pages) == 1:
-            return await msg.edit(embed=embed, file=file, view=view)
+            try:
+                return await msg.edit(embed=embed, file=file, view=view)
+            except UnboundLocalError:
+                return await ctx.send(embed=embed, file=file, view=view)
         if view:
             for child in view.children:
                 menu._ViewMenu__view.add_item(child)
 
-        await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
-
+        try:
+            await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
+        except UnboundLocalError:
+            await ctx.send(embed=embeds[0], view = menu._ViewMenu__view)
 
 @duty.command(name='clearall',
               description="Clears all of the shift data.",
@@ -15144,7 +15255,7 @@ async def modstats(ctx, user: discord.Member = None):
         moderations = []
         shifts = []
     else:
-        moderations = [i for i in list(filter(lambda x: x.get('moderations') is not None and x['guild'] == ctx.guild.id, selected['shifts'])) if i is not None]
+        moderations = [i for i in list(filter(lambda x: (x if x else {}).get('moderations') is not None and (x if x else {})['guild'] == ctx.guild.id, selected['shifts'])) if i is not None]
         print(moderations)
         moderations = []
         for i in moderations:
