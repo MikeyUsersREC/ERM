@@ -2466,7 +2466,8 @@ async def on_message(message: discord.Message):
                                 user = user.split('(')[0].replace('[', '').replace(']', '')
                                 person = command.split(' ')[1]
 
-                                if ' for ' not in command and any([(' ' + cmd.qualified_name.lower() + ' ') in command[1:len(cmd.qualified_name.split(' ')) + 1] for cmd in bot.commands]):
+                                # and any([(' ' + cmd.qualified_name.lower() + ' ') in command[0:len(cmd.qualified_name.split(' ')) + 1] for cmd in bot.commands])
+                                if ' for ' not in command:
                                     combined = ""
                                     for word in command.split(' ')[1:]:
                                         if not bot.get_command(combined.strip()):
@@ -15265,7 +15266,7 @@ async def modstats(ctx, user: discord.Member = None):
         for i in moderations:
             moderations = [x for x in i['moderations'] if x is not None]
         print(moderations)
-        shifts = [x for x in [x['shifts'] for x in list(filter(lambda x: x.get('shifts') is True, selected['shifts']))] if x is not None and x['guild'] == ctx.guild.id]
+        shifts = [x for x in [x['shifts'] for x in list(filter(lambda x: (x if x else {}).get('shifts') is True, selected['shifts']))] if (x if x else {}) is not None and (x if x else {})['guild'] == ctx.guild.id]
 
     leaves = list(filter(lambda x: x['type'] == "LoA", loas))
     reduced_activity = list(filter(lambda x: x['type'] == "RA", loas))
