@@ -1565,7 +1565,7 @@ async def check_loa():
                         if roles is not [None]:
                             for role in roles:
                                 if role:
-                                    for rl in roles:
+                                    for rl in roles and rl is not None:
                                         if member:
                                             if rl in member.roles:
                                                 try:
@@ -2660,7 +2660,7 @@ async def on_message(message: discord.Message):
                                                                     configItem['shift_management']['role']]
                                             if role:
                                                 for rl in role:
-                                                    if rl not in ctx.author.roles:
+                                                    if rl not in ctx.author.roles and rl is not None:
                                                         try:
                                                             await ctx.author.add_roles(rl)
                                                         except:
@@ -2962,7 +2962,7 @@ async def on_message(message: discord.Message):
 
                                             if role:
                                                 for rl in role:
-                                                    if not rl in ctx.author.roles:
+                                                    if not rl in ctx.author.roles and rl is not None:
                                                         try:
                                                             await ctx.author.add_roles(rl)
                                                         except:
@@ -3451,7 +3451,7 @@ async def on_message(message: discord.Message):
 
                                         if role:
                                             for rl in role:
-                                                if rl in ctx.author.roles:
+                                                if rl in ctx.author.roles and rl is not None:
                                                     try:
                                                         await ctx.author.remove_roles(rl)
                                                     except:
@@ -8786,7 +8786,7 @@ async def duty_admin(ctx, member: discord.Member):
                                     configItem['shift_management']['role']]
             if role:
                 for rl in role:
-                    if rl not in ctx.author.roles:
+                    if rl not in ctx.author.roles and rl is not None:
                         try:
                             await ctx.author.add_roles(rl)
                         except:
@@ -8974,7 +8974,7 @@ async def duty_admin(ctx, member: discord.Member):
 
             if role:
                 for rl in role:
-                    if not rl in member.roles:
+                    if not rl in member.roles and rl is not None:
                         try:
                             await member.add_roles(rl)
                         except:
@@ -9346,7 +9346,7 @@ async def duty_admin(ctx, member: discord.Member):
 
         if role:
             for rl in role:
-                if rl in member.roles:
+                if rl in member.roles and rl is not None:
                     try:
                         await member.remove_roles(rl)
                     except:
@@ -9400,7 +9400,7 @@ async def duty_admin(ctx, member: discord.Member):
 
             if role:
                 for rl in role:
-                    if rl in member.roles:
+                    if rl in member.roles and rl is not None:
                         try:
                             await member.remove_roles(rl)
                         except:
@@ -9435,7 +9435,7 @@ async def duty_admin(ctx, member: discord.Member):
 
             if role:
                 for rl in role:
-                    if not rl in member.roles:
+                    if not rl in member.roles and rl is not None:
                         try:
                             await member.add_roles(rl)
                         except:
@@ -9722,7 +9722,7 @@ async def duty_admin(ctx, member: discord.Member):
 
             if role:
                 for rl in role:
-                    if rl in member.roles:
+                    if rl in member.roles and rl is not None:
                         try:
                             await member.remove_roles(rl)
                         except:
@@ -9848,7 +9848,7 @@ async def duty_admin(ctx, member: discord.Member):
 
                 if role:
                     for rl in role:
-                        if rl in member.roles:
+                        if rl in member.roles and rl is not None:
                             try:
                                 await member.remove_roles(rl)
                             except:
@@ -10910,21 +10910,24 @@ async def manage(ctx):
             role = None
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles,
-                                              id=shift_type.get('role'))]
+                    if shift_type.get('role'):
+                        role = [discord.utils.get(ctx.guild.roles,
+                                                  id=rl) for rl in shift_type.get('role')]
+                    else:
+                        role = [discord.utils.get(ctx.guild.roles, id=shift_type.get('role'))]
             else:
                 if configItem['shift_management']['role']:
                     if not isinstance(configItem['shift_management']['role'],
                                       list):
                         role = [discord.utils.get(ctx.guild.roles, id=
-                        configItem['shift_management']['role'])]
+                        configItem['shift_management']['role'])] or []
                     else:
                         role = [discord.utils.get(ctx.guild.roles, id=role) for
                                 role in
                                 configItem['shift_management']['role']]
             if role:
                 for rl in role:
-                    if rl not in ctx.author.roles:
+                    if rl not in ctx.author.roles and rl is not None:
                         try:
                             await ctx.author.add_roles(rl)
                         except:
@@ -11208,7 +11211,7 @@ async def manage(ctx):
                                     configItem['shift_management']['role']]
             if role:
                 for rl in role:
-                    if rl not in ctx.author.roles:
+                    if rl not in ctx.author.roles and rl is not None:
                         try:
                             await ctx.author.add_roles(rl)
                         except:
@@ -11576,7 +11579,7 @@ async def manage(ctx):
 
         if role:
             for rl in role:
-                if rl in ctx.author.roles:
+                if rl in ctx.author.roles and rl is not None:
                     try:
                         await ctx.author.remove_roles(rl)
                     except:
@@ -11631,7 +11634,7 @@ async def manage(ctx):
             if vars().get('role'):
                 if role is not None:
                     for rl in role:
-                        if rl in ctx.author.roles:
+                        if rl in ctx.author.roles and rl is not None:
                             try:
                                 await ctx.author.remove_roles(rl)
                             except:
@@ -11666,7 +11669,7 @@ async def manage(ctx):
 
             if role:
                 for rl in role:
-                    if not rl in ctx.author.roles:
+                    if not rl in ctx.author.roles and rl is not None:
                         try:
                             await ctx.author.add_roles(rl)
                         except:
@@ -11732,7 +11735,7 @@ async def manage(ctx):
 
         if role:
             for rl in role:
-                if rl in ctx.author.roles:
+                if rl in ctx.author.roles and rl is not None:
                     try:
                         await ctx.author.remove_roles(rl)
                     except:
@@ -12764,7 +12767,7 @@ async def force_end_shift(interaction: discord.Interaction, member: discord.Memb
 
         if role:
             for rl in role:
-                if rl in member.roles:
+                if rl in member.roles and rl is not None:
                     try:
                         await member.remove_roles(rl)
                     except:
@@ -13652,7 +13655,7 @@ async def force_start_shift(interaction: discord.Interaction, member: discord.Me
 
         if role:
             for rl in role:
-                if rl not in member.roles:
+                if rl not in member.roles and rl is not None:
                     try:
                         await member.add_roles(rl)
                     except:
@@ -13861,7 +13864,7 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
 
         if role:
             for rl in role:
-                if rl in member.roles:
+                if rl in member.roles and rl is not None:
                     try:
                         await member.remove_roles(rl)
                     except:
