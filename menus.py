@@ -1,5 +1,5 @@
 import typing
-
+import datetime
 import discord
 
 from utils.utils import int_invis_embed, create_invis_embed
@@ -512,6 +512,31 @@ class ColouredButton(discord.ui.Button):
             await interaction.response.defer()
             self.view.value = self.label
             self.view.stop()
+        else:
+            await interaction.response.send_message(embed=create_invis_embed(
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+
+class CustomExecutionButton(discord.ui.Button):
+    def __init__(self, user_id, label, style, emoji=None, func=None):
+        '''
+
+        A button used for custom execution functions. This is often used to subvert pagination limitations.
+
+        :param user_id: the user who can use this button
+        :param label: the label of the button
+        :param style: style of the button : discord.ButtonStyle
+        :param emoji: emoji of the button
+        :param func: function to be executed when pressed
+        '''
+
+
+        super().__init__(label=label, style=style, emoji=emoji)
+        self.func = func
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == self.user_id:
+            await self.func(interaction, self)
         else:
             await interaction.response.send_message(embed=create_invis_embed(
                 'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
@@ -2173,6 +2198,14 @@ class RoleSelect(discord.ui.View):
 
     @discord.ui.select(cls=discord.ui.RoleSelect)
     async def role_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.RoleSelect):
+                select = child
+
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
             self.value = select.values
@@ -2180,7 +2213,8 @@ class RoleSelect(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(embed=create_invis_embed(
-                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'),
+                ephemeral=True)
 
 
 class UserSelect(discord.ui.View):
@@ -2205,7 +2239,15 @@ class UserSelect(discord.ui.View):
             child.min_values = 1
 
     @discord.ui.select(cls=discord.ui.UserSelect)
-    async def role_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+    async def user_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.UserSelect):
+                select = child
+
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
             self.value = select.values
@@ -2213,7 +2255,8 @@ class UserSelect(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(embed=create_invis_embed(
-                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'), ephemeral=True)
+                'You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu.'),
+                ephemeral=True)
 
 
 
@@ -2240,6 +2283,14 @@ class ChannelSelect(discord.ui.View):
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.text])
     async def channel_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
             self.value = select.values
@@ -2279,3 +2330,29 @@ class CheckMark(discord.ui.View):
         await interaction.response.defer()
         self.value = False
         self.stop()
+
+class CompleteReminder(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label="Mark as Complete", style=discord.ButtonStyle.gray)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        embed = interaction.message.embeds[0]
+        embed.set_footer(text="Completed by {0.name}#{0.discriminator}".format(interaction.user), icon_url=interaction.user.avatar.url)
+        embed.timestamp = datetime.datetime.utcnow()
+        embed.color = 0x71c15f
+        embed.title = "<:CheckIcon:1035018951043842088> Reminder Completed!"
+
+        for item in self.children:
+            item.disabled = True
+            item.label = "Completed"
+            item.style = discord.ButtonStyle.green
+
+        await interaction.message.edit(embed=embed, view=self)
+
+        self.stop()
+

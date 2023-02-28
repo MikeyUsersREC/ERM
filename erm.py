@@ -1,5 +1,3 @@
-import datetime
-import json
 import json
 import logging
 import pprint
@@ -7,7 +5,6 @@ import string
 import time
 from dataclasses import MISSING
 from io import BytesIO
-from logging import exception
 import copy
 import aiohttp
 import discord.mentions
@@ -21,6 +18,7 @@ from dateutil import parser
 from decouple import config
 from discord import app_commands
 from discord.ext import tasks
+from reactionmenu.abc import _PageController
 from oauth2client.service_account import ServiceAccountCredentials
 from reactionmenu import ViewButton, ViewMenu, ViewSelect, Page
 from roblox import client as roblox
@@ -29,13 +27,14 @@ from sentry_sdk.integrations.pymongo import PyMongoIntegration
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
 
-from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, ShiftModify, \
-    AddReminder, RemoveReminder, RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, EditWarning, \
-    AddCustomCommand, RemoveCustomCommand, CustomisePunishmentType, RobloxUsername, EnterRobloxUsername, Verification, \
-    ModificationSelectMenu, PartialShiftModify, EmbedCustomisation, MessageCustomisation, RequestGoogleSpreadsheet, \
-    ActivityNoticeModification, LinkView, \
+from menus import CustomSelectMenu, SettingsSelectMenu, YesNoMenu, RemoveWarning, LOAMenu, \
+    RoleSelect, ChannelSelect, EnableDisableMenu, MultiSelectMenu, EditWarning, \
+    AddCustomCommand, RemoveCustomCommand, CustomisePunishmentType, EnterRobloxUsername, Verification, \
+    ModificationSelectMenu, EmbedCustomisation, MessageCustomisation, RequestGoogleSpreadsheet, \
+    ActivityNoticeModification, \
     AdministrativeSelectMenu, RequestDataView, CustomModalView, YesNoColourMenu, ManageReminders, \
-    CustomCommandSettings, UserSelect, GoogleSpreadsheetModification, LinkPathwayMenu
+    UserSelect, GoogleSpreadsheetModification, LinkPathwayMenu, CompleteReminder, CustomExecutionButton
+
 from utils.mongo import Document
 from utils.timestamp import td_format
 from utils.utils import *
@@ -765,7 +764,7 @@ async def link(ctx):
 
     if is_erm_verified:
         embed = discord.Embed(
-            title="<:SyncIcon:1071821068551073892> Moderation Sync",
+            title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
             description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM.\n\n<:ArrowRight:1035003246445596774> You seem to be already verified with ERM! Would you like to use your account linked with ERM or use Bloxlink?",
             color=0x2e3136
         )
@@ -778,7 +777,7 @@ async def link(ctx):
         pathway = view.value
     else:
         embed = discord.Embed(
-            title="<:SyncIcon:1071821068551073892> Moderation Sync",
+            title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
             description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM. Please pick a verification provider to continue this process with.",
             color=0x2e3136
         )
@@ -827,7 +826,7 @@ async def link(ctx):
                 await ctx.send(embed=embed)
             elif status is False:
                 embed = discord.Embed(
-                    title="<:SyncIcon:1071821068551073892> Moderation Sync",
+                    title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
                     description=f"<:ArrowRight:1035003246445596774> You have not verified your account with Bloxlink. You can verify your account with Bloxlink by following the instructions below.\n\n<:ArrowRight:1035003246445596774> Follow [this link](https://blox.link/dashboard/verifications) to verify your account with Bloxlink. If you have verified, click **Done** below.",
                     color=0x2e3136)
                 view = Verification(ctx.author.id)
@@ -978,6 +977,11 @@ async def link(ctx):
 @app_commands.describe(user="What's their username? You can mention a Discord user, or provide a ROBLOX username.")
 @app_commands.describe(reason="What is your reason for punishing this user?")
 async def punish(ctx, user: str, type: str, *, reason: str):
+    configItem = await bot.settings.find_by_id(ctx.guild.id)
+    if configItem is None:
+        return await invis_embed(ctx,
+                                 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
     generic_warning_types = [
         "Warning",
         "Kick",
@@ -1028,6 +1032,11 @@ async def punish(ctx, user: str, type: str, *, reason: str):
                         designated_channel = bot.get_channel(warning_type['channel'])
 
     print(designated_channel)
+
+    if len(reason) > 800:
+        reason = reason[:797] + "..."
+
+    
     if designated_channel is None:
         try:
             designated_channel = bot.get_channel(settings['punishments']['channel'])
@@ -1175,7 +1184,7 @@ async def punish(ctx, user: str, type: str, *, reason: str):
     else:
         gtx = ctx
 
-    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None)
 
     async def warn_function(ctx, menu, designated_channel=None):
         user = menu.message.embeds[0].title.split(' ')[0]
@@ -1270,6 +1279,47 @@ async def punish(ctx, user: str, type: str, *, reason: str):
             description=f"<:ArrowRightW:1035023450592514048>**{user}**'s {type.lower()} has been logged.",
             color=0x71c15f
         )
+
+        roblox_id = menu.message.embeds[0].title.split(' ')[1].replace('(', '').replace(')', '')
+
+        discord_user = None
+        async for document in bot.synced_users.db.find({"roblox": roblox_id}):
+            discord_user = document['_id']
+
+        if discord_user:
+            try:
+                member = await ctx.guild.fetch_member(discord_user)
+            except discord.NotFound:
+                member = None
+
+            if member:
+                should_dm = True
+                if document.get('consent'):
+                    if document['consent'].get('punishments') is False:
+                        should_dm = False
+
+                if should_dm:
+                    try:
+                        personal_embed = discord.Embed(
+                            title="<:WarningIcon:1035258528149033090> You have been moderated!",
+                            description=f"***{ctx.guild.name}** has moderated you in-game*",
+                            color=0x2e3136
+                        )
+                        personal_embed.add_field(name="<:MalletWhite:1035258530422341672> Moderation Details",
+                                        value=f"<:ArrowRightW:1035023450592514048> **Username:** {menu.message.embeds[0].title.split(' ')[0]}\n<:ArrowRightW:1035023450592514048> **Reason:** {reason}\n<:ArrowRightW:1035023450592514048> **Type:** {type.lower().title()}",
+                                        inline=False)
+
+                        try:
+                            personal_embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon.url)
+                        except:
+                            personal_embed.set_author(name=ctx.guild.name)
+
+                        await member.send(embed=personal_embed)
+
+                    except:
+                        pass
+
+
 
         await menu.message.edit(embed=success)
 
@@ -1401,9 +1451,8 @@ async def GDPR():
     # if the date in each warning is more than 30 days ago, redact the staff's username and tag
     # using mongodb (warnings)
     # get all warnings
-    warnings = await bot.warnings.get_all()
     # iterate through each warning, to check the date via the time variable stored in "d/m/y h:m:s"
-    for userentry in warnings:
+    async for userentry in bot.warnings.db.find({}):
         for warning in userentry['warnings']:
             try:
                 date = datetime.datetime.strptime(warning['Time'], '%m/%d/%Y, %H:%M:%S')
@@ -1424,7 +1473,7 @@ async def GDPR():
 
 @tasks.loop(minutes=1)
 async def check_reminders():
-    for guildObj in await bot.reminders.get_all():
+    async for guildObj in bot.reminders.db.find({}):
         for item in guildObj['reminders']:
             try:
                 dT = datetime.datetime.now()
@@ -1449,6 +1498,10 @@ async def check_reminders():
                     except:
                         roles = [""]
 
+                    if item.get('completion_ability') and item.get('completion_ability') is True:
+                        view = CompleteReminder()
+                    else:
+                        view = None
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Notification",
                         description=f"{item['message']}",
@@ -1458,9 +1511,10 @@ async def check_reminders():
                     item['lastTriggered'] = lastTriggered
                     await bot.reminders.update_by_id(guildObj)
 
-                    await channel.send(" ".join(roles), embed=embed)
+
+                    await channel.send(" ".join(roles), embed=embed, view = view)
             except Exception as e:
-                print('Could not send reminder: {}'.format(e))
+                print('Could not send reminder: {}'.format(str(e)))
                 pass
 
 
@@ -1468,7 +1522,7 @@ async def check_reminders():
 async def check_loa():
     loas = bot.loas
 
-    for loaObject in await loas.get_all():
+    async for loaObject in bot.loas.db.find({}):
         if datetime.datetime.utcnow().timestamp() > loaObject['expiry'] and loaObject["expired"] == False:
             if loaObject['accepted'] is True:
                 loaObject['expired'] = True
@@ -1525,16 +1579,27 @@ async def check_loa():
 @bot.event
 async def on_command_error(ctx, error):
     error_id = error_gen()
+    
+    if isinstance(error, discord.Forbidden):
+        if 'Cannot send messages to this user' in str(error):
+            return
+
     if isinstance(error, commands.CommandNotFound):
         return
     if isinstance(error, commands.CheckFailure):
         embed = discord.Embed(title="<:ErrorIcon:1035000018165321808> Permissions Error", color=0xff3c3c,
                               description="You do not have permission to use this command.")
-        return await ctx.send(embed=embed)
+        try:
+            return await ctx.send(embed=embed)
+        except:
+            pass
     if isinstance(error, commands.MissingRequiredArgument):
         embed = discord.Embed(title="<:ErrorIcon:1035000018165321808> Error", color=0xff3c3c,
                               description="You are missing a required argument to run this command.")
-        return await ctx.send(embed=embed)
+        try:
+            return await ctx.send(embed=embed)
+        except:
+            pass
     try:
         embed = discord.Embed(
             title='<:ErrorIcon:1035000018165321808> Bot Error',
@@ -1552,7 +1617,7 @@ async def on_command_error(ctx, error):
         embed.add_field(name="Support Server", value="[Click here](https://discord.gg/5pMmJEYazQ)", inline=False)
         embed.add_field(name='Error ID', value=f"`{error_id}`", inline=False)
 
-        if not isinstance(error, (commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument)):
+        if not isinstance(error, (commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument, discord.Forbidden)):
             await ctx.send(embed=embed)
     except Exception as e:
         logging.info(e)
@@ -2035,7 +2100,7 @@ async def activity_report(ctx):
     loa_staff = []
     print(all_staff)
 
-    for document in await bot.loas.get_all():
+    async for document in bot.loas.db.find({}):
         if document['guild_id'] == ctx.guild.id:
             if document['expiry'] >= starting_period.timestamp():
                 if document['denied'] is False and document['accepted'] is True:
@@ -2072,7 +2137,7 @@ async def activity_report(ctx):
         else:
             met_quota = "<:ErrorIcon:1035000018165321808>"
         if member:
-            string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.name}#{member.discriminator} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
+            string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
             if value['moderations']:
                 data.append([index + 1, "YES" if met_quota == "<:CheckIcon:1035018951043842088>" else "NO",
                              f"{member.name}#{member.discriminator}", member.top_role.name,
@@ -2227,7 +2292,7 @@ async def activity_report(ctx):
     else:
         gtx = ctx
 
-    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
+    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None)
     menu.add_pages(embeds)
     menu.add_buttons([ViewButton.back(), ViewButton.next()])
     print(bbytes)
@@ -2239,7 +2304,7 @@ async def activity_report(ctx):
     async def google_task():
         embed = discord.Embed(color=0x2E3136,
                               description='<a:Loading:1044067865453670441> Your command is loading! We are currently taking our time to ensure that your ERM experience is bug-free!')
-        msg = await ctx.reply(embed=embed)
+        msg = await ctx.send(embed=embed)
 
         client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope))
         sheet = client.copy(config('ACTIVITY_REPORT_ID'), ctx.guild.name, copy_permissions=True)
@@ -2397,6 +2462,1001 @@ async def on_message(message: discord.Message):
                                 profile_link = user.split('(')[1].split(')')[0]
                                 user = user.split('(')[0].replace('[', '').replace(']', '')
                                 person = command.split(' ')[1]
+
+                                if ' for ' not in command:
+                                    combined = ""
+                                    for word in command.split(' ')[1:]:
+                                        if not bot.get_command(combined.strip()):
+                                            combined += word + " "
+                                            print(f'not found : {combined.strip()}')
+                                        else:
+                                            print(combined)
+                                            item = bot.get_command(combined.strip())
+                                            if isinstance(item, commands.HybridCommand) and not isinstance(item, commands.HybridGroup):
+                                                print('about to break 2405')
+                                                break
+                                            else:
+                                                combined += word + " "
+                                                print(f'not found : {combined.strip()}')
+                                    invoked_command = ' '.join(combined.replace('"', '').split(' ')[:-1])
+                                    print(invoked_command)
+                                    print(command.split(' '))
+                                    args = [i.replace('"', '') for i in command.split(' ')][[i.replace('"', '') for i in command.split(' ')].index(invoked_command.split(' ')[-1]) + 1:]
+                                    print(args)
+
+                                    _cmd = command
+
+                                    discord_user = 0
+                                    async for document in bot.synced_users.db.find(
+                                            {"roblox": str(profile_link.split('/')[4])}):
+                                        discord_user = document['_id']
+
+                                    print(f'Discord User: {discord_user}')
+                                    if discord_user == 0:
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('6️⃣')
+
+                                    user = discord.utils.get(message.guild.members, id=discord_user)
+                                    if not user:
+                                        user = await message.guild.fetch_member(discord_user)
+                                        if not user:
+                                            await message.add_reaction('❌')
+                                            return await message.add_reaction('7️⃣')
+
+                                    print(invoked_command)
+                                    command = bot.get_command(invoked_command.lower().strip())
+                                    if not command:
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('8️⃣')
+
+                                    
+
+                                    new_message = copy.copy(message)
+                                    new_message.channel = await user.create_dm()
+                                    new_message.author = user
+                                    new_message.content =  ((await get_prefix(bot, message))[-1]) + _cmd.split(':logs ')[1].split('"')[0]
+
+                                    new_ctx = await bot.get_context(new_message)
+                                    if invoked_command.lower() == "duty on":
+                                        ctx = new_ctx
+                                        predetermined_shift_type = None
+                                        settings = await bot.settings.find_by_id(ctx.guild.id)
+                                        shift_types = settings.get('shift_types')
+                                        shift_types = shift_types.get('types') if shift_types.get(
+                                            'types') not in [None, []] else []
+                                        if args:
+                                            combined = ""
+                                            for arg in args:
+                                                if combined.strip() not in [shift_type['name'].lower().strip() if isinstance(shift_type, dict) else shift_type.lower().strip() for shift_type in shift_types]:
+                                                    combined += arg + " "
+                                                else:
+                                                    break
+                                            combined = combined.strip()
+                                            predetermined_shift_type = shift_types[[shift_type['name'].lower().strip() if isinstance(shift_type, dict) else shift_type.lower().strip() for shift_type in shift_types].index(combined.lower().strip())]
+
+
+                                        configItem = await bot.settings.find_by_id(ctx.guild.id)
+                                        if configItem is None:
+                                            return await invis_embed(ctx,
+                                                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+                                        try:
+                                            shift_channel = discord.utils.get(ctx.guild.channels,
+                                                                              id=configItem['shift_management'][
+                                                                                  'channel'])
+                                        except:
+                                            return await invis_embed(ctx,
+                                                                     f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
+
+                                        if not configItem['shift_management']['enabled']:
+                                            return await invis_embed(ctx,
+                                                                     'Shift management is not enabled on this server.')
+
+                                        shift = None
+                                        if await bot.shifts.find_by_id(ctx.author.id):
+                                            if 'data' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+                                                var = (await bot.shifts.find_by_id(ctx.author.id))['data']
+                                                print(var)
+
+                                                for item in var:
+                                                    if item['guild'] == ctx.guild.id:
+                                                        parent_item = await bot.shifts.find_by_id(ctx.author.id)
+                                                        shift = item
+                                            else:
+                                                if 'guild' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+                                                    if (await bot.shifts.find_by_id(ctx.author.id))[
+                                                        'guild'] == ctx.guild.id:
+                                                        shift = (await bot.shifts.find_by_id(ctx.author.id))
+                                        if shift:
+                                            if 'on_break' in shift.keys():
+                                                if shift['on_break']:
+                                                    status = "break"
+                                                else:
+                                                    status = "on"
+                                            else:
+                                                status = "on"
+                                        else:
+                                            status = "off"
+
+                                        if shift:
+                                            if 'type' in shift.keys():
+                                                if shift['type']:
+                                                    raw_shift_type: int = shift['type']
+                                                    settings = await bot.settings.find_by_id(ctx.guild.id)
+                                                    shift_types = settings.get('shift_types')
+                                                    shift_types = shift_types.get('types') if shift_types.get(
+                                                        'types') not in [None, []] else []
+                                                    if shift_types:
+                                                        sh_typelist = [item for item in shift_types if
+                                                                       item['id'] == raw_shift_type]
+                                                        if len(sh_typelist) > 0:
+                                                            shift_type = sh_typelist[0]
+                                                        else:
+                                                            shift_type = {
+                                                                'name': 'Unknown',
+                                                                'id': 0,
+                                                                'role': settings['shift_management'].get('role')
+                                                            }
+                                                    else:
+                                                        shift_type = {
+                                                            'name': 'Default',
+                                                            'id': 0,
+                                                            'role': settings['shift_management'].get('role')
+                                                        }
+                                                else:
+                                                    shift_type = None
+                                            else:
+                                                shift_type = None
+
+                                            if shift_type:
+                                                if shift_type.get('channel'):
+                                                    temp_shift_channel = discord.utils.get(ctx.guild.channels,
+                                                                                           id=shift_type.get('channel'))
+                                                    if temp_shift_channel:
+                                                        shift_channel = temp_shift_channel
+
+                                        if status == "on":
+                                            return await invis_embed(ctx,
+                                                                     "You are already on-duty. You can go off-duty by selecting **Off-Duty**.")
+                                        elif status == "break":
+                                            for item in shift['breaks']:
+                                                if item['ended'] is None:
+                                                    item['ended'] = ctx.message.created_at.replace(
+                                                        tzinfo=None).timestamp()
+                                            for data in parent_item['data']:
+                                                if shift['startTimestamp'] == data['startTimestamp'] and shift[
+                                                    'guild'] == data['guild']:
+                                                    data['breaks'] = shift['breaks']
+                                                    data['on_break'] = False
+                                                    break
+                                            await bot.shifts.update_by_id(parent_item)
+
+                                            if shift_type:
+                                                if shift_type.get('role'):
+                                                    role = [discord.utils.get(ctx.guild.roles,
+                                                                              id=shift_type.get('role'))]
+                                            else:
+                                                if shift_type:
+                                                    if shift_type.get('role'):
+                                                        role = [discord.utils.get(ctx.guild.roles, id=role) for role
+                                                                in shift_type.get('role')]
+                                                else:
+                                                    if configItem['shift_management']['role']:
+                                                        if not isinstance(configItem['shift_management']['role'],
+                                                                          list):
+                                                            role = [discord.utils.get(ctx.guild.roles, id=
+                                                            configItem['shift_management']['role'])]
+                                                        else:
+                                                            role = [discord.utils.get(ctx.guild.roles, id=role) for
+                                                                    role in
+                                                                    configItem['shift_management']['role']]
+                                            if role:
+                                                for rl in role:
+                                                    if rl not in ctx.author.roles:
+                                                        try:
+                                                            await ctx.author.add_roles(rl)
+                                                        except:
+                                                            await invis_embed(ctx,
+                                                                              f'Could not add {rl} to {ctx.author.mention}')
+
+                                            success = discord.Embed(
+                                                title="<:CheckIcon:1035018951043842088> Break Ended",
+                                                description="<:ArrowRight:1035003246445596774> You are no longer on break.",
+                                                color=0x71c15f
+                                            )
+                                            await ctx.send(embed=success, view=None)
+                                        else:
+
+                                            settings = await bot.settings.find_by_id(ctx.guild.id)
+                                            shift_type = None
+                                            if settings.get('shift_types'):
+                                                if predetermined_shift_type:
+                                                    shift_type = [item for item in
+                                                                  settings['shift_types']['types'] if
+                                                                  item['name'].lower().strip() == predetermined_shift_type['name'].lower().strip()]
+                                                    if len(shift_type) == 1:
+                                                        shift_type = shift_type[0]
+                                                elif len(settings['shift_types'].get('types') or []) > 1 and settings[
+                                                    'shift_types'].get('enabled') is True:
+                                                    embed = discord.Embed(
+                                                        title="<:Clock:1035308064305332224> Shift Types",
+                                                        description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(settings['shift_types']['types']))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in settings['shift_types']['types']]])}. Select one of these options.",
+                                                        color=0x2e3136
+                                                    )
+                                                    view = CustomSelectMenu(ctx.author.id, [
+                                                        discord.SelectOption(label=item['name'], value=item['id'],
+                                                                             description=item['name'],
+                                                                             emoji='<:Clock:1035308064305332224>')
+                                                        for item in settings['shift_types']['types']
+                                                    ])
+                                                    msg = await ctx.send(embed=embed, view=view)
+                                                    timeout = await view.wait()
+                                                    if timeout:
+                                                        return
+                                                    if view.value:
+                                                        shift_type = [item for item in
+                                                                      settings['shift_types']['types'] if
+                                                                      item['id'] == int(view.value)]
+                                                        if len(shift_type) == 1:
+                                                            shift_type = shift_type[0]
+                                                        else:
+                                                            return await invis_embed(ctx,
+                                                                                     'Something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).')
+                                                    else:
+                                                        return
+                                                else:
+                                                    if settings['shift_types'].get('enabled') is True and len(
+                                                            settings['shift_types'].get('types') or []) == 1:
+                                                        shift_type = settings['shift_types']['types'][0]
+                                                    else:
+                                                        shift_type = None
+
+                                            nickname_prefix = None
+                                            changed_nick = False
+                                            if shift_type:
+                                                if shift_type.get('nickname'):
+                                                    nickname_prefix = shift_type.get('nickname')
+                                            else:
+                                                if configItem['shift_management'].get('nickname'):
+                                                    nickname_prefix = configItem['shift_management'].get('nickname')
+
+                                            if nickname_prefix:
+                                                current_name = ctx.author.nick if ctx.author.nick else ctx.author.name
+                                                new_name = "{}{}".format(nickname_prefix, current_name)
+
+                                                try:
+                                                    await ctx.author.edit(nick=new_name)
+                                                    changed_nick = True
+                                                except Exception as e:
+                                                    print(e)
+                                                    pass
+
+                                            try:
+                                                if shift_type:
+                                                    if changed_nick:
+                                                        await bot.shifts.insert({
+                                                            '_id': ctx.author.id,
+                                                            'name': ctx.author.name,
+                                                            'data': [
+                                                                {
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "type": shift_type['id'],
+                                                                    "nickname": {
+                                                                        "old": current_name,
+                                                                        "new": new_name
+                                                                    }
+                                                                }
+                                                            ]
+                                                        })
+                                                    else:
+                                                        await bot.shifts.insert({
+                                                            '_id': ctx.author.id,
+                                                            'name': ctx.author.name,
+                                                            'data': [
+                                                                {
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "type": shift_type['id']
+                                                                }
+                                                            ]
+                                                        })
+                                                else:
+                                                    if changed_nick:
+                                                        await bot.shifts.insert({
+                                                            '_id': ctx.author.id,
+                                                            'name': ctx.author.name,
+                                                            'data': [
+                                                                {
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "nickname": {
+                                                                        "old": current_name,
+                                                                        "new": new_name
+                                                                    }
+                                                                }
+                                                            ]
+                                                        })
+                                                    else:
+                                                        await bot.shifts.insert({
+                                                            '_id': ctx.author.id,
+                                                            'name': ctx.author.name,
+                                                            'data': [
+                                                                {
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp()
+                                                                }
+                                                            ]
+                                                        })
+                                            except:
+                                                if await bot.shifts.find_by_id(ctx.author.id):
+                                                    shift = await bot.shifts.find_by_id(ctx.author.id)
+                                                    if 'data' in shift.keys():
+                                                        if shift_type:
+                                                            newData = shift['data']
+                                                            if changed_nick:
+                                                                newData.append({
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "type": shift_type['id'],
+                                                                    "nickname": {
+                                                                        "new": new_name,
+                                                                        "old": current_name
+                                                                    }
+                                                                })
+                                                            else:
+                                                                newData.append({
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "type": shift_type['id']
+                                                                })
+                                                            await bot.shifts.update_by_id({
+                                                                '_id': ctx.author.id,
+                                                                'name': ctx.author.name,
+                                                                'data': newData
+                                                            })
+                                                        else:
+                                                            newData = shift['data']
+                                                            if changed_nick:
+                                                                newData.append({
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                    "nickname": {
+                                                                        "old": current_name,
+                                                                        "new": new_name
+                                                                    }
+                                                                })
+                                                            else:
+                                                                newData.append({
+                                                                    "guild": ctx.guild.id,
+                                                                    "startTimestamp": ctx.message.created_at.replace(
+                                                                        tzinfo=None).timestamp(),
+                                                                })
+                                                            await bot.shifts.update_by_id({
+                                                                '_id': ctx.author.id,
+                                                                'name': ctx.author.name,
+                                                                'data': newData
+                                                            })
+                                                    elif 'data' not in shift.keys():
+                                                        if shift_type:
+                                                            if changed_nick:
+                                                                await bot.shifts.update_by_id({
+                                                                    '_id': ctx.author.id,
+                                                                    'name': ctx.author.name,
+                                                                    'data': [
+                                                                        {
+                                                                            "guild": ctx.guild.id,
+                                                                            "startTimestamp": ctx.message.created_at.replace(
+                                                                                tzinfo=None).timestamp(),
+                                                                            "type": shift_type['id'],
+                                                                            "nickname": {
+                                                                                "old": current_name,
+                                                                                "new": new_name
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "guild": shift['guild'],
+                                                                            "startTimestamp": shift[
+                                                                                'startTimestamp'],
+
+                                                                        }
+                                                                    ]
+                                                                })
+                                                            else:
+                                                                await bot.shifts.update_by_id({
+                                                                    '_id': ctx.author.id,
+                                                                    'name': ctx.author.name,
+                                                                    'data': [
+                                                                        {
+                                                                            "guild": ctx.guild.id,
+                                                                            "startTimestamp": ctx.message.created_at.replace(
+                                                                                tzinfo=None).timestamp(),
+                                                                            "type": shift_type['id']
+                                                                        },
+                                                                        {
+                                                                            "guild": shift['guild'],
+                                                                            "startTimestamp": shift[
+                                                                                'startTimestamp'],
+
+                                                                        }
+                                                                    ]
+                                                                })
+                                                        else:
+                                                            if changed_nick:
+                                                                await bot.shifts.update_by_id({
+                                                                    '_id': ctx.author.id,
+                                                                    'name': ctx.author.name,
+                                                                    'data': [
+                                                                        {
+                                                                            "guild": ctx.guild.id,
+                                                                            "startTimestamp": ctx.message.created_at.replace(
+                                                                                tzinfo=None).timestamp(),
+                                                                            "nickname": {
+                                                                                "old": current_name,
+                                                                                "new": new_name
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "guild": shift['guild'],
+                                                                            "startTimestamp": shift[
+                                                                                'startTimestamp'],
+
+                                                                        }
+                                                                    ]
+                                                                })
+                                                            else:
+                                                                await bot.shifts.update_by_id({
+                                                                    '_id': ctx.author.id,
+                                                                    'name': ctx.author.name,
+                                                                    'data': [
+                                                                        {
+                                                                            "guild": ctx.guild.id,
+                                                                            "startTimestamp": ctx.message.created_at.replace(
+                                                                                tzinfo=None).timestamp(),
+                                                                        },
+                                                                        {
+                                                                            "guild": shift['guild'],
+                                                                            "startTimestamp": shift[
+                                                                                'startTimestamp'],
+
+                                                                        }
+                                                                    ]
+                                                                })
+                                            successEmbed = discord.Embed(
+                                                title="<:CheckIcon:1035018951043842088> Success",
+                                                description="<:ArrowRight:1035003246445596774> Your shift is now active.",
+                                                color=0x71c15f
+                                            )
+
+                                            role = None
+
+                                            if shift_type:
+                                                if shift_type.get('role'):
+                                                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in
+                                                            shift_type.get('role')]
+                                            else:
+                                                if configItem['shift_management']['role']:
+                                                    if not isinstance(configItem['shift_management']['role'], list):
+                                                        role = [discord.utils.get(ctx.guild.roles,
+                                                                                  id=configItem['shift_management'][
+                                                                                      'role'])]
+                                                    else:
+                                                        role = [discord.utils.get(ctx.guild.roles, id=role) for role
+                                                                in
+                                                                configItem['shift_management']['role']]
+
+                                            if role:
+                                                for rl in role:
+                                                    if not rl in ctx.author.roles:
+                                                        try:
+                                                            await ctx.author.add_roles(rl)
+                                                        except:
+                                                            await invis_embed(ctx,
+                                                                              f'Could not add {rl} to {ctx.author.mention}')
+
+                                            embed = discord.Embed(title=ctx.author.name, color=0x2E3136)
+                                            try:
+                                                embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                                                embed.set_footer(text="Staff Logging Module")
+                                            except:
+                                                pass
+
+                                            if shift_type:
+                                                embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
+                                                                value=f"<:ArrowRight:1035003246445596774> Clocking in. **({shift_type['name']})**",
+                                                                inline=False)
+                                            else:
+                                                embed.add_field(name="<:MalletWhite:1035258530422341672> Type",
+                                                                value="<:ArrowRight:1035003246445596774> Clocking in.",
+                                                                inline=False)
+                                            embed.add_field(name="<:Clock:1035308064305332224> Current Time",
+                                                            value=f"<:ArrowRight:1035003246445596774> <t:{int(ctx.message.created_at.timestamp())}>",
+                                                            inline=False)
+
+                                            await shift_channel.send(embed=embed)
+                                            await msg.edit(embed=successEmbed, view=None)
+                                            return
+                                    elif invoked_command == "duty off":
+                                        ctx = new_ctx
+                                        configItem = await bot.settings.find_by_id(ctx.guild.id)
+                                        if configItem is None:
+                                            return await invis_embed(ctx,
+                                                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+                                        try:
+                                            shift_channel = discord.utils.get(ctx.guild.channels,
+                                                                              id=configItem['shift_management'][
+                                                                                  'channel'])
+                                        except:
+                                            return await invis_embed(ctx,
+                                                                     f'Some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.')
+
+                                        if not configItem['shift_management']['enabled']:
+                                            return await invis_embed(ctx,
+                                                                     'Shift management is not enabled on this server.')
+
+                                        shift = None
+                                        if await bot.shifts.find_by_id(ctx.author.id):
+                                            if 'data' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+                                                var = (await bot.shifts.find_by_id(ctx.author.id))['data']
+                                                print(var)
+
+                                                for item in var:
+                                                    if item['guild'] == ctx.guild.id:
+                                                        parent_item = await bot.shifts.find_by_id(ctx.author.id)
+                                                        shift = item
+                                            else:
+                                                if 'guild' in (await bot.shifts.find_by_id(ctx.author.id)).keys():
+                                                    if (await bot.shifts.find_by_id(ctx.author.id))[
+                                                        'guild'] == ctx.guild.id:
+                                                        shift = (await bot.shifts.find_by_id(ctx.author.id))
+                                        if shift:
+                                            if 'on_break' in shift.keys():
+                                                if shift['on_break']:
+                                                    status = "break"
+                                                else:
+                                                    status = "on"
+                                            else:
+                                                status = "on"
+                                        else:
+                                            status = "off"
+
+                                        if shift:
+                                            if 'type' in shift.keys():
+                                                if shift['type']:
+                                                    raw_shift_type: int = shift['type']
+                                                    settings = await bot.settings.find_by_id(ctx.guild.id)
+                                                    shift_types = settings.get('shift_types')
+                                                    shift_types = shift_types.get('types') if shift_types.get(
+                                                        'types') not in [None, []] else []
+                                                    if shift_types:
+                                                        sh_typelist = [item for item in shift_types if
+                                                                       item['id'] == raw_shift_type]
+                                                        if len(sh_typelist) > 0:
+                                                            shift_type = sh_typelist[0]
+                                                        else:
+                                                            shift_type = {
+                                                                'name': 'Unknown',
+                                                                'id': 0,
+                                                                'role': settings['shift_management'].get('role')
+                                                            }
+                                                    else:
+                                                        shift_type = {
+                                                            'name': 'Default',
+                                                            'id': 0,
+                                                            'role': settings['shift_management'].get('role')
+                                                        }
+                                                else:
+                                                    shift_type = None
+                                            else:
+                                                shift_type = None
+
+                                            if shift_type:
+                                                if shift_type.get('channel'):
+                                                    temp_shift_channel = discord.utils.get(ctx.guild.channels,
+                                                                                           id=shift_type.get('channel'))
+                                                    if temp_shift_channel:
+                                                        shift_channel = temp_shift_channel
+
+                                        break_seconds = 0
+                                        if shift:
+                                            if 'breaks' in shift.keys():
+                                                for item in shift["breaks"]:
+                                                    if item['ended'] == None:
+                                                        item['ended'] = ctx.message.created_at.replace(
+                                                            tzinfo=None).timestamp()
+                                                    startTimestamp = item['started']
+                                                    endTimestamp = item['ended']
+                                                    break_seconds += int(endTimestamp - startTimestamp)
+                                        else:
+                                            return await invis_embed(ctx,
+                                                                     "You are not on-duty. You can go on-duty by selecting **On-Duty**.")
+                                        if status == "off":
+                                            return await invis_embed(ctx,
+                                                                     "You are already off-duty. You can go on-duty by selecting **On-Duty**.")
+
+                                        embed = discord.Embed(
+                                            title=ctx.author.name,
+                                            color=0x2E3136
+                                        )
+
+                                        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                                        embed.set_footer(text='Staff Logging Module')
+
+                                        if shift.get('type'):
+                                            settings = await bot.settings.find_by_id(ctx.author.id)
+                                            shift_type = None
+                                            if settings:
+                                                if 'shift_types' in settings.keys():
+                                                    for item in (settings['shift_types'].get('types') or []):
+                                                        if item['id'] == shift['type']:
+                                                            shift_type = item
+
+                                        if shift_type:
+                                            embed.add_field(
+                                                name="<:MalletWhite:1035258530422341672> Type",
+                                                value=f"<:ArrowRight:1035003246445596774> Clocking out. **({shift_type['name']})**",
+                                                inline=False
+                                            )
+                                        else:
+                                            embed.add_field(
+                                                name="<:MalletWhite:1035258530422341672> Type",
+                                                value=f"<:ArrowRight:1035003246445596774> Clocking out.",
+                                                inline=False
+                                            )
+
+                                        time_delta = ctx.message.created_at.replace(
+                                            tzinfo=None) - datetime.datetime.fromtimestamp(
+                                            shift['startTimestamp']).replace(tzinfo=None)
+
+                                        time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
+
+                                        added_seconds = 0
+                                        removed_seconds = 0
+                                        if 'added_time' in shift.keys():
+                                            for added in shift['added_time']:
+                                                added_seconds += added
+
+                                        if 'removed_time' in shift.keys():
+                                            for removed in shift['removed_time']:
+                                                removed_seconds += removed
+
+                                        try:
+                                            time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
+                                            time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
+                                        except OverflowError:
+                                            await invis_embed(ctx,
+                                                              f"{ctx.author.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
+
+                                        if break_seconds > 0:
+                                            embed.add_field(
+                                                name="<:Clock:1035308064305332224> Elapsed Time",
+                                                value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
+                                                inline=False
+                                            )
+                                        else:
+                                            embed.add_field(
+                                                name="<:Clock:1035308064305332224> Elapsed Time",
+                                                value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
+                                                inline=False
+                                            )
+
+                                        successEmbed = discord.Embed(
+                                            title="<:CheckIcon:1035018951043842088> Shift Ended",
+                                            description="<:ArrowRight:1035003246445596774> Your shift has now ended.",
+                                            color=0x71c15f
+                                        )
+
+                                        await ctx.send(embed=successEmbed, view=None)
+
+                                        if shift.get('nickname'):
+                                            if shift['nickname']['new'] == ctx.author.display_name:
+                                                try:
+                                                    await ctx.author.edit(nick=shift['nickname']['old'])
+                                                except Exception as e:
+                                                    print(e)
+                                                    pass
+
+                                        await shift_channel.send(embed=embed)
+
+                                        embed = discord.Embed(title="<:MalletWhite:1035258530422341672> Shift Report",
+                                                              description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                                              color=0x2e3136)
+
+                                        moderations = len(shift.get('moderations') if shift.get('moderations') else [])
+                                        synced_moderations = len([moderation for moderation in (
+                                            shift.get('moderations') if shift.get('moderations') else []) if
+                                                                  moderation.get('synced')])
+
+                                        moderation_list = shift.get('moderations') if shift.get('moderations') else []
+                                        synced_moderation_list = [moderation for moderation in (
+                                            shift.get('moderations') if shift.get('moderations') else []) if
+                                                                  moderation.get('synced')]
+
+                                        embed.set_author(
+                                            name=f"You have made {moderations} moderations during your shift.",
+                                            icon_url="https://cdn.discordapp.com/emojis/1035258528149033090.webp?size=96&quality=lossless"
+                                        )
+
+                                        embed.add_field(
+                                            name="<:Clock:1035308064305332224> Elapsed Time",
+                                            value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
+                                            inline=False
+                                        )
+
+                                        embed.add_field(
+                                            name="<:Search:1035353785184288788> Total Moderations",
+                                            value=f"<:ArrowRightW:1035023450592514048> **Warnings:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'warning'])}\n<:ArrowRightW:1035023450592514048> **Kicks:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'kick'])}\n<:ArrowRightW:1035023450592514048> **Bans:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'ban'])}\n<:ArrowRightW:1035023450592514048> **BOLO:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() == 'bolo'])}\n<:ArrowRightW:1035023450592514048> **Custom:** {len([moderation for moderation in moderation_list if moderation['Type'].lower() not in ['warning', 'kick', 'ban', 'bolo']])}",
+                                            inline=False
+                                        )
+                                        new_ctx = copy.copy(ctx)
+                                        dm_channel = (await new_ctx.author.create_dm())
+
+                                        new_ctx.guild = None
+                                        new_ctx.channel = dm_channel
+
+                                        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+                                        menu.add_page(embed)
+
+                                        moderation_embed = discord.Embed(
+                                            title="<:MalletWhite:1035258530422341672> Shift Report",
+                                            description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                            color=0x2e3136)
+
+                                        moderation_embed.set_author(
+                                            name=f"You have made {moderations} moderations during your shift.",
+                                            icon_url="https://cdn.discordapp.com/emojis/1035258528149033090.webp?size=96&quality=lossless"
+                                        )
+
+                                        moderation_embeds = []
+                                        moderation_embeds.append(moderation_embed)
+                                        print('9867')
+
+                                        for moderation in moderation_list:
+                                            if len(moderation_embeds[-1].fields) >= 10:
+                                                moderation_embeds.append(discord.Embed(
+                                                    title="<:MalletWhite:1035258530422341672> Shift Report",
+                                                    description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                                    color=0x2e3136))
+
+                                                moderation_embeds[-1].set_author(
+                                                    name=f"You have made {moderations} moderations during your shift.",
+                                                    icon_url="https://cdn.discordapp.com/emojis/1035258528149033090.webp?size=96&quality=lossless"
+                                                )
+
+                                            moderation_embeds[-1].add_field(
+                                                name=f"<:WarningIcon:1035258528149033090> {moderation['Type'].title()}",
+                                                value=f"<:ArrowRightW:1035023450592514048> **ID:** {moderation['id']}\n<:ArrowRightW:1035023450592514048> **Type:** {moderation['Type']}\n<:ArrowRightW:1035023450592514048> **Reason:** {moderation['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(moderation['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(moderation['Time'], str) else int(moderation['Time'])}>\n<:ArrowRightW:1035023450592514048> **Synced:** {str(moderation.get('synced')) if moderation.get('synced') else 'False'}",
+                                                inline=False
+                                            )
+
+                                        synced_moderation_embed = discord.Embed(
+                                            title="<:MalletWhite:1035258530422341672> Shift Report",
+                                            description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                            color=0x2e3136)
+
+                                        synced_moderation_embed.set_author(
+                                            name=f"You have made {synced_moderations} synced moderations during your shift.",
+                                            icon_url="https://cdn.discordapp.com/emojis/1071821068551073892.webp?size=128&quality=lossless"
+                                        )
+
+                                        synced_moderation_embeds = []
+                                        synced_moderation_embeds.append(moderation_embed)
+                                        print('9895')
+
+                                        for moderation in synced_moderation_list:
+                                            if len(synced_moderation_embeds[-1].fields) >= 10:
+                                                moderation_embeds.append(discord.Embed(
+                                                    title="<:MalletWhite:1035258530422341672> Shift Report",
+                                                    description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                                    color=0x2e3136))
+
+                                                synced_moderation_embeds[-1].set_author(
+                                                    name=f"You have made {synced_moderations} synced moderations during your shift.",
+                                                    icon_url="https://cdn.discordapp.com/emojis/1071821068551073892.webp?size=128&quality=lossless"
+                                                )
+
+                                            synced_moderation_embeds[-1].add_field(
+                                                name=f"<:WarningIcon:1035258528149033090> {moderation['Type'].title()}",
+                                                value=f"<:ArrowRightW:1035023450592514048> **ID:** {moderation['id']}\n<:ArrowRightW:1035023450592514048> **Type:** {moderation['Type']}\n<:ArrowRightW:1035023450592514048> **Reason:** {moderation['Reason']}\n<:ArrowRightW:1035023450592514048> **Time:** <t:{int(datetime.datetime.strptime(moderation['Time'], '%m/%d/%Y, %H:%M:%S').timestamp()) if isinstance(moderation['Time'], str) else int(moderation['Time'])}>",
+                                                inline=False
+                                            )
+
+                                        time_embed = discord.Embed(
+                                            title="<:MalletWhite:1035258530422341672> Shift Report",
+                                            description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
+                                            color=0x2e3136)
+
+                                        time_embed.set_author(
+                                            name=f"You were on-shift for {td_format(time_delta)}.",
+                                            icon_url="https://cdn.discordapp.com/emojis/1035308064305332224.webp?size=128&quality=lossless")
+                                        print('9919')
+
+                                        time_embed.add_field(
+                                            name="<:Resume:1035269012445216858> Shift Start",
+                                            value=f"<:ArrowRight:1035003246445596774> <t:{int(shift['startTimestamp'])}>",
+                                            inline=False
+                                        )
+
+                                        time_embed.add_field(
+                                            name="<:ArrowRightW:1035023450592514048> Shift End",
+                                            value=f"<:ArrowRight:1035003246445596774> <t:{int(datetime.datetime.now().timestamp())}>",
+                                            inline=False
+                                        )
+
+                                        time_embed.add_field(
+                                            name="<:SConductTitle:1053359821308567592> Added Time",
+                                            value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=added_seconds))}",
+                                            inline=False
+                                        )
+
+                                        time_embed.add_field(
+                                            name="<:FlagIcon:1035258525955395664> Removed Time",
+                                            value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=removed_seconds))}",
+                                            inline=False
+                                        )
+
+                                        time_embed.add_field(
+                                            name="<:LinkIcon:1044004006109904966> Total Time",
+                                            value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
+                                            inline=False
+                                        )
+
+                                        menu.add_select(ViewSelect(title="Shift Report", options={
+                                            discord.SelectOption(label="Moderations",
+                                                                 emoji="<:MalletWhite:1035258530422341672>",
+                                                                 description="View all of your moderations during this shift"): [
+                                                Page(embed=embed) for embed in moderation_embeds],
+                                            discord.SelectOption(label="Synced Moderations",
+                                                                 emoji="<:SyncIcon:1071821068551073892>",
+                                                                 description="View all of your synced moderations during this shift"): [
+                                                Page(embed=embed) for embed in synced_moderation_embeds],
+                                            discord.SelectOption(label="Shift Time",
+                                                                 emoji="<:Clock:1035308064305332224>",
+                                                                 description="View your shift time"): [
+                                                Page(embed=time_embed)]
+
+                                        }))
+
+                                        menu.add_button(ViewButton.back())
+                                        menu.add_button(ViewButton.next())
+                                        try:
+                                            await menu.start()
+                                        except:
+                                            pass
+
+                                        print('9960')
+
+                                        if not await bot.shift_storage.find_by_id(ctx.author.id):
+                                            await bot.shift_storage.insert({
+                                                '_id': ctx.author.id,
+                                                'shifts': [
+                                                    {
+                                                        'name': ctx.author.name,
+                                                        'startTimestamp': shift['startTimestamp'],
+                                                        'endTimestamp': ctx.message.created_at.replace(
+                                                            tzinfo=None).timestamp(),
+                                                        'totalSeconds': time_delta.total_seconds(),
+                                                        'guild': ctx.guild.id,
+                                                        'moderations': shift[
+                                                            'moderations'] if 'moderations' in shift.keys() else [],
+                                                        'type': shift['type'] if 'type' in shift.keys() else None,
+                                                    }],
+                                                'totalSeconds': time_delta.total_seconds()
+
+                                            })
+                                        else:
+                                            data = await bot.shift_storage.find_by_id(ctx.author.id)
+
+                                            if "shifts" in data.keys():
+                                                if data['shifts'] is None:
+                                                    data['shifts'] = []
+
+                                                if data['shifts'] == []:
+                                                    shifts = [
+                                                        {
+                                                            'name': ctx.author.name,
+                                                            'startTimestamp': shift['startTimestamp'],
+                                                            'endTimestamp': ctx.message.created_at.replace(
+                                                                tzinfo=None).timestamp(),
+                                                            'totalSeconds': time_delta.total_seconds(),
+                                                            'guild': ctx.guild.id,
+                                                            'moderations': shift[
+                                                                'moderations'] if 'moderations' in shift.keys() else [],
+                                                            'type': shift['type'] if 'type' in shift.keys() else None,
+                                                        }
+                                                    ]
+                                                else:
+                                                    object = {
+                                                        'name': ctx.author.name,
+                                                        'startTimestamp': shift['startTimestamp'],
+                                                        'endTimestamp': ctx.message.created_at.replace(
+                                                            tzinfo=None).timestamp(),
+                                                        'totalSeconds': time_delta.total_seconds(),
+                                                        'guild': ctx.guild.id,
+                                                        'moderations': shift[
+                                                            'moderations'] if 'moderations' in shift.keys() else [],
+                                                        'type': shift['type'] if 'type' in shift.keys() else None,
+                                                    }
+                                                    shiftdata = data['shifts']
+                                                    shifts = shiftdata + [object]
+
+                                                await bot.shift_storage.update_by_id(
+                                                    {
+                                                        '_id': ctx.author.id,
+                                                        'shifts': shifts,
+                                                        'totalSeconds': sum(
+                                                            [shifts[i]['totalSeconds'] for i in range(len(shifts)) if
+                                                             shifts[i] is not None])
+                                                    }
+                                                )
+                                            else:
+                                                await bot.shift_storage.update_by_id({
+                                                    '_id': ctx.author.id,
+                                                    'shifts': [
+                                                        {
+                                                            'name': ctx.author.name,
+                                                            'startTimestamp': shift['startTimestamp'],
+                                                            'endTimestamp': ctx.message.created_at.replace(
+                                                                tzinfo=None).timestamp(),
+                                                            'totalSeconds': time_delta.total_seconds(),
+                                                            'guild': ctx.guild.id,
+                                                            'moderations': shift[
+                                                                'moderations'] if 'moderations' in shift.keys() else [],
+                                                            'type': shift['type'] if 'type' in shift.keys() else None,
+                                                        }],
+                                                    'totalSeconds': time_delta.total_seconds()
+
+                                                })
+
+                                        if await bot.shifts.find_by_id(ctx.author.id):
+                                            dataShift = await bot.shifts.find_by_id(ctx.author.id)
+                                            if 'data' in dataShift.keys():
+                                                if isinstance(dataShift['data'], list):
+                                                    for item in dataShift['data']:
+                                                        if item['guild'] == ctx.guild.id:
+                                                            dataShift['data'].remove(item)
+                                                            break
+                                            await bot.shifts.update_by_id(dataShift)
+
+                                        role = None
+                                        if shift_type:
+                                            if shift_type.get('role'):
+                                                role = [discord.utils.get(ctx.guild.roles, id=role) for role in
+                                                        shift_type.get('role')]
+                                        else:
+                                            if configItem['shift_management']['role']:
+                                                if not isinstance(configItem['shift_management']['role'], list):
+                                                    role = [discord.utils.get(ctx.guild.roles,
+                                                                              id=configItem['shift_management'][
+                                                                                  'role'])]
+                                                else:
+                                                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in
+                                                            configItem['shift_management']['role']]
+
+                                        if role:
+                                            for rl in role:
+                                                if rl in ctx.author.roles:
+                                                    try:
+                                                        await ctx.author.remove_roles(rl)
+                                                    except:
+                                                        await invis_embed(ctx,
+                                                                          f'Could not remove {rl} from {ctx.author.mention}')
+                                        return
+
+                                    await bot.process_commands(new_message)
+                                    await message.add_reaction('📝')
+                                    return
+
+
+
                                 try:
                                     type, reason = (' '.join(command.split(' ')[2:])).split(' for ')
                                 except:
@@ -2594,10 +3654,10 @@ async def on_message(message: discord.Message):
                                                     inline=False)
 
 
-                                    if not await bot.warnings.find_by_id(person.lower()):
+                                    if not await bot.warnings.find_by_id(roblox_user['name'].lower()):
                                         await bot.warnings.insert(default_warning_item)
                                     else:
-                                        dataset = await bot.warnings.find_by_id(person.lower())
+                                        dataset = await bot.warnings.find_by_id(roblox_user['name'].lower())
                                         dataset['warnings'].append(singular_warning_item)
                                         await bot.warnings.update_by_id(dataset)
 
@@ -2636,6 +3696,112 @@ async def on_message(message: discord.Message):
 
                                     await designated_channel.send(embed=embed)
                                 await message.add_reaction('📝')
+                        
+                        if ':m' in embed.description:
+                            if 'Command Usage' in embed.title:
+                                raw_content = embed.description
+                                user, command = raw_content.split('used the command: "')
+
+                                profile_link = user.split('(')[1].split(')')[0]
+
+                                msg = ''.join(command.split(':m ')[1:]).replace('"', '')
+
+                                discord_user = 0
+                                async for document in bot.synced_users.db.find(
+                                        {"roblox": str(profile_link.split('/')[4])}):
+                                    discord_user = document['_id']
+
+                                print(f'Discord User: {discord_user}')
+                                if discord_user == 0:
+                                    await message.add_reaction('❌')
+                                    return await message.add_reaction('6️⃣')
+
+                                user = discord.utils.get(message.guild.members, id=discord_user)
+                                if not user:
+                                    user = await message.guild.fetch_member(discord_user)
+                                    if not user:
+                                        await message.add_reaction('❌')
+                                        return await message.add_reaction('7️⃣')
+
+                                new_message = copy.copy(message)
+                                new_message.channel = await user.create_dm()
+                                new_message.author = user
+
+                                new_ctx = await bot.get_context(new_message)
+                                ctx = new_ctx
+
+
+                                configItem = await bot.settings.find_by_id(ctx.guild.id)
+                                if not configItem:
+                                    return await invis_embed(ctx,
+                                                             'You have not setup ERM. Please setup ERM via the `/setup` command before running this command.')
+
+                                if not configItem.get('game_logging'):
+                                    return await invis_embed(ctx,
+                                                             'You have not setup game logging. Please setup relevant game logging configurations via the `/config change` command before running this command.')
+
+                                if not configItem['game_logging'].get('message'):
+                                    return await invis_embed(ctx,
+                                                             'You have not setup Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.')
+
+                                if not configItem['game_logging'].get('message').get('enabled'):
+                                    return await invis_embed(ctx,
+                                                             'You have not enabled Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.')
+
+                                if not configItem['game_logging'].get('message').get('channel'):
+                                    return await invis_embed(ctx,
+                                                             'You have not set a channel for Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.')
+
+                                channel = ctx.guild.get_channel(configItem['game_logging']['message']['channel'])
+                                if not channel:
+                                    return await invis_embed(ctx,
+                                                             'The channel you have set for Message logging is invalid. Please setup relevant game logging configurations via the `/config change` command before running this command.')
+
+                                embed = discord.Embed(
+                                    title="<:LinkIcon:1044004006109904966> Message Logging",
+                                    description=f"<:ArrowRight:1035003246445596774> Please enter the message you would like to log.",
+                                    color=0x2e3136
+                                )
+
+
+                                announcement = msg
+
+                                embed = discord.Embed(
+                                    title="<:MessageIcon:1035321236793860116> Message Logged",
+                                    description="*A new message has been logged in the server.*",
+                                    color=0x2e3136
+                                )
+
+                                embed.set_author(
+                                    name=ctx.author.name,
+                                    icon_url=ctx.author.display_avatar.url
+                                )
+
+                                embed.add_field(
+                                    name="<:staff:1035308057007230976> Staff Member",
+                                    value=f"<:ArrowRight:1035003246445596774> {ctx.author.mention}",
+                                    inline=False
+                                )
+
+                                embed.add_field(
+                                    name="<:MessageIcon:1035321236793860116> Message",
+                                    value=f"<:ArrowRight:1035003246445596774> `{announcement}`",
+                                    inline=False
+                                )
+
+                                await channel.send(embed=embed)
+
+                                success_embed = discord.Embed(
+                                    title="<:CheckIcon:1035018951043842088> Success!",
+                                    description=f"<:ArrowRight:1035003246445596774> The message has been logged.",
+                                    color=0x71c15f
+                                )
+
+                                await ctx.send(embed=success_embed)
+                            return
+
+
+
 
 
 
@@ -3887,13 +5053,15 @@ async def viewconfig(ctx):
 
     embed.add_field(
         name='<:Search:1035353785184288788> Shift Management',
-        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Nickname Prefix:** {}\n<:ArrowRightW:1035023450592514048>**Quota:** {}'
+        value='<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Nickname Prefix:** {}\n<:ArrowRightW:1035023450592514048>**Quota:** {}\n<:ArrowRightW:1035023450592514048>**Maximum Staff On Duty:** {}'
         .format(
             settingContents['shift_management']['enabled'],
             shift_management_channel,
             shift_role,
-            settingContents['shift_management'].get('nickname') if settingContents['shift_management'].get('nickname') else 'None',
-            quota
+            settingContents['shift_management'].get('nickname_prefix') if settingContents['shift_management'].get('nickname_prefix') else 'None',
+            quota,
+            settingContents['shift_management'].get('maximum_staff') if settingContents['shift_management'].get('maximum_staff') else 'None'
+            
         ),
         inline=False
     )
@@ -4570,6 +5738,11 @@ async def changeconfig(ctx):
                 value='nickname_prefix'
             ),
             discord.SelectOption(
+                label='Set Maximum Staff Online',
+                description='Set the maximum amount of staff allowed online consecutively.',
+                value='maximum_staff'
+            ),
+            discord.SelectOption(
                 label='Set On Duty Role',
                 description='Set the role to be given when on duty.',
                 value='role'
@@ -4634,7 +5807,73 @@ async def changeconfig(ctx):
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
-            settingContents['shift_management']['nickname_prefix'] = view.modal.nickname.value
+            settingContents['shift_management']['nickname'] = view.modal.nickname.value
+        elif content == 'maximum_staff':
+            
+            view = CustomSelectMenu(
+                ctx.author.id,
+                [
+                    discord.SelectOption(
+                        label='No Limit',
+                        description='There is no limit to the amount of staff online.',
+                        value='0'
+                    ),
+                    discord.SelectOption(
+                        label='5 Staff Members',
+                        description='Only 5 staff members can be consecutively online.',
+                        value='5'
+                    ),
+                    discord.SelectOption(
+                        label='10 Staff Members',
+                        description='Only 10 staff members can be consecutively online.',
+                        value='10'
+                    ),
+                    discord.SelectOption(
+                        label='Custom',
+                        description='Set a custom amount of staff members that can be consecutively online',
+                        value='custom'
+                    ),
+                ]
+            )
+
+            question = "What do you want the Maximum Staff limit to be?"
+            embed = discord.Embed(
+                title='<:EditIcon:1042550862834323597> Change Configuration',
+                description=f'<:ArrowRight:1035003246445596774> {question}',
+                color=0x2e3136
+            )
+
+            await ctx.send(embed=embed, view=view)
+            await view.wait()
+
+            if view.value == "custom":
+
+                view = CustomModalView(ctx.author.id, 'Maximum Staff', 'Maximum Staff', [(
+                    "max_staff",
+                    discord.ui.TextInput(
+                        placeholder="Maximum amount of staff allowed online (e.g. 5)",
+                        min_length=1,
+                        max_length=20,
+                        label="Maximum Staff"
+                    )
+                )])
+                question = "What do you want the maximum amount of staff allowed online to be? (e.g. 5)"
+                embed = discord.Embed(
+                    title='<:EditIcon:1042550862834323597> Change Configuration',
+                    description=f'<:ArrowRight:1035003246445596774> {question}',
+                    color=0x2e3136
+                )
+    
+                await ctx.send(embed=embed, view=view)
+                await view.wait()
+                try:
+                    int(view.modal.max_staff.value)
+                except (ValueError, TypeError):
+                    return await invis_embed(ctx, 'That is not a valid number to set as a Maximum Staff Limit. Please try again by rerunning this command.')
+                settingContents['shift_management']['maximum_staff'] = int(view.modal.max_staff.value)
+            else:
+                settingContents['shift_management']['maximum_staff'] = int(view.value)
+                
         elif content == 'channel':
             view = ChannelSelect(ctx.author.id, limit=1)
             question = "What channel do you want to use for shift management? (e.g. shift logons)"
@@ -6165,7 +7404,7 @@ async def tempban(ctx, user, time: str, *, reason):
         interaction = ctx.interaction
     else:
         interaction = ctx
-    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+    menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None)
 
     async def task():
         await ban_function(ctx, menu)
@@ -6492,7 +7731,7 @@ async def search(ctx, *, query):
             interaction = ctx.interaction
         else:
             interaction = ctx
-        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         new_embeds = []
         for embed in embeds:
@@ -6900,7 +8139,7 @@ async def globalsearch(ctx, *, query):
             interaction = ctx.interaction
         else:
             interaction = ctx
-        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         new_embeds = []
         for embed in embeds:
@@ -7435,22 +8674,31 @@ async def duty_admin(ctx, member: discord.Member):
 
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in shift_type.get('role')]
+                    role = [discord.utils.get(ctx.guild.roles,
+                                              id=shift_type.get('role'))]
             else:
-                if configItem['shift_management']['role']:
-                    if not isinstance(configItem['shift_management']['role'], list):
-                        role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
-                    else:
-                        role = [discord.utils.get(ctx.guild.roles, id=role) for role in
-                            configItem['shift_management']['role']]
-
+                if shift_type:
+                    if shift_type.get('role'):
+                        role = [discord.utils.get(ctx.guild.roles, id=role) for role
+                                in shift_type.get('role')]
+                else:
+                    if configItem['shift_management']['role']:
+                        if not isinstance(configItem['shift_management']['role'],
+                                          list):
+                            role = [discord.utils.get(ctx.guild.roles, id=
+                            configItem['shift_management']['role'])]
+                        else:
+                            role = [discord.utils.get(ctx.guild.roles, id=role) for
+                                    role in
+                                    configItem['shift_management']['role']]
             if role:
                 for rl in role:
-                    if rl not in member.roles:
+                    if rl not in ctx.author.roles:
                         try:
-                            await member.add_roles(rl)
+                            await ctx.author.add_roles(rl)
                         except:
-                            await invis_embed(ctx, f'Could not add {rl} to {ctx.author.mention}')
+                            await invis_embed(ctx,
+                                              f'Could not add {rl} to {ctx.author.mention}')
 
             success = discord.Embed(
                 title="<:CheckIcon:1035018951043842088> Break Ended",
@@ -7461,6 +8709,12 @@ async def duty_admin(ctx, member: discord.Member):
         else:
             settings = await bot.settings.find_by_id(ctx.guild.id)
             shift_type = None
+
+            maximum_staff = settings['shift_management'].get('maximum_staff')
+            if maximum_staff not in [None, 0]:
+                if (currently_active + 1) > maximum_staff:
+                    return await invis_embed(ctx, f"Sorry, but the maximum amount of staff that can be on-duty at once is {maximum_staff}. Ask your server administration for more details.")
+
             if settings.get('shift_types'):
                 if len(settings['shift_types'].get('types') or []) > 1 and settings['shift_types'].get(
                         'enabled') is True:
@@ -7770,7 +9024,7 @@ async def duty_admin(ctx, member: discord.Member):
         new_ctx.guild = None
         new_ctx.channel = dm_channel
 
-        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed)
+        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
         menu.add_page(embed)
 
         moderation_embed = discord.Embed(title="<:MalletWhite:1035258530422341672> Shift Report",
@@ -8938,7 +10192,10 @@ async def loa_admin(ctx, member: discord.Member):
         )
 
         if ctx.interaction:
-            await ctx.interaction.followup.send(embed=successEmbed, ephemeral=True)
+            try:
+                await ctx.interaction.followup.send(embed=successEmbed, ephemeral=True)
+            except discord.HTTPException:
+                await ctx.send(embed=successEmbed)
         else:
             await ctx.send(embed=successEmbed)
 
@@ -9102,6 +10359,8 @@ async def loa_admin(ctx, member: discord.Member):
             )
             view = CustomModalView(
                 ctx.author.id,
+                "Edit Leave of Absence",
+                "Edit Leave of Absence",
                 [
                     ('reason',
                      discord.ui.TextInput(
@@ -9182,6 +10441,8 @@ async def loa_admin(ctx, member: discord.Member):
 
             view = CustomModalView(
                 ctx.author.id,
+                "Edit Leave of Absence",
+                "Edit Leave of Absence",
                 [
                     (
                         'end',
@@ -9222,6 +10483,80 @@ async def loa_admin(ctx, member: discord.Member):
         await edit_loa(ctx, member)
     elif view.value == "void":
         await void_loa(ctx, member)
+
+@loa.command(
+    name="active",
+    description="View all active LoAs",
+    extras={
+        "category": "Staff Management"
+    }
+)
+async def loa_active(ctx):
+    try:
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if not configItem:
+            raise Exception('Settings not found')
+    except:
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+    active_loas = [document async for document in bot.loas.db.find(
+        {"guild_id": ctx.guild.id, "type": "LoA", "expired": False,
+         "expiry": {"$gt": int(datetime.datetime.timestamp(datetime.datetime.utcnow()))}})]
+
+    if not active_loas:
+        return await invis_embed(ctx, 'No Leave of Absences are currently active within this server. If you did not expect this message, please contact ERM Support or server administration.')
+    print(active_loas)
+    INVISIBLE_CHAR = "‎"
+
+    embed = discord.Embed(
+        title="<:Clock:1035308064305332224> Active LOAs",
+        description="*The active LOAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(ctx.guild.name),
+        color=0x2e3136
+    )
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+    unsorted_loas = [{"object": l, "expiry": l['expiry']} for l in active_loas]
+    sorted_loas  = sorted(unsorted_loas, key=lambda k: k['expiry'])
+
+    if not sorted_loas:
+        return await invis_embed(ctx, 'No Leave of Absences are currently active within this server. If you did not expect this message, please contact ERM Support or server administration.')
+
+
+    embeds = [embed]
+
+    for index, l in enumerate(sorted_loas):
+        loa_object = l['object']
+        member = loa_object['user_id']
+        member = discord.utils.get(ctx.guild.members, id=member)
+        print(loa_object['_id'].split('_')[2])
+        if member is not None:
+            if len(embeds[-1].description.splitlines()) < 18:
+                embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - Active\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Reason:** {loa_object['reason']}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Started At:** <t:{loa_object['_id'].split('_')[2]}>\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Ends At:** <t:{loa_object['expiry']}>"
+            else:
+                new_embed = discord.Embed(
+                    title="<:Clock:1035308064305332224> Active LOAs",
+                    description="*The active LOAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
+                        ctx.guild.name),
+                    color=0x2e3136
+                )
+                new_embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                embeds.append(new_embed)
+                embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - Active\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Reason:** {loa_object['reason']}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Started At:** <t:{loa_object['_id'].split('_')[2]}>\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Ends At:** <t:{loa_object['expiry']}>"
+
+
+    if ctx.interaction:
+        new_ctx = ctx.interaction
+    else:
+        new_ctx = ctx
+
+    menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+    menu.add_pages(embeds)
+    menu.add_buttons([
+        ViewButton.back()        ,
+        ViewButton.next()
+    ])
+    await menu.start()
+
 
 
 @duty.command(
@@ -9363,6 +10698,7 @@ async def manage(ctx):
     doc = [doc async for doc in bot.shifts.db.find({'data': {'$elemMatch': {'guild': ctx.guild.id}}})]
     currently_active = len(doc)
 
+
     if status == "on" or status == "break":
         warnings = 0
         kicks = 0
@@ -9477,22 +10813,21 @@ async def manage(ctx):
                     data['on_break'] = False
                     break
             await bot.shifts.update_by_id(parent_item)
-
-
+            role = None
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles, id=shift_type.get('role'))]
+                    role = [discord.utils.get(ctx.guild.roles,
+                                              id=shift_type.get('role'))]
             else:
-                if shift_type:
-                    if shift_type.get('role'):
-                        role = [discord.utils.get(ctx.guild.roles, id=role) for role in shift_type.get('role')]
-                else:
-                    if configItem['shift_management']['role']:
-                        if not isinstance(configItem['shift_management']['role'], list):
-                            role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
-                        else:
-                            role = [discord.utils.get(ctx.guild.roles, id=role) for role in
-                                    configItem['shift_management']['role']]
+                if configItem['shift_management']['role']:
+                    if not isinstance(configItem['shift_management']['role'],
+                                      list):
+                        role = [discord.utils.get(ctx.guild.roles, id=
+                        configItem['shift_management']['role'])]
+                    else:
+                        role = [discord.utils.get(ctx.guild.roles, id=role) for
+                                role in
+                                configItem['shift_management']['role']]
             if role:
                 for rl in role:
                     if rl not in ctx.author.roles:
@@ -9509,8 +10844,16 @@ async def manage(ctx):
             await msg.edit(embed=success, view=None)
         else:
 
+
+
             settings = await bot.settings.find_by_id(ctx.guild.id)
             shift_type = None
+
+            maximum_staff = settings['shift_management'].get('maximum_staff')
+            if maximum_staff not in [None, 0]:
+                if (currently_active + 1) > maximum_staff:
+                    return await invis_embed(ctx, f"Sorry, but the maximum amount of staff that can be on-duty at once is {maximum_staff}. Ask your server administration for more details.")
+
             if settings.get('shift_types'):
                 if len(settings['shift_types'].get('types') or []) > 1 and settings['shift_types'].get('enabled') is True:
                     embed = discord.Embed(
@@ -9752,22 +11095,31 @@ async def manage(ctx):
 
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles, id=role) for role in shift_type.get('role')]
+                    role = [discord.utils.get(ctx.guild.roles,
+                                              id=shift_type.get('role'))]
             else:
-                if configItem['shift_management']['role']:
-                    if not isinstance(configItem['shift_management']['role'], list):
-                        role = [discord.utils.get(ctx.guild.roles, id=configItem['shift_management']['role'])]
-                    else:
-                        role = [discord.utils.get(ctx.guild.roles, id=role) for role in
-                                configItem['shift_management']['role']]
-
+                if shift_type:
+                    if shift_type.get('role'):
+                        role = [discord.utils.get(ctx.guild.roles, id=role) for role
+                                in shift_type.get('role')]
+                else:
+                    if configItem['shift_management']['role']:
+                        if not isinstance(configItem['shift_management']['role'],
+                                          list):
+                            role = [discord.utils.get(ctx.guild.roles, id=
+                            configItem['shift_management']['role'])]
+                        else:
+                            role = [discord.utils.get(ctx.guild.roles, id=role) for
+                                    role in
+                                    configItem['shift_management']['role']]
             if role:
                 for rl in role:
-                    if not rl in ctx.author.roles:
+                    if rl not in ctx.author.roles:
                         try:
                             await ctx.author.add_roles(rl)
                         except:
-                            await invis_embed(ctx, f'Could not add {rl} to {ctx.author.mention}')
+                            await invis_embed(ctx,
+                                              f'Could not add {rl} to {ctx.author.mention}')
 
             embed = discord.Embed(title=ctx.author.name, color=0x2E3136)
             try:
@@ -9919,7 +11271,7 @@ async def manage(ctx):
         new_ctx.guild = None
         new_ctx.channel = dm_channel
 
-        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed)
+        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
         menu.add_page(embed)
 
         moderation_embed = discord.Embed(title="<:MalletWhite:1035258530422341672> Shift Report",
@@ -10301,6 +11653,79 @@ async def manage(ctx):
 )
 async def ra(ctx, time, *, reason):
     pass
+
+@ra.command(
+    name="active",
+    description="View all active RAs",
+    extras={
+        "category": "Staff Management"
+    }
+)
+async def loa_active(ctx):
+    try:
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if not configItem:
+            raise Exception('Settings not found')
+    except:
+        return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+    active_loas = [document async for document in bot.loas.db.find(
+        {"guild_id": ctx.guild.id, "type": "RA", "expired": False,
+         "expiry": {"$gt": int(datetime.datetime.timestamp(datetime.datetime.utcnow()))}})]
+
+    if not active_loas:
+        return await invis_embed(ctx, 'No Reduced Activity notices are currently active within this server. If you did not expect this message, please contact ERM Support or server administration.')
+    print(active_loas)
+    INVISIBLE_CHAR = "‎"
+
+    embed = discord.Embed(
+        title="<:Clock:1035308064305332224> Active RAs",
+        description="*The active RAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(ctx.guild.name),
+        color=0x2e3136
+    )
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+    unsorted_loas = [{"object": l, "expiry": l['expiry']} for l in active_loas]
+    sorted_loas  = sorted(unsorted_loas, key=lambda k: k['expiry'])
+
+    if not sorted_loas:
+        return await invis_embed(ctx, 'No Reduced Activity notices are currently active within this server. If you did not expect this message, please contact ERM Support or server administration.')
+
+
+    embeds = [embed]
+
+    for index, l in enumerate(sorted_loas):
+        loa_object = l['object']
+        member = loa_object['user_id']
+        member = discord.utils.get(ctx.guild.members, id=member)
+        print(loa_object['_id'].split('_')[2])
+        if member is not None:
+            if len(embeds[-1].description.splitlines()) < 18:
+                embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - Active\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Reason:** {loa_object['reason']}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Started At:** <t:{loa_object['_id'].split('_')[2]}>\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Ends At:** <t:{loa_object['expiry']}>"
+            else:
+                new_embed = discord.Embed(
+                    title="<:Clock:1035308064305332224> Active RAs",
+                    description="*The active RAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
+                        ctx.guild.name),
+                    color=0x2e3136
+                )
+                new_embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                embeds.append(new_embed)
+                embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - Active\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Reason:** {loa_object['reason']}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Started At:** <t:{loa_object['_id'].split('_')[2]}>\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Ends At:** <t:{loa_object['expiry']}>"
+
+
+    if ctx.interaction:
+        new_ctx = ctx.interaction
+    else:
+        new_ctx = ctx
+
+    menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+    menu.add_pages(embeds)
+    menu.add_buttons([
+        ViewButton.back()        ,
+        ViewButton.next()
+    ])
+    await menu.start()
 
 
 @ra.command(
@@ -10873,6 +12298,8 @@ async def ra_admin(ctx, member: discord.Member):
             )
             view = CustomModalView(
                 ctx.author.id,
+                "Edit Leave of Absence",
+                "Edit Leave of Absence",
                 [
                     ('reason',
                      discord.ui.TextInput(
@@ -10900,8 +12327,8 @@ async def ra_admin(ctx, member: discord.Member):
 
         elif view.value == "start":
             embed = discord.Embed(
-                title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
-                description=f"<:ArrowRight:1035003246445596774> What would you like to change the start date of the Leave of Absence to?",
+                title=f"<:WarningIcon:1035258528149033090> Edit Reduced Activity",
+                description=f"<:ArrowRight:1035003246445596774> What would you like to change the start date of the Reduced Activity to?",
                 color=0x2E3136
             )
 
@@ -10953,6 +12380,8 @@ async def ra_admin(ctx, member: discord.Member):
 
             view = CustomModalView(
                 ctx.author.id,
+                "Edit Reduced Activity",
+                "Edit Reduced Activity",
                 [
                     (
                         'end',
@@ -11273,11 +12702,11 @@ async def manage_reminders(ctx):
     for item in Data['reminders']:
         if len(item['message']) > 800:
             embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
-                            value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']}s\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                            value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
                             inline=False)
         else:
             embed.add_field(name=f"<:Clock:1035308064305332224> {item['name']}",
-                        value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']}s\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                        value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
                         inline=False)
 
     if len(embed.fields) == 0:
@@ -11315,13 +12744,28 @@ async def manage_reminders(ctx):
             else:
                 return await invis_embed(ctx, 'You have not provided a correct suffix. (s/m/h/d)')
 
+            view = YesNoColourMenu(ctx.author.id)
+
+            embed = discord.Embed(
+                title="<:Resume:1035269012445216858> Reminder Completion",
+                description="Should this reminder be able to be completed? Once it's completed, the embed will be edited appropriately to reflect this.",
+                color=0x2E3136
+            )
+
+            await ctx.send(embed=embed, view=view)
+            timeout = await view.wait()
+            if timeout:
+                return
+
+            completed = view.value
+
             view = ChannelSelect(ctx.author.id, limit=1)
             embed = discord.Embed(
                 title="<:Resume:1035269012445216858> Select a channel",
                 description="Please select a channel for the reminder to be sent in.",
                 color=0x2E3136
             )
-            await ctx.reply(embed=embed, view=view)
+            await ctx.send(embed=embed, view=view)
             timeout = await view.wait()
             if timeout:
                 return
@@ -11336,7 +12780,7 @@ async def manage_reminders(ctx):
                 color=0x2E3136
             )
 
-            await ctx.reply(embed=embed, view=view)
+            await ctx.send(embed=embed, view=view)
             roleObject = None
             timeout = await view.wait()
             if view.value == True:
@@ -11346,7 +12790,7 @@ async def manage_reminders(ctx):
                     description="Please select a role to be mentioned.",
                     color=0x2E3136
                 )
-                await ctx.reply(embed=embed, view=view)
+                await ctx.send(embed=embed, view=view)
                 timeout = await view.wait()
                 if timeout:
                     return
@@ -11357,6 +12801,7 @@ async def manage_reminders(ctx):
                     "id": next(generator),
                     "name": name,
                     "interval": time,
+                    "completion_ability": completed,
                     "message": message,
                     "channel": channel.id,
                     "role": [role.id for role in roleObject],
@@ -11367,6 +12812,7 @@ async def manage_reminders(ctx):
                     "id": next(generator),
                     "name": name,
                     "interval": time,
+                    "completion_ability": completed,
                     "message": message,
                     "channel": channel.id,
                     "role": 0,
@@ -11466,7 +12912,7 @@ async def custom_manage(ctx):
 
     if view.value == 'create':
         view = AddCustomCommand(ctx.author.id)
-        await ctx.reply(view=view)
+        await ctx.send(view=view)
         timeout = await view.wait()
         if timeout:
             return
@@ -11478,10 +12924,39 @@ async def custom_manage(ctx):
             name = view.information['name']
         except:
             return await invis_embed(ctx, 'This has been successfully cancelled.')
+
+        for item in Data['commands']:
+            if item['name'] == name:
+                return await invis_embed(ctx, 'This command already exists. Please try again with a different name.')
+
         embeds = []
         resultingMessage = view.view.newView.msg
         for embed in resultingMessage.embeds:
             embeds.append(embed.to_dict())
+
+        embed = discord.Embed(
+            title="<:Resume:1035269012445216858> Custom Commands",
+            description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
+            color=0x2e3136
+        )
+        channel_view = YesNoColourMenu(ctx.author.id)
+        await ctx.send(embed=embed, view=channel_view)
+        await channel_view.wait()
+        channel = None
+        if channel_view.value is True:
+            embed = discord.Embed(
+                title="<:Resume:1035269012445216858> Custom Commands",
+                description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
+                color=0x2e3136
+            )
+
+            channel_view = ChannelSelect(ctx.author.id, limit=1)
+            await ctx.send(embed=embed, view=channel_view)
+            await channel_view.wait()
+            if channel_view.value:
+               channel = [ch.id for ch in channel_view.value][0]
+
+
 
         custom_command_data = {
             "_id": ctx.guild.id,
@@ -11491,7 +12966,8 @@ async def custom_manage(ctx):
                     "id": next(generator),
                     "message": {
                         "content": resultingMessage.content,
-                        "embeds": embeds
+                        "embeds": embeds,
+                        "channel": channel
                     }
                 }
             ]
@@ -11503,7 +12979,8 @@ async def custom_manage(ctx):
                 "id": next(generator),
                 "message": {
                     "content": resultingMessage.content,
-                    "embeds": embeds
+                    "embeds": embeds,
+                    "channel": channel
                 }
             })
         else:
@@ -11515,7 +12992,7 @@ async def custom_manage(ctx):
             description=f"<:ArrowRight:1035003246445596774> Your custom command has been added successfully.",
             color=0x71c15f
         )
-        await ctx.reply(embed=successEmbed)
+        await ctx.send(embed=successEmbed)
     elif view.value == 'edit':
 
         embed = discord.Embed(
@@ -11535,7 +13012,7 @@ async def custom_manage(ctx):
             )
         ])
 
-        await ctx.reply(embed=embed, view=view)
+        await ctx.send(embed=embed, view=view)
         await view.wait()
 
         try:
@@ -11546,79 +13023,224 @@ async def custom_manage(ctx):
         if command.lower() not in [c['name'].lower() for c in Data['commands']]:
             return await invis_embed(ctx, 'This command does not exist.')
 
-        view = EmbedCustomisation(ctx.author.id)
-        embed = discord.Embed(description="<a:Loading:1044067865453670441> We are loading your custom command.",
-                              color=0x2E3136)
-        msg = await ctx.send(embed=embed)
+        embed = discord.Embed(
+            title="<:EditIcon:1042550862834323597> Edit a Custom Command",
+            description="<:ArrowRight:1035003246445596774> What would you like to edit about this custom command?",
+            color=0x2e3136
+        )
+        view = CustomSelectMenu(
+            ctx.author.id,
+            [
+                discord.SelectOption(
+                    label="Name",
+                    value="name",
+                    description="Edit the name of the custom command."
+                ),
+                discord.SelectOption(
+                    label="Message",
+                    value="message",
+                    description="Edit the message of the custom command."
+                ),
+                discord.SelectOption(
+                    label="Channel",
+                    value="channel",
+                    description="Edit the channel overrides of the custom command."
+                )
+            ]
+        )
 
-        cmd = None
-        for c in Data['commands']:
-            if c['name'].lower() == command.lower():
-                cmd = c
-
-        message_data = cmd.get('message')
-        if message_data is None:
-            await msg.edit(view=view)
-        else:
-            content = message_data.get('content')
-            embeds = message_data.get('embeds')
-            if content is None:
-                content = ""
-            if embeds is None:
-                embeds = []
-            if embeds:
-                embed_list = []
-                for embed in embeds:
-                    embed_list.append(discord.Embed.from_dict(embed))
-
-                await msg.edit(content=content, embeds=embed_list, view=view)
-            else:
-                view = MessageCustomisation(ctx.author.id)
-                await msg.edit(content=content, embeds=[], view=view)
+        await ctx.send(embed=embed, view=view)
         await view.wait()
+        if view.value == "message":
+            view = EmbedCustomisation(ctx.author.id)
+            embed = discord.Embed(description="<a:Loading:1044067865453670441> We are loading your custom command.",
+                                  color=0x2E3136)
+            msg = await ctx.send(embed=embed)
 
-        embeds = []
-        resultingMessage = view.msg
-        print(view.msg)
-        if msg.embeds:
-            for embed in resultingMessage.embeds:
-                embeds.append(embed.to_dict())
+            cmd = None
+            for c in Data['commands']:
+                if c['name'].lower() == command.lower():
+                    cmd = c
 
-        name = command
+            message_data = cmd.get('message')
+            if message_data is None:
+                await msg.edit(view=view)
+            else:
+                content = message_data.get('content')
+                embeds = message_data.get('embeds')
+                if content is None:
+                    content = ""
+                if embeds is None:
+                    embeds = []
+                if embeds:
+                    embed_list = []
+                    for embed in embeds:
+                        embed_list.append(discord.Embed.from_dict(embed))
 
-        custom_command_data = {
-            "_id": ctx.guild.id,
-            "commands": [
-                {
-                    "name": name,
-                    "id": next(generator),
+                    await msg.edit(content=content, embeds=embed_list, view=view)
+                else:
+                    view = MessageCustomisation(ctx.author.id)
+                    await msg.edit(content=content, embeds=[], view=view)
+            await view.wait()
+
+            embeds = []
+            resultingMessage = view.msg
+            print(view.msg)
+            if msg.embeds:
+                for embed in resultingMessage.embeds:
+                    embeds.append(embed.to_dict())
+
+            name = command
+
+            custom_command_data = {
+                "_id": ctx.guild.id,
+                "commands": [
+                    {
+                        "name": cmd.get('name'),
+                        "id": cmd.get("id"),
+                        "message": {
+                            "content": resultingMessage.content,
+                            "embeds": embeds
+                        },
+                        "channel": cmd.get('channel')
+                    }
+                ]
+            }
+
+            if Data:
+                ind = Data['commands'].index(cmd)
+                Data['commands'][ind] = {
+                    "name": cmd['name'],
+                    "id": cmd['id'],
                     "message": {
                         "content": resultingMessage.content,
                         "embeds": embeds
+                    },
+                    "channel": cmd.get('channel')
+                }
+            else:
+                Data = custom_command_data
+
+            await bot.custom_commands.upsert(Data)
+            successEmbed = discord.Embed(
+                title="<:CheckIcon:1035018951043842088> Success!",
+                description=f"<:ArrowRight:1035003246445596774> Your custom command has been edited successfully.",
+                color=0x71c15f
+            )
+            await ctx.send(embed=successEmbed)
+        elif view.value == "channel":
+            embed = discord.Embed(
+                title="<:Resume:1035269012445216858> Custom Commands",
+                description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command."
+            )
+            channel_view = YesNoColourMenu(ctx.author.id)
+            await ctx.send(embed=embed, view=channel_view)
+            await channel_view.wait()
+            channel = None
+            if channel_view.value is True:
+                embed = discord.Embed(
+                    title="<:Resume:1035269012445216858> Custom Commands",
+                    description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command."
+                )
+
+                channel_view = ChannelSelect(ctx.author.id, limit=1)
+                await ctx.send(embed=embed, view=channel_view)
+                await channel_view.wait()
+                if channel_view.value:
+                    channel = [ch.id for ch in channel_view.value][0]
+
+            cmd = None
+            for c in Data['commands']:
+                if c['name'].lower() == command.lower():
+                    cmd = c
+
+            name = command
+
+
+            custom_command_data = {
+                "_id": ctx.guild.id,
+                "commands": [
+                    {
+                        "name": name,
+                        "id": next(generator),
+                        "message": cmd.get('message'),
+                        "channel": cmd.get('channel')
                     }
-                }
-            ]
-        }
+                ]
+            }
 
-        if Data:
-            Data['commands'].append({
-                "name": name,
-                "id": next(generator),
-                "message": {
-                    "content": resultingMessage.content,
-                    "embeds": embeds
+            if Data:
+                ind = Data['commands'].index(cmd)
+                Data['commands'][ind] = {
+                    "name": cmd['name'],
+                    "id": cmd['id'],
+                    "message": cmd['message'],
+                    "channel": channel
                 }
-            })
-        else:
-            Data = custom_command_data
+            else:
+                Data = custom_command_data
 
-        await bot.custom_commands.upsert(Data)
-        successEmbed = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Success!",
-            description=f"<:ArrowRight:1035003246445596774> Your custom command has been edited successfully.",
-            color=0x71c15f
-        )
-        await ctx.reply(embed=successEmbed)
+            await bot.custom_commands.upsert(Data)
+        elif view.value == "name":
+            embed = discord.Embed(
+                title="<:EditIcon:1042550862834323597> Edit a Custom Command",
+                description="<:ArrowRight:1035003246445596774> What would you like to change the name of this custom command to?",
+                color=0x2e3136
+            )
+
+            view = CustomModalView(
+                ctx.author.id,
+                "Edit Custom Command Name",
+                "Edit Command Name",
+                [
+                    (
+                        "new_name",
+                        discord.ui.TextInput(
+                            placeholder="New Name",
+                            min_length=1,
+                            max_length=32
+                        )
+                    )
+                ]
+            )
+
+            await ctx.send(embed=embed, view=view)
+            await view.wait()
+
+            new_name = view.modal.new_name.value
+
+            cmd = None
+
+            for c in Data['commands']:
+                if c['name'].lower() == command.lower():
+                    cmd = c
+
+            custom_command_data = {
+                "_id": ctx.guild.id,
+                "commands": [
+                    {
+                        "name": new_name,
+                        "id": cmd.get("id"),
+                        "message": cmd.get('message'),
+                        "channel": cmd.get('channel')
+                    }
+                ]
+            }
+
+            if Data:
+                ind = Data['commands'].index(cmd)
+                Data['commands'][ind] = {
+                    "name": new_name,
+                    "id": cmd['id'],
+                    "message": cmd['message'],
+                    "channel": cmd.get('channel')
+                }
+            else:
+                Data = custom_command_data
+
+            await bot.custom_commands.upsert(Data)
+
+
 
     elif view.value == "delete":
         embed = discord.Embed(title="<:Resume:1035269012445216858> Remove a custom command", color=0x2E3136)
@@ -11666,7 +13288,7 @@ async def custom_manage(ctx):
                             inline=False
                             )
 
-        return await ctx.reply(embed=embed)
+        return await ctx.send(embed=embed)
 
 
 async def command_autocomplete(
@@ -11713,8 +13335,6 @@ async def command_autocomplete(
 @app_commands.describe(command="What custom command would you like to run?")
 @app_commands.describe(channel="Where do you want this custom command's output to go? (e.g. #general)")
 async def run(ctx, command: str, channel: discord.TextChannel = None):
-    if not channel:
-        channel = ctx.channel
     Data = await bot.custom_commands.find_by_id(ctx.guild.id)
     if Data is None:
         return await invis_embed(ctx, 'There are no custom commands associated with this server.')
@@ -11727,9 +13347,15 @@ async def run(ctx, command: str, channel: discord.TextChannel = None):
                     is_command = True
                     selected = cmd
 
+
     if not is_command:
         return await invis_embed(ctx, 'There is no custom command with the associated name.')
 
+    if not channel:
+        if selected.get('channel') is None:
+            channel = ctx.channel
+        else:
+            channel = discord.utils.get(ctx.guild.text_channels, id=selected['channel']) if discord.utils.get(ctx.guild.text_channels, id=selected['channel']) is not None else ctx.channel
     embeds = []
     for embed in selected['message']['embeds']:
         embeds.append(await interpret_embed(bot, ctx, channel, embed))
@@ -12147,125 +13773,155 @@ async def force_void_shift(interaction: discord.Interaction, member: discord.Mem
               extras={"category": "Shift Management"},
               aliases=['ac', 'ison'])
 @is_staff()
-async def clockedin(ctx):
+async def duty_active(ctx):
     configItem = await bot.settings.find_by_id(ctx.guild.id)
     if not configItem:
         return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
-    embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
-    try:
-        embed.set_footer(text="Staff Logging Module")
-    except:
-        pass
+    shift_type = None
+    if configItem.get('shift_types'):
+        shift_types = configItem.get('shift_types')
+        if shift_types.get('enabled') is True:
+            if len(shift_types.get('types')) > 1:
+                shift_types = shift_types.get('types')
+
+                embed = discord.Embed(
+                    title="<:Clock:1035308064305332224> Shift Types",
+                    description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(shift_types))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select one of these options to show in this command. If you want to view the active time between these types, select `All`.",
+                    color=0x2e3136
+                )
+
+                view = CustomSelectMenu(ctx.author.id, [
+                    discord.SelectOption(label=i['name'], value=i['id'], emoji="<:Clock:1035308064305332224>",
+                                         description=i['name']) for i in shift_types
+                ] + [
+                                            discord.SelectOption(label="All", value="all",
+                                                                 emoji="<:Clock:1035308064305332224>",
+                                                                 description="Data from all shift types")
+                                        ])
+
+                msg = await ctx.send(embed=embed, view=view)
+                timeout = await view.wait()
+                if timeout:
+                    return
+
+                if view.value:
+                    if view.value == "all":
+                        shift_type = 0
+                    else:
+                        shift_type = view.value
+                        shift_list = [i for i in shift_types if i['id'] == int(shift_type)]
+                        if shift_list:
+                            shift_type = shift_list[0]
+                        else:
+                            return await invis_embed(ctx,
+                                                     'If you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)')
+
+    embed = discord.Embed(title='<:Clock:1035308064305332224> Currently on Shift', color=0x2E3136)
+    embed.description = "<:ArrowRight:1035003246445596774> *Only active shift times will be here. To view all shift time, run `/duty leaderboard`*\n\n<:SConductTitle:1053359821308567592> **Active Shifts**"
+    embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
+
 
     embeds = []
     embeds.append(embed)
 
-    async for shift in bot.shifts.db.find({"data": {"$elemMatch": {"guild": ctx.guild.id}}}):
-        if 'data' in shift.keys():
-            for s in shift['data']:
-                if s['guild'] == ctx.guild.id:
-                    member = discord.utils.get(ctx.guild.members, id=shift['_id'])
-                    if member:
-                        print(s)
-                        time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
-                            s['startTimestamp']).replace(tzinfo=None)
-                        break_seconds = 0
-                        if 'breaks' in s.keys():
-                            for item in s["breaks"]:
-                                if item['ended'] == None:
-                                    break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item[
-                                        'started']
+    all_staff = []
 
-                        time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
+    if not shift_type:
+        async for shift in bot.shifts.db.find({"data": {"$elemMatch": {"guild": ctx.guild.id}}}):
+            if 'data' in shift.keys():
+                for s in shift['data']:
+                    if s['guild'] == ctx.guild.id:
+                        member = discord.utils.get(ctx.guild.members, id=shift['_id'])
+                        if member:
+                            print(s)
+                            time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+                                s['startTimestamp']).replace(tzinfo=None)
+                            break_seconds = 0
+                            if 'breaks' in s.keys():
+                                for item in s["breaks"]:
+                                    if item['ended'] == None:
+                                        break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item[
+                                            'started']
 
-                        added_seconds = 0
-                        removed_seconds = 0
-                        if 'added_time' in s.keys():
-                            for added in s['added_time']:
-                                added_seconds += added
+                            time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
 
-                        if 'removed_time' in s.keys():
-                            for removed in s['removed_time']:
-                                removed_seconds += removed
+                            added_seconds = 0
+                            removed_seconds = 0
+                            if 'added_time' in s.keys():
+                                for added in s['added_time']:
+                                    added_seconds += added
 
-                        try:
-                            time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
-                            time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-                        except OverflowError:
-                            await invis_embed(
-                                f"{member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
+                            if 'removed_time' in s.keys():
+                                for removed in s['removed_time']:
+                                    removed_seconds += removed
 
-                        if f"<:staff:1035308057007230976> {member.name}#{member.discriminator}" not in [field.name for
-                                                                                                        field in
-                                                                                                        embed.fields]:
-                            if break_seconds > 0:
-                                if len(embed.fields) == 25:
-                                    new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
-                                    embeds.append(new_embed)
-                                embeds[-1].add_field(
-                                    name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {td_format(datetime.timedelta(seconds=break_seconds))})",
-                                    inline=False)
-                            else:
-                                if len(embed.fields) == 25:
-                                    new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift', color=0x2E3136)
-                                    embeds.append(new_embed)
-                                embeds[-1].add_field(
-                                    name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                    value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
-                                    inline=False)
+                            try:
+                                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
+                                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
+                            except OverflowError:
+                                await invis_embed(
+                                    f"{member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
 
-        elif 'guild' in shift.keys():
-            if shift['guild'] == ctx.guild.id:
-                member = discord.utils.get(ctx.guild.members, id=shift['_id'])
-                if member:
-                    time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
-                        shift['startTimestamp']).replace(tzinfo=None)
-                    break_seconds = 0
-                    if 'breaks' in shift.keys():
-                        for item in shift["breaks"]:
-                            if item['ended'] == None:
-                                break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item[
-                                    'started']
+                            all_staff.append({'id': shift['_id'], "total_seconds": time_delta.total_seconds(), "break_seconds": break_seconds})
 
-                    time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
 
-                    added_seconds = 0
-                    removed_seconds = 0
-                    if 'added_time' in shift.keys():
-                        for added in shift['added_time']:
-                            added_seconds += added
+    else:
+        async for shift in bot.shifts.db.find({"data": {"$elemMatch": {"guild": ctx.guild.id, "type": shift_type['id']}}}):
+            if 'data' in shift.keys():
+                for s in shift['data']:
+                    if s['guild'] == ctx.guild.id:
+                        member = discord.utils.get(ctx.guild.members, id=shift['_id'])
+                        if member:
+                            print(s)
+                            time_delta = ctx.message.created_at.replace(tzinfo=None) - datetime.datetime.fromtimestamp(
+                                s['startTimestamp']).replace(tzinfo=None)
+                            break_seconds = 0
+                            if 'breaks' in s.keys():
+                                for item in s["breaks"]:
+                                    if item['ended'] == None:
+                                        break_seconds = ctx.message.created_at.replace(tzinfo=None).timestamp() - item[
+                                            'started']
 
-                    if 'removed_time' in shift.keys():
-                        for removed in shift['removed_time']:
-                            removed_seconds += removed
+                            time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
 
-                    try:
-                        time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
-                        time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-                    except OverflowError:
-                        await invis_embed(
-                            f"{member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
+                            added_seconds = 0
+                            removed_seconds = 0
+                            if 'added_time' in s.keys():
+                                for added in s['added_time']:
+                                    added_seconds += added
 
-                    if f"<:staff:1035308057007230976> {member.name}#{member.discriminator}" not in [field.name for field
-                                                                                                    in embed.fields]:
-                        if break_seconds > 0:
-                            if len(embed.fields) == 25:
-                                new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift',
-                                                          color=0x2E3136)
-                                embeds.append(new_embed)
-                            embeds[-1].add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                            value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)} (Currently on break: {datetime.timedelta(seconds=break_seconds)})",
-                                            inline=False)
-                        else:
-                            if len(embed.fields) == 25:
-                                new_embed = discord.Embed(title='<:Resume:1035269012445216858> Currently on Shift',
-                                                          color=0x2E3136)
-                                embeds.append(new_embed)
-                            embeds[-1].add_field(name=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-                                            value=f"<:ArrowRight:1035003246445596774> {td_format(time_delta)}",
-                                            inline=False)
+                            if 'removed_time' in s.keys():
+                                for removed in s['removed_time']:
+                                    removed_seconds += removed
+
+                            try:
+                                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
+                                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
+                            except OverflowError:
+                                await invis_embed(
+                                    f"{member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
+
+                            all_staff.append({'id': shift['_id'], "total_seconds": time_delta.total_seconds(), "break_seconds": break_seconds})
+
+
+    sorted_staff = sorted(all_staff, key=lambda x: x['total_seconds'], reverse=True)
+
+
+    for index, staff in enumerate(sorted_staff):
+        member = discord.utils.get(ctx.guild.members, id=staff['id'])
+        if not member:
+            continue
+
+        if len((embeds[-1].description or '').splitlines()) >= 16:
+            embed = discord.Embed(title='<:Clock:1035308064305332224> Currently on Shift', color=0x2E3136)
+            embed.description = "<:ArrowRight:1035003246445596774> *Only active shift times will be here. To view all shift time, run `/duty leaderboard`*\n\n<:SConductTitle:1053359821308567592> **Active Shifts**"
+            embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
+                             icon_url=ctx.author.display_avatar.url)
+            embeds.append(embed)
+
+        embeds[-1].description += f"\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{' (Currently on break: {})'.format(staff['break_seconds']) if staff['break_seconds'] > 0 else ''}"
+
 
     if ctx.interaction:
         gtx = ctx.interaction
@@ -12273,22 +13929,27 @@ async def clockedin(ctx):
         gtx = ctx
 
 
-    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed)
-    menu.add_buttons(
-        [ViewButton.back(), ViewButton.next()]
-    )
-    menu.add_pages(embeds)
+    menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+    for embed in embeds:
+        menu.add_page(embed=embed)
+    menu._pc = _PageController(menu.pages)
+    menu.add_buttons([ViewButton.back(), ViewButton.next()])
+    if len(menu.pages) == 1:
+        return await msg.edit(embed=embed, view=None)
+    await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
 
-    await menu.start()
+
 
 @duty.command(name='leaderboard',
-              description="'Get the total time worked for the whole of the staff team.",
+              description="Get the total time worked for the whole of the staff team.",
               extras={"category": "Shift Management"},
               aliases=['lb'])
 @is_staff()
 async def shift_leaderboard(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if configItem is None:
+            raise ValueError('Settings does not exist.')
     except:
         return await invis_embed(ctx, 'The server has not been set up yet. Please run `/setup` to set up the server.')
 
@@ -12381,8 +14042,9 @@ async def shift_leaderboard(ctx):
 
     embed = discord.Embed(
         color=0x2E3136,
-        title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+        title="<:Clock:1035308064305332224> Duty Leaderboard"
     )
+    embed.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
 
     embeds.append(embed)
     print(sorted_staff)
@@ -12394,6 +14056,8 @@ async def shift_leaderboard(ctx):
             await invis_embed(ctx, 'No shifts were made in your server.')
         return
 
+    my_data = None
+
     for index, i in enumerate(sorted_staff):
         try:
             member = await ctx.guild.fetch_member(i["id"])
@@ -12403,6 +14067,11 @@ async def shift_leaderboard(ctx):
         print(i)
         print(member)
         if member:
+            if member.id == ctx.author.id:
+                i['index'] = index
+                my_data = i
+
+
             if buffer is None:
                 print('buffer none')
                 buffer = "%s - %s" % (
@@ -12415,25 +14084,31 @@ async def shift_leaderboard(ctx):
                     f"{member.name}#{member.discriminator}", td_format(datetime.timedelta(seconds=i['total_seconds'])))
                 data.append([index + 1, f"{member.name}#{member.discriminator}", member.top_role.name,
                              td_format(datetime.timedelta(seconds=i['total_seconds'])), i['moderations']])
-            if len(embeds[-1].fields) <= 24:
-                print('fields less than 24')
-                embeds[-1].add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                     value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}",
-                                     inline=False)
+
+            if len((embeds[-1].description or '').splitlines()) < 16:
+                if embeds[-1].description is None:
+                    embeds[-1].description = f"<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                else:
+                    embeds[-1].description += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+
             else:
                 print('fields more than 24')
                 new_embed = discord.Embed(
                     color=0x2E3136,
-                    title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+                    title="<:Clock:1035308064305332224> Duty Leaderboard"
                 )
 
-                print(new_embed)
-                new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                    value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}",
-                                    inline=False)
+                new_embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                new_embed.description = "<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n"
+                new_embed.description += f"<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
                 embeds.append(new_embed)
 
     staff_roles = []
+    ordinal = lambda n: "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4])  # NOQA: E731
+    ordinal_formatted = None
+    quota_seconds = 0
+
+
 
     if configItem['staff_management'].get('role'):
         if isinstance(configItem['staff_management']['role'], int):
@@ -12461,41 +14136,48 @@ async def shift_leaderboard(ctx):
             for member in role.members:
                 if member.id not in [item['id'] for item in sorted_staff]:
                     if member not in added_staff:
+                        index = index + 1
+
                         if buffer is None:
                             buffer = "%s - %s" % (f"{member.name}#{member.discriminator}", "0 seconds")
                             data.append(
-                                [index + 1, f"{member.name}#{member.discriminator}", member.top_role.name, "0 seconds",
+                                [index, f"{member.name}#{member.discriminator}", member.top_role.name, "0 seconds",
                                  0])
                             added_staff.append(member)
                         else:
                             buffer = buffer + "\n%s - %s" % (f"{member.name}#{member.discriminator}", "0 seconds")
                             data.append(
-                                [index + 1, f"{member.name}#{member.discriminator}", member.top_role.name, "0 seconds",
+                                [index, f"{member.name}#{member.discriminator}", member.top_role.name, "0 seconds",
                                  0])
                             added_staff.append(member)
 
-                        if len(embeds[-1].fields) <= 24:
-                            embeds[-1].add_field(
-                                name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                value=f"<:ArrowRight:1035003246445596774> 0 seconds",
-                                inline=False)
+                        if len((embeds[-1].description or '').splitlines()) < 16:
+                            if embeds[-1].description is None:
+                                embeds[
+                                    -1].description = f"<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - 0 seconds\n"
+                            else:
+                                embeds[
+                                    -1].description += f"<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - 0 seconds\n"
+
                         else:
+                            print('fields more than 24')
                             new_embed = discord.Embed(
                                 color=0x2E3136,
-                                title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+                                title="<:Clock:1035308064305332224> Duty Leaderboard"
                             )
-                            new_embed.add_field(
-                                name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=i['total_seconds']))}",
-                                inline=False)
-                            embeds.append(new_embed)
 
+                            new_embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                            new_embed.description = "<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n"
+                            new_embed.description += f"<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                            embeds.append(new_embed)
     perm_staff = list(
         filter(lambda m: (m.guild_permissions.manage_messages or m.guild_permissions.manage_guild) and not m.bot,
                ctx.guild.members))
     for member in perm_staff:
         if member.id not in [item['id'] for item in sorted_staff]:
             if member not in added_staff:
+                index = index + 1
+
                 if buffer is None:
                     buffer = "%s - %s" % (f"{member.name}#{member.discriminator}", "0 seconds")
                     data.append(
@@ -12508,18 +14190,24 @@ async def shift_leaderboard(ctx):
                         [index + 1, f"{member.name}#{member.discriminator}", member.top_role.name, "0 seconds", 0])
                     added_staff.append(member)
 
-                if len(embeds[-1].fields) <= 24:
-                    embeds[-1].add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                         value=f"<:ArrowRight:1035003246445596774> 0 seconds",
-                                         inline=False)
+                if len((embeds[-1].description or '').splitlines()) < 16:
+                    if embeds[-1].description is None:
+                        embeds[
+                            -1].description = f"<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index}.** {member.mention} - 0 seconds\n"
+                    else:
+                        embeds[
+                            -1].description += f"<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - 0 seconds\n"
+
                 else:
+                    print('fields more than 24')
                     new_embed = discord.Embed(
                         color=0x2E3136,
-                        title="<:SettingIcon:1035353776460152892> Duty Leaderboard"
+                        title="<:Clock:1035308064305332224> Duty Leaderboard"
                     )
-                    new_embed.add_field(name=f'<:staff:1035308057007230976> {member.name}#{member.discriminator}',
-                                        value=f"<:ArrowRight:1035003246445596774> 0 seconds",
-                                        inline=False)
+
+                    new_embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                    new_embed.description = "<:ArrowRight:1035003246445596774> *All shift times will be here. To view active shifts, run `/duty active`*\n\n"
+                    new_embed.description += f"<:SConductTitle:1053359821308567592> **Total Shifts**\n<:ArrowRightW:1035023450592514048> **{index+1}.** {member.mention} - 0 seconds\n"
                     embeds.append(new_embed)
 
     combined = []
@@ -12530,6 +14218,18 @@ async def shift_leaderboard(ctx):
     print(all_staff)
     print(sorted_staff)
     print(buffer)
+
+    if my_data is not None:
+        ordinal_formatted = ordinal(my_data['index']+1)
+        if 'quota' in configItem['shift_management'].keys():
+            quota_seconds = configItem['shift_management']['quota']
+
+        embeds[0].description += f"\n\n<:staff:1035308057007230976> **Your Stats**\n<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=my_data['total_seconds']))}\n<:ArrowRight:1035003246445596774> {ordinal_formatted} Place on Leaderboard\n<:ArrowRight:1035003246445596774> {'Met Quota' if my_data['total_seconds'] >= quota_seconds else 'Not Met Quota'}"
+    else:
+        embeds[0].description += f"\n\n<:staff:1035308057007230976> **Your Stats**\n<:ArrowRight:1035003246445596774> 0 seconds\n<:ArrowRight:1035003246445596774> Not Met Quota"
+
+
+
     try:
         bbytes = buffer.encode('utf-8')
     except Exception as e:
@@ -12544,7 +14244,7 @@ async def shift_leaderboard(ctx):
             else:
                 interaction = ctx
 
-            menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+            menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
             for embed in embeds:
                 if embed is not None:
                     menu.add_pages([embed])
@@ -12573,21 +14273,35 @@ async def shift_leaderboard(ctx):
         else:
             interaction = ctx
 
-        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
-        for embed in embeds:
-            if embed is not None:
-                menu.add_pages([embed])
-
         if await management_predicate(ctx):
             view = RequestGoogleSpreadsheet(ctx.author.id, credentials_dict, scope, combined, config("DUTY_LEADERBOARD_ID"))
         else:
             view = None
-        if len(menu.pages) == 1:
-            return await ctx.send(embed=embed, file=file, view=view)
 
+        async def response_func(interaction: discord.Interaction, button: discord.Button):
+            await interaction.response.send_message(file=file, ephemeral=True)
+
+        menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None)
+        for embed in embeds:
+            if embed is not None:
+                menu.add_page(embed=embed)
+
+        menu._pc = _PageController(menu.pages)
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
-        await menu.start()
-        await ctx.send(file=file, view=view)
+        menu._ViewMenu__view.add_item(CustomExecutionButton(
+            ctx.author.id,
+            "Download Shift Leaderboard",
+            discord.ButtonStyle.gray,
+            emoji=None,
+            func=response_func
+        ))
+        if len(menu.pages) == 1:
+            return await msg.edit(embed=embed, file=file, view=view)
+        if view:
+            for child in view.children:
+                menu._ViewMenu__view.add_item(child)
+
+        await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
 
 
 @duty.command(name='clearall',
@@ -12707,7 +14421,7 @@ async def active(ctx, user: str = None):
                 embeds.append(new_embed)
                 print('new embed')
 
-            if rbx not in [None, [], {}]:
+            if vars().get('rbx') not in [None, [], {}]:
                 if 'id' in rbx.keys() and 'name' in rbx.keys():
                     print(f'Added to {embeds[-1]}')
                     embeds[-1].add_field(
@@ -12722,7 +14436,7 @@ async def active(ctx, user: str = None):
         else:
             gtx = ctx
 
-        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True)
+        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None)
         menu.add_buttons(
             [ViewButton.back(), ViewButton.next()]
         )
@@ -12898,7 +14612,7 @@ async def active(ctx, user: str = None):
             gtx = ctx
 
 
-        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False)
+        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None)
         menu.add_buttons(
             [ViewButton.back(), ViewButton.next()]
         )
@@ -13076,7 +14790,7 @@ async def game_message(ctx):
             color=0x71c15f
         )
 
-        await ctx.reply(embed=success_embed)
+        await ctx.send(embed=success_embed)
     return
 
 
@@ -13238,7 +14952,7 @@ async def game_sts(ctx):
         color=0x71c15f
     )
 
-    await ctx.reply(embed=success_embed)
+    await ctx.send(embed=success_embed)
 
 @game.command(
     name="priority",
@@ -13397,7 +15111,83 @@ async def game_priority(ctx):
         color=0x71c15f
     )
 
-    await ctx.reply(embed=success_embed)
+    await ctx.send(embed=success_embed)
+
+@bot.hybrid_command(
+    name="modstats",
+    description="View all information of moderations you've made",
+    extras={
+        "category": "Punishments"
+    }
+)
+@is_staff()
+async def modstats(ctx, user: discord.Member = None):
+    settings = await bot.settings.find_by_id(ctx.guild.id)
+    if settings is None:
+        return await invis_embed(ctx,
+                                 'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+    if user == None:
+        user = ctx.author
+
+    selected = None
+    async for document in bot.shift_storage.db.find({"_id": user.id}):
+        selected = document
+
+    loas = []
+    async for document in bot.loas.db.find({"user_id": user.id}):
+        loas.append(document)
+        
+    if not selected:
+        moderations = []
+        shifts = []
+    else:
+        moderations = [i for i in list(filter(lambda x: x.get('moderations') is not None and x['guild'] == ctx.guild.id, selected['shifts'])) if i is not None]
+        print(moderations)
+        moderations = []
+        for i in moderations:
+            moderations = [x for x in i['moderations'] if x is not None]
+        print(moderations)
+        shifts = [x for x in [x['shifts'] for x in list(filter(lambda x: x.get('shifts') is True, selected['shifts']))] if x is not None and x['guild'] == ctx.guild.id]
+
+    leaves = list(filter(lambda x: x['type'] == "LoA", loas))
+    reduced_activity = list(filter(lambda x: x['type'] == "RA", loas))
+    accepted_leaves = list(filter(lambda x: x['accepted'] == True, leaves))
+    denied_leaves = list(filter(lambda x: x['denied'] == True, leaves))
+    accepted_ras = list(filter(lambda x: x['accepted'] == True, reduced_activity))
+    denied_ras = list(filter(lambda x: x['denied'] == True, reduced_activity))
+
+
+    embed = discord.Embed(
+        title="<:SConductTitle:1053359821308567592> Moderation Statistics",
+        description="*Moderation statistics displays relevant information about a user.*",
+        color=0x2e3136
+    )
+
+    INVISIBLE_CHAR = "‎"
+
+
+    embed.add_field(
+        name="<:MalletWhite:1035258530422341672> Moderations",
+        value=f"<:ArrowRightW:1035023450592514048> **Moderations:** {len(moderations)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Warnings:** {len(list(filter(lambda x: x['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: x['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: x['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: x['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: x['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
+        inline=True
+    )
+    embed.add_field(
+        name="<:Clock:1035308064305332224> Activity Notices",
+        value=f"<:ArrowRightW:1035023450592514048> **LOAs:** {len(leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_leaves)}\n<:ArrowRightW:1035023450592514048> **Reduced Activity:** {len(reduced_activity)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_ras)}",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="<:Resume:1035269012445216858> Shifts",
+        value=f"<:ArrowRightW:1035023450592514048> **Shifts:** {len(shifts)}\n<:ArrowRightW:1035023450592514048> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['endTimestamp']) - (x['startTimestamp']) for x  in shifts])))}\n<:ArrowRightW:1035023450592514048> **Average Shift Time:** {td_format(datetime.timedelta(seconds=((sum([(x['endTimestamp']) - (x['startTimestamp']) for x  in shifts]) / (len([(x['endTimestamp']) - (x['startTimestamp']) for x  in shifts]))) if len([(x['endTimestamp']) - (x['startTimestamp']) for x  in shifts]) != 0 else 1) - 1))}\n",
+        inline=True
+    )
+
+    await ctx.send(embed=embed)
+
+
+
 
 
 
