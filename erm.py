@@ -10491,6 +10491,7 @@ async def loa_admin(ctx, member: discord.Member):
         "category": "Staff Management"
     }
 )
+@is_management()
 async def loa_active(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -11661,7 +11662,8 @@ async def ra(ctx, time, *, reason):
         "category": "Staff Management"
     }
 )
-async def loa_active(ctx):
+@is_management()
+async def ra_active(ctx):
     try:
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
