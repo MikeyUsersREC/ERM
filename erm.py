@@ -8767,7 +8767,10 @@ async def duty_admin(ctx, member: discord.Member):
 
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles,
+                    if isinstance(shift.type.get('role'), list):
+                        role = [discord.utils.get(ctx.guild.roles, id=role) for role in shift_type.get('role')]
+                    else:
+                        role = [discord.utils.get(ctx.guild.roles,
                                               id=shift_type.get('role'))]
             else:
                 if shift_type:
@@ -10910,7 +10913,7 @@ async def manage(ctx):
             role = None
             if shift_type:
                 if shift_type.get('role'):
-                    if shift_type.get('role'):
+                    if isinstance(shift_type.get('role'), list):
                         role = [discord.utils.get(ctx.guild.roles,
                                                   id=rl) for rl in shift_type.get('role')]
                     else:
@@ -11192,23 +11195,21 @@ async def manage(ctx):
 
             if shift_type:
                 if shift_type.get('role'):
-                    role = [discord.utils.get(ctx.guild.roles,
-                                              id=shift_type.get('role'))]
+                    if isinstance(shift_type.get('role'), list):
+                        role = [discord.utils.get(ctx.guild.roles,
+                                                  id=rl) for rl in shift_type.get('role')]
+                    else:
+                        role = [discord.utils.get(ctx.guild.roles, id=shift_type.get('role'))]
             else:
-                if shift_type:
-                    if shift_type.get('role'):
-                        role = [discord.utils.get(ctx.guild.roles, id=role) for role
-                                in shift_type.get('role')]
-                else:
-                    if configItem['shift_management']['role']:
-                        if not isinstance(configItem['shift_management']['role'],
-                                          list):
-                            role = [discord.utils.get(ctx.guild.roles, id=
-                            configItem['shift_management']['role'])]
-                        else:
-                            role = [discord.utils.get(ctx.guild.roles, id=role) for
-                                    role in
-                                    configItem['shift_management']['role']]
+                if configItem['shift_management']['role']:
+                    if not isinstance(configItem['shift_management']['role'],
+                                      list):
+                        role = [discord.utils.get(ctx.guild.roles, id=
+                        configItem['shift_management']['role'])]
+                    else:
+                        role = [discord.utils.get(ctx.guild.roles, id=role) for
+                                role in
+                                configItem['shift_management']['role']]
             if role:
                 for rl in role:
                     if rl not in ctx.author.roles and rl is not None:
