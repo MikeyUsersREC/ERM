@@ -39,8 +39,8 @@ async def interpret_embed(bot, ctx, channel, embed: dict):
     except:
         pass
     for i in embed.fields:
-        i.name = await sub_vars(bot, ctx, i.name)
-        i.value = await sub_vars(bot, ctx, i.value)
+        i.name = await sub_vars(bot, ctx, channel, i.name)
+        i.value = await sub_vars(bot, ctx, channel, i.value)
 
     return embed
 

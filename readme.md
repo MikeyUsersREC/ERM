@@ -1,29 +1,18 @@
 <h1 align="center">ERM | Emergency Response Management</h1>
 
-<p align="center">Emergency Response Management (or ERM for short!) is a bot tailored to servers within the Roblox roleplay genre. This is the repository for the bot. </p>
+<p align="center">Emergency Response Management (ERM for short) is a bot designed for servers within the Roblox roleplay community. This repository contains all necessary information and resources for the bot. </p>
 
-### Links
+## Essential Links
+- [Bot Invitation](https://canary.discord.com/api/oauth2/authorize?client_id=978662093408591912&permissions=8&scope=applications.commands%20bot)
+- [Support Server](https://discord.gg/BGfyfqU5fx)
+- [Official Website](https://ermbot.xyz/)
 
-[Bot Invite](https://canary.discord.com/api/oauth2/authorize?client_id=978662093408591912&permissions=8&scope=applications.commands%20bot)
+## Licensing
+ERM is licensed under the Attribution-NonCommercial-ShareAlike (CC BY-NC-SA) license. This license allows for the copy, distribution, and creation of adaptations of the material for non-commercial purposes, as long as proper attribution is given to the original creator and any adaptations are licensed under the same terms.
 
-[Support Server](https://discord.gg/BGfyfqU5fx)
+[![License](https://licensebuttons.net/l/by-nc-sa/3.0/88x31.png)](https://top.gg/bot/978662093408591912)
 
-[Website](https://ermbot.xyz/)
-
-### Licensing
-
-Attribution-NonCommercial-NoDerivs
-CC BY-NC-ND
-
-[![License](https://licensebuttons.net/l/by-nc-nd/3.0/88x31.png)](https://top.gg/bot/978662093408591912)
-
-This license allows reusers to copy and distribute the material in any medium or format in unadapted form only, for noncommercial purposes only, and only so long as attribution is given to the creator. 
-
-CC BY-NC-ND includes the following elements:
-
-BY  – Credit must be given to the creator
-
-NC  – Only noncommercial uses of the work are permitted
-
-ND  – No derivatives or adaptations of the work are permitted
-
+The CC BY-NC-SA license requires the following elements:
+- BY: Credit must be given to the original creator
+- NC: The material can only be used for non-commercial purposes
+- SA: Adaptations must be licensed under the same terms
