@@ -349,9 +349,11 @@ class Punishments(commands.Cog):
 
                 if member:
                     should_dm = True
-                    if document.get('consent'):
-                        if document['consent'].get('punishments') is False:
-                            should_dm = False
+
+                    async for doc in bot.consent.db.find({"_id": member.id}):
+                        if document.get('punishments'):
+                            if document.get('punishments') is False:
+                                should_dm = False
 
                     if should_dm:
                         try:

@@ -2304,6 +2304,10 @@ class ShiftManagement(commands.Cog):
                 menu.add_button(ViewButton.back())
                 menu.add_button(ViewButton.next())
                 try:
+                    if consent_obj := await ctx.bot.consent.find_by_id(ctx.author.id):
+                        if consent_obj.get('shift_reports'):
+                            if consent_obj.get('shift_reports') is False:
+                                raise Exception()
                     await menu.start()
                 except:
                     pass
