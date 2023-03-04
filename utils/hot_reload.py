@@ -23,7 +23,7 @@ class HotReload(commands.Cog):
     @tasks.loop(seconds=3)
     async def hot_reload_loop(self):
         for extension in list(self.bot.extensions.keys()):
-            if extension:
+            if extension in ['jishaku']:
                 continue
             path = path_from_extension(extension)
             time = os.path.getmtime(path)
@@ -41,7 +41,9 @@ class HotReload(commands.Cog):
             except commands.ExtensionError:
                 print(f"Couldn't reload extension: {extension}")
             else:
-                print(f"Reloaded extension: {extension}")
+                guild = self.bot.get_guild(987798554972143728)
+                channel = guild.get_channel(1055558545250193418)
+                await channel.send(f"Reloaded extension: {extension}")
             finally:
                 self.last_modified_time[extension] = time
 
@@ -49,7 +51,7 @@ class HotReload(commands.Cog):
     async def cache_last_modified_time(self):
         self.last_modified_time = {}
         for extension in self.bot.extensions.keys():
-            if extension in ['jishaku', 'utils.hot_reload']:
+            if extension in ['jishaku']:
                 continue
             path = path_from_extension(extension)
             time = os.path.getmtime(path)
