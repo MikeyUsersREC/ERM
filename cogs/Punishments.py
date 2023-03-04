@@ -6,8 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from reactionmenu import ViewMenu, ViewButton
-
-from erm import is_management, is_staff, user_autocomplete, punishment_autocomplete, generator, crp_data_to_mongo
+from utils.autocompletes import user_autocomplete, punishment_autocomplete
+from erm import is_management, is_staff, generator, crp_data_to_mongo
 from menus import CustomSelectMenu, CustomisePunishmentType, ChannelSelect, RequestDataView, RemoveWarning, EditWarning, \
     CustomModalView
 from utils.utils import invis_embed, removesuffix

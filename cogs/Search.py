@@ -9,7 +9,8 @@ from discord.ext import commands
 from reactionmenu import ViewMenu, ViewButton
 from roblox import client as roblox
 
-from erm import is_staff, staff_field, user_autocomplete, check_privacy
+from erm import is_staff, staff_field, check_privacy
+from utils.autocompletes import user_autocomplete
 from utils.utils import invis_embed
 
 client = roblox.Client()
