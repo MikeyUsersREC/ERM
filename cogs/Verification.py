@@ -2,7 +2,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 from discord import app_commands
-
+from menus import Verification as VerifyView
 from menus import EnterRobloxUsername
 from utils.utils import invis_embed
 
@@ -136,7 +136,7 @@ class Verification(commands.Cog):
             embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
             embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
             embed.set_footer(text=f'ROBLOX Verification provided by Emergency Response Management')
-            view = Verification(ctx.author.id)
+            view = VerifyView(ctx.author.id)
             await ctx.send(embed=embed, view=view)
             await view.wait()
             if view.value:

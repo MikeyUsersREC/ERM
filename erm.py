@@ -700,16 +700,16 @@ scope = [
 ]
 
 credentials_dict = {
-    "type": config("TYPE", default=None),
-    "project_id": config("PROJECT_ID", default=None),
-    "private_key_id": config("PRIVATE_KEY_ID", default=None),
-    "private_key": config("PRIVATE_KEY", default=None).replace("\\n", '\n'),
-    "client_email": config("CLIENT_EMAIL", default=None),
-    "client_id": config("CLIENT_ID", default=None),
-    "auth_uri": config("AUTH_URI", default=None),
-    "token_uri": config("TOKEN_URI", default=None),
-    "auth_provider_x509_cert_url": config("AUTH_PROVIDER_X509_CERT_URL", default=None),
-    "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=None),
+    "type": config("TYPE", default=''),
+    "project_id": config("PROJECT_ID", default=''),
+    "private_key_id": config("PRIVATE_KEY_ID", default=''),
+    "private_key": config("PRIVATE_KEY", default='').replace("\\n", '\n'),
+    "client_email": config("CLIENT_EMAIL", default=''),
+    "client_id": config("CLIENT_ID", default=''),
+    "auth_uri": config("AUTH_URI", default=''),
+    "token_uri": config("TOKEN_URI", default=''),
+    "auth_provider_x509_cert_url": config("AUTH_PROVIDER_X509_CERT_URL", default=''),
+    "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=''),
 }
 
 if __name__ == "__main__":
