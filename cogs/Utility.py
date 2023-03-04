@@ -41,8 +41,8 @@ class Utility(commands.Cog):
             name='<:Search:1035353785184288788> Database',
             value=f"{status}"
         )
-
-        embed.set_footer(text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}")
+        if ctx.guild:
+            embed.set_footer(text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}")
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
 
