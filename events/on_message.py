@@ -151,7 +151,8 @@ class OnMessage(commands.Cog):
                                         print(invoked_command)
                                         command = bot.get_command(invoked_command.lower().strip())
                                         if not command:
-                                            if not any([i in invoked_command.lower().strip() for i in ["duty on", "duty off"]]):
+                                            if not any([i in invoked_command.lower().strip() for i in
+                                                        ["duty on", "duty off"]]):
                                                 await message.add_reaction('❌')
                                                 return await message.add_reaction('8️⃣')
 
