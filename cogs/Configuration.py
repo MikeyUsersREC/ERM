@@ -1525,7 +1525,7 @@ class Configuration(commands.Cog):
                         discord.SelectOption(
                             label=type.get('name'),
                             description=type.get('name'),
-                            value=type.get('name')
+                            value=str(type.get('id'))
                         ) for type in shift_types.get('types')
                     ])
 
@@ -1534,7 +1534,7 @@ class Configuration(commands.Cog):
                     if timeout:
                         return
 
-                    shift_type = [type for type in shift_types.get('types') if type.get('name') == view.value]
+                    shift_type = [type for type in shift_types.get('types') if type.get('id') == int(view.value)]
                     if len(shift_type) == 0:
                         return await invis_embed(ctx, 'That shift type does not exist.')
 
@@ -1777,7 +1777,7 @@ class Configuration(commands.Cog):
                         discord.SelectOption(
                             label=type.get('name'),
                             description=type.get('name'),
-                            value=type.get('name')
+                            value=type.get('id')
                         ) for type in shift_types.get('types')
                     ])
 
@@ -1786,7 +1786,7 @@ class Configuration(commands.Cog):
                     if timeout:
                         return
 
-                    shift_type = [type for type in shift_types.get('types') if type.get('name') == view.value]
+                    shift_type = [type for type in shift_types.get('types') if type.get('id') == int(view.value)]
                     if len(shift_type) == 0:
                         return await invis_embed(ctx, 'That shift type does not exist.')
 
@@ -2763,7 +2763,7 @@ class Configuration(commands.Cog):
                                 discord.SelectOption(
                                     label=type.get('name'),
                                     description=type.get('name'),
-                                    value=type.get('name')
+                                    value=type.get('id')
                                 ) for type in shift_types.get('types')
                             ])
 
@@ -2772,7 +2772,8 @@ class Configuration(commands.Cog):
                             if timeout:
                                 return
 
-                            shift_type = [type for type in shift_types.get('types') if type.get('name') == view.value]
+                            shift_type = [type for type in shift_types.get('types') if
+                                          type.get('id') == int(view.value)]
                             if len(shift_type) == 0:
                                 return await invis_embed(ctx, 'That shift type does not exist.')
 
@@ -3018,7 +3019,7 @@ class Configuration(commands.Cog):
                                 discord.SelectOption(
                                     label=type.get('name'),
                                     description=type.get('name'),
-                                    value=type.get('name')
+                                    value=type.get('id')
                                 ) for type in shift_types.get('types')
                             ])
 
@@ -3027,7 +3028,8 @@ class Configuration(commands.Cog):
                             if timeout:
                                 return
 
-                            shift_type = [type for type in shift_types.get('types') if type.get('name') == view.value]
+                            shift_type = [type for type in shift_types.get('types') if
+                                          type.get('id') == int(view.value)]
                             if len(shift_type) == 0:
                                 return await invis_embed(ctx, 'That shift type does not exist.')
 
