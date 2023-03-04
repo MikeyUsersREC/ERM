@@ -1,13 +1,12 @@
-import inspect
 import sys
 import logging
-import discord
-
-from discord.ext import commands, ipc
-from discord.ext.ipc.server import route
-from discord.ext.ipc.errors import IPCError
+import sys
 
 from decouple import config
+from discord.ext import commands, ipc
+from discord.ext.ipc.errors import IPCError
+from discord.ext.ipc.server import route
+
 
 class Routes(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -15,11 +14,11 @@ class Routes(commands.Cog):
         if not hasattr(bot, "ipc"):
             bot.ipc = ipc.Server(self.bot, host="127.0.0.1", port=5600, secret_key=config('IPC_SECRET_KEY'))
             bot.ipc.start()
-    
+
     @commands.Cog.listener()
     async def on_ipc_ready(self):
         logging.info("IPC is ready")
-    
+
     @commands.Cog.listener()
     async def on_ipc_error(self, endpoint: str, error: IPCError):
         logging.error(endpoint, "raised", error, file=sys.stderr)
@@ -47,7 +46,7 @@ class Routes(commands.Cog):
 
         if guild == None or settingData == None:
             return None
-        
+
         guild_data = {
             "name": guild.name,
             "id": guild.id,

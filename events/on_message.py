@@ -5,8 +5,8 @@ import string
 
 import aiohttp
 import discord
-from discord.ext import commands
 import num2words
+from discord.ext import commands
 from reactionmenu import ViewMenu, ViewSelect, ViewButton, Page
 
 from erm import generator
@@ -18,7 +18,6 @@ from utils.utils import get_guild_icon, get_prefix, invis_embed
 class OnMessage(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
 
     @commands.Cog.listener('on_message')
     async def on_message(self, message: discord.Message):
@@ -32,7 +31,6 @@ class OnMessage(commands.Cog):
             return
 
         if not message.guild:
-
             return
 
         dataset = await bot.settings.find_by_id(message.guild.id)

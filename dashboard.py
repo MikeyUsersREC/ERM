@@ -1,10 +1,10 @@
 import asyncio
 import os
-from quart import Quart, render_template, redirect, url_for, request
-from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
-from discord.ext import ipc
-import discord
+
 from decouple import config
+from discord.ext import ipc
+from quart import Quart, render_template, redirect, url_for, request
+from quart_discord import DiscordOAuth2Session
 
 app = Quart(__name__)
 app.secret_key = b"UQOAOWOQP_ALNBYIPPPML"
@@ -24,11 +24,13 @@ else:
     raise Exception("Environment variable 'environment' not set")
 
 discord_oauth = DiscordOAuth2Session(app)
-ipcClient = ipc.Client(host = "127.0.0.1", port = 5600, secret_key=config("IPC_SECRET_KEY"))
+ipcClient = ipc.Client(host="127.0.0.1", port=5600, secret_key=config("IPC_SECRET_KEY"))
+
 
 @app.route('/login/')
 async def login():
     return await discord_oauth.create_session()
+
 
 @app.route('/callback/')
 async def callback():
@@ -41,15 +43,20 @@ async def callback():
     print('redirecting')
     return redirect(url_for('dashboard'))
 
+
 @app.route('/')
 async def index():
     return await render_template("index.html")
 
+
 @app.route('/invite/')
-async def invite(guild_id = None):
+async def invite(guild_id=None):
     if guild_id is None:
-        return redirect(f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8')
-    return redirect(f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
+        return redirect(
+            f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8')
+    return redirect(
+        f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
+
 
 @app.route('/dashboard/')
 async def dashboard():
@@ -61,37 +68,39 @@ async def dashboard():
     try:
         userGuilds = await discord_oauth.fetch_guilds()
     except:
-        #return await redirect(url_for('login'))
+        # return await redirect(url_for('login'))
         pass
     guilds = []
 
     for guild in userGuilds:
         if guild.permissions.manage_guild:
-            guild.classColor = "greenBorder" if guild.id in guildIds else "redBorder"     
+            guild.classColor = "greenBorder" if guild.id in guildIds else "redBorder"
             guilds.append(guild)
 
-    guilds.sort(key=lambda x: x.classColor == "redBorder")  
+    guilds.sort(key=lambda x: x.classColor == "redBorder")
 
-    return await render_template("dashboard.html", user=user, guildCount = guild_count, guilds=guilds)
+    return await render_template("dashboard.html", user=user, guildCount=guild_count, guilds=guilds)
 
 
 @app.route('/dashboard/<int:guild_id>/')
 async def dashboardServer(guild_id):
     if not await discord_oauth.authorized:
         return redirect(url_for('login'))
-    
+
     guild = await ipcClient.request("get_guild", guild_id=guild_id)
     if 'name' not in guild:
-        return redirect(f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
-    
-    return await render_template("server.html", guild=guild, guildName = guild['name'], guildIcon = guild['icon'], guildRoles = guild['roles'], guildChannels = guild['channels'], guildID = guild_id)
+        return redirect(
+            f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
+
+    return await render_template("server.html", guild=guild, guildName=guild['name'], guildIcon=guild['icon'],
+                                 guildRoles=guild['roles'], guildChannels=guild['channels'], guildID=guild_id)
 
 
 @app.route('/dashboard/<int:guild_id>/', methods=['POST'])
 async def dashboardServerPOST(guild_id):
     if not await discord_oauth.authorized:
         return redirect(url_for('login'))
-    
+
     settingsChange = await request.get_json()
 
     guild = await ipcClient.request("get_guild", guild_id=guild_id)
@@ -108,22 +117,28 @@ async def dashboardServerPOST(guild_id):
     print(guild['settings'][configItem])
 
     if 'name' not in guild:
-        return redirect(f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
+        return redirect(
+            f'https://discord.com/oauth2/authorize?client_id={app.config["DISCORD_CLIENT_ID"]}&scope=bot&permissions=8&guild_id={guild_id}&response_type=code&redirect_uri={app.config["DISCORD_REDIRECT_URI"]}')
 
     return settingsChange
-    return await render_template("server.html", guild=guild, guildName = guild['name'], guildRoles = guild['roles'], guildIcon=guild['icon'], guildChannesl = guild['channels'], settingsChange=settingsChange)
+    return await render_template("server.html", guild=guild, guildName=guild['name'], guildRoles=guild['roles'],
+                                 guildIcon=guild['icon'], guildChannesl=guild['channels'],
+                                 settingsChange=settingsChange)
+
 
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     try:
-        app.ipc = loop.run_until_complete(ipcClient.start(loop=loop)) # `Client.start()` returns new Client instance or None if it fails to start
+        app.ipc = loop.run_until_complete(
+            ipcClient.start(loop=loop))  # `Client.start()` returns new Client instance or None if it fails to start
         app.run(loop=loop)
     except:
         asyncio.sleep(1)
-        app.ipc = loop.run_until_complete(ipcClient.start(loop=loop)) # `Client.start()` returns new Client instance or None if it fails to start
+        app.ipc = loop.run_until_complete(
+            ipcClient.start(loop=loop))  # `Client.start()` returns new Client instance or None if it fails to start
         app.run(loop=loop)
     finally:
-        loop.run_until_complete(app.ipc.close()) # Closes the session, doesn't close the loop
+        loop.run_until_complete(app.ipc.close())  # Closes the session, doesn't close the loop
         loop.close()

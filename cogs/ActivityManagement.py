@@ -3,10 +3,10 @@ from io import BytesIO
 
 import discord
 import gspread as gspread
+import num2words
 from dateutil import parser
 from decouple import config
 from discord.ext import commands
-import num2words
 from oauth2client.service_account import ServiceAccountCredentials
 from reactionmenu import ViewMenu, ViewButton
 

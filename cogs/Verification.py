@@ -1,9 +1,10 @@
 import aiohttp
 import discord
-from discord.ext import commands
 from discord import app_commands
-from menus import Verification as VerifyView
+from discord.ext import commands
+
 from menus import EnterRobloxUsername
+from menus import Verification as VerifyView
 from utils.utils import invis_embed
 
 

@@ -91,7 +91,6 @@ class Bot(commands.AutoShardedBot):
         bot.synced_users = Document(bot.db, 'synced_users')
         bot.consent = Document(bot.db, 'consent')
 
-
         Extensions = [m.name for m in iter_modules(['cogs'], prefix='cogs.')]
         Events = [m.name for m in iter_modules(['events'], prefix='events.')]
 
@@ -101,7 +100,6 @@ class Bot(commands.AutoShardedBot):
                 logging.info(f'Loaded {extension}')
             except Exception as e:
                 logging.error(f'Failed to load extension {extension}.', exc_info=e)
-
 
         for extension in Events:
             try:
@@ -114,6 +112,7 @@ class Bot(commands.AutoShardedBot):
         logging.info('Connected to MongoDB!')
 
         await bot.load_extension('jishaku')
+        await bot.load_extension('utils.hot_reload')
         # await bot.load_extension('utils.server')
 
         if not bot.is_synced:  # check if slash commands have been synced
@@ -155,8 +154,6 @@ def running():
         return -1
 
 
-
-
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
     analytics = await bot.analytics.find_by_id(ctx.command.full_parent_name + f" {ctx.command.name}")
@@ -196,6 +193,7 @@ def is_staff():
 
     return commands.check(predicate)
 
+
 async def management_predicate(ctx):
     guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
     if guild_settings:
@@ -212,6 +210,7 @@ async def management_predicate(ctx):
     if ctx.author.guild_permissions.manage_guild:
         return True
     return False
+
 
 def is_management():
     return commands.check(management_predicate)
@@ -367,7 +366,6 @@ error_gen = ZUID(prefix="error_", length=10)
 system_code_gen = ZUID(prefix="erm-systems-", length=7)
 
 
-
 async def punishment_autocomplete(
         interaction: discord.Interaction,
         current: str) -> typing.List[app_commands.Choice[str]]:
@@ -447,11 +445,6 @@ async def user_autocomplete(
                         async for search in searches:
                             choices.append(discord.app_commands.Choice(name=search['_id'], value=search['_id']))
                     return choices
-
-
-
-
-
 
 
 # status change discord.ext.tasks
@@ -584,8 +577,7 @@ async def check_reminders():
                     item['lastTriggered'] = lastTriggered
                     await bot.reminders.update_by_id(guildObj)
 
-
-                    await channel.send(" ".join(roles), embed=embed, view = view)
+                    await channel.send(" ".join(roles), embed=embed, view=view)
             except Exception as e:
                 print('Could not send reminder: {}'.format(str(e)))
                 pass
@@ -681,7 +673,6 @@ async def command_autocomplete(
                     discord.app_commands.Choice(name=cmd['message']['content'][:20].replace(' ', '').lower(),
                                                 value=cmd['name']))
         return commandList
-
 
 
 discord.utils.setup_logging(level=logging.INFO)

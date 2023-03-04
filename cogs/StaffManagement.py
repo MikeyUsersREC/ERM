@@ -1516,7 +1516,7 @@ class StaffManagement(commands.Cog):
         }
     )
     @is_management()
-    async def loa_active(self,ctx):
+    async def loa_active(self, ctx):
         bot = self.bot
         try:
             configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1590,6 +1590,7 @@ class StaffManagement(commands.Cog):
             ViewButton.next()
         ])
         await menu.start()
+
 
 async def setup(bot):
     await bot.add_cog(StaffManagement(bot))

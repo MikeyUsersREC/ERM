@@ -1,8 +1,10 @@
+import aiohttp
 import discord
 from discord.ext import commands
+
 from menus import LinkPathwayMenu, EnterRobloxUsername, Verification
-import aiohttp
 from utils.utils import invis_embed
+
 
 class ModerationSync(commands.Cog):
     def __init__(self, bot):
@@ -222,4 +224,3 @@ class ModerationSync(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(ModerationSync(bot))
-

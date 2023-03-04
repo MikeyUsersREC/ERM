@@ -7,6 +7,7 @@ from discord.ext.commands import CheckFailure, Context, has_any_role, NoPrivateM
 
 from helpers import MockContext, MockRole
 
+
 async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
     """
     Returns True if the context's author has any of the specified roles.
@@ -17,6 +18,7 @@ async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
         return await has_any_role(*roles).predicate(ctx)
     except CheckFailure:
         return False
+
 
 async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
     """

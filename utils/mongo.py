@@ -1,5 +1,5 @@
-import logging
 import collections
+import logging
 
 """
 A helper file for using mongo db

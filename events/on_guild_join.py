@@ -1,9 +1,8 @@
-
+import logging
 
 import discord
 from discord.ext import commands
 
-import logging
 
 class OnGuildJoin(commands.Cog):
     def __init__(self, bot):
@@ -58,6 +57,7 @@ class OnGuildJoin(commands.Cog):
                 pass
             await channel.send(embed=embed)
             logging.info('Server has been sent welcome sequence.')
+
 
 async def setup(bot):
     await bot.add_cog(OnGuildJoin(bot))

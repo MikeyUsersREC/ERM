@@ -1,12 +1,13 @@
 import datetime
 import json
 
-import discord
-from discord.ext import commands
-from discord import app_commands
-from erm import is_management, is_staff, user_autocomplete, punishment_autocomplete, generator, crp_data_to_mongo
-from reactionmenu import ViewMenu, ViewButton
 import aiohttp
+import discord
+from discord import app_commands
+from discord.ext import commands
+from reactionmenu import ViewMenu, ViewButton
+
+from erm import is_management, is_staff, user_autocomplete, punishment_autocomplete, generator, crp_data_to_mongo
 from menus import CustomSelectMenu, CustomisePunishmentType, ChannelSelect, RequestDataView, RemoveWarning, EditWarning, \
     CustomModalView
 from utils.utils import invis_embed, removesuffix

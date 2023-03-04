@@ -1,8 +1,9 @@
-import discord
 from discord.ext import commands
-from aiohttp import web
 import aiohttp_cors
 import discord
+from aiohttp import web
+from discord.ext import commands
+
 
 class Server(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -32,7 +33,7 @@ class Server(commands.Cog):
                     print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
-                guilds.append({ 
+                guilds.append({
                     "id": str(guild.id),
                     "name": str(guild.name),
                     "icon_url": icon
@@ -76,18 +77,16 @@ class Server(commands.Cog):
 
         return web.json_response(settings)
 
-
     async def get_last_warnings(self, request):
         json_data = await request.json()
         guild_id = json_data.get('guild')
 
         warning_objects = {}
-        async for document in self.bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": guild_id}}}).sort([("$natural", -1)]).limit(10):
+        async for document in self.bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": guild_id}}}).sort(
+                [("$natural", -1)]).limit(10):
             warning_objects[document["_id"]] = list(filter(lambda x: x["Guild"] == guild_id, document["warnings"]))
 
         return web.json_response(warning_objects)
-
-
 
     async def start_server(self):
         app = web.Application()
@@ -142,7 +141,6 @@ class Server(commands.Cog):
                 )
             }
         )
-
 
         runner = web.AppRunner(app)
         await runner.setup()

@@ -1,18 +1,20 @@
+import datetime
 import logging
 
 import aiohttp
 import discord
-from discord.ext import commands
-from discord import app_commands
-from erm import is_staff, is_management, staff_field, user_autocomplete, check_privacy
-from utils.utils import invis_embed, int_invis_embed
-from roblox import client as roblox
-import datetime
-from reactionmenu import ViewMenu, ViewButton, ViewSelect
 import pytz
+from discord import app_commands
+from discord.ext import commands
+from reactionmenu import ViewMenu, ViewButton
+from roblox import client as roblox
 
+from erm import is_staff, staff_field, user_autocomplete, check_privacy
+from utils.utils import invis_embed
 
 client = roblox.Client()
+
+
 class Search(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -133,7 +135,8 @@ class Search(commands.Cog):
                 triggered_alerts.append('NoAlerts')
 
             embed1 = discord.Embed(title=f"{query} ({User.id})", color=0x2E3136)
-            embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
+            embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
+                              icon_url=ctx.author.display_avatar.url)
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
                 await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
             embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
@@ -160,7 +163,6 @@ class Search(commands.Cog):
         if len(RESULTS) == 1:
 
             message = ctx.message
-
 
             result_var = None
             logging.info(message.content.lower())
@@ -295,7 +297,6 @@ class Search(commands.Cog):
             menu.add_pages(new_embeds)
             await menu.start()
 
-
     @commands.hybrid_command(
         name="userid",
         aliases=["u"],
@@ -378,7 +379,6 @@ class Search(commands.Cog):
         embed.set_thumbnail(url=thumbnail)
         embed.set_footer(text="Search Module")
         await ctx.send(embed=embed)
-
 
     @commands.hybrid_command(
         name="globalsearch",
@@ -492,7 +492,8 @@ class Search(commands.Cog):
                 triggered_alerts.append('NoAlerts')
 
             embed1 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2E3136)
-            embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
+            embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}",
+                              icon_url=ctx.author.display_avatar.url)
 
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
                 await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
@@ -684,6 +685,7 @@ class Search(commands.Cog):
                 new_embeds.append(embed)
             menu.add_pages(new_embeds)
             await menu.start()
+
 
 async def setup(bot):
     await bot.add_cog(Search(bot))

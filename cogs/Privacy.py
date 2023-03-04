@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 from menus import CustomExecutionButton, CustomSelectMenu
 from utils.utils import create_invis_embed
@@ -96,7 +95,7 @@ class Privacy(commands.Cog):
             else:
                 await interaction.response.send_message(embed=create_invis_embed(
                     'You are not the individual that has activated this menu. Refrain from interacting with this view.'),
-                                                        ephemeral=True)
+                    ephemeral=True)
 
         async def shift_reports(interaction: discord.Interaction, button: discord.ui.Button):
             if interaction.user.id == ctx.author.id:
@@ -175,6 +174,7 @@ class Privacy(commands.Cog):
             custom_view.add_item(child)
 
         await ctx.send(embed=embed, view=custom_view)
+
 
 async def setup(bot):
     await bot.add_cog(Privacy(bot))

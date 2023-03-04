@@ -55,7 +55,8 @@ class OnCommandError(commands.Cog):
             embed.add_field(name='Error ID', value=f"`{error_id}`", inline=False)
 
             if not isinstance(error, (
-            commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument, discord.Forbidden)):
+                    commands.CommandNotFound, commands.CheckFailure, commands.MissingRequiredArgument,
+                    discord.Forbidden)):
                 await ctx.send(embed=embed)
         except Exception as e:
             logging.info(e)
@@ -71,6 +72,7 @@ class OnCommandError(commands.Cog):
                     "guild": ctx.guild.id
                 })
                 capture_exception(error)
+
 
 async def setup(bot):
     await bot.add_cog(OnCommandError(bot))

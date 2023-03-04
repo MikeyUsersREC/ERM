@@ -1,8 +1,8 @@
 import logging
 
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 
 from utils.utils import invis_embed
 
@@ -12,7 +12,7 @@ class Utility(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command(name='ping', description="Shows information of the bot, such as uptime and latency",
-                        extras={"category": "Utility"})
+                             extras={"category": "Utility"})
     async def ping(self, ctx):
         uptime = f"<t:{int(self.bot.start_time)}>"
 
@@ -46,11 +46,10 @@ class Utility(commands.Cog):
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
 
-
     @commands.hybrid_command(name='support', aliases=['support-server'],
-                        description="Information about the ERM Support Server",
-                        extras={"category": "Utility"},
-                        )
+                             description="Information about the ERM Support Server",
+                             extras={"category": "Utility"},
+                             )
     async def support_server(self, ctx):
         # using an embed
         embed = discord.Embed(title='<:support:1035269007655321680> Support Server',

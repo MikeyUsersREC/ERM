@@ -1,10 +1,11 @@
 from typing import Callable, List, Optional
+
 import discord
 
 
 def example_callback(embeds):
     def callback(page):
-        return embeds[page-1]
+        return embeds[page - 1]
 
     return callback
 
@@ -54,14 +55,14 @@ class Paginator(discord.ui.View):
         self.page = max(self.page - 1, 1)
         self._update_buttons()
         embs = self.callback(self.page)
-        await interaction.response.edit_message(embeds=[ embs ], view=self)
+        await interaction.response.edit_message(embeds=[embs], view=self)
 
     @discord.ui.button(label="Next")
     async def next_button(self, interaction, _):
         self.page = min(self.page + 1, self.pages)
         self._update_buttons()
         embs = self.callback(self.page)
-        await interaction.response.edit_message(embeds=[ embs ], view=self)
+        await interaction.response.edit_message(embeds=[embs], view=self)
 
 
 class StaticPaginator(Paginator):

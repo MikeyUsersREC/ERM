@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 from erm import is_management, generator
 from menus import ManageReminders, YesNoColourMenu, YesNoMenu, ChannelSelect, RoleSelect

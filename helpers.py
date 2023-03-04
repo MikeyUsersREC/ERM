@@ -8,7 +8,6 @@ from asyncio import AbstractEventLoop
 from typing import Iterable, Optional
 
 import discord
-from aiohttp import ClientSession
 from discord.ext.commands import Context
 
 from erm import Bot
@@ -259,7 +258,6 @@ class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
             self.mention = f"@{self.name}"
 
 
-
 def _get_mock_loop() -> unittest.mock.Mock:
     """Return a mocked asyncio.AbstractEventLoop."""
     loop = unittest.mock.create_autospec(spec=AbstractEventLoop, spec_set=True)
@@ -270,6 +268,7 @@ def _get_mock_loop() -> unittest.mock.Mock:
     def mock_create_task(coroutine, **kwargs):
         coroutine.close()
         return unittest.mock.Mock()
+
     loop.create_task.side_effect = mock_create_task
 
     return loop
@@ -412,7 +411,6 @@ state = unittest.mock.MagicMock()
 channel = unittest.mock.MagicMock()
 channel.type = discord.ChannelType.text
 message_instance = discord.Message(state=state, channel=channel, data=message_data)
-
 
 # Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
 context_instance = Context(

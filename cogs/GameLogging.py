@@ -2,7 +2,6 @@ import datetime
 
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 from menus import CustomModalView, UserSelect
 from utils.timestamp import td_format

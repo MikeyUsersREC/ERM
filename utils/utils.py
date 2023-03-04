@@ -1,9 +1,9 @@
 import datetime
-
-from discord.ext import commands
-import discord
 import typing
+
+import discord
 from discord import Embed
+from discord.ext import commands
 
 
 def removesuffix(input_string: str, suffix: str):
@@ -20,7 +20,6 @@ def get_guild_icon(bot: typing.Union[commands.Bot, commands.AutoShardedBot], gui
 
 
 async def interpret_embed(bot, ctx, channel, embed: dict):
-
     embed = discord.Embed.from_dict(embed)
     try:
         embed.title = await sub_vars(bot, ctx, channel, embed.title)
@@ -43,6 +42,7 @@ async def interpret_embed(bot, ctx, channel, embed: dict):
         i.value = await sub_vars(bot, ctx, channel, i.value)
 
     return embed
+
 
 async def interpret_content(bot, ctx, channel, content: str):
     return await sub_vars(bot, ctx, channel, content)
@@ -85,9 +85,11 @@ async def int_invis_embed(interaction, content, **kwargs):
     except discord.InteractionResponded:
         await interaction.edit_original_response(embed=embed, **kwargs)
 
+
 def create_invis_embed(content: str, **kwargs) -> discord.Embed:
     embed = Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}")
     return embed
+
 
 async def coloured_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
     embed = Embed(color=0x2E3136, description=f"{content}")
@@ -102,6 +104,7 @@ async def int_coloured_embed(interaction, content, **kwargs):
     except discord.InteractionResponded:
         await interaction.edit_original_response(embed=embed, **kwargs)
 
+
 async def request_response(bot, ctx, question, **kwargs):
     embed = discord.Embed(color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}")
     await ctx.send(embed=embed, **kwargs)
@@ -111,6 +114,7 @@ async def request_response(bot, ctx, question, **kwargs):
     except:
         raise Exception('No response')
     return response
+
 
 def make_ordinal(n):
     """
@@ -127,5 +131,3 @@ def make_ordinal(n):
     else:
         suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
     return str(n) + suffix
-
-
