@@ -334,7 +334,7 @@ bot.erm_team = {
 }
 
 
-async def staff_field(embed, query):
+async def staff_field(bot: Bot, embed, query):
     flag = await bot.flags.find_by_id(query)
     embed.add_field(name="<:FlagIcon:1035258525955395664> Flags",
                     value=f"<:ArrowRight:1035003246445596774> {flag['rank']}",

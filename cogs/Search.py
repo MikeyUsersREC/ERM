@@ -135,7 +135,7 @@ class Search(commands.Cog):
             embed1 = discord.Embed(title=f"{query} ({User.id})", color=0x2E3136)
             embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
-                await staff_field(embed1, embed1.title.lower().split(' ')[0])
+                await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
             embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                              value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
             string = "\n".join([alerts[i] for i in triggered_alerts])
@@ -219,7 +219,7 @@ class Search(commands.Cog):
             embeds = [embed1, embed2]
 
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
-                await staff_field(embeds[0], embed1.title.lower().split(' ')[0])
+                await staff_field(bot, embeds[0], embed1.title.lower().split(' ')[0])
 
             embeds[0].add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                                 value=f'<:ArrowRight:1035003246445596774> {len(listOfPerGuild)}', inline=False)
@@ -495,7 +495,7 @@ class Search(commands.Cog):
             embed1.set_author(name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.display_avatar.url)
 
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
-                await staff_field(embed1, embed1.title.lower().split(' ')[0])
+                await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
 
             embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                              value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
@@ -566,7 +566,7 @@ class Search(commands.Cog):
                                   icon_url=ctx.author.display_avatar.url)
 
                 if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
-                    await staff_field(embed1, embed1.title.lower().split(' ')[0])
+                    await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
 
                 embed1.add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                                  value=f'<:ArrowRight:1035003246445596774> 0', inline=False)
@@ -612,7 +612,7 @@ class Search(commands.Cog):
             embeds = [embed1, embed2]
 
             if await bot.flags.find_by_id(embed1.title.lower().split(' ')[0]):
-                await staff_field(embed1, embed1.title.lower().split(' ')[0])
+                await staff_field(bot, embed1, embed1.title.lower().split(' ')[0])
 
             embeds[0].add_field(name='<:MalletWhite:1035258530422341672> Punishments',
                                 value=f'<:ArrowRight:1035003246445596774> {len(result)}', inline=False)
