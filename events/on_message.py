@@ -151,7 +151,7 @@ class OnMessage(commands.Cog):
                                         print(invoked_command)
                                         command = bot.get_command(invoked_command.lower().strip())
                                         if not command:
-                                            if invoked_command.lower() not in ["duty on", "duty off"]:
+                                            if not any([i in invoked_command.lower().strip() for i in ["duty on", "duty off"]]):
                                                 await message.add_reaction('❌')
                                                 return await message.add_reaction('8️⃣')
 
@@ -162,7 +162,7 @@ class OnMessage(commands.Cog):
                                                               _cmd.split(':logs ')[1].split('"')[0]
 
                                         new_ctx = await bot.get_context(new_message)
-                                        if invoked_command.lower() == "duty on":
+                                        if "duty on" in invoked_command.lower().strip():
                                             ctx = new_ctx
                                             predetermined_shift_type = None
                                             settings = await bot.settings.find_by_id(ctx.guild.id)
@@ -639,7 +639,7 @@ class OnMessage(commands.Cog):
                                                 await shift_channel.send(embed=embed)
                                                 await msg.edit(embed=successEmbed, view=None)
                                                 return
-                                        elif invoked_command == "duty off":
+                                        elif "duty off" in invoked_command.lower().strip():
                                             ctx = new_ctx
                                             configItem = await bot.settings.find_by_id(ctx.guild.id)
                                             if configItem is None:
