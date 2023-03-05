@@ -2674,7 +2674,7 @@ class ShiftManagement(commands.Cog):
                                     time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
                                     time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
                                 except OverflowError:
-                                    await invis_embed(
+                                    await invis_embed(ctx,
                                         f"{member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.")
 
                                 all_staff.append({'id': shift['_id'], "total_seconds": time_delta.total_seconds(),

@@ -19,7 +19,7 @@ class StaffManagement(commands.Cog):
 
     @commands.hybrid_group(
         name='ra',
-        description="File a Rediced Activity request",
+        description="File a Reduced Activity request",
         extras={"category": "Staff Management"},
         with_app_command=True,
     )

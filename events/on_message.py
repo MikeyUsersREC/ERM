@@ -163,6 +163,7 @@ class OnMessage(commands.Cog):
                                                               _cmd.split(':logs ')[1].split('"')[0]
 
                                         new_ctx = await bot.get_context(new_message)
+                                        print(invoked_command)
                                         if "duty on" in invoked_command.lower().strip():
                                             ctx = new_ctx
                                             predetermined_shift_type = None
@@ -639,7 +640,8 @@ class OnMessage(commands.Cog):
 
                                                 await shift_channel.send(embed=embed)
                                                 await msg.edit(embed=successEmbed, view=None)
-                                                return
+                                            await message.add_reaction('📝')
+                                            return
                                         elif "duty off" in invoked_command.lower().strip():
                                             ctx = new_ctx
                                             configItem = await bot.settings.find_by_id(ctx.guild.id)
@@ -1113,6 +1115,7 @@ class OnMessage(commands.Cog):
                                                         except:
                                                             await invis_embed(ctx,
                                                                               f'Could not remove {rl} from {ctx.author.mention}')
+                                            await message.add_reaction('📝')
                                             return
 
                                         await bot.process_commands(new_message)
@@ -1399,7 +1402,7 @@ class OnMessage(commands.Cog):
 
                                     await message.add_reaction('📝')
 
-                            if ':m' in embed.description:
+                            if ':m ' in embed.description:
                                 if 'Command Usage' in embed.title:
                                     raw_content = embed.description
                                     user, command = raw_content.split('used the command: "')
