@@ -1,4 +1,3 @@
-import sys
 import logging
 import sys
 
@@ -12,7 +11,12 @@ class Routes(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         if not hasattr(bot, "ipc"):
-            bot.ipc = ipc.Server(self.bot, host="127.0.0.1", port=5600, secret_key=config('IPC_SECRET_KEY'))
+            bot.ipc = ipc.Server(
+                self.bot,
+                host="127.0.0.1",
+                port=5600,
+                secret_key=config("IPC_SECRET_KEY"),
+            )
             bot.ipc.start()
 
     @commands.Cog.listener()
@@ -52,8 +56,10 @@ class Routes(commands.Cog):
             "id": guild.id,
             "icon": guild.icon.url,
             "settings": settingData,
-            "roles": [{'name': role.name, 'id': role.id} for role in guild.roles],
-            "channels": [{'name': channel.name, 'id': channel.id} for channel in guild.channels]
+            "roles": [{"name": role.name, "id": role.id} for role in guild.roles],
+            "channels": [
+                {"name": channel.name, "id": channel.id} for channel in guild.channels
+            ],
         }
 
         return guild_data

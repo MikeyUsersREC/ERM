@@ -8,27 +8,30 @@ class OnGuildJoin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener('on_guild_join')
+    @commands.Cog.listener("on_guild_join")
     async def on_guild_join(self, guild: discord.Guild):
         bot = self.bot
-        embed = discord.Embed(color=0x2E3136, title="<:ERMWhite:1044004989997166682> Emergency Response Management")
+        embed = discord.Embed(
+            color=0x2E3136,
+            title="<:ERMWhite:1044004989997166682> Emergency Response Management",
+        )
         embed.description = f"Thanks for adding ERM to **{guild.name}**"
         embed.add_field(
             name="<:Setup:1035006520817090640> Getting Started",
             value=f"<:ArrowRight:1035003246445596774> Run `/setup` to go through the setup. \n<:ArrowRight:1035003246445596774> Run `/config change` to change any configuration.",
-            inline=False
+            inline=False,
         )
 
         embed.add_field(
             name="<:MessageIcon:1035321236793860116> Simple Commands",
             value=f"<:ArrowRight:1035003246445596774> Run `/duty manage` to manage your shift. \n<:ArrowRight:1035003246445596774> Run `/punish` to punish a roblox user.",
-            inline=False
+            inline=False,
         )
 
         embed.add_field(
             name="<:LinkIcon:1044004006109904966> Important Links",
             value=f"<:ArrowRight:1035003246445596774> [Our Website](https://ermbot.xyz)\n<:ArrowRight:1035003246445596774> [Support Server](https://discord.gg/BGfyfqU5fx)\n<:ArrowRight:1035003246445596774> [Status Page](https://status.ermbot.xyz)",
-            inline=False
+            inline=False,
         )
 
         try:
@@ -56,7 +59,7 @@ class OnGuildJoin(commands.Cog):
             except AttributeError:
                 pass
             await channel.send(embed=embed)
-            logging.info('Server has been sent welcome sequence.')
+            logging.info("Server has been sent welcome sequence.")
 
 
 async def setup(bot):
