@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 
-from erm import is_management, generator
-from menus import ManageReminders, YesNoColourMenu, YesNoMenu, ChannelSelect, RoleSelect
-from utils.utils import removesuffix, invis_embed, request_response
+from erm import generator, is_management
+from menus import ChannelSelect, ManageReminders, RoleSelect, YesNoColourMenu, YesNoMenu
+from utils.utils import invis_embed, removesuffix, request_response
 
 
 class Reminders(commands.Cog):

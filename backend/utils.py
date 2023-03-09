@@ -1,6 +1,7 @@
-from sanic.exceptions import Unauthorized
 import typing
+
 import hikari
+from sanic.exceptions import Unauthorized
 
 
 async def return_token_or_raise(request):

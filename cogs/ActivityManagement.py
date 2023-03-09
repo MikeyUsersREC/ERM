@@ -8,9 +8,9 @@ from dateutil import parser
 from decouple import config
 from discord.ext import commands
 from oauth2client.service_account import ServiceAccountCredentials
-from reactionmenu import ViewMenu, ViewButton
+from reactionmenu import ViewButton, ViewMenu
 
-from erm import is_management, credentials_dict, scope
+from erm import credentials_dict, is_management, scope
 from menus import CustomSelectMenu, GoogleSpreadsheetModification
 from utils.timestamp import td_format
 from utils.utils import invis_embed, request_response

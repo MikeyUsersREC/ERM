@@ -1,19 +1,19 @@
 import discord
 from discord.ext import commands
 
-from erm import is_management, check_privacy, generator
+from erm import check_privacy, generator, is_management
 from menus import (
-    CustomSelectMenu,
-    SettingsSelectMenu,
     ChannelSelect,
-    RoleSelect,
-    EnableDisableMenu,
     CustomModalView,
-    YesNoColourMenu,
+    CustomSelectMenu,
+    EnableDisableMenu,
     MultiSelectMenu,
+    RoleSelect,
+    SettingsSelectMenu,
+    YesNoColourMenu,
     YesNoMenu,
 )
-from utils.utils import invis_embed, request_response, create_invis_embed
+from utils.utils import create_invis_embed, invis_embed, request_response
 
 
 class Configuration(commands.Cog):
