@@ -4,8 +4,9 @@ import pathlib
 import discord
 from discord.ext import commands, tasks
 
+
 def path_from_extension(extension: str) -> pathlib.Path:
-    return pathlib.Path(extension.replace('.', os.sep) + '.py')
+    return pathlib.Path(extension.replace(".", os.sep) + ".py")
 
 
 class HotReload(commands.Cog):
@@ -23,7 +24,7 @@ class HotReload(commands.Cog):
     @tasks.loop(seconds=3)
     async def hot_reload_loop(self):
         for extension in list(self.bot.extensions.keys()):
-            if extension in ['jishaku']:
+            if extension in ["jishaku"]:
                 continue
             path = path_from_extension(extension)
             time = os.path.getmtime(path)
@@ -51,7 +52,7 @@ class HotReload(commands.Cog):
     async def cache_last_modified_time(self):
         self.last_modified_time = {}
         for extension in self.bot.extensions.keys():
-            if extension in ['jishaku']:
+            if extension in ["jishaku"]:
                 continue
             path = path_from_extension(extension)
             time = os.path.getmtime(path)

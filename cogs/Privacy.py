@@ -12,10 +12,7 @@ class Privacy(commands.Cog):
     @commands.hybrid_command(
         name="consent",
         description="Change your privacy settings.",
-        extras={
-            "category": "Privacy",
-            "ephemeral": True
-        }
+        extras={"category": "Privacy", "ephemeral": True},
     )
     async def consent(self, ctx):
         bot = self.bot
@@ -24,19 +21,25 @@ class Privacy(commands.Cog):
         shift_reports_enabled = True
 
         async for document in bot.consent.db.find({"_id": ctx.author.id}):
-            punishments_enabled = document.get('punishments') if document.get('punishments') else True
-            shift_reports_enabled = document.get('shift_reports') if document.get('shift_reports') else True
+            punishments_enabled = (
+                document.get("punishments") if document.get("punishments") else True
+            )
+            shift_reports_enabled = (
+                document.get("shift_reports") if document.get("shift_reports") else True
+            )
             selected = document
 
         embed = discord.Embed(
             title="<:SettingIcon:1035353776460152892> Notification Settings",
             description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
-            color=0x2e3136
+            color=0x2E3136,
         ).set_thumbnail(url=ctx.author.display_avatar.url)
 
         custom_view = discord.ui.View()
 
-        async def punishment_alerts(interaction: discord.Interaction, button: discord.ui.Button):
+        async def punishment_alerts(
+            interaction: discord.Interaction, button: discord.ui.Button
+        ):
             if interaction.user.id == ctx.author.id:
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -50,54 +53,61 @@ class Privacy(commands.Cog):
                             label="Disable",
                             value="disable",
                             description="Disable punishment alerts.",
-                        )
-                    ]
+                        ),
+                    ],
                 )
                 embed = discord.Embed(
                     title="<:SettingIcon:1035353776460152892> Notification Settings",
                     description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2e3136
+                    color=0x2E3136,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
-                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                await interaction.response.send_message(
+                    embed=embed, view=view, ephemeral=True
+                )
                 button.view.stop()
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
-                        await bot.consent.insert({
-                            "_id": ctx.author.id,
-                            "punishments": True
-                        })
+                        await bot.consent.insert(
+                            {"_id": ctx.author.id, "punishments": True}
+                        )
                     else:
-                        selected['punishments'] = True
+                        selected["punishments"] = True
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",
                         description="<:ArrowRight:1035003246445596774> You have enabled punishment alerts.",
-                        color=0x71c15f
+                        color=0x71C15F,
                     )
-                    await interaction.message.edit(embed=embed, view=None, ephemeral=True)
+                    await interaction.message.edit(
+                        embed=embed, view=None, ephemeral=True
+                    )
                 elif view.value == "disable":
                     if selected is None:
-                        await bot.consent.insert({
-                            "_id": ctx.author.id,
-                            "punishments": False
-                        })
+                        await bot.consent.insert(
+                            {"_id": ctx.author.id, "punishments": False}
+                        )
                     else:
-                        selected['punishments'] = False
+                        selected["punishments"] = False
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",
                         description="<:ArrowRight:1035003246445596774> You have disabled punishment alerts.",
-                        color=0x71c15f
+                        color=0x71C15F,
                     )
                     await interaction.message.edit(embed=embed, view=None)
 
             else:
-                await interaction.response.send_message(embed=create_invis_embed(
-                    'You are not the individual that has activated this menu. Refrain from interacting with this view.'),
-                    ephemeral=True)
+                await interaction.response.send_message(
+                    embed=create_invis_embed(
+                        "You are not the individual that has activated this menu. Refrain from interacting with this view."
+                    ),
+                    ephemeral=True,
+                )
 
-        async def shift_reports(interaction: discord.Interaction, button: discord.ui.Button):
+        async def shift_reports(
+            interaction: discord.Interaction, button: discord.ui.Button
+        ):
             if interaction.user.id == ctx.author.id:
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -107,51 +117,52 @@ class Privacy(commands.Cog):
                             value="enable",
                             description="Enable shift reports.",
                         ),
-
                         discord.SelectOption(
                             label="Disable",
                             value="disable",
                             description="Disable shift reports.",
-                        )
-                    ]
+                        ),
+                    ],
                 )
                 embed = discord.Embed(
                     title="<:SettingIcon:1035353776460152892> Notification Settings",
                     description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2e3136
+                    color=0x2E3136,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
-                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                await interaction.response.send_message(
+                    embed=embed, view=view, ephemeral=True
+                )
                 button.view.stop()
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
-                        await bot.consent.insert({
-                            "_id": ctx.author.id,
-                            "shift_reports": True
-                        })
+                        await bot.consent.insert(
+                            {"_id": ctx.author.id, "shift_reports": True}
+                        )
                     else:
-                        selected['shift_reports'] = True
+                        selected["shift_reports"] = True
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",
                         description="<:ArrowRight:1035003246445596774> You have enabled shift reports.",
-                        color=0x71c15f
+                        color=0x71C15F,
                     )
 
-                    await interaction.message.edit(embed=embed, view=None, ephemeral=True)
+                    await interaction.message.edit(
+                        embed=embed, view=None, ephemeral=True
+                    )
                 elif view.value == "disable":
                     if selected is None:
-                        await bot.consent.insert({
-                            "_id": ctx.author.id,
-                            "shift_reports": False
-                        })
+                        await bot.consent.insert(
+                            {"_id": ctx.author.id, "shift_reports": False}
+                        )
                     else:
-                        selected['shift_reports'] = False
+                        selected["shift_reports"] = False
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",
                         description="<:ArrowRight:1035003246445596774> You have disabled shift reports.",
-                        color=0x71c15f
+                        color=0x71C15F,
                     )
                     await interaction.message.edit(embed=embed, view=None)
 
@@ -160,14 +171,14 @@ class Privacy(commands.Cog):
                 ctx.author.id,
                 label="Punishment Alerts",
                 style=discord.ButtonStyle.secondary,
-                func=punishment_alerts
+                func=punishment_alerts,
             ),
             CustomExecutionButton(
                 ctx.author.id,
                 label="Shift Reports",
                 style=discord.ButtonStyle.secondary,
-                func=shift_reports
-            )
+                func=shift_reports,
+            ),
         ]
 
         for child in buttons:

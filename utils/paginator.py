@@ -27,10 +27,9 @@ class Paginator(discord.ui.View):
         The current page on the paginator.
     """
 
-    def __init__(self,
-                 callback: Callable[[int], List[discord.Embed]],
-                 pages: int,
-                 **kwargs):
+    def __init__(
+        self, callback: Callable[[int], List[discord.Embed]], pages: int, **kwargs
+    ):
         super().__init__(**kwargs)
         self.pages = pages
         self.callback = callback
@@ -81,17 +80,20 @@ class StaticPaginator(Paginator):
         be replaced.
     """
 
-    def __init__(self,
-                 lines: List[str],
-                 *,
-                 line_limit: Optional[int] = 15,
-                 base_embed: Optional[discord.Embed] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        lines: List[str],
+        *,
+        line_limit: Optional[int] = 15,
+        base_embed: Optional[discord.Embed] = None,
+        **kwargs
+    ):
         self.lines = lines
         self.line_limit = line_limit
         self.base_embed = base_embed or discord.Embed()
 
         import math
+
         pages: int = math.ceil(len(lines) / self.line_limit)  # type: ignore
 
         def callback(page: int) -> List[discord.Embed]:
