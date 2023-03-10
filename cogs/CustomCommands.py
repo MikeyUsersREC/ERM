@@ -2,23 +2,23 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from erm import is_management, generator
-from utils.autocompletes import command_autocomplete
+from erm import generator, is_management
 from menus import (
-    CustomSelectMenu,
     AddCustomCommand,
-    YesNoColourMenu,
     ChannelSelect,
     CustomModalView,
+    CustomSelectMenu,
     EmbedCustomisation,
-    RemoveCustomCommand,
     MessageCustomisation,
+    RemoveCustomCommand,
+    YesNoColourMenu,
 )
+from utils.autocompletes import command_autocomplete
 from utils.utils import (
+    interpret_content,
+    interpret_embed,
     invis_embed,
     request_response,
-    interpret_embed,
-    interpret_content,
 )
 
 

@@ -3,7 +3,7 @@ from typing import Union
 from unittest.mock import MagicMock
 
 from discord import DMChannel
-from discord.ext.commands import CheckFailure, Context, has_any_role, NoPrivateMessage
+from discord.ext.commands import CheckFailure, Context, NoPrivateMessage, has_any_role
 
 from helpers import MockContext, MockRole
 

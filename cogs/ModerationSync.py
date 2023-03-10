@@ -2,7 +2,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from menus import LinkPathwayMenu, EnterRobloxUsername, Verification
+from menus import EnterRobloxUsername, LinkPathwayMenu, Verification
 from utils.utils import invis_embed
 
 

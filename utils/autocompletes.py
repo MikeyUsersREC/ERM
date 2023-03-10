@@ -1,9 +1,10 @@
+import typing
+
+import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
-import typing
-from discord import app_commands
-import aiohttp
 
 
 async def command_autocomplete(

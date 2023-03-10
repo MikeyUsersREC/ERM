@@ -3,7 +3,7 @@ import os
 
 from decouple import config
 from discord.ext import ipc
-from quart import Quart, render_template, redirect, url_for, request
+from quart import Quart, redirect, render_template, request, url_for
 from quart_discord import DiscordOAuth2Session
 
 app = Quart(__name__)

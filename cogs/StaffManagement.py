@@ -4,16 +4,15 @@ import discord
 from dateutil import parser
 from discord import app_commands
 from discord.ext import commands
-from reactionmenu import ViewMenu, ViewButton
+from reactionmenu import ViewButton, ViewMenu
 
-from erm import is_management
-from erm import system_code_gen
+from erm import is_management, system_code_gen
 from menus import (
-    CustomSelectMenu,
-    YesNoColourMenu,
-    LOAMenu,
-    CustomModalView,
     ActivityNoticeModification,
+    CustomModalView,
+    CustomSelectMenu,
+    LOAMenu,
+    YesNoColourMenu,
 )
 from utils.utils import invis_embed, removesuffix
 

@@ -3,14 +3,16 @@ import typing
 
 import discord
 
-from utils.utils import int_invis_embed, create_invis_embed
+from utils.utils import create_invis_embed, int_invis_embed
 
 REQUIREMENTS = ["gspread", "oauth2client"]
 try:
     import gspread
     from oauth2client.service_account import ServiceAccountCredentials
 except:
-    import os, pip
+    import os
+
+    import pip
 
     pip_args = ["-vvv"]
     try:

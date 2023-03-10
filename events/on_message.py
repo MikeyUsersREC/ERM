@@ -7,7 +7,7 @@ import aiohttp
 import discord
 import num2words
 from discord.ext import commands
-from reactionmenu import ViewMenu, ViewSelect, ViewButton, Page
+from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
 from erm import generator
 from menus import CustomSelectMenu
@@ -122,13 +122,13 @@ class OnMessage(commands.Cog):
                                 if "Command Usage" in embed.title:
                                     raw_content = embed.description
                                     user, command = raw_content.split(
-                                        'used the command: `'
+                                        "used the command: `"
                                     )
 
                                     profile_link = user.split("(")[1].split(")")[0]
 
                                     msg = "".join(command.split(":m ")[1:]).replace(
-                                        '`', ""
+                                        "`", ""
                                     )
 
                                     discord_user = 0
@@ -252,15 +252,11 @@ class OnMessage(commands.Cog):
                                 ):
                                     print("command usage")
                                     raw_content = embed.description
-                                    if 'kicked' in raw_content:
-                                        user, command = raw_content.split(
-                                            " kicked `"
-                                        )
+                                    if "kicked" in raw_content:
+                                        user, command = raw_content.split(" kicked `")
                                     else:
-                                        user, command = raw_content.split(
-                                            " banned `"
-                                        )
-                                    command = command.replace('`', '')
+                                        user, command = raw_content.split(" banned `")
+                                    command = command.replace("`", "")
                                     code = embed.footer.text.split("Server: ")[1]
                                     if command.count(",") + 1 >= 5:
                                         embed = discord.Embed(
