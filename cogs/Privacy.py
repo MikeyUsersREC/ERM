@@ -22,16 +22,15 @@ class Privacy(commands.Cog):
 
         async for document in bot.consent.db.find({"_id": ctx.author.id}):
             punishments_enabled = (
-                document.get("punishments") if document.get("punishments") else True
+                document.get("punishments") if document.get("punishments") is not None else True
             )
             shift_reports_enabled = (
-                document.get("shift_reports") if document.get("shift_reports") else True
+                document.get("shift_reports") if document.get("punishments") is not None else True
             )
             selected = document
-
         embed = discord.Embed(
             title="<:SettingIcon:1035353776460152892> Notification Settings",
-            description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
+            description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
             color=0x2E3136,
         ).set_thumbnail(url=ctx.author.display_avatar.url)
 
