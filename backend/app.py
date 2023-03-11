@@ -8,7 +8,7 @@ from sanic.exceptions import InvalidUsage, Unauthorized
 from sanic.response import json
 from sanic_cors import CORS
 
-from utils import return_token_or_raise, filter_guilds
+from utils import filter_guilds, return_token_or_raise
 
 app = Sanic("HelloWorld")
 CORS(app)

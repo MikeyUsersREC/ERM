@@ -6,10 +6,10 @@ import discord
 import pytz
 from discord import app_commands
 from discord.ext import commands
-from reactionmenu import ViewMenu, ViewButton
+from reactionmenu import ViewButton, ViewMenu
 from roblox import client as roblox
 
-from erm import is_staff, staff_field, check_privacy
+from erm import check_privacy, is_staff, staff_field
 from utils.autocompletes import user_autocomplete
 from utils.utils import invis_embed
 

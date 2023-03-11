@@ -5,18 +5,19 @@ import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
-from reactionmenu import ViewMenu, ViewButton
-from utils.autocompletes import user_autocomplete, punishment_autocomplete
-from erm import is_management, is_staff, generator, crp_data_to_mongo
+from reactionmenu import ViewButton, ViewMenu
+
+from erm import crp_data_to_mongo, generator, is_management, is_staff
 from menus import (
-    CustomSelectMenu,
-    CustomisePunishmentType,
     ChannelSelect,
-    RequestDataView,
-    RemoveWarning,
-    EditWarning,
+    CustomisePunishmentType,
     CustomModalView,
+    CustomSelectMenu,
+    EditWarning,
+    RemoveWarning,
+    RequestDataView,
 )
+from utils.autocompletes import punishment_autocomplete, user_autocomplete
 from utils.utils import invis_embed, removesuffix
 
 

@@ -1,4 +1,3 @@
-from discord.ext import commands
 import aiohttp_cors
 import discord
 from aiohttp import web

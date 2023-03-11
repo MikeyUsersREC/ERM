@@ -18,7 +18,7 @@ from sentry_sdk.integrations.pymongo import PyMongoIntegration
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
 
-from menus import LOAMenu, CompleteReminder
+from menus import CompleteReminder, LOAMenu
 from utils.mongo import Document
 from utils.utils import *
 

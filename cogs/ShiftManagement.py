@@ -6,17 +6,17 @@ import discord
 import num2words
 from decouple import config
 from discord.ext import commands
-from reactionmenu import ViewMenu, ViewSelect, ViewButton, Page
+from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 from reactionmenu.abc import _PageController
 
-from erm import is_staff, is_management, management_predicate, credentials_dict, scope
+from erm import credentials_dict, is_management, is_staff, management_predicate, scope
 from menus import (
     AdministrativeSelectMenu,
+    CustomExecutionButton,
     CustomSelectMenu,
     ModificationSelectMenu,
     RequestGoogleSpreadsheet,
     YesNoMenu,
-    CustomExecutionButton,
 )
 from utils.timestamp import td_format
 from utils.utils import invis_embed, request_response
