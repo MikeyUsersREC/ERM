@@ -52,7 +52,7 @@ class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [
             459374864067723275,
-            906383042841563167,
+            528805861762662400,
             877195103335231558,
         ]:  # Implement your own conditions here
             return True

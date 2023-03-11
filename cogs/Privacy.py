@@ -79,8 +79,8 @@ class Privacy(commands.Cog):
                         description="<:ArrowRight:1035003246445596774> You have enabled punishment alerts.",
                         color=0x71C15F,
                     )
-                    await interaction.message.edit(
-                        embed=embed, view=None, ephemeral=True
+                    await interaction.edit_original_response(
+                        embed=embed, view=None
                     )
                 elif view.value == "disable":
                     if selected is None:
@@ -95,7 +95,7 @@ class Privacy(commands.Cog):
                         description="<:ArrowRight:1035003246445596774> You have disabled punishment alerts.",
                         color=0x71C15F,
                     )
-                    await interaction.message.edit(embed=embed, view=None)
+                    await interaction.edit_original_response(embed=embed, view=None)
 
             else:
                 await interaction.response.send_message(
@@ -148,9 +148,9 @@ class Privacy(commands.Cog):
                         color=0x71C15F,
                     )
 
-                    await interaction.message.edit(
-                        embed=embed, view=None, ephemeral=True
-                    )
+                    await interaction.edit_original_response(embed=embed, view=None)
+
+
                 elif view.value == "disable":
                     if selected is None:
                         await bot.consent.insert(
@@ -164,7 +164,7 @@ class Privacy(commands.Cog):
                         description="<:ArrowRight:1035003246445596774> You have disabled shift reports.",
                         color=0x71C15F,
                     )
-                    await interaction.message.edit(embed=embed, view=None)
+                    await interaction.edit_original_response(embed=embed, view=None)
 
         buttons = [
             CustomExecutionButton(

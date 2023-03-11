@@ -3502,13 +3502,13 @@ class ShiftManagement(commands.Cog):
                                 )
 
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
-
+        added_staff = []
         for index, staff in enumerate(sorted_staff):
             member = discord.utils.get(ctx.guild.members, id=staff["id"])
             if not member:
                 continue
 
-            if len((embeds[-1].description or "").splitlines()) >= 16:
+            if len((embeds[-1].description or "").splitlines()) >= 16 and ctx.author.id not in added_staff:
                 embed = discord.Embed(
                     title="<:Clock:1035308064305332224> Currently on Shift",
                     color=0x2E3136,
@@ -3518,11 +3518,12 @@ class ShiftManagement(commands.Cog):
                     name=f"{ctx.author.name}#{ctx.author.discriminator}",
                     icon_url=ctx.author.display_avatar.url,
                 )
+                added_staff.append(member.id)
                 embeds.append(embed)
-
-            embeds[
-                -1
-            ].description += f"\n<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' (Currently on break: {})'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
+            if member.id not in added_staff:
+                embeds[
+                    -1
+                ].description += f"\n<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' (Currently on break: {})'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
 
         if ctx.interaction:
             gtx = ctx.interaction
