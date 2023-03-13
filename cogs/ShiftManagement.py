@@ -30,6 +30,8 @@ class ShiftManagement(commands.Cog):
     async def duty(self, ctx):
         pass
 
+
+
     @duty.command(
         name="time",
         description="Allows for you to check your shift time, as well as your past data.",

@@ -26,6 +26,82 @@ class Punishments(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command(
+        name="modstats",
+        description="View all information of moderations you've made",
+        extras={
+            "category": "Punishments"
+        }
+    )
+    @is_staff()
+    async def modstats(self, ctx, user: discord.Member = None):
+        bot = self.bot
+        settings = await bot.settings.find_by_id(ctx.guild.id)
+        if settings is None:
+            return await invis_embed(ctx,
+                                     'The server has not been set up yet. Please run `/setup` to set up the server.')
+
+        if user == None:
+            user = ctx.author
+
+        selected = None
+        async for document in bot.shift_storage.db.find({"_id": user.id}):
+            selected = document
+
+        loas = []
+        async for document in bot.loas.db.find({"user_id": user.id}):
+            loas.append(document)
+
+        if not selected:
+            moderations = []
+            shifts = []
+        else:
+            moderations = [i for i in list(filter(
+                lambda x: (x if x else {}).get('moderations') is not None and (x if x else {})['guild'] == ctx.guild.id,
+                selected['shifts'])) if i is not None]
+            print(moderations)
+            moderations = []
+            for i in moderations:
+                moderations = [x for x in i['moderations'] if x is not None]
+            print(moderations)
+            shifts = [x for x in [x['shifts'] for x in
+                                  list(filter(lambda x: (x if x else {}).get('shifts') is True, selected['shifts']))] if
+                      (x if x else {}) is not None and (x if x else {})['guild'] == ctx.guild.id]
+
+        leaves = list(filter(lambda x: x['type'] == "LoA", loas))
+        reduced_activity = list(filter(lambda x: x['type'] == "RA", loas))
+        accepted_leaves = list(filter(lambda x: x['accepted'] == True, leaves))
+        denied_leaves = list(filter(lambda x: x['denied'] == True, leaves))
+        accepted_ras = list(filter(lambda x: x['accepted'] == True, reduced_activity))
+        denied_ras = list(filter(lambda x: x['denied'] == True, reduced_activity))
+
+        embed = discord.Embed(
+            title="<:SConductTitle:1053359821308567592> Moderation Statistics",
+            description="*Moderation statistics displays relevant information about a user.*",
+            color=0x2e3136
+        )
+
+        INVISIBLE_CHAR = "‎"
+
+        embed.add_field(
+            name="<:MalletWhite:1035258530422341672> Moderations",
+            value=f"<:ArrowRightW:1035023450592514048> **Moderations:** {len(moderations)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Warnings:** {len(list(filter(lambda x: x['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: x['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: x['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: x['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: x['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
+            inline=True
+        )
+        embed.add_field(
+            name="<:Clock:1035308064305332224> Activity Notices",
+            value=f"<:ArrowRightW:1035023450592514048> **LOAs:** {len(leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_leaves)}\n<:ArrowRightW:1035023450592514048> **Reduced Activity:** {len(reduced_activity)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_ras)}",
+            inline=True
+        )
+
+        embed.add_field(
+            name="<:Resume:1035269012445216858> Shifts",
+            value=f"<:ArrowRightW:1035023450592514048> **Shifts:** {len(shifts)}\n<:ArrowRightW:1035023450592514048> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['endTimestamp']) - (x['startTimestamp']) for x in shifts])))}\n<:ArrowRightW:1035023450592514048> **Average Shift Time:** {td_format(datetime.timedelta(seconds=((sum([(x['endTimestamp']) - (x['startTimestamp']) for x in shifts]) / (len([(x['endTimestamp']) - (x['startTimestamp']) for x in shifts]))) if len([(x['endTimestamp']) - (x['startTimestamp']) for x in shifts]) != 0 else 1) - 1))}\n",
+            inline=True
+        )
+
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(
         name="punish",
         description="Punish a user",
         extras={"category": "Punishments"},
