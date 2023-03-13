@@ -18,7 +18,7 @@ from menus import (
     RequestDataView,
 )
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
-from utils.utils import invis_embed, removesuffix
+from utils.utils import invis_embed, removesuffix, td_format
 
 
 class Punishments(commands.Cog):
