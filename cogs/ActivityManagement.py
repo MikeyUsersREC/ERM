@@ -124,7 +124,7 @@ class ActivityManagement(commands.Cog):
 
         embeds = []
         embed = discord.Embed(
-            title="<:Clock:1035308064305332224> Activity Report", color=0x2E3136
+            title="<:Clock:1035308064305332224> Activity Report", color=0x2A2D31
         )
 
         embed.set_footer(text="Click 'Next' to see users who are on LoA.")
@@ -139,7 +139,7 @@ class ActivityManagement(commands.Cog):
                     shift_embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(shift_types))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select one of these options to show on the report. If you want to view the total time between these types, select `All`.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = CustomSelectMenu(
@@ -538,7 +538,7 @@ class ActivityManagement(commands.Cog):
                 if len(embeds[-1].fields) >= 3:
                     new_embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Activity Report",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     new_embed.add_field(
                         name="<:Clock:1035308064305332224> Shifts", value=string_obj
@@ -548,7 +548,7 @@ class ActivityManagement(commands.Cog):
                     embeds[-1].add_field(name="\u200b", value=string_obj, inline=False)
 
         embed2 = discord.Embed(
-            title="<:Clock:1035308064305332224> Activity Notices", color=0x2E3136
+            title="<:Clock:1035308064305332224> Activity Notices", color=0x2A2D31
         )
 
         embed2.set_footer(text="Click 'Next' to see more information.")
@@ -558,7 +558,7 @@ class ActivityManagement(commands.Cog):
             if len(embeds[-1].fields) >= 3:
                 new_embed = discord.Embed(
                     title="<:Clock:1035308064305332224> Activity Notices",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 new_embed.add_field(
                     name=f"<:Clock:1035308064305332224> {member}",
@@ -623,7 +623,7 @@ class ActivityManagement(commands.Cog):
 
         async def google_task():
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description="<a:Loading:1044067865453670441> Your command is loading! We are currently taking our time to ensure that your ERM experience is bug-free!",
             )
             msg = await ctx.send(embed=embed)

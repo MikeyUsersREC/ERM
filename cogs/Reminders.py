@@ -28,7 +28,7 @@ class Reminders(commands.Cog):
             Data = {"_id": ctx.guild.id, "reminders": []}
 
         embed = discord.Embed(
-            title="<:Resume:1035269012445216858> Manage reminders", color=0x2E3136
+            title="<:Resume:1035269012445216858> Manage reminders", color=0x2A2D31
         )
         for item in Data["reminders"]:
             if len(item["message"]) > 800:
@@ -88,7 +88,7 @@ class Reminders(commands.Cog):
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Reminder Completion",
                     description="Should this reminder be able to be completed? Once it's completed, the embed will be edited appropriately to reflect this.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -102,7 +102,7 @@ class Reminders(commands.Cog):
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Select a channel",
                     description="Please select a channel for the reminder to be sent in.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 await ctx.send(embed=embed, view=view)
                 timeout = await view.wait()
@@ -121,7 +121,7 @@ class Reminders(commands.Cog):
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Mentioning a Role",
                     description="Do you want a role to be mentioned?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -132,7 +132,7 @@ class Reminders(commands.Cog):
                     embed = discord.Embed(
                         title="<:Resume:1035269012445216858> Select a role",
                         description="Please select a role to be mentioned.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     await ctx.send(embed=embed, view=view)
                     timeout = await view.wait()

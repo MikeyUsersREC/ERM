@@ -12,7 +12,7 @@ class OnGuildJoin(commands.Cog):
     async def on_guild_join(self, guild: discord.Guild):
         bot = self.bot
         embed = discord.Embed(
-            color=0x2E3136,
+            color=0x2A2D31,
             title="<:ERMWhite:1044004989997166682> Emergency Response Management",
         )
         embed.description = f"Thanks for adding ERM to **{guild.name}**"
@@ -46,7 +46,7 @@ class OnGuildJoin(commands.Cog):
             pass
         finally:
             channel = bot.get_channel(1033021466381398086)
-            embed = discord.Embed(color=0x2E3136)
+            embed = discord.Embed(color=0x2A2D31)
             embed.description = f"""
             <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
             <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}

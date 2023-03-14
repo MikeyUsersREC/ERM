@@ -70,7 +70,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> Message Logging",
             description=f"<:ArrowRight:1035003246445596774> Please enter the message you would like to log.",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = CustomModalView(
@@ -102,7 +102,7 @@ class GameLogging(commands.Cog):
             embed = discord.Embed(
                 title="<:MessageIcon:1035321236793860116> Message Logged",
                 description="*A new message has been logged in the server.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.set_author(
@@ -180,7 +180,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> STS Logging",
             description=f"<:ArrowRight:1035003246445596774> Which staff members were involved in the Shoulder-to-Shoulder?",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = UserSelect(ctx.author.id)
@@ -198,7 +198,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> STS Logging",
             description=f"<:ArrowRight:1035003246445596774> What was the reason for the Shoulder-to-Shoulder?",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = CustomModalView(
@@ -232,7 +232,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> STS Logging",
             description=f"<:ArrowRight:1035003246445596774> How long did the Shoulder-to-Shoulder take? (s/m/h/d)\n*Examples: 10s, 15m, 12h, 14m*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = CustomModalView(
@@ -266,7 +266,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:MessageIcon:1035321236793860116> STS Logged",
             description="*A new STS has been logged in the server.*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
@@ -364,7 +364,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> Priority Logging",
             description=f"<:ArrowRight:1035003246445596774> Please provide some basic information regarding the Priority.",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = CustomModalView(
@@ -415,7 +415,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:LinkIcon:1044004006109904966> Priority Logging",
             description=f"<:ArrowRight:1035003246445596774> How long will the priority take? (s/m/h/d)\n*Examples: 10s, 15m, 12h, 14m*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         view = CustomModalView(
@@ -449,7 +449,7 @@ class GameLogging(commands.Cog):
         embed = discord.Embed(
             title="<:FlagIcon:1035258525955395664> Priority Logged",
             description="*A new priority has been logged in the server.*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)

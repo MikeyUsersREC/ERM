@@ -29,7 +29,7 @@ class ModerationSync(commands.Cog):
             embed = discord.Embed(
                 title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
                 description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM.\n\n<:ArrowRight:1035003246445596774> You seem to be already verified with ERM! Would you like to use your account linked with ERM or use Bloxlink?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             view = LinkPathwayMenu(ctx.author.id)
             await ctx.send(embed=embed, view=view)
@@ -42,7 +42,7 @@ class ModerationSync(commands.Cog):
             embed = discord.Embed(
                 title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
                 description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM. Please pick a verification provider to continue this process with.",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             view = LinkPathwayMenu(ctx.author.id)
             await ctx.send(embed=embed, view=view)
@@ -94,7 +94,7 @@ class ModerationSync(commands.Cog):
                     embed = discord.Embed(
                         title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
                         description=f"<:ArrowRight:1035003246445596774> You have not verified your account with Bloxlink. You can verify your account with Bloxlink by following the instructions below.\n\n<:ArrowRight:1035003246445596774> Follow [this link](https://blox.link/dashboard/verifications) to verify your account with Bloxlink. If you have verified, click **Done** below.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     view = Verification(ctx.author.id)
                     await ctx.send(embed=embed, view=view)
@@ -132,7 +132,7 @@ class ModerationSync(commands.Cog):
                     embed = discord.Embed(
                         title="<:LinkIcon:1044004006109904966> ERM Verification",
                         description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     embed.set_footer(text="ROBLOX Verification provided by ERM")
                     await ctx.send(embed=embed, view=view)
@@ -216,7 +216,7 @@ class ModerationSync(commands.Cog):
                         }
                     )
 
-                    embed = discord.Embed(color=0x2E3136)
+                    embed = discord.Embed(color=0x2A2D31)
                     embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
                     embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
                     embed.set_footer(

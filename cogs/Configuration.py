@@ -269,7 +269,7 @@ class Configuration(commands.Cog):
         embed = discord.Embed(
             title="<:support:1035269007655321680> Server Configuration",
             description=f"<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embed.add_field(
             name="<:SettingIcon:1035353776460152892>Verification",
@@ -527,7 +527,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:Clock:1035308064305332224> Shift Types",
                 description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.add_field(
@@ -585,7 +585,7 @@ class Configuration(commands.Cog):
         embed = discord.Embed(
             title="<:EditIcon:1042550862834323597> Change Configuration",
             description="<:ArrowRight:1035003246445596774> What category would you like to configure?",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         await ctx.send(embed=embed, view=category)
 
@@ -618,7 +618,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -634,7 +634,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> What roles do you want to be given on Verification?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -689,7 +689,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -708,7 +708,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 await ctx.send(embed=embed, view=view)
                 await view.wait()
@@ -727,7 +727,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -798,7 +798,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -813,7 +813,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> What channel would you want to use for Staff Management (e.g. LOA Requests)",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 await ctx.send(embed=embed, view=view)
                 await view.wait()
@@ -828,7 +828,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -845,7 +845,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -861,7 +861,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -877,7 +877,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -893,7 +893,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 await ctx.send(embed=embed, view=view)
                 await view.wait()
@@ -946,7 +946,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> What would you like to change in the Punishments module?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
@@ -961,7 +961,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -975,7 +975,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -989,7 +989,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1003,7 +1003,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1046,7 +1046,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> What would you like to change in the Game Sync module?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
@@ -1073,7 +1073,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1093,7 +1093,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1153,7 +1153,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -1209,7 +1209,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1248,7 +1248,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1275,7 +1275,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
                         description=f"<:ArrowRight:1035003246445596774> {question}",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     await ctx.send(embed=embed, view=view)
@@ -1301,7 +1301,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1317,7 +1317,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -1354,7 +1354,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -1374,7 +1374,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:Clock:1035308064305332224> Shift Types",
                     description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 embed.add_field(
@@ -1418,7 +1418,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:Clock:1035308064305332224> Shift Types",
                     description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 embed.add_field(
@@ -1503,7 +1503,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> Select the button below to begin the creation of a Shift Type.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = CustomModalView(
@@ -1537,7 +1537,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description="<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = YesNoColourMenu(ctx.author.id)
@@ -1555,7 +1555,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description="<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = YesNoColourMenu(ctx.author.id)
@@ -1569,7 +1569,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = RoleSelect(ctx.author.id)
@@ -1586,7 +1586,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description="<:ArrowRight:1035003246445596774> Do you want a Nickname Prefix to be added to someone's name when they are on-duty for this shift type?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = YesNoColourMenu(ctx.author.id)
@@ -1600,7 +1600,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description="<:ArrowRight:1035003246445596774> What do you want to be the Nickname Prefix?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = CustomModalView(
@@ -1631,7 +1631,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description="<:ArrowRight:1035003246445596774> Do you want this type to send to a different channel than the currently configured one?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = YesNoColourMenu(ctx.author.id)
@@ -1645,7 +1645,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description="<:ArrowRight:1035003246445596774> What channel do you want to this type to send to?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = ChannelSelect(ctx.author.id, limit=1)
@@ -1685,7 +1685,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to edit.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     if len(shift_types.get("types")) == 0:
                         return await invis_embed(
@@ -1723,7 +1723,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> What would you like to edit about this shift type?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     roles = type.get("role")
@@ -1783,7 +1783,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> What would you like to change the name of this shift type to?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = CustomModalView(
@@ -1824,7 +1824,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = YesNoColourMenu(ctx.author.id)
@@ -1850,7 +1850,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = YesNoColourMenu(ctx.author.id)
@@ -1865,7 +1865,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = RoleSelect(ctx.author.id)
@@ -1893,7 +1893,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> Do you want this shift type to be sent to a different channel than the one configured in Shift Management?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = YesNoColourMenu(ctx.author.id)
@@ -1908,7 +1908,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> What channel do you want logs of this shift type to be sent to?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = ChannelSelect(ctx.author.id, limit=1)
@@ -1940,7 +1940,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> What nickname prefix do you want for people on duty of this type?",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         view = CustomModalView(
@@ -1986,7 +1986,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to delete.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     if len(shift_types.get("types")) == 0:
@@ -2060,7 +2060,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -2162,7 +2162,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -2212,7 +2212,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -2248,7 +2248,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=customselect)
@@ -2265,7 +2265,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
                         description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for message logging?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = ChannelSelect(ctx.author.id, limit=1)
@@ -2311,7 +2311,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=customselect)
@@ -2328,7 +2328,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
                         description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for STS logging?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = ChannelSelect(ctx.author.id, limit=1)
@@ -2372,7 +2372,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=customselect)
@@ -2401,7 +2401,7 @@ class Configuration(commands.Cog):
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
                         description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for Priority logging?",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = ChannelSelect(ctx.author.id, limit=1)
@@ -2467,7 +2467,7 @@ class Configuration(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Change Configuration",
                 description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.send(embed=embed, view=customselect)
@@ -2489,7 +2489,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -2507,7 +2507,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -2521,7 +2521,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Change Configuration",
                     description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 await ctx.send(embed=embed, view=view)
@@ -2667,7 +2667,7 @@ class Configuration(commands.Cog):
             view = YesNoMenu(ctx.author.id)
             question = "Do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?"
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> {question}",
             )
 
@@ -2689,7 +2689,7 @@ class Configuration(commands.Cog):
             view = YesNoMenu(ctx.author.id)
             question = "Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?"
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> {question}",
             )
 
@@ -2729,7 +2729,7 @@ class Configuration(commands.Cog):
             view = YesNoMenu(ctx.author.id)
             question = "Do you want a role to be assigned to staff members when they are in game?"
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> {question}",
             )
 
@@ -2751,7 +2751,7 @@ class Configuration(commands.Cog):
             view = YesNoMenu(ctx.author.id)
             question = "Do you have a weekly quota? (e.g. `2h`, `90m`, `7h`)"
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> {question}",
             )
 
@@ -2789,7 +2789,7 @@ class Configuration(commands.Cog):
             view = YesNoMenu(ctx.author.id)
             question = "Do you have multiple shift types?"
             embed = discord.Embed(
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> {question}",
             )
 
@@ -2806,7 +2806,7 @@ class Configuration(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
 
                         embed.add_field(
@@ -2908,7 +2908,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description=f"<:ArrowRight:1035003246445596774> Select the button below to begin the creation of a Shift Type.",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = CustomModalView(
@@ -2942,7 +2942,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = YesNoColourMenu(ctx.author.id)
@@ -2960,7 +2960,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = YesNoColourMenu(ctx.author.id)
@@ -2974,7 +2974,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = RoleSelect(ctx.author.id)
@@ -2991,7 +2991,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> Do you want a Nickname Prefix to be added to someone's name when they are on-duty for this shift type?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = YesNoColourMenu(ctx.author.id)
@@ -3005,7 +3005,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description="<:ArrowRight:1035003246445596774> What do you want to be the Nickname Prefix?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = CustomModalView(
@@ -3036,7 +3036,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description="<:ArrowRight:1035003246445596774> Do you want this type to send to a different channel than the currently configured one?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = YesNoColourMenu(ctx.author.id)
@@ -3050,7 +3050,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description="<:ArrowRight:1035003246445596774> What channel do you want to this type to send to?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = ChannelSelect(ctx.author.id, limit=1)
@@ -3094,7 +3094,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to edit.",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
                             if len(shift_types.get("types")) == 0:
                                 return await invis_embed(
@@ -3134,7 +3134,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description=f"<:ArrowRight:1035003246445596774> What would you like to edit about this shift type?",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             roles = type.get("role")
@@ -3196,7 +3196,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the name of this shift type to?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = CustomModalView(
@@ -3237,7 +3237,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description=f"<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = YesNoColourMenu(ctx.author.id)
@@ -3263,7 +3263,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description=f"<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = YesNoColourMenu(ctx.author.id)
@@ -3278,7 +3278,7 @@ class Configuration(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:Clock:1035308064305332224> Shift Types",
                                         description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                        color=0x2E3136,
+                                        color=0x2A2D31,
                                     )
 
                                     view = RoleSelect(ctx.author.id)
@@ -3306,7 +3306,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description=f"<:ArrowRight:1035003246445596774> Do you want this shift type to be sent to a different channel than the one configured in Shift Management?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = YesNoColourMenu(ctx.author.id)
@@ -3321,7 +3321,7 @@ class Configuration(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:Clock:1035308064305332224> Shift Types",
                                         description="<:ArrowRight:1035003246445596774> What channel do you want logs of this shift type to be sent to?",
-                                        color=0x2E3136,
+                                        color=0x2A2D31,
                                     )
 
                                     view = ChannelSelect(ctx.author.id, limit=1)
@@ -3353,7 +3353,7 @@ class Configuration(commands.Cog):
                                 embed = discord.Embed(
                                     title="<:Clock:1035308064305332224> Shift Types",
                                     description=f"<:ArrowRight:1035003246445596774> What nickname prefix do you want for people on duty of this type?",
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                 )
 
                                 view = CustomModalView(
@@ -3402,7 +3402,7 @@ class Configuration(commands.Cog):
                             embed = discord.Embed(
                                 title="<:Clock:1035308064305332224> Shift Types",
                                 description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to delete.",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
 
                             view = CustomSelectMenu(
@@ -3449,7 +3449,7 @@ class Configuration(commands.Cog):
         view = YesNoMenu(ctx.author.id)
         question = "Do you want your server's warnings to be able to be queried across the bot? (e.g. `globalsearch`)"
         embed = discord.Embed(
-            color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}"
+            color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {question}"
         )
 
         await ctx.send(embed=embed, view=view)

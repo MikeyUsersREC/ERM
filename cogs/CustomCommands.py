@@ -76,7 +76,7 @@ class CustomCommands(commands.Cog):
         embed = discord.Embed(
             title="<:Resume:1035269012445216858> Manage Custom Commands",
             description="<:ArrowRight:1035003246445596774> What would you like to do?",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         await ctx.send(embed=embed, view=view)
 
@@ -114,7 +114,7 @@ class CustomCommands(commands.Cog):
             embed = discord.Embed(
                 title="<:Resume:1035269012445216858> Custom Commands",
                 description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             channel_view = YesNoColourMenu(ctx.author.id)
             await ctx.send(embed=embed, view=channel_view)
@@ -124,7 +124,7 @@ class CustomCommands(commands.Cog):
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Custom Commands",
                     description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 channel_view = ChannelSelect(ctx.author.id, limit=1)
@@ -174,7 +174,7 @@ class CustomCommands(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Edit a Custom Command",
                 description="<:ArrowRight:1035003246445596774> What custom command would you like to edit?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             view = CustomModalView(
@@ -207,7 +207,7 @@ class CustomCommands(commands.Cog):
             embed = discord.Embed(
                 title="<:EditIcon:1042550862834323597> Edit a Custom Command",
                 description="<:ArrowRight:1035003246445596774> What would you like to edit about this custom command?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             view = CustomSelectMenu(
                 ctx.author.id,
@@ -236,7 +236,7 @@ class CustomCommands(commands.Cog):
                 view = EmbedCustomisation(ctx.author.id)
                 embed = discord.Embed(
                     description="<a:Loading:1044067865453670441> We are loading your custom command.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 msg = await ctx.send(embed=embed)
 
@@ -315,7 +315,7 @@ class CustomCommands(commands.Cog):
                 embed = discord.Embed(
                     title="<:Resume:1035269012445216858> Custom Commands",
                     description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 channel_view = YesNoColourMenu(ctx.author.id)
                 await ctx.send(embed=embed, view=channel_view)
@@ -325,7 +325,7 @@ class CustomCommands(commands.Cog):
                     embed = discord.Embed(
                         title="<:Resume:1035269012445216858> Custom Commands",
                         description="<:ArrowRight:1035003246445596774> Would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     channel_view = ChannelSelect(ctx.author.id, limit=1)
@@ -375,7 +375,7 @@ class CustomCommands(commands.Cog):
                 embed = discord.Embed(
                     title="<:EditIcon:1042550862834323597> Edit a Custom Command",
                     description="<:ArrowRight:1035003246445596774> What would you like to change the name of this custom command to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 view = CustomModalView(
@@ -434,7 +434,7 @@ class CustomCommands(commands.Cog):
         elif view.value == "delete":
             embed = discord.Embed(
                 title="<:Resume:1035269012445216858> Remove a custom command",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             for item in Data["commands"]:
                 embed.add_field(
@@ -479,7 +479,7 @@ class CustomCommands(commands.Cog):
 
         elif view.value == "list":
             embed = discord.Embed(
-                title="<:Resume:1035269012445216858> Custom Commands", color=0x2E3136
+                title="<:Resume:1035269012445216858> Custom Commands", color=0x2A2D31
             )
             for item in Data["commands"]:
                 embed.add_field(
@@ -549,7 +549,7 @@ class CustomCommands(commands.Cog):
         if ctx.interaction:
             embed = discord.Embed(
                 description="<:ArrowRight:1035003246445596774> Successfully ran this custom command!",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             await ctx.interaction.followup.send(embed=embed)

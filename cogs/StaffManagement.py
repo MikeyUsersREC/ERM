@@ -82,7 +82,7 @@ class StaffManagement(commands.Cog):
             description="*The active RAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
                 ctx.guild.name
             ),
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
@@ -113,7 +113,7 @@ class StaffManagement(commands.Cog):
                         description="*The active RAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
                             ctx.guild.name
                         ),
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     new_embed.set_author(
                         name=ctx.author.name, icon_url=ctx.author.display_avatar.url
@@ -205,7 +205,7 @@ class StaffManagement(commands.Cog):
         startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
         endTimestamp = int(startTimestamp + time)
 
-        embed = discord.Embed(title="Reduced Activity", color=0x2E3136)
+        embed = discord.Embed(title="Reduced Activity", color=0x2A2D31)
 
         try:
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
@@ -331,7 +331,7 @@ class StaffManagement(commands.Cog):
         embed = discord.Embed(
             title=f"<:EditIcon:1042550862834323597> {member.name}#{member.discriminator}'s RA Panel",
             description=f"*This panel is for editing {member.name}'s RA history, or current RA.*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embeds.append(embed)
         active_ras = [
@@ -416,7 +416,7 @@ class StaffManagement(commands.Cog):
                     new_embed = discord.Embed(
                         title=f"<:EditIcon:1042550862834323597> {member.name}#{member.discriminator}'s RA Panel",
                         description=f"*This panel is for editing {member.name}'s RA history, or current RAs.*",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     new_embed.add_field(
                         name="<:Clock:1035308064305332224> Previous RA(s)",
@@ -469,7 +469,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:SConductTitle:1053359821308567592> Activity Notice Creation",
                 description=f"<:ArrowRight:1035003246445596774> Please click the button below to create a Reduced Activity for {member.mention}.",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             embed.set_footer(text="Staff Management Module")
             view = CustomModalView(
@@ -510,7 +510,7 @@ class StaffManagement(commands.Cog):
                 error_embed = discord.Embed(
                     title=f"<:ErrorIcon:1042550862834323597> Error",
                     description=f"<:ArrowRight:1035003246445596774> Invalid duration. Please try again.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 return await ctx.send(embed=error_embed)
 
@@ -528,7 +528,7 @@ class StaffManagement(commands.Cog):
             startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
             endTimestamp = int(startTimestamp + duration)
 
-            embed = discord.Embed(title="Reduced Activity", color=0x2E3136)
+            embed = discord.Embed(title="Reduced Activity", color=0x2A2D31)
 
             try:
                 embed.set_thumbnail(url=member.display_avatar.url)
@@ -632,7 +632,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:WarningIcon:1035258528149033090> Activity Notice Deletion",
                 description=f"<:ArrowRight:1035003246445596774> Are you sure you would like to delete {member.mention}'s Reduced Activity request?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             embed.set_footer(text="Staff Management Module")
 
@@ -702,7 +702,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:WarningIcon:1035258528149033090> Edit Reduced Activity",
                 description=f"<:ArrowRight:1035003246445596774> What would you like to edit about the following Reduced Activity?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.add_field(
@@ -750,7 +750,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the type of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -792,7 +792,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the reason of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 view = CustomModalView(
                     ctx.author.id,
@@ -827,7 +827,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Reduced Activity",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the start date of the Reduced Activity to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 view = CustomModalView(
@@ -877,7 +877,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Reduced Activity",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the end date of the Reduced Activity to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 view = CustomModalView(
@@ -1005,7 +1005,7 @@ class StaffManagement(commands.Cog):
         startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
         endTimestamp = int(startTimestamp + time)
 
-        embed = discord.Embed(title="Leave of Absence", color=0x2E3136)
+        embed = discord.Embed(title="Leave of Absence", color=0x2A2D31)
 
         try:
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
@@ -1131,7 +1131,7 @@ class StaffManagement(commands.Cog):
         embed = discord.Embed(
             title=f"<:EditIcon:1042550862834323597> {member.name}#{member.discriminator}'s LOA Panel",
             description=f"*This panel is for editing {member.name}'s LOA history, or current LOA.*",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embeds.append(embed)
         active_loas = [
@@ -1216,7 +1216,7 @@ class StaffManagement(commands.Cog):
                     new_embed = discord.Embed(
                         title=f"<:EditIcon:1042550862834323597> {member.name}#{member.discriminator}'s LOA Panel",
                         description=f"*This panel is for editing {member.name}'s LOA history, or current LOA.*",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     new_embed.add_field(
                         name="<:Clock:1035308064305332224> Previous LOA(s)",
@@ -1269,7 +1269,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:SConductTitle:1053359821308567592> Activity Notice Creation",
                 description=f"<:ArrowRight:1035003246445596774> Please click the button below to create a Leave of Absence for {member.mention}.",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             embed.set_footer(text="Staff Management Module")
             view = CustomModalView(
@@ -1310,7 +1310,7 @@ class StaffManagement(commands.Cog):
                 error_embed = discord.Embed(
                     title=f"<:ErrorIcon:1042550862834323597> Error",
                     description=f"<:ArrowRight:1035003246445596774> Invalid duration. Please try again.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 return await ctx.send(embed=error_embed)
 
@@ -1328,7 +1328,7 @@ class StaffManagement(commands.Cog):
             startTimestamp = datetime.datetime.timestamp(ctx.message.created_at)
             endTimestamp = int(startTimestamp + duration)
 
-            embed = discord.Embed(title="Leave of Absence", color=0x2E3136)
+            embed = discord.Embed(title="Leave of Absence", color=0x2A2D31)
 
             try:
                 embed.set_thumbnail(url=member.display_avatar.url)
@@ -1436,7 +1436,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:WarningIcon:1035258528149033090> Activity Notice Deletion",
                 description=f"<:ArrowRight:1035003246445596774> Are you sure you would like to delete {member.mention}'s Leave of Absence request?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             embed.set_footer(text="Staff Management Module")
 
@@ -1506,7 +1506,7 @@ class StaffManagement(commands.Cog):
             embed = discord.Embed(
                 title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                 description=f"<:ArrowRight:1035003246445596774> What would you like to edit about the following Leave of Absence?",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.add_field(
@@ -1554,7 +1554,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the type of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -1596,7 +1596,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the reason of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 view = CustomModalView(
                     ctx.author.id,
@@ -1631,7 +1631,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the start date of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 view = CustomModalView(
@@ -1681,7 +1681,7 @@ class StaffManagement(commands.Cog):
                 embed = discord.Embed(
                     title=f"<:WarningIcon:1035258528149033090> Edit Leave of Absence",
                     description=f"<:ArrowRight:1035003246445596774> What would you like to change the end date of the Leave of Absence to?",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
 
                 view = CustomModalView(
@@ -1783,7 +1783,7 @@ class StaffManagement(commands.Cog):
             description="*The active LOAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
                 ctx.guild.name
             ),
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
@@ -1814,7 +1814,7 @@ class StaffManagement(commands.Cog):
                         description="*The active LOAs for **{}** will be displayed here.*\n\n**<:Pause:1035308061679689859> Active LOAs:**".format(
                             ctx.guild.name
                         ),
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     new_embed.set_author(
                         name=ctx.author.name, icon_url=ctx.author.display_avatar.url

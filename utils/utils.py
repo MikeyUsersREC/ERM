@@ -79,7 +79,7 @@ async def get_prefix(bot, message):
 
 async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
     embed = Embed(
-        color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}"
+        color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {content}"
     )
     msg = await ctx.send(embed=embed, **kwargs)
     return msg
@@ -87,7 +87,7 @@ async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.
 
 async def int_invis_embed(interaction, content, **kwargs):
     embed = Embed(
-        color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}"
+        color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {content}"
     )
     try:
         await interaction.response.send_message(embed=embed, **kwargs)
@@ -97,7 +97,7 @@ async def int_invis_embed(interaction, content, **kwargs):
 
 def create_invis_embed(content: str, **kwargs) -> discord.Embed:
     embed = Embed(
-        color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {content}"
+        color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {content}"
     )
     return embed
 
@@ -105,13 +105,13 @@ def create_invis_embed(content: str, **kwargs) -> discord.Embed:
 async def coloured_embed(
     ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
-    embed = Embed(color=0x2E3136, description=f"{content}")
+    embed = Embed(color=0x2A2D31, description=f"{content}")
     msg = await ctx.send(embed=embed, **kwargs)
     return msg
 
 
 async def int_coloured_embed(interaction, content, **kwargs):
-    embed = Embed(color=0x2E3136, description=f"{content}")
+    embed = Embed(color=0x2A2D31, description=f"{content}")
     try:
         await interaction.response.send_message(embed=embed, **kwargs)
     except discord.InteractionResponded:
@@ -120,7 +120,7 @@ async def int_coloured_embed(interaction, content, **kwargs):
 
 async def request_response(bot, ctx, question, **kwargs):
     embed = discord.Embed(
-        color=0x2E3136, description=f"<:ArrowRight:1035003246445596774> {question}"
+        color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {question}"
     )
     await ctx.send(embed=embed, **kwargs)
     try:

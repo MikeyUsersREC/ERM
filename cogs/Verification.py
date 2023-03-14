@@ -50,7 +50,7 @@ class Verification(commands.Cog):
             embed = discord.Embed(
                 title="<:LinkIcon:1044004006109904966> ERM Verification",
                 description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             embed.set_footer(text="ROBLOX Verification provided by ERM")
             await ctx.send(embed=embed, view=view)
@@ -115,7 +115,7 @@ class Verification(commands.Cog):
                 pass
             success_embed = discord.Embed(
                 title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['name']}!",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             success_embed.description = f"<:ArrowRight:1035003246445596774> You've been verified as <:LinkIcon:1044004006109904966> **{roblox_user['name']}** in **{ctx.guild.name}**."
             success_embed.set_footer(
@@ -166,7 +166,7 @@ class Verification(commands.Cog):
                 }
             )
 
-            embed = discord.Embed(color=0x2E3136)
+            embed = discord.Embed(color=0x2A2D31)
             embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
             embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
             embed.set_footer(

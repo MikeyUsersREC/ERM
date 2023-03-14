@@ -56,17 +56,24 @@ class Punishments(commands.Cog):
             moderations = []
             shifts = []
         else:
-            moderations = [i for i in list(filter(
-                lambda x: (x if x else {}).get('moderations') is not None and (x if x else {})['guild'] == ctx.guild.id,
-                selected['shifts'])) if i is not None]
+            shifts = selected['shifts'] if selected['shifts'] is not None else []
+            shifts = list(filter(lambda x: (x or {}).get("guild") == ctx.guild.id, shifts))
+
+
+            moderations = [*[x['moderations'] for x in list(filter(lambda y: y.get('moderations') is not None, shifts))]]
             print(moderations)
-            moderations = []
-            for i in moderations:
-                moderations = [x for x in i['moderations'] if x is not None]
+            async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": ctx.guild.id, "Moderator": {"$elemMatch": {'$eq': ctx.author.id}}}}}):
+                mods = filter(lambda z: z.get('Guild') == ctx.guild.id and (z.get("Moderator") if isinstance(z.get('Moderator'), list) else [])[-1] == ctx.author.id,document['warnings'])
+                for mod in mods:
+                    if mod['id'] not in [x['id'] for x in moderations]:
+                        moderations.append(mod)
+
+
+            # for i in moderations:
+            #     moderations = [x for x in i['moderations'] if x is not None]
             print(moderations)
-            shifts = [x for x in [x['shifts'] for x in
-                                  list(filter(lambda x: (x if x else {}).get('shifts') is True, selected['shifts']))] if
-                      (x if x else {}) is not None and (x if x else {})['guild'] == ctx.guild.id]
+            print(shifts)
+            print(selected['shifts'])
 
         leaves = list(filter(lambda x: x['type'] == "LoA", loas))
         reduced_activity = list(filter(lambda x: x['type'] == "RA", loas))
@@ -78,7 +85,7 @@ class Punishments(commands.Cog):
         embed = discord.Embed(
             title="<:SConductTitle:1053359821308567592> Moderation Statistics",
             description="*Moderation statistics displays relevant information about a user.*",
-            color=0x2e3136
+            color=0x2A2D31
         )
 
         INVISIBLE_CHAR = "‎"
@@ -294,7 +301,7 @@ class Punishments(commands.Cog):
 
         for dataItem in data:
             embed = discord.Embed(
-                title=f"{dataItem['name']} ({dataItem['id']})", color=0x2E3136
+                title=f"{dataItem['name']} ({dataItem['id']})", color=0x2A2D31
             )
 
             async with aiohttp.ClientSession() as session:
@@ -402,7 +409,7 @@ class Punishments(commands.Cog):
                     "This server has punishments disabled. Please run `/config change` to enable punishments.",
                 )
 
-            embed = discord.Embed(title=user, color=0x2E3136)
+            embed = discord.Embed(title=user, color=0x2A2D31)
             embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
             try:
                 embed.set_footer(text="Staff Logging Module")
@@ -519,7 +526,7 @@ class Punishments(commands.Cog):
                             personal_embed = discord.Embed(
                                 title="<:WarningIcon:1035258528149033090> You have been moderated!",
                                 description=f"***{ctx.guild.name}** has moderated you in-game*",
-                                color=0x2E3136,
+                                color=0x2A2D31,
                             )
                             personal_embed.add_field(
                                 name="<:MalletWhite:1035258530422341672> Moderation Details",
@@ -610,7 +617,7 @@ class Punishments(commands.Cog):
         bot = self.bot
         embed = discord.Embed(
             title="<:MalletWhite:1035258530422341672> Punishment Management",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embed.description = "*You can manage the punishments module here. You can view and modify the types of punishments, void punishments, and modify punishments.*"
         embed.add_field(
@@ -663,7 +670,7 @@ class Punishments(commands.Cog):
 
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Punishment Types",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
             for item in Data["types"]:
                 if isinstance(item, str):
@@ -709,7 +716,7 @@ class Punishments(commands.Cog):
 
                 embed = discord.Embed(
                     title="<:MalletWhite:1035258530422341672> Create a Punishment Type",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                     description=f"<:ArrowRight:1035003246445596774> What channel do you want this punishment type to be logged in?",
                 )
                 newview = ChannelSelect(ctx.author.id, limit=1)
@@ -768,7 +775,7 @@ class Punishments(commands.Cog):
         if view.value == "void":
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Void Punishments",
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> What punishment do you want to remove?",
             )
             view = RequestDataView(ctx.author.id, "Punishment", "Punishment ID")
@@ -827,7 +834,7 @@ class Punishments(commands.Cog):
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Remove Punishment",
                 description=f"<:ArrowRightW:1035023450592514048> **Type:** {selected_item['Type']}\n<:ArrowRightW:1035023450592514048> **Reason:** {selected_item['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {Moderator}\n<:ArrowRightW:1035023450592514048> **ID:** {selected_item['id']}\n",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             view = RemoveWarning(bot, ctx.author.id)
@@ -840,7 +847,7 @@ class Punishments(commands.Cog):
         if view.value == "modify":
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Modify Punishments",
-                color=0x2E3136,
+                color=0x2A2D31,
                 description=f"<:ArrowRight:1035003246445596774> What punishment do you want to modify?",
             )
 
@@ -899,7 +906,7 @@ class Punishments(commands.Cog):
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Edit Punishment",
                 description=f"<:ArrowRightW:1035023450592514048> **Type:** {selected_item['Type']}\n<:ArrowRightW:1035023450592514048> **Reason:** {selected_item['Reason']}\n<:ArrowRightW:1035023450592514048> **Moderator:** {Moderator}\n<:ArrowRightW:1035023450592514048> **ID:** {selected_item['id']}\n",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             punishment_types = await bot.punishment_types.find_by_id(ctx.guild.id)
@@ -990,7 +997,7 @@ class Punishments(commands.Cog):
 
             embed = discord.Embed(
                 title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.set_author(
@@ -1019,7 +1026,7 @@ class Punishments(commands.Cog):
                 if len(embeds[-1].fields) == 4:
                     new_embed = discord.Embed(
                         title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     new_embed.set_author(
@@ -1057,7 +1064,7 @@ class Punishments(commands.Cog):
             async def task():
                 embed = discord.Embed(
                     title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                     description="<:ArrowRight:1035003246445596774> Enter the ID of the BOLO you wish to mark as complete.",
                 )
 
@@ -1188,7 +1195,7 @@ class Punishments(commands.Cog):
 
             embed = discord.Embed(
                 title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.set_author(
@@ -1225,7 +1232,7 @@ class Punishments(commands.Cog):
                 if len(embeds[-1].fields) == 4:
                     new_embed = discord.Embed(
                         title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     new_embed.set_author(
@@ -1262,7 +1269,7 @@ class Punishments(commands.Cog):
             async def task():
                 embed = discord.Embed(
                     title="<:WarningIcon:1035258528149033090> Active Ban BOLOs",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                     description="<:ArrowRight:1035003246445596774> Enter the ID of the BOLO you wish to mark as complete.",
                 )
 
@@ -1518,7 +1525,7 @@ class Punishments(commands.Cog):
         Embeds = []
 
         for dataItem in data:
-            embed = discord.Embed(title=dataItem["name"], color=0x2E3136)
+            embed = discord.Embed(title=dataItem["name"], color=0x2A2D31)
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -1630,7 +1637,7 @@ class Punishments(commands.Cog):
                     "This server has punishments disabled. Please run `/config change` to enable punishments.",
                 )
 
-            embed = discord.Embed(title=user, color=0x2E3136)
+            embed = discord.Embed(title=user, color=0x2A2D31)
             embed.set_thumbnail(url=menu.message.embeds[0].thumbnail.url)
             try:
                 embed.set_footer(text="Staff Logging Module")

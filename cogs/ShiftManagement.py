@@ -72,7 +72,7 @@ class ShiftManagement(commands.Cog):
 
         embed = discord.Embed(
             title=f"<:staff:1035308057007230976> {member.name}#{member.discriminator}",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         # Get current shift
@@ -169,7 +169,7 @@ class ShiftManagement(commands.Cog):
         view = AdministrativeSelectMenu(ctx.author.id)
 
         embed = discord.Embed(
-            color=0x2E3136,
+            color=0x2A2D31,
             title=f"<:Clock:1035308064305332224> {member.name}#{member.discriminator}'s Shift Panel",
         )
 
@@ -359,7 +359,7 @@ class ShiftManagement(commands.Cog):
 
             embed2 = discord.Embed(
                 title=f"<:Clock:1035308064305332224> {member.name}#{member.discriminator}'s Current Shift",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed2.add_field(
@@ -504,7 +504,7 @@ class ShiftManagement(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(settings['shift_types']['types']))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in settings['shift_types']['types']]])}. Select one of these options.",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                         v = CustomSelectMenu(
                             ctx.author.id,
@@ -735,7 +735,7 @@ class ShiftManagement(commands.Cog):
                                     ctx, f"Could not add {rl} to {member.mention}"
                                 )
 
-                embed = discord.Embed(title=member.name, color=0x2E3136)
+                embed = discord.Embed(title=member.name, color=0x2A2D31)
                 try:
                     embed.set_thumbnail(url=member.display_avatar.url)
                     embed.set_footer(text="Staff Logging Module")
@@ -785,7 +785,7 @@ class ShiftManagement(commands.Cog):
                     f"{member.name}#{member.discriminator} is already off-duty. You can force them on-duty by selecting **On-Duty**.",
                 )
 
-            embed = discord.Embed(title=member.name, color=0x2E3136)
+            embed = discord.Embed(title=member.name, color=0x2A2D31)
 
             embed.set_thumbnail(url=member.display_avatar.url)
             embed.set_footer(text="Staff Logging Module")
@@ -856,7 +856,7 @@ class ShiftManagement(commands.Cog):
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             moderations = len(
@@ -914,7 +914,7 @@ class ShiftManagement(commands.Cog):
             moderation_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             moderation_embed.set_author(
@@ -932,7 +932,7 @@ class ShiftManagement(commands.Cog):
                         discord.Embed(
                             title="<:MalletWhite:1035258530422341672> Shift Report",
                             description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                     )
 
@@ -950,7 +950,7 @@ class ShiftManagement(commands.Cog):
             synced_moderation_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             synced_moderation_embed.set_author(
@@ -968,7 +968,7 @@ class ShiftManagement(commands.Cog):
                         discord.Embed(
                             title="<:MalletWhite:1035258530422341672> Shift Report",
                             description="*This is the report for the shift that just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                     )
 
@@ -986,7 +986,7 @@ class ShiftManagement(commands.Cog):
             time_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             time_embed.set_author(
@@ -1051,7 +1051,7 @@ class ShiftManagement(commands.Cog):
             menu.add_button(ViewButton.back())
             menu.add_button(ViewButton.next())
             try:
-                if consent_obj := await ctx.bot.consent.find_by_id(ctx.author.id):
+                if consent_obj := await self.bot.consent.find_by_id(ctx.author.id):
                     if consent_obj.get("shift_reports"):
                         if consent_obj.get("shift_reports") is False:
                             raise Exception()
@@ -1615,7 +1615,7 @@ class ShiftManagement(commands.Cog):
                         "This user has not started a shift yet. You cannot void a shift that has not started.",
                     )
                 embed = discord.Embed(
-                    title=f"{member.name}#{member.discriminator}", color=0x2E3136
+                    title=f"{member.name}#{member.discriminator}", color=0x2A2D31
                 )
 
                 try:
@@ -1912,7 +1912,7 @@ class ShiftManagement(commands.Cog):
         view = ModificationSelectMenu(ctx.author.id)
 
         embed = discord.Embed(
-            color=0x2E3136,
+            color=0x2A2D31,
             title=f"<:Clock:1035308064305332224> {ctx.author.name}#{ctx.author.discriminator}'s Shift Panel",
         )
 
@@ -2104,7 +2104,7 @@ class ShiftManagement(commands.Cog):
 
             embed2 = discord.Embed(
                 title=f"<:Clock:1035308064305332224> {ctx.author.name}#{ctx.author.discriminator}'s Current Shift",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed2.add_field(
@@ -2240,7 +2240,7 @@ class ShiftManagement(commands.Cog):
                         embed = discord.Embed(
                             title="<:Clock:1035308064305332224> Shift Types",
                             description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(settings['shift_types']['types']))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in settings['shift_types']['types']]])}. Select one of these options.",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                         view = CustomSelectMenu(
                             ctx.author.id,
@@ -2587,7 +2587,7 @@ class ShiftManagement(commands.Cog):
                                     ctx, f"Could not add {rl} to {ctx.author.mention}"
                                 )
 
-                embed = discord.Embed(title=ctx.author.name, color=0x2E3136)
+                embed = discord.Embed(title=ctx.author.name, color=0x2A2D31)
                 try:
                     embed.set_thumbnail(url=ctx.author.display_avatar.url)
                     embed.set_footer(text="Staff Logging Module")
@@ -2637,7 +2637,7 @@ class ShiftManagement(commands.Cog):
                     "You are already off-duty. You can go on-duty by selecting **On-Duty**.",
                 )
 
-            embed = discord.Embed(title=ctx.author.name, color=0x2E3136)
+            embed = discord.Embed(title=ctx.author.name, color=0x2A2D31)
 
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
             embed.set_footer(text="Staff Logging Module")
@@ -2725,7 +2725,7 @@ class ShiftManagement(commands.Cog):
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             moderations = len(
@@ -2780,7 +2780,7 @@ class ShiftManagement(commands.Cog):
             moderation_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             moderation_embed.set_author(
@@ -2798,7 +2798,7 @@ class ShiftManagement(commands.Cog):
                         discord.Embed(
                             title="<:MalletWhite:1035258530422341672> Shift Report",
                             description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                     )
 
@@ -2816,7 +2816,7 @@ class ShiftManagement(commands.Cog):
             synced_moderation_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             synced_moderation_embed.set_author(
@@ -2834,7 +2834,7 @@ class ShiftManagement(commands.Cog):
                         discord.Embed(
                             title="<:MalletWhite:1035258530422341672> Shift Report",
                             description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                            color=0x2E3136,
+                            color=0x2A2D31,
                         )
                     )
 
@@ -2852,7 +2852,7 @@ class ShiftManagement(commands.Cog):
             time_embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Shift Report",
                 description="*This is the report for the shift you just ended, it goes over moderations you made during your shift, and any other information that may be useful.*",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             time_embed.set_author(
@@ -2917,7 +2917,7 @@ class ShiftManagement(commands.Cog):
             menu.add_button(ViewButton.back())
             menu.add_button(ViewButton.next())
             try:
-                if consent_obj := await ctx.bot.consent.find_by_id(ctx.author.id):
+                if consent_obj := await self.bot.consent.find_by_id(ctx.author.id):
                     if consent_obj.get("shift_reports"):
                         if consent_obj.get("shift_reports") is False:
                             raise Exception()
@@ -3212,7 +3212,7 @@ class ShiftManagement(commands.Cog):
                     "This user has not started a shift yet. You cannot void a shift that has not started.",
                 )
             embed = discord.Embed(
-                title=f"{ctx.author.name}#{ctx.author.discriminator}", color=0x2E3136
+                title=f"{ctx.author.name}#{ctx.author.discriminator}", color=0x2A2D31
             )
 
             try:
@@ -3311,7 +3311,7 @@ class ShiftManagement(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(shift_types))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select one of these options to show in this command. If you want to view the active time between these types, select `All`.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = CustomSelectMenu(
@@ -3357,7 +3357,7 @@ class ShiftManagement(commands.Cog):
                                 )
 
         embed = discord.Embed(
-            title="<:Clock:1035308064305332224> Currently on Shift", color=0x2E3136
+            title="<:Clock:1035308064305332224> Currently on Shift", color=0x2A2D31
         )
         embed.description = "<:ArrowRight:1035003246445596774> *Only active shift times will be here. To view all shift time, run `/duty leaderboard`*\n\n<:SConductTitle:1053359821308567592> **Active Shifts**"
         embed.set_author(
@@ -3513,7 +3513,7 @@ class ShiftManagement(commands.Cog):
             if len((embeds[-1].description or "").splitlines()) >= 16 and ctx.author.id not in added_staff:
                 embed = discord.Embed(
                     title="<:Clock:1035308064305332224> Currently on Shift",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 embed.description = "<:ArrowRight:1035003246445596774> *Only active shift times will be here. To view all shift time, run `/duty leaderboard`*\n\n<:SConductTitle:1053359821308567592> **Active Shifts**"
                 embed.set_author(
@@ -3576,7 +3576,7 @@ class ShiftManagement(commands.Cog):
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Shift Types",
                         description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(shift_types))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select one of these options to show on the leaderboard. If you want to view the total time between these types, select `All`.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
 
                     view = CustomSelectMenu(
@@ -3696,7 +3696,7 @@ class ShiftManagement(commands.Cog):
         embeds = []
 
         embed = discord.Embed(
-            color=0x2E3136, title="<:Clock:1035308064305332224> Duty Leaderboard"
+            color=0x2A2D31, title="<:Clock:1035308064305332224> Duty Leaderboard"
         )
         embed.set_author(
             name=f"{ctx.author.name}#{ctx.author.discriminator}",
@@ -3775,7 +3775,7 @@ class ShiftManagement(commands.Cog):
                 else:
                     print("fields more than 24")
                     new_embed = discord.Embed(
-                        color=0x2E3136,
+                        color=0x2A2D31,
                         title="<:Clock:1035308064305332224> Duty Leaderboard",
                     )
 
@@ -3865,7 +3865,7 @@ class ShiftManagement(commands.Cog):
                             else:
                                 print("fields more than 24")
                                 new_embed = discord.Embed(
-                                    color=0x2E3136,
+                                    color=0x2A2D31,
                                     title="<:Clock:1035308064305332224> Duty Leaderboard",
                                 )
 
@@ -3936,7 +3936,7 @@ class ShiftManagement(commands.Cog):
                     else:
                         print("fields more than 24")
                         new_embed = discord.Embed(
-                            color=0x2E3136,
+                            color=0x2A2D31,
                             title="<:Clock:1035308064305332224> Duty Leaderboard",
                         )
 
@@ -4091,7 +4091,7 @@ class ShiftManagement(commands.Cog):
         view = YesNoMenu(ctx.author.id)
         embed = discord.Embed(
             description="<:WarningIcon:1035258528149033090> **Are you sure you would like to clear ALL shift data?** This is irreversible.",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
 
         msg = await ctx.send(view=view, embed=embed)

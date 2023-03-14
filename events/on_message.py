@@ -191,7 +191,7 @@ class OnMessage(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:LinkIcon:1044004006109904966> Message Logging",
                                         description=f"<:ArrowRight:1035003246445596774> Please enter the message you would like to log.",
-                                        color=0x2E3136,
+                                        color=0x2A2D31,
                                     )
 
                                     announcement = msg
@@ -199,7 +199,7 @@ class OnMessage(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:MessageIcon:1035321236793860116> Message Logged",
                                         description="*A new message has been logged in the server.*",
-                                        color=0x2E3136,
+                                        color=0x2A2D31,
                                     )
 
                                     embed.set_author(
@@ -262,7 +262,7 @@ class OnMessage(commands.Cog):
                                         embed = discord.Embed(
                                             title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
                                             description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                            color=0x2E3136,
+                                            color=0x2A2D31,
                                         )
 
                                         embed.add_field(
@@ -309,7 +309,7 @@ class OnMessage(commands.Cog):
                                         embed = discord.Embed(
                                             title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
                                             description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                            color=0x2E3136,
+                                            color=0x2A2D31,
                                         )
 
                                         embed.add_field(

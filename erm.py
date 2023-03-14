@@ -116,7 +116,7 @@ class Bot(commands.AutoShardedBot):
         bot.error_list = []
         logging.info("Connected to MongoDB!")
 
-        await bot.load_extension("jishaku")
+        # await bot.load_extension("jishaku")
         await bot.load_extension("utils.hot_reload")
         # await bot.load_extension('utils.server')
 
@@ -519,7 +519,7 @@ async def check_reminders():
                     embed = discord.Embed(
                         title="<:Clock:1035308064305332224> Notification",
                         description=f"{item['message']}",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     lastTriggered = tD.timestamp()
                     item["lastTriggered"] = lastTriggered
@@ -548,7 +548,7 @@ async def check_loa():
                     embed = discord.Embed(
                         title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
                         description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
-                        color=0x2E3136,
+                        color=0x2A2D31,
                     )
                     member = guild.get_member(loaObject["user_id"])
                     settings = await bot.settings.find_by_id(guild.id)

@@ -160,7 +160,7 @@ class Search(commands.Cog):
             if len(triggered_alerts) == 0:
                 triggered_alerts.append("NoAlerts")
 
-            embed1 = discord.Embed(title=f"{query} ({User.id})", color=0x2E3136)
+            embed1 = discord.Embed(title=f"{query} ({User.id})", color=0x2A2D31)
             embed1.set_author(
                 name=f"{ctx.author.name}#{ctx.author.discriminator}",
                 icon_url=ctx.author.display_avatar.url,
@@ -217,10 +217,10 @@ class Search(commands.Cog):
             )
 
             embed1 = discord.Embed(
-                title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2E3136
+                title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2A2D31
             )
             embed2 = discord.Embed(
-                title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2E3136
+                title=f"{RESULTS[0][0]['name']} ({User.id})", color=0x2A2D31
             )
 
             listOfPerGuild = []
@@ -304,7 +304,7 @@ class Search(commands.Cog):
                             )
                         else:
                             new_embed = discord.Embed(
-                                title=embeds[0].title, color=0x2E3136
+                                title=embeds[0].title, color=0x2A2D31
                             )
 
                             embeds.append(new_embed)
@@ -322,7 +322,7 @@ class Search(commands.Cog):
                             )
                         else:
                             new_embed = discord.Embed(
-                                title=embeds[0].title, color=0x2E3136
+                                title=embeds[0].title, color=0x2A2D31
                             )
 
                             embeds.append(new_embed)
@@ -463,7 +463,7 @@ class Search(commands.Cog):
                 else:
                     thumbnail = ""
 
-        embed = discord.Embed(title=query, color=0x2E3136)
+        embed = discord.Embed(title=query, color=0x2A2D31)
         embed.add_field(
             name=f"<:LinkIcon:1044004006109904966> Username",
             value=f"<:ArrowRight:1035003246445596774> {query}",
@@ -615,7 +615,7 @@ class Search(commands.Cog):
             if len(triggered_alerts) == 0:
                 triggered_alerts.append("NoAlerts")
 
-            embed1 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2E3136)
+            embed1 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2A2D31)
             embed1.set_author(
                 name=f"{ctx.author.name}#{ctx.author.discriminator}",
                 icon_url=ctx.author.display_avatar.url,
@@ -670,18 +670,18 @@ class Search(commands.Cog):
                 User = await client.get_user_by_username(
                     result[0]["name"], expand=True, exclude_banned_users=False
                 )
-                embed1 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2E3136)
-                embed2 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2E3136)
+                embed1 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2A2D31)
+                embed2 = discord.Embed(title=f"{User.name} ({User.id})", color=0x2A2D31)
             except (IndexError, KeyError):
                 try:
                     User = await client.get_user_by_username(
                         query, exclude_banned_users=False, expand=True
                     )
                     embed1 = discord.Embed(
-                        title=f"{User.name} ({User.id})", color=0x2E3136
+                        title=f"{User.name} ({User.id})", color=0x2A2D31
                     )
                     embed2 = discord.Embed(
-                        title=f"{User.name} ({User.id})", color=0x2E3136
+                        title=f"{User.name} ({User.id})", color=0x2A2D31
                     )
                 except:
                     return await invis_embed(ctx, "No user matches your query.")
@@ -706,7 +706,7 @@ class Search(commands.Cog):
 
                 if len(triggered_alerts) == 0:
                     triggered_alerts.append("NoAlerts")
-                embed1 = discord.Embed(title=query, color=0x2E3136)
+                embed1 = discord.Embed(title=query, color=0x2A2D31)
 
                 embed1.set_author(
                     name=f"{ctx.author.name}#{ctx.author.discriminator}",
@@ -799,7 +799,7 @@ class Search(commands.Cog):
                             )
                         else:
                             new_embed = discord.Embed(
-                                title=embeds[0].title, color=0x2E3136
+                                title=embeds[0].title, color=0x2A2D31
                             )
 
                             embeds.append(new_embed)
@@ -817,7 +817,7 @@ class Search(commands.Cog):
                             )
                         else:
                             new_embed = discord.Embed(
-                                title=embeds[0].title, color=0x2E3136
+                                title=embeds[0].title, color=0x2A2D31
                             )
 
                             embeds.append(new_embed)

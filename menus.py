@@ -989,7 +989,7 @@ class LOAMenu(discord.ui.View):
             ):
                 embed = discord.Embed(
                     description=f"You do not have permissions to accept this person's request. If you believe to have received this message in error, please contact a server administrator.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 await interaction.followup.send(embed=embed)
                 return
@@ -1091,7 +1091,7 @@ class LOAMenu(discord.ui.View):
                 await interaction.response.defer(ephemeral=True, thinking=True)
                 embed = discord.Embed(
                     description=f"You do not have permissions to deny this person's request. If you believe to have received this message in error, please contact a server administrator.",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 )
                 return await interaction.followup.send(embed=embed)
         for item in self.children:
@@ -1428,7 +1428,7 @@ class MessageCustomisation(discord.ui.View):
             newView = EmbedCustomisation(interaction.user.id, self)
             self.newView = newView
             await interaction.message.edit(
-                view=newView, embed=discord.Embed(colour=0x2E3136, description="\u200b")
+                view=newView, embed=discord.Embed(colour=0x2A2D31, description="\u200b")
             )
             await int_invis_embed(
                 interaction,

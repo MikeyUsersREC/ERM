@@ -31,7 +31,7 @@ class Privacy(commands.Cog):
         embed = discord.Embed(
             title="<:SettingIcon:1035353776460152892> Notification Settings",
             description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
-            color=0x2E3136,
+            color=0x2A2D31,
         ).set_thumbnail(url=ctx.author.display_avatar.url)
 
         custom_view = discord.ui.View()
@@ -58,7 +58,7 @@ class Privacy(commands.Cog):
                 embed = discord.Embed(
                     title="<:SettingIcon:1035353776460152892> Notification Settings",
                     description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
                 await interaction.response.send_message(
                     embed=embed, view=view, ephemeral=True
@@ -126,7 +126,7 @@ class Privacy(commands.Cog):
                 embed = discord.Embed(
                     title="<:SettingIcon:1035353776460152892> Notification Settings",
                     description=f"*This is where you block certain messages from ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2E3136,
+                    color=0x2A2D31,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
                 await interaction.response.send_message(
                     embed=embed, view=view, ephemeral=True

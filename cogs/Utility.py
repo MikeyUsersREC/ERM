@@ -22,7 +22,7 @@ class Utility(commands.Cog):
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(
             title="<:SettingIcon:1035353776460152892> Service Status",
-            color=0x2E3136,
+            color=0x2A2D31,
             description="*This will go over the current status of ERM.*",
         )
         embed.add_field(
@@ -62,7 +62,7 @@ class Utility(commands.Cog):
         embed = discord.Embed(
             title="<:support:1035269007655321680> Support Server",
             description="<:ArrowRight:1035003246445596774> Join the [**Support Server**](https://discord.gg/5pMmJEYazQ) to get help with the bot!",
-            color=0x2E3136,
+            color=0x2A2D31,
         )
         embed.set_footer(
             text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}"
@@ -93,7 +93,7 @@ class Utility(commands.Cog):
         if command == None:
             embed = discord.Embed(
                 title="<:support:1035269007655321680> Command List | Emergency Response Management",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             categories = []
@@ -207,7 +207,7 @@ class Utility(commands.Cog):
                     command.name
                 ),
                 description=f"<:ArrowRight:1035003246445596774> {command.description.split('[')[0]}",
-                color=0x2E3136,
+                color=0x2A2D31,
             )
 
             embed.set_footer(
