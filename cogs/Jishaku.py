@@ -86,8 +86,16 @@ class CustomDebugCog(*OPTIONAL_FEATURES, *STANDARD_FEATURES):
                 icon_url=ctx.author.display_avatar.url,
             )
             embed.set_footer(text="️️©️ ERM Systems - Jishaku Logging Systems")
-            await selected_webhook.send(embed=embed)
-
+            try:
+                await selected_webhook.send(embed=embed)
+            except ValueError:
+                await selected_webhook.delete()
+                selected_webhook = await channel.create_webhook(
+                    name=f"{ctx.author.name}#{ctx.author.discriminator}",
+                    avatar=(await ctx.author.display_avatar.read()),
+                    reason="Logs",
+                )
+                await selected_webhook.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(CustomDebugCog(bot=bot))
