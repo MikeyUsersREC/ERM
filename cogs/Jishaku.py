@@ -71,9 +71,15 @@ class CustomDebugCog(*OPTIONAL_FEATURES, *STANDARD_FEATURES):
             else:
                 codeblock = None
             if codeblock is not None:
-                embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`')-1]}```\n{codeblock.content}\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+                if ctx.guild:
+                    embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`')-1]}```\n{codeblock.content}\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+                else:
+                    embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`') - 1]}```\n{codeblock.content}"
             else:
-                embed.description = f"```\n{ctx.message.content}```\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+                if ctx.guild:
+                    embed.description = f"```\n{ctx.message.content}```\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+                else:
+                    embed.description = f"```\n{ctx.message.content}```"
             embed.title = "Jishaku Logging"
             embed.set_author(
                 name=f"{ctx.author.name}#{ctx.author.discriminator}",
