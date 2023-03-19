@@ -49,7 +49,7 @@ class Punishments(commands.Cog):
             selected = document
 
         loas = []
-        async for document in bot.loas.db.find({"user_id": user.id}):
+        async for document in bot.loas.db.find({"user_id": user.id, "guild_id": ctx.guild.id}):
             loas.append(document)
 
         if not selected:
@@ -61,13 +61,25 @@ class Punishments(commands.Cog):
 
 
             moderations = [*[x['moderations'] for x in list(filter(lambda y: y.get('moderations') is not None, shifts))]]
-            print(moderations)
+
+            for i in moderations.copy():
+                if not i:
+                    moderations.remove(i)
+
+
+
             async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": ctx.guild.id, "Moderator": {"$elemMatch": {'$eq': ctx.author.id}}}}}):
                 mods = filter(lambda z: z.get('Guild') == ctx.guild.id and (z.get("Moderator") if isinstance(z.get('Moderator'), list) else [])[-1] == ctx.author.id,document['warnings'])
                 for mod in mods:
-                    if mod['id'] not in [x['id'] for x in moderations]:
-                        moderations.append(mod)
+                    if isinstance(mod, dict):
+                        if mod['id'] not in [(x if isinstance(x, dict) else {}).get('id') for x in moderations]:
+                            moderations.append(mod)
 
+
+            for i in moderations:
+                if isinstance(i, list):
+                    moderations.remove(i)
+                    [moderations.append(o) for o in i]
 
             # for i in moderations:
             #     moderations = [x for x in i['moderations'] if x is not None]
