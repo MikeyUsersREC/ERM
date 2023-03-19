@@ -34,13 +34,13 @@ class Reminders(commands.Cog):
             if len(item["message"]) > 800:
                 embed.add_field(
                     name=f"<:Clock:1035308064305332224> {item['name']}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Paused:** { {True: 'Paused', False: 'Not Paused', None: 'Not Paused'}[item.get('paused')] }\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
                     inline=False,
                 )
             else:
                 embed.add_field(
                     name=f"<:Clock:1035308064305332224> {item['name']}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Paused:** { {True: 'Paused', False: 'Not Paused', None: 'Not Paused'}[item.get('paused')]}\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
                     inline=False,
                 )
 
@@ -57,6 +57,37 @@ class Reminders(commands.Cog):
         timeout = await view.wait()
         if timeout:
             return
+
+        if view.value == "pause":
+            reminder = view.modal.id_value.value
+            try:
+                for index, item in enumerate(Data["reminders"]):
+                    if item["id"] == int(reminder):
+                        if item.get("paused") is True:
+                            item["paused"] = False
+                            Data["reminders"][index] = item
+                            await bot.reminders.upsert(Data)
+                            successEmbed = discord.Embed(
+                                title="<:CheckIcon:1035018951043842088> Reminder Resumed",
+                                description="<:ArrowRight:1035003246445596774> Your reminder has been resumed successfully.",
+                                color=0x71C15F,
+                            )
+                        else:
+                            item["paused"] = True
+                            Data["reminders"][index] = item
+                            await bot.reminders.upsert(Data)
+                            successEmbed = discord.Embed(
+                                title="<:CheckIcon:1035018951043842088> Reminder Paused",
+                                description="<:ArrowRight:1035003246445596774> Your reminder has been paused successfully.",
+                                color=0x71C15F,
+                            )
+
+                        return await ctx.send(embed=successEmbed)
+            except:
+                return await invis_embed(
+                    ctx,
+                    "You have not provided a correct ID. Please try again with an ID from the list.",
+                )
 
         if view.value == "create":
             if view.modal:

@@ -3,9 +3,11 @@ import json
 
 import aiohttp
 import discord
+from decouple import config
 from discord import app_commands
 from discord.ext import commands
 from reactionmenu import ViewButton, ViewMenu
+from reactionmenu.abc import _PageController
 
 from erm import crp_data_to_mongo, generator, is_management, is_staff
 from menus import (
@@ -15,8 +17,9 @@ from menus import (
     CustomSelectMenu,
     EditWarning,
     RemoveWarning,
-    RequestDataView,
+    RequestDataView, CustomExecutionButton, UserSelect, YesNoMenu,
 )
+from utils.AI import AI
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
 from utils.utils import invis_embed, removesuffix
 from utils.timestamp import td_format
@@ -68,8 +71,8 @@ class Punishments(commands.Cog):
 
 
 
-            async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": ctx.guild.id, "Moderator": {"$elemMatch": {'$eq': ctx.author.id}}}}}):
-                mods = filter(lambda z: z.get('Guild') == ctx.guild.id and (z.get("Moderator") if isinstance(z.get('Moderator'), list) else [])[-1] == ctx.author.id,document['warnings'])
+            async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Guild": ctx.guild.id, "Moderator": {"$elemMatch": {'$eq': user.id}}}}}):
+                mods = filter(lambda z: z.get('Guild') == ctx.guild.id and (z.get("Moderator") if isinstance(z.get('Moderator'), list) else [])[-1] == user.id,document['warnings'])
                 for mod in mods:
                     if isinstance(mod, dict):
                         if mod['id'] not in [(x if isinstance(x, dict) else {}).get('id') for x in moderations]:
@@ -104,7 +107,7 @@ class Punishments(commands.Cog):
 
         embed.add_field(
             name="<:MalletWhite:1035258530422341672> Moderations",
-            value=f"<:ArrowRightW:1035023450592514048> **Moderations:** {len(moderations)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Warnings:** {len(list(filter(lambda x: x['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: x['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: x['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: x['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: x['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
+            value=f"<:ArrowRightW:1035023450592514048> **Moderations:** {len(moderations)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Warnings:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
             inline=True
         )
         embed.add_field(
@@ -233,14 +236,16 @@ class Punishments(commands.Cog):
                 f"https://users.roblox.com/v1/usernames/users",
                 json={"usernames": [user]},
             ) as r:
-                if r.status == 200:
-                    robloxUser = await r.json()
-                    if len(robloxUser["data"]) == 0:
-                        return await invis_embed(
-                            ctx, f"No user found with the name `{user}`"
-                        )
-                    robloxUser = robloxUser["data"][0]
-                    Id = robloxUser["id"]
+                try:
+                    requestJson = await r.json()
+                    should_switch = len(requestJson["data"]) == 0
+                except:
+                    requestJson = None
+                    should_switch = False
+
+                if r.status == 200 and should_switch is False:
+                    requestJson = requestJson["data"][0]
+                    Id = requestJson["id"]
                     async with session.get(
                         f"https://users.roblox.com/v1/users/{Id}"
                     ) as r:
@@ -250,10 +255,10 @@ class Punishments(commands.Cog):
                         f"https://users.roblox.com/v1/usernames/users",
                         json={"usernames": [user]},
                     ) as r:
-                        robloxUser = await r.json()
-                        if len(robloxUser["data"]) != 0:
-                            robloxUser = robloxUser["data"][0]
-                            Id = robloxUser["id"]
+                        requestJson = await r.json()
+                        if len(requestJson["data"]) != 0:
+                            requestJson = requestJson["data"][0]
+                            Id = requestJson["id"]
                             async with session.get(
                                 f"https://users.roblox.com/v1/users/{Id}"
                             ) as r:
@@ -300,6 +305,148 @@ class Punishments(commands.Cog):
                                     ctx, f"No member found with the query: `{user}`"
                                 )
 
+
+
+        stop_exception = False
+        try:
+            agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
+        except:
+            stop_exception = True
+
+        new_past = []
+        warns = []
+        past = []
+        print(requestJson)
+        # Get all punishments of the user in the server in the last hour
+        async for doc in bot.warnings.db.find({"_id": f"{requestJson['name'].lower()}"}):
+            warns = list(filter(lambda x: (x if x else {}).get("Guild") == ctx.guild.id, doc["warnings"]))
+            past = list(filter(lambda x: (x if x else {}).get("Time") is not None, warns))
+            new_past = []
+            for i in past:
+                if isinstance(i["Time"], int):
+                    if (datetime.datetime.now() - datetime.datetime.fromtimestamp(i['Time'])).total_seconds() < 3600:
+                        new_past.append(i)
+                elif isinstance(i['Time'], str):
+                    if (datetime.datetime.now() - datetime.datetime.strptime(i['Time'], "%m/%d/%Y, %H:%M:%S")).total_seconds() < 3600:
+                        new_past.append(i)
+
+        print(new_past)
+        if new_past:
+            new_past = [x["Type"] for x in new_past]
+            for index, x in enumerate(new_past):
+                if x == "Bolo":
+                    x = "BOLO"
+                    new_past[index] = x
+
+            for i in new_past:
+                if x not in ["Warning", "Kick", "Ban", "Bolo"]:
+                    new_past.remove(i)
+            print(new_past)
+            try:
+                recommended = await agent.recommended_punishment(reason, new_past)
+            except:
+                stop_exception = True
+        else:
+            try:
+                recommended = await agent.recommended_punishment(reason, None)
+            except:
+                stop_exception = True
+
+        if type.lower() in [w.lower() for w in generic_warning_types] and not stop_exception:
+            if not recommended.modified:
+                embed = discord.Embed(
+                    title="<:SConductTitle:1053359821308567592> Recommended Punishment",
+                    description=f"<:ArrowRight:1035003246445596774> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/BGfyfqU5fx). You can disable this feature by using `/consent` at any time.",
+                    color=0x2A2D31
+                )
+            else:
+                embed = discord.Embed(
+                    title="<:SConductTitle:1053359821308567592> Recommended Punishment",
+                    description=f"<:ArrowRight:1035003246445596774> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. This is because this user has been identified as a repeat offender. Would you like to change the type of this punishment to a {recommended.prediction}?",
+                    color=0x2A2D31
+                )
+            print(type)
+            print(recommended.prediction)
+            if type.lower() != recommended.prediction.lower():
+                if recommended.prediction.lower() in already_types:
+                    view = discord.ui.View()
+                    async def change_type(interaction: discord.Interaction, button: discord.ui.Button):
+                        await interaction.response.send_message(embed=discord.Embed(
+                            title="<:CheckIcon:1035018951043842088> Success!",
+                            description=f"<:ArrowRight:1035003246445596774> Successfully changed the type of this punishment to a **{recommended.prediction}**.",
+                            color=0x71C15F
+                        ), ephemeral=True)
+                        global changed_type
+                        changed_type = recommended.prediction
+                        print(recommended.prediction)
+                        type = recommended.prediction
+                        if settings:
+                            warning_type = None
+                            for warning in warning_types:
+                                if isinstance(warning, str):
+                                    if warning.lower() == type.lower():
+                                        warning_type = warning
+                                elif isinstance(warning, dict):
+                                    if warning["name"].lower() == type.lower():
+                                        warning_type = warning
+
+                            if isinstance(warning_type, str):
+                                if settings["customisation"].get("kick_channel"):
+                                    if settings["customisation"]["kick_channel"] != "None":
+                                        if type.lower() == "kick":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["kick_channel"]
+                                            )
+                                if settings["customisation"].get("ban_channel"):
+                                    if settings["customisation"]["ban_channel"] != "None":
+                                        if type.lower() == "ban":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["ban_channel"]
+                                            )
+                                if settings["customisation"].get("bolo_channel"):
+                                    if settings["customisation"]["bolo_channel"] != "None":
+                                        if type.lower() == "bolo":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["bolo_channel"]
+                                            )
+                            else:
+                                if isinstance(warning_type, dict):
+                                    if "channel" in warning_type.keys():
+                                        if warning_type["channel"] != "None":
+                                            designated_channel = bot.get_channel(
+                                                warning_type["channel"]
+                                            )
+                        print(button)
+                        button.view.stop()
+
+                    async def keep_type(interaction: discord.Interaction, button: discord.ui.Button):
+                        await interaction.response.send_message(embed=discord.Embed(
+                            title="<:CheckIcon:1035018951043842088> Success!",
+                            description=f"<:ArrowRight:1035003246445596774> Successfully kept the type of this punishment as a **{type}**.",
+                            color=0x71C15F
+                        ), ephemeral=True)
+                        button.view.stop()
+
+                    view.add_item(CustomExecutionButton(ctx.author.id, "Change Type", discord.ButtonStyle.green, func=change_type))
+                    view.add_item(
+                        CustomExecutionButton(ctx.author.id, "Keep Type", discord.ButtonStyle.danger, func=keep_type))
+                    view.add_item(
+                        discord.ui.Button(disabled=True, label="This is a beta feature, expect issues.", style=discord.ButtonStyle.grey, row=1)
+                    )
+                    msg = await ctx.send(embed=embed, view=view)
+                    await view.wait()
+            else:
+                msg = None
+        else:
+            msg = None
+        try:
+            if changed_type:
+                type = changed_type
+        except (UnboundLocalError, NameError):
+            pass
+
+
+        print(designated_channel)
         print(requestJson)
         try:
             data = requestJson["data"]
@@ -310,6 +457,7 @@ class Punishments(commands.Cog):
             data = [requestJson]
 
         Embeds = []
+
 
         for dataItem in data:
             embed = discord.Embed(
@@ -328,14 +476,7 @@ class Punishments(commands.Cog):
 
             user = await bot.warnings.find_by_id(dataItem["name"].lower())
             if user is None:
-                embed.description = """
-                    <:ArrowRightW:1035023450592514048>**Warnings:** 0
-                    <:ArrowRightW:1035023450592514048>**Kicks:** 0
-                    <:ArrowRightW:1035023450592514048>**Bans:** 0
-                    <:ArrowRightW:1035023450592514048>**Custom:** 0
-
-                    `Banned:` <:ErrorIcon:1035000018165321808>
-                    """
+                embed.description = "<:ArrowRightW:1035023450592514048>**Warnings:** 0\n<:ArrowRightW:1035023450592514048>**Kicks:** 0\n<:ArrowRightW:1035023450592514048>**Bans:** 0\n<:ArrowRightW:1035023450592514048>**Custom:** 0\n\n`Banned:` <:ErrorIcon:1035000018165321808>"
             else:
                 warnings = 0
                 kicks = 0
@@ -381,8 +522,9 @@ class Punishments(commands.Cog):
         menu = ViewMenu(
             gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None
         )
-
+        print(type)
         async def warn_function(ctx, menu, designated_channel=None):
+            print(type)
             user = menu.message.embeds[0].title.split(" ")[0]
             await menu.stop(disable_items=True)
             default_warning_item = {
@@ -558,7 +700,7 @@ class Punishments(commands.Cog):
                         except:
                             pass
 
-            await menu.message.edit(embed=success)
+            await menu.message.edit(embed=success, view=None)
 
             await designated_channel.send(embed=embed)
 
@@ -575,10 +717,8 @@ class Punishments(commands.Cog):
                 color=0xFF3C3C,
             )
 
-            await menu.message.edit(embed=embed)
-
-            await menu.stop(disable_items=True)
-
+            await menu.message.edit(embed=embed, view=None)
+            await menu.stop()
         def cancelTaskWrapper():
             bot.loop.create_task(cancelTask())
 
@@ -602,7 +742,11 @@ class Punishments(commands.Cog):
 
         try:
             menu.add_pages(Embeds)
-            await menu.start()
+            menu._pc = _PageController(menu.pages)
+            if msg:
+                menu._msg = await msg.edit(embed=Embeds[0], view=menu._ViewMenu__view)
+            else:
+                menu._msg = await ctx.send(embed=Embeds[0], view=menu._ViewMenu__view)
         except:
             return await invis_embed(
                 ctx,
@@ -647,6 +791,11 @@ class Punishments(commands.Cog):
             value="<:ArrowRight:1035003246445596774> Remove a punishment from your server.",
             inline=False,
         )
+        embed.add_field(
+            name="<:WarningIcon:1035258528149033090> Administrative Actions",
+            value="<:ArrowRight:1035003246445596774> Remove particular punishments from your server.",
+            inline=False,
+        )
 
         view = CustomSelectMenu(
             ctx.author.id,
@@ -669,6 +818,12 @@ class Punishments(commands.Cog):
                     emoji="<:TrashIcon:1042550860435181628>",
                     description="Remove a punishment from your server.",
                 ),
+                discord.SelectOption(
+                    label="Administrative Actions",
+                    value="admin_actions",
+                    emoji="<:WarningIcon:1035258528149033090>",
+                    description="Remove particular punishments from your server."
+                )
             ],
         )
         msg = await ctx.send(embed=embed, view=view)
@@ -784,6 +939,173 @@ class Punishments(commands.Cog):
                         color=0x71C15F,
                     )
                     await msg.edit(embed=success)
+        if view.value == "admin_actions":
+            embed = discord.Embed(
+                title="<:MalletWhite:1035258530422341672> Administrative Actions",
+                color=0x2A2D31,
+                description=f"<:ArrowRight:1035003246445596774> What Administrative Action would you like to complete?"
+            )
+
+            view = CustomSelectMenu(
+                ctx.author.id,
+                [
+                    discord.SelectOption(
+                        label="Remove all punishments from a user",
+                        description="Remove all punishments from a user.",
+                        emoji="<:MalletWhite:1035258530422341672>",
+                        value="remove_user",
+                    ),
+                    discord.SelectOption(
+                        label="Remove all punishments from a type",
+                        description="Remove all punishments from a type.",
+                        emoji="<:SettingIcon:1035353776460152892>",
+                        value="remove_type",
+                    ),
+                    discord.SelectOption(
+                        label="Remove all punishments from a moderator",
+                        description="Remove all punishments from a staff member.",
+                        emoji="<:staff:1035308057007230976>",
+                        value="remove_moderator",
+                    ),
+                    discord.SelectOption(
+                        label="Remove all punishments",
+                        description="Remove all punishments.",
+                        emoji="<:MalletWhite:1035258530422341672>",
+                        value="remove_all",
+                    )
+                ],
+            )
+
+
+            msg = await ctx.send(embed=embed, view=view)
+            await view.wait()
+
+            if view.value == "remove_user":
+                embed = discord.Embed(
+                    title="<:MalletWhite:1035258530422341672> Remove all punishments from a user",
+                    color=0x2A2D31,
+                    description=f"<:ArrowRight:1035003246445596774> What user would you like to remove all punishments from?"
+                )
+                view = RequestDataView(ctx.author.id, "Username", "Username")
+                await msg.edit(embed=embed, view=view)
+                await view.wait()
+                value = view.value
+                selected = None
+                async for document in bot.warnings.db.find({"_id": value.lower()}):
+                    selected = document
+                if not selected:
+                    return await invis_embed(ctx, "No user with that username was found in our database. Please ensure that you have spelt the username correctly.")
+
+                if isinstance(selected.get('warnings'), list):
+                    all_guild = list(filter(lambda x: (x or {}).get('Guild') == ctx.guild.id, selected.get('warnings')))
+                    if all_guild:
+                        for item in all_guild:
+                            selected.get('warnings').remove(item)
+
+                await bot.warnings.update_by_id(selected)
+
+                success = discord.Embed(
+                    title=f"<:CheckIcon:1035018951043842088> Success!",
+                    description=f"<:ArrowRightW:1035023450592514048> All punishments from **{value}** have been removed.",
+                    color=0x71C15F,
+                )
+                await msg.edit(embed=success, view=None)
+            elif view.value == "remove_type":
+                embed = discord.Embed(
+                    title="<:MalletWhite:1035258530422341672> Remove all punishments from a type",
+                    color=0x2A2D31,
+                    description=f"<:ArrowRight:1035003246445596774> What punishment type would you like to remove all punishments from?"
+                )
+                view = RequestDataView(ctx.author.id, "Punishment Type", "Punishment Type")
+                await msg.edit(embed=embed, view=view)
+                await view.wait()
+                value = view.value
+                selected = None
+                async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Type": {"$regex": value, "$options": "i"}, "Guild": ctx.guild.id}}}):
+                    if document.get('warnings'):
+                        all_guild = list(filter(lambda x: (x or {}).get('Guild') == ctx.guild.id, document.get('warnings')))
+                        if all_guild:
+                            for item in all_guild:
+                                if item.get('Type').lower() == value.lower():
+                                    document.get('warnings').remove(item)
+                    await bot.warnings.update_by_id(document)
+
+                success = discord.Embed(
+                    title=f"<:CheckIcon:1035018951043842088> Success!",
+                    description=f"<:ArrowRightW:1035023450592514048> All punishments from the **{value}** type have been removed.",
+                    color=0x71C15F,
+                )
+                await msg.edit(embed=success, view=None)
+            elif view.value == "remove_moderator":
+                embed = discord.Embed(
+                    title="<:MalletWhite:1035258530422341672> Remove all punishments from a moderator",
+                    color=0x2A2D31,
+                    description=f"<:ArrowRight:1035003246445596774> What moderator would you like to remove all punishments from?"
+                )
+                view = UserSelect(ctx.author.id, limit=1)
+                await msg.edit(embed=embed, view=view)
+                await view.wait()
+                value = view.value[0]
+                selected = None
+                async for document in bot.warnings.db.find({"warnings": {
+                    "$elemMatch": {"Moderator": {"$elemMatch": {'$eq': value.id}}, "Guild": ctx.guild.id}}}):
+                    if document.get('warnings'):
+                        all_guild = list(
+                            filter(lambda x: (x or {}).get('Guild') == ctx.guild.id, document.get('warnings')))
+                        if all_guild:
+                            for item in all_guild:
+                                if value.id in (item.get('Moderator') if item.get('Moderator') else []):
+                                    document.get('warnings').remove(item)
+                    await bot.warnings.update_by_id(document)
+
+                success = discord.Embed(
+                    title=f"<:CheckIcon:1035018951043842088> Success!",
+                    description=f"<:ArrowRightW:1035023450592514048> **All** punishments from {value.mention} have been removed.",
+                    color=0x71C15F,
+                )
+                await msg.edit(embed=success, view=None)
+            elif view.value == "remove_all":
+                # Do a confirmation embed
+                embed = discord.Embed(
+                    title="<:MalletWhite:1035258530422341672> Remove all punishments",
+                    color=0x2A2D31,
+                    description=f"<:ArrowRight:1035003246445596774> Are you sure you want to remove all punishments?"
+                )
+                embed.add_field(
+                    name="<:EditIcon:1042550862834323597> Disclaimer",
+                    value="<:ArrowRight:1035003246445596774> This action is **reversible.** Once this command is ran, your data is backed up and can be restored within a 30 day period of contacting ERM Systems. If you'd like to restore data or remove your data, please contact ERM Systems via our [Support Server](https://discord.gg/BGfyfqU5fx).",
+                )
+                view = YesNoMenu(ctx.author.id)
+
+                await msg.edit(embed=embed, view=view)
+                await view.wait()
+                if view.value is True:
+                    await bot.warnings.db.update_many({
+                        "warnings": {"$elemMatch": {
+                            "Guild": ctx.guild.id
+                        }}
+                    }, {
+                        "$set": {
+                            "warnings.$[elem].Guild": f'RECOVERY_{ctx.guild.id}'
+                        }
+                    },
+                        array_filters=[{"elem.Guild": ctx.guild.id}],
+                        upsert=True
+                    )
+                    success = discord.Embed(
+                        title=f"<:CheckIcon:1035018951043842088> Success!",
+                        description=f"<:ArrowRightW:1035023450592514048> **All** punishments have been removed.",
+                        color=0x71C15F,
+                    )
+                    await msg.edit(embed=success, view=None)
+                else:
+                    await msg.edit(embed=discord.Embed(
+                        title=f"<:ErrorIcon:1035000018165321808> Cancelled",
+                        description=f"<:ArrowRight:1035003246445596774> The removal of all punishments has been cancelled.",
+                        color=0xFF3C3C
+                    ), view=None)
+
+
         if view.value == "void":
             embed = discord.Embed(
                 title="<:MalletWhite:1035258530422341672> Void Punishments",
@@ -1456,31 +1778,25 @@ class Punishments(commands.Cog):
 
         reason = "".join([str(item) for item in reason])
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"https://users.roblox.com/v1/users/search?keyword={user}&limit=10"
-            ) as r:
-                if r.status == 200:
-                    robloxUser = await r.json()
-                    if len(robloxUser["data"]) == 0:
-                        return await invis_embed(
-                            ctx, f"No user found with the name `{user}`"
-                        )
-                    robloxUser = robloxUser["data"][0]
-                    Id = robloxUser["id"]
+            async with session.get(f"https://users.roblox.com/v1/users/search?keyword={user}&limit=10") as r:
+                requestJson = await r.json()
+                if len(requestJson['data']) != 0:
+                    requestJson = requestJson["data"][0]
+                    Id = requestJson["id"]
                     async with session.get(
-                        f"https://users.roblox.com/v1/users/{Id}"
+                            f"https://users.roblox.com/v1/users/{Id}"
                     ) as r:
                         requestJson = await r.json()
                 else:
                     async with session.post(
-                        f"https://users.roblox.com/v1/usernames/users",
-                        json={"usernames": [user]},
+                            f"https://users.roblox.com/v1/usernames/users",
+                            json={"usernames": [user]},
                     ) as r:
-                        robloxUser = await r.json()
-                        if "data" in robloxUser.keys():
-                            Id = robloxUser["data"][0]["id"]
+                        requestJson = await r.json()
+                        if "data" in requestJson.keys():
+                            Id = requestJson["data"][0]["id"]
                             async with session.get(
-                                f"https://users.roblox.com/v1/users/{Id}"
+                                    f"https://users.roblox.com/v1/users/{Id}"
                             ) as r:
                                 requestJson = await r.json()
                         else:
@@ -1495,15 +1811,15 @@ class Punishments(commands.Cog):
                                     if verified_user:
                                         Id = verified_user["roblox"]
                                         async with session.get(
-                                            f"https://users.roblox.com/v1/users/{Id}"
+                                                f"https://users.roblox.com/v1/users/{Id}"
                                         ) as r:
                                             requestJson = await r.json()
                                     else:
                                         async with aiohttp.ClientSession(
-                                            headers={"api-key": bot.bloxlink_api_key}
+                                                headers={"api-key": bot.bloxlink_api_key}
                                         ) as newSession:
                                             async with newSession.get(
-                                                f"https://v3.blox.link/developer/discord/{userConverted.id}"
+                                                    f"https://v3.blox.link/developer/discord/{userConverted.id}"
                                             ) as r:
                                                 tempRBXUser = await r.json()
                                                 if tempRBXUser["success"]:
@@ -1517,7 +1833,7 @@ class Punishments(commands.Cog):
                                                     )
                                                 Id = tempRBXID
                                                 async with session.get(
-                                                    f"https://users.roblox.com/v1/users/{Id}"
+                                                        f"https://users.roblox.com/v1/users/{Id}"
                                                 ) as r:
                                                     requestJson = await r.json()
                             except discord.ext.commands.MemberNotFound:

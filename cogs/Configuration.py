@@ -11,7 +11,7 @@ from menus import (
     RoleSelect,
     SettingsSelectMenu,
     YesNoColourMenu,
-    YesNoMenu,
+    YesNoMenu, CustomExecutionButton,
 )
 from utils.utils import create_invis_embed, invis_embed, request_response
 
@@ -2548,7 +2548,32 @@ class Configuration(commands.Cog):
             description="<:ArrowRight:1035003246445596774> Your configuration has been changed.",
             color=0x71C15F,
         )
-        await ctx.send(embed=successEmbed)
+        view = discord.ui.View()
+
+        run_again = False
+        async def callback(interaction: discord.Interaction, button: discord.ui.Button):
+            nonlocal run_again
+            run_again = True
+            await interaction.response.send_message(embed=discord.Embed(
+                title="<:EditIcon:1042550862834323597> Change Configuration",
+                description=f"<a:Loading:1044067865453670441> Currently loading your configuration..",
+                color=0x2A2D31,
+            ), ephemeral=True, delete_after=4)
+            button.view.stop()
+
+        view.add_item(
+            CustomExecutionButton(
+                ctx.author.id,
+                label="Rerun",
+                style=discord.ButtonStyle.grey,
+                func=callback
+            )
+        )
+
+        await ctx.send(embed=successEmbed, view=view)
+        await view.wait()
+        if run_again:
+            await ctx.invoke(ctx.command)
 
     @commands.hybrid_command(
         name="setup",

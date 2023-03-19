@@ -487,6 +487,8 @@ async def check_reminders():
     async for guildObj in bot.reminders.db.find({}):
         for item in guildObj["reminders"]:
             try:
+                if item.get('paused') is True:
+                    continue
                 dT = datetime.datetime.now()
                 interval = item["interval"]
                 full = None

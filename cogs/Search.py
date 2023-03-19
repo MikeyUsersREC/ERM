@@ -402,7 +402,7 @@ class Search(commands.Cog):
                         json={"usernames": [user]},
                     ) as r:
                         robloxUser = await r.json()
-                        if "success" not in robloxUser.keys():
+                        if "success" not in robloxUser.keys() and len(robloxUser['data']) != 0:
                             Id = robloxUser["data"][0]["id"]
                             async with session.get(
                                 f"https://users.roblox.com/v1/users/{Id}"

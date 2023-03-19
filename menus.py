@@ -1209,7 +1209,7 @@ class ManageReminders(discord.ui.View):
         self.user_id = user_id
         self.modal: typing.Union[None, CustomModal] = None
 
-    @discord.ui.button(label="Create a reminder", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="Create reminder", style=discord.ButtonStyle.green)
     async def create(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
             for item in self.children:
@@ -1258,7 +1258,37 @@ class ManageReminders(discord.ui.View):
                 ephemeral=True,
             )
 
-    @discord.ui.button(label="Delete a reminder", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Pause reminder", style=discord.ButtonStyle.blurple)
+    async def pause(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            self.modal = CustomModal(
+                f"Create a reminder",
+                [
+                    (
+                        "id_value",
+                        discord.ui.TextInput(
+                            label="ID",
+                            placeholder="ID of your reminder",
+                            required=True,
+                        ),
+                    ),
+                ],
+            )
+            await interaction.response.send_modal(self.modal)
+            await self.modal.wait()
+            self.value = "pause"
+            await interaction.message.edit(view=self)
+            self.stop()
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(
+                embed=create_invis_embed(
+                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
+                ),
+                ephemeral=True,
+            )
+
+    @discord.ui.button(label="Delete reminder", style=discord.ButtonStyle.red)
     async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
             await interaction.response.defer()
