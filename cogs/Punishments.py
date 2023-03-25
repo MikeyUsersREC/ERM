@@ -307,7 +307,14 @@ class Punishments(commands.Cog):
 
 
 
+
         stop_exception = False
+
+        async for document in bot.consent.db.find({"_id": ctx.author.id}):
+            if document.get('ai_predictions') is not None:
+                if document.get('ai_predictions') is False:
+                    stop_exception = True
+
         try:
             agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
         except:
