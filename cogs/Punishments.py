@@ -376,6 +376,7 @@ class Punishments(commands.Cog):
             print(recommended.prediction)
             if type.lower() != recommended.prediction.lower():
                 if recommended.prediction.lower() in already_types:
+                    stored_type = type
                     view = discord.ui.View()
                     async def change_type(interaction: discord.Interaction, button: discord.ui.Button):
                         await interaction.response.send_message(embed=discord.Embed(
@@ -429,9 +430,47 @@ class Punishments(commands.Cog):
                     async def keep_type(interaction: discord.Interaction, button: discord.ui.Button):
                         await interaction.response.send_message(embed=discord.Embed(
                             title="<:CheckIcon:1035018951043842088> Success!",
-                            description=f"<:ArrowRight:1035003246445596774> Successfully kept the type of this punishment as a **{type}**.",
+                            description=f"<:ArrowRight:1035003246445596774> Successfully kept the type of this punishment as a **{stored_type}**.",
                             color=0x71C15F
                         ), ephemeral=True)
+                        type = stored_type
+                        if settings:
+                            warning_type = None
+                            for warning in warning_types:
+                                if isinstance(warning, str):
+                                    if warning.lower() == type.lower():
+                                        warning_type = warning
+                                elif isinstance(warning, dict):
+                                    if warning["name"].lower() == type.lower():
+                                        warning_type = warning
+
+                            if isinstance(warning_type, str):
+                                if settings["customisation"].get("kick_channel"):
+                                    if settings["customisation"]["kick_channel"] != "None":
+                                        if type.lower() == "kick":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["kick_channel"]
+                                            )
+                                if settings["customisation"].get("ban_channel"):
+                                    if settings["customisation"]["ban_channel"] != "None":
+                                        if type.lower() == "ban":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["ban_channel"]
+                                            )
+                                if settings["customisation"].get("bolo_channel"):
+                                    if settings["customisation"]["bolo_channel"] != "None":
+                                        if type.lower() == "bolo":
+                                            designated_channel = bot.get_channel(
+                                                settings["customisation"]["bolo_channel"]
+                                            )
+                            else:
+                                if isinstance(warning_type, dict):
+                                    if "channel" in warning_type.keys():
+                                        if warning_type["channel"] != "None":
+                                            designated_channel = bot.get_channel(
+                                                warning_type["channel"]
+                                            )
+
                         button.view.stop()
 
                     view.add_item(CustomExecutionButton(ctx.author.id, "Change Type", discord.ButtonStyle.green, func=change_type))
@@ -442,10 +481,18 @@ class Punishments(commands.Cog):
                     )
                     msg = await ctx.send(embed=embed, view=view)
                     await view.wait()
+                    try:
+                        type = stored_type
+                        if changed_type:
+                            type = changed_type
+                    except:
+                        type = stored_type
+
             else:
                 msg = None
         else:
             msg = None
+        print(type)
         try:
             if changed_type:
                 type = changed_type
@@ -999,7 +1046,7 @@ class Punishments(commands.Cog):
                 view = RequestDataView(ctx.author.id, "Username", "Username")
                 await msg.edit(embed=embed, view=view)
                 await view.wait()
-                value = view.value
+                value = view.modal.data.value
                 selected = None
                 async for document in bot.warnings.db.find({"_id": value.lower()}):
                     selected = document
@@ -1029,7 +1076,7 @@ class Punishments(commands.Cog):
                 view = RequestDataView(ctx.author.id, "Punishment Type", "Punishment Type")
                 await msg.edit(embed=embed, view=view)
                 await view.wait()
-                value = view.value
+                value = view.modal.data.value
                 selected = None
                 async for document in bot.warnings.db.find({"warnings": {"$elemMatch": {"Type": {"$regex": value, "$options": "i"}, "Guild": ctx.guild.id}}}):
                     if document.get('warnings'):
