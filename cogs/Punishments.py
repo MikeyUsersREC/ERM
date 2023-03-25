@@ -750,16 +750,18 @@ class Punishments(commands.Cog):
         try:
             menu.add_pages(Embeds)
             menu._pc = _PageController(menu.pages)
-            if msg:
-                menu._msg = await msg.edit(embed=Embeds[0], view=menu._ViewMenu__view)
-            else:
+            try:
+                if msg:
+                    menu._msg = await msg.edit(embed=Embeds[0], view=menu._ViewMenu__view)
+                else:
+                    menu._msg = await ctx.send(embed=Embeds[0], view=menu._ViewMenu__view)
+            except:
                 menu._msg = await ctx.send(embed=Embeds[0], view=menu._ViewMenu__view)
-        except Exception as e:
-            await invis_embed(
+        except:
+            return await invis_embed(
                 ctx,
                 "This user does not exist on the Roblox platform. Please try again with a valid username.",
             )
-            raise Exception(e)
 
     @commands.hybrid_group(
         name="punishment",
@@ -2131,12 +2133,11 @@ class Punishments(commands.Cog):
         try:
             menu.add_pages(Embeds)
             await menu.start()
-        except Exception as e:
-            await invis_embed(
+        except:
+            return await invis_embed(
                 ctx,
                 "This user does not exist on the Roblox platform. Please try again with a valid username.",
             )
-            raise Exception(e)
 
 
 async def setup(bot):
