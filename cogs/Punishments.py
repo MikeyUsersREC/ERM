@@ -2130,11 +2130,12 @@ class Punishments(commands.Cog):
         try:
             menu.add_pages(Embeds)
             await menu.start()
-        except:
-            return await invis_embed(
+        except Exception as e:
+            await invis_embed(
                 ctx,
                 "This user does not exist on the Roblox platform. Please try again with a valid username.",
             )
+            raise Exception(e)
 
 
 async def setup(bot):
