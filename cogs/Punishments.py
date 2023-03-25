@@ -754,7 +754,7 @@ class Punishments(commands.Cog):
                 menu._msg = await msg.edit(embed=Embeds[0], view=menu._ViewMenu__view)
             else:
                 menu._msg = await ctx.send(embed=Embeds[0], view=menu._ViewMenu__view)
-        except:
+        except Exception as e:
             await invis_embed(
                 ctx,
                 "This user does not exist on the Roblox platform. Please try again with a valid username.",
