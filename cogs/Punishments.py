@@ -359,6 +359,9 @@ class Punishments(commands.Cog):
             except:
                 stop_exception = True
 
+        changed_type = None
+        did_change_type = None
+
         if type.lower() in [w.lower() for w in generic_warning_types] and not stop_exception:
             if not recommended.modified:
                 embed = discord.Embed(
@@ -369,9 +372,10 @@ class Punishments(commands.Cog):
             else:
                 embed = discord.Embed(
                     title="<:SConductTitle:1053359821308567592> Recommended Punishment",
-                    description=f"<:ArrowRight:1035003246445596774> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. This is because this user has been identified as a repeat offender. Would you like to change the type of this punishment to a {recommended.prediction}?",
+                    description=f"<:ArrowRight:1035003246445596774> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. This is because this user has been identified as a repeat offender. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/BGfyfqU5fx). You can disable this feature by using `/consent` at any time.",
                     color=0x2A2D31
                 )
+
             print(type)
             print(recommended.prediction)
             if type.lower() != recommended.prediction.lower():
@@ -384,8 +388,8 @@ class Punishments(commands.Cog):
                             description=f"<:ArrowRight:1035003246445596774> Successfully changed the type of this punishment to a **{recommended.prediction}**.",
                             color=0x71C15F
                         ), ephemeral=True)
-                        global did_change_type
-                        global changed_type
+                        nonlocal changed_type
+                        nonlocal did_change_type
                         changed_type = recommended.prediction
                         did_change_type = True
                         print(recommended.prediction)
@@ -513,9 +517,6 @@ class Punishments(commands.Cog):
             data = [requestJson]
 
         Embeds = []
-        if ctx.channel.id == 1057960689639116860:
-            await ctx.send(f"type: {type}\nchanged type: {vars().get('changed_type')}\ndid change type: {vars().get('did_change_type')}\nstored type: {vars().get('stored_type')}\nwarning type: {vars().get('warning_type')}\n")
-
 
         for dataItem in data:
             embed = discord.Embed(
