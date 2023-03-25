@@ -54,6 +54,7 @@ class Bot(commands.AutoShardedBot):
             459374864067723275,
             528805861762662400,
             877195103335231558,
+            333991360199917568
         ]:  # Implement your own conditions here
             return True
 

@@ -143,7 +143,7 @@ class Privacy(commands.Cog):
                             {"_id": ctx.author.id, "ai_predictions": True}
                         )
                     else:
-                        selected["punishments"] = True
+                        selected["ai_predictions"] = True
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",
@@ -159,7 +159,7 @@ class Privacy(commands.Cog):
                             {"_id": ctx.author.id, "ai_predictions": False}
                         )
                     else:
-                        selected["punishments"] = False
+                        selected["ai_predictions"] = False
                         await bot.consent.update_by_id(selected)
                     embed = discord.Embed(
                         title="<:CheckIcon:1035018951043842088> Success!",

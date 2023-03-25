@@ -1,19 +1,33 @@
 import asyncio
 
 import uvicorn
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Header, HTTPException
 from discord.ext import commands
 import discord
 from erm import Bot
+from typing import Annotated
+from decouple import config
 
 class APIRoutes:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.router =  APIRouter()
-        self.router.add_api_route("/status", self.get_status)
+        self.router = APIRouter()
+        for i in vars(self):
+            if i.startswith(('get_', 'post_', 'patch_', 'delete')) and not i.startswith("_"):
+                self.router.add_api_route(f"/{i.replace('get_', '')}", getattr(self, i), methods=[i.split('_')[0].upper()])
+
     def get_status(self):
         return {"guilds": len(self.bot.guilds), "ping": round(self.bot.latency * 1000)}
 
+    def get_token(self, authorization: Annotated[str | None, Header()]):
+        if authorization != config("API_PRIVATE_KEY"):
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+
+
+        return {
+            "token": "token"
+        }
 
 
 api = FastAPI()
