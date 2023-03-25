@@ -384,8 +384,10 @@ class Punishments(commands.Cog):
                             description=f"<:ArrowRight:1035003246445596774> Successfully changed the type of this punishment to a **{recommended.prediction}**.",
                             color=0x71C15F
                         ), ephemeral=True)
+                        global did_change_type
                         global changed_type
                         changed_type = recommended.prediction
+                        did_change_type = True
                         print(recommended.prediction)
                         type = recommended.prediction
                         if settings:
@@ -483,7 +485,7 @@ class Punishments(commands.Cog):
                     await view.wait()
                     try:
                         type = stored_type
-                        if changed_type:
+                        if changed_type and did_change_type:
                             type = changed_type
                     except:
                         type = stored_type
@@ -494,7 +496,7 @@ class Punishments(commands.Cog):
             msg = None
         print(type)
         try:
-            if changed_type:
+            if changed_type and did_change_type:
                 type = changed_type
         except (UnboundLocalError, NameError):
             pass
