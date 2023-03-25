@@ -513,6 +513,9 @@ class Punishments(commands.Cog):
             data = [requestJson]
 
         Embeds = []
+        if ctx.channel.id == 1057960689639116860:
+            await ctx.send(f"type: {type}\nchanged type: {vars().get('changed_type')}\ndid change type: {vars().get('did_change_type')}\nstored type: {vars().get('stored_type')}\nwarning type: {vars().get('warning_type')}\n")
+
 
         for dataItem in data:
             embed = discord.Embed(
