@@ -449,19 +449,19 @@ class Punishments(commands.Cog):
                             if isinstance(warning_type, str):
                                 if settings["customisation"].get("kick_channel"):
                                     if settings["customisation"]["kick_channel"] != "None":
-                                        if type.lower() == "kick":
+                                        if warning_type.lower() == "kick":
                                             designated_channel = bot.get_channel(
                                                 settings["customisation"]["kick_channel"]
                                             )
                                 if settings["customisation"].get("ban_channel"):
                                     if settings["customisation"]["ban_channel"] != "None":
-                                        if type.lower() == "ban":
+                                        if warning_type.lower() == "ban":
                                             designated_channel = bot.get_channel(
                                                 settings["customisation"]["ban_channel"]
                                             )
                                 if settings["customisation"].get("bolo_channel"):
                                     if settings["customisation"]["bolo_channel"] != "None":
-                                        if type.lower() == "bolo":
+                                        if warning_type.lower() == "bolo":
                                             designated_channel = bot.get_channel(
                                                 settings["customisation"]["bolo_channel"]
                                             )
@@ -513,6 +513,8 @@ class Punishments(commands.Cog):
             data = [requestJson]
 
         Embeds = []
+        if ctx.channel.id == 1057960689639116860:
+            await ctx.send(f"type: {type}\nchanged type: {vars().get('changed_type')}\ndid change type: {vars().get('did_change_type')}\nstored type: {vars().get('stored_type')}\nwarning type: {vars().get('warning_type')}\n")
 
 
         for dataItem in data:
