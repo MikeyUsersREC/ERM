@@ -36,6 +36,7 @@ class CustomCommands(commands.Cog):
         description="Manage your custom commands.",
         extras={"category": "Custom Commands"},
     )
+    @is_management()
     async def custom_manage(self, ctx):
         bot = self.bot
         Data = await bot.custom_commands.find_by_id(ctx.guild.id)
