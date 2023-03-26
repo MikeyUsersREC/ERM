@@ -1657,7 +1657,7 @@ class Configuration(commands.Cog):
 
                         channel = view.value
                         if channel:
-                            channel = channel[0].id
+                            channel = channel[0]
                         else:
                             return await ctx.send(
                                 embed=create_invis_embed(

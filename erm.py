@@ -96,6 +96,7 @@ class Bot(commands.AutoShardedBot):
         bot.views = Document(bot.db, "views")
         bot.synced_users = Document(bot.db, "synced_users")
         bot.consent = Document(bot.db, "consent")
+        bot.api_tokens = Document(bot.db, "api_tokens")
 
         Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
         Events = [m.name for m in iter_modules(["events"], prefix="events.")]
