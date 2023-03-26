@@ -35,7 +35,7 @@ class AI:
                         confidence=res["confidence"]
                     )
 
-            weights = {"Warning": 1, "Kick": 3, "Ban": 9, "BOLO": 9}
+            weights = {"Warning": 1, "Kick": 3, "Ban": 4, "BOLO": 4}
             score = weights.get(result[0]["prediction"], 0) + sum([weights.get(x, 0) for x in past])
             print(score)
             if result[-1]["prediction"] == "BOLO":
@@ -46,7 +46,7 @@ class AI:
                     confidence=result[-1]["confidence"],
                     modified=True
                 )
-            if score < 4:
+            if score < 3:
                 # return "Warning"
                 return Punishment(
                     text=result[-1]["text"],
@@ -54,7 +54,7 @@ class AI:
                     confidence=result[-1]["confidence"],
                     modified=True
                 )
-            elif score <= 8:
+            elif (score < 4) or score <= 5 and result[-1]["prediction"] == "Kick":
                 return Punishment(
                     text=result[-1]["text"],
                     prediction="Kick",
