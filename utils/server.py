@@ -110,7 +110,7 @@ class Server(commands.Cog):
                 "POST", self.get_mutual_guilds
             ),
             {
-                "localhost": aiohttp_cors.ResourceOptions(
+                "*": aiohttp_cors.ResourceOptions(
                     allow_credentials=True, expose_headers="*", allow_headers="*"
                 )
             },
@@ -121,7 +121,7 @@ class Server(commands.Cog):
                 "GET", self.get_guild_settings
             ),
             {
-                "localhost": aiohttp_cors.ResourceOptions(
+                "*": aiohttp_cors.ResourceOptions(
                     allow_credentials=True, expose_headers="*", allow_headers="*"
                 )
             },
@@ -129,10 +129,10 @@ class Server(commands.Cog):
 
         cors.add(
             cors.add(app.router.add_resource("/update-settings")).add_route(
-                "POST", self.update_guild_settings
+                "GET", self.update_guild_settings
             ),
             {
-                "localhost": aiohttp_cors.ResourceOptions(
+                "*": aiohttp_cors.ResourceOptions(
                     allow_credentials=True, expose_headers="*", allow_headers="*"
                 )
             },
@@ -143,7 +143,7 @@ class Server(commands.Cog):
                 "GET", self.get_last_warnings
             ),
             {
-                "localhost": aiohttp_cors.ResourceOptions(
+                "*": aiohttp_cors.ResourceOptions(
                     allow_credentials=True, expose_headers="*", allow_headers="*"
                 )
             },
