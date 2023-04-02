@@ -3,8 +3,27 @@ import discord
 from aiohttp import web
 from discord.ext import commands
 
-from erm import management_predicate, staff_predicate
+from erm import management_predicate
 from helpers import MockContext
+
+
+async def is_staff(ctx: commands.Context):
+    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+    if guild_settings:
+        if "role" in guild_settings["staff_management"].keys():
+            if guild_settings["staff_management"]["role"] != "":
+                if isinstance(guild_settings["staff_management"]["role"], list):
+                    for role in guild_settings["staff_management"]["role"]:
+                        if role in [role.id for role in ctx.author.roles]:
+                            return True
+                elif isinstance(guild_settings["staff_management"]["role"], int):
+                    if guild_settings["staff_management"]["role"] in [
+                        role.id for role in ctx.author.roles
+                    ]:
+                        return True
+    if ctx.author.guild_permissions.manage_messages:
+        return True
+    return False
 
 
 class Server(commands.Cog):
@@ -80,7 +99,7 @@ class Server(commands.Cog):
                 permission_level = 0
                 if await management_predicate(mock_context):
                     permission_level = 2
-                elif await staff_predicate(mock_context):
+                elif await is_staff(mock_context):
                     permission_level = 1
 
                 if permission_level > 0:
@@ -120,7 +139,7 @@ class Server(commands.Cog):
         permission_level = 0
         if await management_predicate(mock_context):
             permission_level = 2
-        elif await staff_predicate(mock_context):
+        elif await is_staff(mock_context):
             permission_level = 1
 
         return web.json_response({
