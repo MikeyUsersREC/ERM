@@ -3,20 +3,28 @@ import discord
 from discord.ext import commands
 
 from menus import EnterRobloxUsername, LinkPathwayMenu, Verification
-from utils.utils import invis_embed
 
 
-class ModerationSync(commands.Cog):
+class GameSync(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(
+    @commands.hybrid_group(
         name="link",
-        description="Link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM",
-        extras={"category": "Moderation Sync"},
+        description="Link your external accounts to your Discord account via verification methods",
+        extras={"category": "Game Sync"},
         usage="link",
     )
     async def link(self, ctx):
+        pass
+
+    @link.command(
+        name="roblox",
+        description="Link your Roblox account with ERM.",
+        extras={"category": "Game Sync"},
+        usage="link roblox",
+    )
+    async def link_roblox(self, ctx: commands.Context):
         bot = self.bot
         is_erm_verified = False
         erm_roblox_id = 0
@@ -26,26 +34,22 @@ class ModerationSync(commands.Cog):
                 erm_roblox_id = document.get("roblox")
 
         if is_erm_verified:
-            embed = discord.Embed(
-                title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
-                description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM.\n\n<:ArrowRight:1035003246445596774> You seem to be already verified with ERM! Would you like to use your account linked with ERM or use Bloxlink?",
-                color=0x2A2D31,
-            )
             view = LinkPathwayMenu(ctx.author.id)
-            await ctx.send(embed=embed, view=view)
+            await ctx.reply(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you can link your account with ERM or Bloxlink. Chose an option below. You appear to already be verified with ERM.",
+                view=view,
+            )
             timeout = await view.wait()
             if timeout:
                 return
 
             pathway = view.value
         else:
-            embed = discord.Embed(
-                title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
-                description=f"<:ArrowRight:1035003246445596774> You can link your Roblox account to your Discord account via verification methods such as Bloxlink and ERM. Please pick a verification provider to continue this process with.",
-                color=0x2A2D31,
-            )
             view = LinkPathwayMenu(ctx.author.id)
-            await ctx.send(embed=embed, view=view)
+            verify_msg = await ctx.reply(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you can link your account with ERM or Bloxlink. Chose an option below.",
+                view=view,
+            )
             timeout = await view.wait()
             if timeout:
                 return
@@ -76,11 +80,6 @@ class ModerationSync(commands.Cog):
                         status = None
 
                 if status:
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description=f"<:ArrowRight:1035003246445596774> You have successfully linked your Roblox account to your Discord account!",
-                        color=0x71C15F,
-                    )
                     if await bot.synced_users.find_by_id(ctx.author.id):
                         await bot.synced_users.update_by_id(
                             {"_id": ctx.author.id, "roblox": verified_user}
@@ -89,15 +88,16 @@ class ModerationSync(commands.Cog):
                         await bot.synced_users.insert(
                             {"_id": ctx.author.id, "roblox": verified_user}
                         )
-                    await ctx.send(embed=embed)
-                elif status is False:
-                    embed = discord.Embed(
-                        title="<:SyncIcon:1071821068551073892> ROBLOX Account Linking",
-                        description=f"<:ArrowRight:1035003246445596774> You have not verified your account with Bloxlink. You can verify your account with Bloxlink by following the instructions below.\n\n<:ArrowRight:1035003246445596774> Follow [this link](https://blox.link/dashboard/verifications) to verify your account with Bloxlink. If you have verified, click **Done** below.",
-                        color=0x2A2D31,
+                    await verify_msg.edit(
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've linked your account!",
+                        view=None,
                     )
+                elif status is False:
                     view = Verification(ctx.author.id)
-                    await ctx.send(embed=embed, view=view)
+                    await verify_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you're not verified with either Bloxlink or ERM! If you have verified, click **Done** below",
+                        view=view,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -129,26 +129,24 @@ class ModerationSync(commands.Cog):
 
                 if user is None and verified_user is None:
                     view = EnterRobloxUsername(ctx.author.id)
-                    embed = discord.Embed(
-                        title="<:LinkIcon:1044004006109904966> ERM Verification",
-                        description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
-                        color=0x2A2D31,
+                    await verify_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, click the **Verify** button to start you verification process.",
+                        view=view,
                     )
-                    embed.set_footer(text="ROBLOX Verification provided by ERM")
-                    await ctx.send(embed=embed, view=view)
                     await view.wait()
                     if view.modal:
                         try:
                             user = view.modal.name.value
                         except:
-                            return await invis_embed(
-                                ctx,
-                                "You have not submitted a username. Please try again.",
+                            return await verify_msg.edit(
+                                content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you have not submitted a username. Please try again.",
+                                view=None,
                             )
-                    else:
-                        return await invis_embed(
-                            ctx, "You have not submitted a username. Please try again."
-                        )
+                        else:
+                            return await verify_msg.edit(
+                                content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you have not submitted a username. Please try again.",
+                                view=None,
+                            )
                 else:
                     if user is None:
                         user = verified_user["roblox"]
@@ -158,11 +156,6 @@ class ModerationSync(commands.Cog):
                         verified = False
 
                 async def after_verified(roblox_user):
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description=f"<:ArrowRight:1035003246445596774> You have successfully linked your Roblox account to your Discord account!",
-                        color=0x71C15F,
-                    )
                     if await bot.synced_users.find_by_id(ctx.author.id):
                         await bot.synced_users.update_by_id(
                             {"_id": ctx.author.id, "roblox": str(roblox_user)}
@@ -171,7 +164,9 @@ class ModerationSync(commands.Cog):
                         await bot.synced_users.insert(
                             {"_id": ctx.author.id, "roblox": str(roblox_user)}
                         )
-                    await ctx.send(embed=embed)
+                    await verify_msg.edit(
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, nice! I've verified your account as **{roblox_user}**."
+                    )
 
                 if verified:
                     async with aiohttp.ClientSession() as session:
@@ -197,9 +192,8 @@ class ModerationSync(commands.Cog):
                                         roblox_user = await r.json()
                                         roblox_id = roblox_user["id"]
                                     else:
-                                        return await invis_embed(
-                                            ctx,
-                                            "That is not a valid roblox username. Please try again.",
+                                        return await verify_msg.edit(
+                                            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, that's not a valid ROBLOX user."
                                         )
 
                         else:
@@ -216,14 +210,22 @@ class ModerationSync(commands.Cog):
                         }
                     )
 
-                    embed = discord.Embed(color=0x2A2D31)
-                    embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
-                    embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
-                    embed.set_footer(
-                        text=f"ROBLOX Verification provided by Emergency Response Management"
+                    embed = discord.Embed(color=0xED4348)
+                    embed.title = (
+                        f"<:ERMSecurity:1113209656370802879> Prove your Identity"
                     )
+                    embed.description = f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 1:** Go to [placeholder link](https://www.roblox.com/games/11747455621/Verification)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 2:** Click **Authorize**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 3:** Click **Done**"
+                    embed.set_author(
+                        name=ctx.author.name,
+                        icon_url=ctx.author.display_avatar.url,
+                    )
+                    embed.set_thumbnail(url=ctx.guild.icon.url)
                     view = Verification(ctx.author.id)
-                    await ctx.send(embed=embed, view=view)
+                    await verify_msg.edit(
+                        embed=None,
+                        view=view,
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, one last step! Join our verification game.",
+                    )
                     await view.wait()
                     if view.value:
                         if view.value == "done":
@@ -233,20 +235,53 @@ class ModerationSync(commands.Cog):
                                 if new_data["isVerified"]:
                                     return await after_verified(roblox_user["id"])
                                 else:
-                                    await invis_embed(
-                                        ctx,
-                                        "You have not verified using the verification game. Please retry.",
+                                    await verify_msg.edit(
+                                        content=f"You've not verified in the verification game."
                                     )
                                     return await run_pathway()
                             else:
-                                await invis_embed(
-                                    ctx,
-                                    "You have not verified using the verification game. Please retry.",
+                                await verify_msg.edit(
+                                    content=f"You've not verified in the verification game."
                                 )
                                 return await run_pathway()
 
             await run_pathway()
 
+    # @link.group(
+    #     name="fivem",
+    #     description="Link your FiveM subsidiaries to ERM.",
+    #     extras={
+    #         "category": "Game Sync"
+    #     },
+    #     usage="link fivem"
+    # )
+    # async def fivem(self, ctx: commands.Context):
+    #     pass
+    #
+    # @fivem.command(
+    #     name="account",
+    #     description="Link your FiveM account to ERM.",
+    #     extras={
+    #         "category": "Game Sync",
+    #         "ephemeral": True
+    #     },
+    #     usage="link fivem account"
+    # )
+    # async def fivem_account(self, ctx: commands.Context):
+    #
+    #     verification = await self.bot.link_strings.find_one({
+    #         "user": ctx.author.id,
+    #         "type": "user"
+    #     })
+    #
+    #
+    #
+    #     embed = discord.Embed(
+    #         title="<:SyncIcon:1071821068551073892> FiveM Account Linking",
+    #         description=f"<:ArrowRight:1035003246445596774> To link your FiveM account, join a server with the ERM Systems plugin and execute the following command:\n\n",
+    #         color=0xED4348,
+    #     )
+
 
 async def setup(bot):
-    await bot.add_cog(ModerationSync(bot))
+    await bot.add_cog(GameSync(bot))

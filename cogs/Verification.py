@@ -22,15 +22,13 @@ class Verification(commands.Cog):
         bot = self.bot
         settings = await bot.settings.find_by_id(ctx.guild.id)
         if not settings:
-            return await invis_embed(
-                ctx,
-                "This server is currently not setup. Please tell a server administrator to run `/setup` to allow the usage of this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup."
             )
 
         if not settings["verification"]["enabled"]:
-            return await invis_embed(
-                ctx,
-                "This server has verification disabled. Please tell a server administrator to enable verification in `/config change`.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has **Verification** disabled."
             )
 
         verified = False
@@ -47,25 +45,23 @@ class Verification(commands.Cog):
 
         if user is None and verified_user is None:
             view = EnterRobloxUsername(ctx.author.id)
-            embed = discord.Embed(
-                title="<:LinkIcon:1044004006109904966> ERM Verification",
-                description="<:ArrowRight:1035003246445596774> Click `Verify` and input your ROBLOX username.",
-                color=0x2A2D31,
+            msg = await ctx.reply(
+                content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** let's get you verified! Enter your ROBLOX username.",
+                view=view,
             )
-            embed.set_footer(text="ROBLOX Verification provided by ERM")
-            await ctx.send(embed=embed, view=view)
             await view.wait()
             if view.modal:
                 try:
                     user = view.modal.name.value
                 except:
-                    return await invis_embed(
-                        ctx, "You have not submitted a username. Please try again."
+                    return await msg.edit(
+                        f":ERMClose:1111101633389146223>  **{ctx.author.name},** you did not submit a username."
                     )
             else:
-                return await invis_embed(
-                    ctx, "You have not submitted a username. Please try again."
+                return await msg.edit(
+                    f":ERMClose:1111101633389146223>  **{ctx.author.name},** you did not submit a username."
                 )
+
         else:
             if user is None:
                 user = verified_user["roblox"]
@@ -113,15 +109,14 @@ class Verification(commands.Cog):
                 await ctx.author.edit(nick=f"{roblox_user['name']}")
             except:
                 pass
-            success_embed = discord.Embed(
-                title=f"<:ERMWhite:1044004989997166682> Welcome {roblox_user['name']}!",
-                color=0x2A2D31,
+            embed = discord.Embed(
+                description="<:ERMModify:1111100050718867577> **PRO TIP:** You can now run `/link` to get notified of when you're moderated.",
+                color=0xED4348,
             )
-            success_embed.description = f"<:ArrowRight:1035003246445596774> You've been verified as <:LinkIcon:1044004006109904966> **{roblox_user['name']}** in **{ctx.guild.name}**."
-            success_embed.set_footer(
-                text="ROBLOX Verification provided to you by Emergency Response Management (ERM)"
+            return await ctx.reply(
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** nice job! You've verified that you're **{roblox_user['name']}**",
+                embed=embed,
             )
-            return await ctx.send(embed=success_embed)
 
         if verified:
             async with aiohttp.ClientSession() as session:
@@ -147,16 +142,19 @@ class Verification(commands.Cog):
                                 roblox_user = await r.json()
                                 roblox_id = roblox_user["id"]
                             else:
-                                return await invis_embed(
-                                    ctx,
-                                    "That is not a valid roblox username. Please try again.",
+                                return await ctx.reply(
+                                    f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** I could not find your ROBLOX account!"
                                 )
 
                 else:
                     roblox_user = await r.json()
-                    roblox_user = roblox_user["data"][0]
-                    roblox_id = roblox_user["id"]
-
+                    try:
+                        roblox_user = roblox_user["data"][0]
+                        roblox_id = roblox_user["id"]
+                    except:
+                        return await ctx.reply(
+                            f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** I could not find your ROBLOX account!"
+                        )
         if not verified:
             await bot.verification.upsert(
                 {
@@ -166,14 +164,20 @@ class Verification(commands.Cog):
                 }
             )
 
-            embed = discord.Embed(color=0x2A2D31)
-            embed.title = f"<:LinkIcon:1044004006109904966> {roblox_user['name']}, let's get you verified!"
-            embed.description = f"<:ArrowRight:1035003246445596774> Go to our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:ArrowRight:1035003246445596774> Click on <:Resume:1035269012445216858>\n<:ArrowRight:1035003246445596774> Verify your ROBLOX account in the game.\n<:ArrowRight:1035003246445596774> Click **Done**!"
-            embed.set_footer(
-                text=f"ROBLOX Verification provided by Emergency Response Management"
+            embed = discord.Embed(color=0xED4348)
+            embed.title = f"<:ERMSecurity:1113209656370802879> Prove your Identity"
+            embed.description = f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 1:** Join our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 2:** Wait to be kicked in-game.\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 3:** Click on the **Done** button!"
+
+            embed.set_author(
+                name=ctx.author.name,
+                icon_url=ctx.author.display_avatar.url,
             )
             view = VerifyView(ctx.author.id)
-            await ctx.send(embed=embed, view=view)
+            await ctx.reply(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** one last step! Join our verification game.",
+                embed=embed,
+                view=view,
+            )
             await view.wait()
             if view.value:
                 if view.value == "done":
@@ -197,15 +201,14 @@ class Verification(commands.Cog):
                         if new_data["isVerified"]:
                             return await after_verified(roblox_user)
                         else:
-                            return await invis_embed(
-                                ctx,
-                                "You have not verified using the verification game. Please retry by running `/verify` again.",
+                            return await ctx.reply(
+                                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** it doesn't look like you verified! Try again."
                             )
-                    else:
-                        return await invis_embed(
-                            ctx,
-                            "You have not verified using the verification game. Please retry by running `/verify` again.",
-                        )
+
+                else:
+                    return await ctx.reply(
+                        f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** it doesn't look like you verified! Try again."
+                    )
 
 
 async def setup(bot):

@@ -1,9 +1,23 @@
 import discord
 from discord.ext import commands
 
-from erm import generator, is_management
-from menus import ChannelSelect, ManageReminders, RoleSelect, YesNoColourMenu, YesNoMenu
-from utils.utils import invis_embed, removesuffix, request_response
+from erm import is_management
+from menus import (
+    ChannelSelect,
+    ManageReminders,
+    RoleSelect,
+    YesNoColourMenu,
+    YesNoMenu,
+    CustomSelectMenu,
+    CustomModalView,
+)
+from utils.utils import (
+    generator,
+    invis_embed,
+    removesuffix,
+    request_response,
+    failure_embed,
+)
 
 
 class Reminders(commands.Cog):
@@ -27,39 +41,95 @@ class Reminders(commands.Cog):
         if Data is None:
             Data = {"_id": ctx.guild.id, "reminders": []}
 
-        embed = discord.Embed(
-            title="<:Resume:1035269012445216858> Manage reminders", color=0x2A2D31
+        view = CustomSelectMenu(
+            ctx.author.id,
+            [
+                discord.SelectOption(
+                    label="Create",
+                    value="create",
+                    description="Create a reminder.",
+                    emoji="<:ERMAdd:1113207792854106173>",
+                ),
+                discord.SelectOption(
+                    label="List",
+                    value="list",
+                    description="List all of the reminders",
+                    emoji="<:ERMList:1111099396990435428>",
+                ),
+                discord.SelectOption(
+                    label="Pause",
+                    value="pause",
+                    description="Pause a reminder",
+                    emoji="<:ERMReminder:1113211641736208506>",
+                ),
+                discord.SelectOption(
+                    label="Delete",
+                    value="delete",
+                    description="Delete a reminder",
+                    emoji="<:ERMTrash:1111100349244264508>",
+                ),
+            ],
         )
-        for item in Data["reminders"]:
-            if len(item["message"]) > 800:
+
+        msg = await ctx.reply(
+            f"<:ERMPending:1111097561588183121> **{ctx.author.name},** select an option.",
+            view=view,
+        )
+        await view.wait()
+
+        if view.value == "list":
+            embed = discord.Embed(
+                title="<:ERMReminder:1113211641736208506> Reminders", color=0xED4348
+            )
+            embed.set_author(
+                name=ctx.author.name,
+                icon_url=ctx.author.display_avatar.url,
+            )
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+            for item in Data["reminders"]:
                 embed.add_field(
-                    name=f"<:Clock:1035308064305332224> {item['name']}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Paused:** { {True: 'Paused', False: 'Not Paused', None: 'Not Paused'}[item.get('paused')] }\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
-                    inline=False,
-                )
-            else:
-                embed.add_field(
-                    name=f"<:Clock:1035308064305332224> {item['name']}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Interval:** {item['interval']} seconds\n<:ArrowRightW:1035023450592514048> **Paused:** { {True: 'Paused', False: 'Not Paused', None: 'Not Paused'}[item.get('paused')]}\n<:ArrowRightW:1035023450592514048> **Able to be Completed:** {str(item.get('completion_ability')) if item.get('completion_ability') else 'False'}\n<:ArrowRightW:1035023450592514048> **Channel:** {item['channel']}\n<:ArrowRightW:1035023450592514048> **Message:** `{item['message']}`\n<:ArrowRightW:1035023450592514048> **ID:** {item['id']}\n<:ArrowRightW:1035023450592514048> **Last Completed:** <t:{int(item['lastTriggered'])}>",
+                    name=f"<:ERMList:1111099396990435428> {item['name']}",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Interval:** {item['interval']} seconds\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Paused:** { {True: '<:ERMCheck:1111089850720976906>', False: '<:ERMClose:1111101633389146223>', None: '<:ERMClose:1111101633389146223>'}[item.get('paused')]}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Able to be Completed:** {'<:ERMCheck:1111089850720976906>' if item.get('completion_ability') else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Channel:** <#{item['channel']}>\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **ID:** {item['id']}",
                     inline=False,
                 )
 
-        if len(embed.fields) == 0:
-            embed.add_field(
-                name="<:Clock:1035308064305332224> No reminders",
-                value="<:ArrowRightW:1035023450592514048> No reminders have been added.",
-                inline=False,
+            if len(embed.fields) == 0:
+                embed.add_field(
+                    name="<:ERMList:1111099396990435428> No reminders",
+                    value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912> No reminders have been added.",
+                    inline=False,
+                )
+
+            view = ManageReminders(ctx.author.id)
+
+            await msg.edit(
+                embed=embed,
+                view=None,
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** you are **viewing** reminders.",
             )
 
-        view = ManageReminders(ctx.author.id)
-
-        await ctx.send(embed=embed, view=view)
-        timeout = await view.wait()
-        if timeout:
-            return
-
         if view.value == "pause":
-            reminder = view.modal.id_value.value
+            view = CustomModalView(
+                ctx.author.id,
+                "Pause Reminder",
+                "Pause Reminder",
+                [
+                    (
+                        "id",
+                        discord.ui.TextInput(
+                            label="Reminder ID",
+                            min_length=1,
+                        ),
+                    )
+                ],
+            )
+            await msg.edit(
+                content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** what reminder do you want to pause?",
+                view=view,
+            )
+            await view.wait()
+            reminder = view.modal.id.value
+
             try:
                 for index, item in enumerate(Data["reminders"]):
                     if item["id"] == int(reminder):
@@ -67,29 +137,45 @@ class Reminders(commands.Cog):
                             item["paused"] = False
                             Data["reminders"][index] = item
                             await bot.reminders.upsert(Data)
-                            successEmbed = discord.Embed(
-                                title="<:CheckIcon:1035018951043842088> Reminder Resumed",
-                                description="<:ArrowRight:1035003246445596774> Your reminder has been resumed successfully.",
-                                color=0x71C15F,
+                            return await msg.edit(
+                                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** your reminder has been resumed!",
+                                view=None,
                             )
                         else:
                             item["paused"] = True
                             Data["reminders"][index] = item
                             await bot.reminders.upsert(Data)
-                            successEmbed = discord.Embed(
-                                title="<:CheckIcon:1035018951043842088> Reminder Paused",
-                                description="<:ArrowRight:1035003246445596774> Your reminder has been paused successfully.",
-                                color=0x71C15F,
+                            return await msg.edit(
+                                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** your reminder has been paused!",
+                                view=None,
                             )
-
-                        return await ctx.send(embed=successEmbed)
             except:
-                return await invis_embed(
-                    ctx,
-                    "You have not provided a correct ID. Please try again with an ID from the list.",
+                return await msg.edit(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** that is not a valid reminder ID.",
+                    view=None,
                 )
 
         if view.value == "create":
+            view = CustomModalView(
+                ctx.author.id,
+                "Create Reminder",
+                "Create Reminder",
+                [
+                    (
+                        "name",
+                        discord.ui.TextInput(
+                            label="Reminder Name",
+                            min_length=1,
+                        ),
+                    )
+                ],
+            )
+            await msg.edit(
+                content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** what do you want to call this reminder?",
+                view=view,
+            )
+            await view.wait()
+
             if view.modal:
                 timeout = await view.modal.wait()
                 if timeout:
@@ -98,31 +184,32 @@ class Reminders(commands.Cog):
                 time = view.modal.time.value
                 message = view.modal.content.value
                 name = view.modal.name.value
-
-                if time.lower().endswith("s"):
-                    time = int(removesuffix(time.lower(), "s"))
-                elif time.lower().endswith("m"):
-                    time = int(removesuffix(time.lower(), "m")) * 60
-                elif time.lower().endswith("h"):
-                    time = int(removesuffix(time.lower(), "h")) * 60 * 60
-                elif time.lower().endswith("d"):
-                    time = int(removesuffix(time.lower(), "d")) * 60 * 60 * 24
-                elif time.lower().endswith("w"):
-                    time = int(removesuffix(time.lower(), "w")) * 60 * 60 * 24 * 7
-                else:
-                    return await invis_embed(
-                        ctx, "You have not provided a correct suffix. (s/m/h/d)"
+                try:
+                    if time.lower().endswith("s"):
+                        time = int(removesuffix(time.lower(), "s"))
+                    elif time.lower().endswith("m"):
+                        time = int(removesuffix(time.lower(), "m")) * 60
+                    elif time.lower().endswith("h"):
+                        time = int(removesuffix(time.lower(), "h")) * 60 * 60
+                    elif time.lower().endswith("d"):
+                        time = int(removesuffix(time.lower(), "d")) * 60 * 60 * 24
+                    elif time.lower().endswith("w"):
+                        time = int(removesuffix(time.lower(), "w")) * 60 * 60 * 24 * 7
+                    else:
+                        return await failure_embed(
+                            ctx, "you haven't used the right time format!"
+                        )
+                except:
+                    return await ctx.reply(
+                        f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** a correct time must be provided."
                     )
 
                 view = YesNoColourMenu(ctx.author.id)
 
-                embed = discord.Embed(
-                    title="<:Resume:1035269012445216858> Reminder Completion",
-                    description="Should this reminder be able to be completed? Once it's completed, the embed will be edited appropriately to reflect this.",
-                    color=0x2A2D31,
+                await msg.edit(
+                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** do you want this reminder to be able to be completed?",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 timeout = await view.wait()
                 if timeout:
                     return
@@ -130,42 +217,35 @@ class Reminders(commands.Cog):
                 completed = view.value
 
                 view = ChannelSelect(ctx.author.id, limit=1)
-                embed = discord.Embed(
-                    title="<:Resume:1035269012445216858> Select a channel",
-                    description="Please select a channel for the reminder to be sent in.",
-                    color=0x2A2D31,
+                await msg.edit(
+                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** what channel do you want it to be sent in?",
+                    view=view,
                 )
-                await ctx.send(embed=embed, view=view)
+
                 timeout = await view.wait()
                 if timeout:
                     return
 
                 channel = view.value[0] if view.value else None
                 if not channel:
-                    return await invis_embed(
-                        ctx,
-                        "You have not selected a channel. A channel is required for for reminder creation.",
-                    )
+                    return await failure_embed(ctx, "you haven't selected a channel!")
 
                 view = YesNoMenu(ctx.author.id)
 
-                embed = discord.Embed(
-                    title="<:Resume:1035269012445216858> Mentioning a Role",
-                    description="Do you want a role to be mentioned?",
-                    color=0x2A2D31,
+                await msg.edit(
+                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** do you want to mention a role?",
+                    view=view,
                 )
 
-                await ctx.send(embed=embed, view=view)
                 roleObject = None
                 timeout = await view.wait()
                 if view.value == True:
                     view = RoleSelect(ctx.author.id)
-                    embed = discord.Embed(
-                        title="<:Resume:1035269012445216858> Select a role",
-                        description="Please select a role to be mentioned.",
-                        color=0x2A2D31,
+                    await msg.edit(
+                        content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** what roles?",
+                        view=view,
                     )
-                    await ctx.send(embed=embed, view=view)
+
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -200,39 +280,43 @@ class Reminders(commands.Cog):
                         }
                     )
                 await bot.reminders.upsert(Data)
-                successEmbed = discord.Embed(
-                    title="<:CheckIcon:1035018951043842088> Reminder Added",
-                    description="<:ArrowRight:1035003246445596774> Your reminder has been added successfully.",
-                    color=0x71C15F,
+                await msg.edit(
+                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** your reminder has been created!"
                 )
-
-                await ctx.send(embed=successEmbed)
 
         elif view.value == "delete":
-            name = (
-                await request_response(
-                    bot,
-                    ctx,
-                    "What reminder would you like to delete? (e.g. `1`)\n*Specify the ID to delete the reminder.*",
-                )
-            ).content
-
+            view = CustomModalView(
+                ctx.author.id,
+                "Delete Reminder",
+                "Delete Reminder",
+                [
+                    (
+                        "id",
+                        discord.ui.TextInput(
+                            label="Reminder ID",
+                            min_length=1,
+                        ),
+                    )
+                ],
+            )
+            await msg.edit(
+                content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** what reminder do you want to delete?",
+                view=view,
+            )
+            await view.wait()
+            name = view.modal.id.value
             try:
                 for item in Data["reminders"]:
                     if item["id"] == int(name):
                         Data["reminders"].remove(item)
                         await bot.reminders.upsert(Data)
-                        successEmbed = discord.Embed(
-                            title="<:CheckIcon:1035018951043842088> Reminder Removed",
-                            description="<:ArrowRight:1035003246445596774> Your reminder has been removed successfully.",
-                            color=0x71C15F,
+                        return await msg.edit(
+                            view=None,
+                            content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** your reminder has been deleted!",
                         )
-
-                        return await ctx.send(embed=successEmbed)
             except:
-                return await invis_embed(
-                    ctx,
-                    "You have not provided a correct ID. Please try again with an ID from the list.",
+                return await msg.edit(
+                    content=f"<:ERMClose:1111101633389146223> **{ctx.author.name},** I could not find this reminder!"
                 )
 
 

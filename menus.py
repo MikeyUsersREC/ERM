@@ -3,7 +3,7 @@ import typing
 
 import discord
 
-from utils.utils import create_invis_embed, int_invis_embed
+from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed
 
 REQUIREMENTS = ["gspread", "oauth2client"]
 try:
@@ -48,9 +48,7 @@ class Setup(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                )
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit."
             )
         await interaction.response.defer()
         self.value = "all"
@@ -64,9 +62,7 @@ class Setup(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                )
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit."
             )
         await interaction.response.defer()
         self.value = "punishments"
@@ -79,9 +75,7 @@ class Setup(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                )
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit."
             )
         await interaction.response.defer()
         self.value = "staff management"
@@ -94,9 +88,7 @@ class Setup(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                )
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit."
             )
         await interaction.response.defer()
         self.value = "shift management"
@@ -110,61 +102,51 @@ class Dropdown(discord.ui.Select):
             discord.SelectOption(
                 label="Staff Management",
                 value="staff_management",
-                emoji="<:staff:1035308057007230976>",
                 description="Inactivity Notices, and managing staff members",
             ),
             discord.SelectOption(
                 label="Anti-ping",
                 value="antiping",
-                emoji="<:MessageIcon:1035321236793860116>",
                 description="Responding to certain pings, ping immunity",
             ),
             discord.SelectOption(
                 label="Punishments",
                 value="punishments",
-                emoji="<:MalletWhite:1035258530422341672>",
                 description="Punishing community members for rule infractions",
             ),
             discord.SelectOption(
                 label="Moderation Sync",
                 value="moderation_sync",
-                emoji="<:SyncIcon:1071821068551073892>",
                 description="Syncing moderation actions from Roblox to Discord",
             ),
             discord.SelectOption(
                 label="Shift Management",
                 value="shift_management",
-                emoji="<:Search:1035353785184288788>",
                 description="Shifts (duty on, duty off), and where logs should go",
             ),
             discord.SelectOption(
                 label="Shift Types",
                 value="shift_types",
-                emoji="<:Search:1035353785184288788>",
                 description="View and customise shift types",
             ),
             discord.SelectOption(
                 label="Verification",
                 value="verification",
-                emoji="<:SettingIcon:1035353776460152892>",
                 description="Roblox Verification, simplified!",
             ),
             discord.SelectOption(
                 label="Game Logging",
                 value="game_logging",
-                emoji="<:SConductTitle:1053359821308567592>",
                 description="Game Logging! Messages, STS, Events, and more!",
             ),
             discord.SelectOption(
                 label="Customisation",
                 value="customisation",
-                emoji="<:FlagIcon:1035258525955395664>",
                 description="Colours, branding, prefix, to customise to your liking",
             ),
             discord.SelectOption(
                 label="Game Security",
                 value="security",
-                emoji="<:WarningIcon:1035258528149033090>",
                 description="Anti-abuse detection, and security measures",
             ),
             discord.SelectOption(
@@ -189,9 +171,7 @@ class Dropdown(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -204,25 +184,21 @@ class ShiftModificationDropdown(discord.ui.Select):
                 discord.SelectOption(
                     label="On Duty",
                     value="on",
-                    emoji="<:CurrentlyOnDuty:1045079678353932398>",
                     description="Start your in-game shift",
                 ),
                 discord.SelectOption(
                     label="Toggle Break",
                     value="break",
-                    emoji="<:Break:1045080685012062329>",
                     description="Taking a break? Toggle your break status",
                 ),
                 discord.SelectOption(
                     label="Off Duty",
                     value="off",
-                    emoji="<:OffDuty:1045081161359183933>",
                     description="End your in-game shift",
                 ),
                 discord.SelectOption(
                     label="Void shift",
                     value="void",
-                    emoji="<:TrashIcon:1042550860435181628>",
                     description="Void your in-game shift. This is irreversible.",
                 ),
             ]
@@ -231,19 +207,16 @@ class ShiftModificationDropdown(discord.ui.Select):
                 discord.SelectOption(
                     label="On Duty",
                     value="on",
-                    emoji="<:CurrentlyOnDuty:1045079678353932398>",
                     description="Start their in-game shift",
                 ),
                 discord.SelectOption(
                     label="Toggle Break",
                     value="break",
-                    emoji="<:Break:1045080685012062329>",
                     description="Taking a break? Toggle their break status",
                 ),
                 discord.SelectOption(
                     label="Off Duty",
                     value="off",
-                    emoji="<:OffDuty:1045081161359183933>",
                     description="End their in-game shift",
                 ),
             ]
@@ -269,9 +242,7 @@ class ShiftModificationDropdown(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -283,25 +254,21 @@ class AdministrativeActionsDropdown(discord.ui.Select):
             discord.SelectOption(
                 label="Add time",
                 value="add",
-                emoji="<:Resume:1035269012445216858>",
                 description="Add time to their current shift",
             ),
             discord.SelectOption(
                 label="Remove time",
                 value="remove",
-                emoji="<:Pause:1035308061679689859>",
                 description="Remove time from their current shift",
             ),
             discord.SelectOption(
                 label="Void shift",
                 value="void",
-                emoji="<:WarningIcon:1035258528149033090>",
                 description="Void their shift, and remove it from the leaderboard",
             ),
             discord.SelectOption(
                 label="Clear Member Shifts",
                 value="clear",
-                emoji="<:TrashIcon:1042550860435181628>",
                 description="Clear all of their shifts from the leaderboard",
             ),
         ]
@@ -335,9 +302,7 @@ class AdministrativeActionsDropdown(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -378,9 +343,48 @@ class CustomDropdown(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
+                ephemeral=True,
+            )
+
+
+class MultiPaginatorDropdown(discord.ui.Select):
+    def __init__(self, user_id, options: list, pages: dict, limit=1):
+        self.user_id = user_id
+        self.pages = pages
+        optionList = []
+
+        for option in options:
+            if isinstance(option, str):
+                optionList.append(
+                    discord.SelectOption(
+                        label=option.replace("_", " ").title(), value=option
+                    )
+                )
+            elif isinstance(option, discord.SelectOption):
+                optionList.append(option)
+
+        # The placeholder is what will be shown when no option is chosen
+        # The min and max values indicate we can only pick one of the three options
+        # The options parameter defines the dropdown options. We defined this above
+        super().__init__(
+            placeholder="Select an option",
+            min_values=1,
+            max_values=limit,
+            options=optionList,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            await interaction.message.edit(
+                content=f"<:ERMCheck:1111089850720976906>  **{interaction.user.name},** you're currently viewing the **{self.values[0].replace('_', ' ').title()}** commands!",
+                embed=self.pages.get(self.values[0]),
+            )
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -422,9 +426,7 @@ class MultiDropdown(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -472,9 +474,7 @@ class YesNoMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -490,9 +490,7 @@ class YesNoMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -517,9 +515,7 @@ class YesNoExpandedMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -537,9 +533,7 @@ class YesNoExpandedMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -564,9 +558,7 @@ class YesNoColourMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -582,9 +574,7 @@ class YesNoColourMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -607,9 +597,7 @@ class ColouredButton(discord.ui.Button):
             self.view.stop()
         else:
             await interaction.response.send_message(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -636,9 +624,7 @@ class CustomExecutionButton(discord.ui.Button):
             await self.func(interaction, self)
         else:
             await interaction.response.send_message(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -677,9 +663,7 @@ class EnableDisableMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -695,9 +679,7 @@ class EnableDisableMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -722,9 +704,7 @@ class LinkPathwayMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -742,9 +722,7 @@ class LinkPathwayMenu(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -769,9 +747,7 @@ class ShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -787,9 +763,7 @@ class ShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -804,9 +778,7 @@ class ShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -821,9 +793,7 @@ class ShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -848,9 +818,7 @@ class ActivityNoticeModification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -866,9 +834,7 @@ class ActivityNoticeModification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -883,9 +849,7 @@ class ActivityNoticeModification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -900,9 +864,7 @@ class ActivityNoticeModification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -927,9 +889,7 @@ class PartialShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -945,9 +905,7 @@ class PartialShiftModify(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -987,11 +945,9 @@ class LOAMenu(discord.ui.View):
                 and not interaction.user.guild_permissions.administrator
                 and not interaction.user == interaction.guild.owner
             ):
-                embed = discord.Embed(
-                    description=f"You do not have permissions to accept this person's request. If you believe to have received this message in error, please contact a server administrator.",
-                    color=0x2A2D31,
+                await interaction.followup.send(
+                    content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, you do not have permission to interact with this menu. Nice try, though."
                 )
-                await interaction.followup.send(embed=embed)
                 return
         for item in self.children:
             item.disabled = True
@@ -1022,9 +978,8 @@ class LOAMenu(discord.ui.View):
                 user = guild.get_member(s_loa["user_id"])
             except:
                 try:
-                    return await int_invis_embed(
-                        interaction,
-                        "User could not be found in the server.",
+                    return await interaction.followup.send(
+                        content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, I couldn't find that user in this server.",
                         ephemeral=True,
                     )
                 except:
@@ -1032,12 +987,10 @@ class LOAMenu(discord.ui.View):
 
             settings = await self.bot.settings.find_by_id(interaction.guild.id)
             mentionable = ""
-            success = discord.Embed(
-                title=f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted",
-                description=f"<:ArrowRight:1035003246445596774> Your {s_loa['type']} request in **{interaction.guild.name}** has been accepted.",
-                color=0x71C15F,
+            await user.send(
+                content=f"<:ERMCheck:1111089850720976906>  **{user.name}**, your **{s_loa['type']}** has been accepted in **{interaction.guild.name}**."
             )
-            await user.send(embed=success)
+
         except:
             pass
         try:
@@ -1057,17 +1010,19 @@ class LOAMenu(discord.ui.View):
         except:
             pass
         embed = interaction.message.embeds[0]
-        embed.title = f"<:CheckIcon:1035018951043842088> {s_loa['type']} Accepted"
-        embed.colour = 0x71C15F
-        embed.set_footer(
-            text=f"Staff Logging Module - Accepted by {interaction.user.name}#{interaction.user.discriminator}"
+        embed.title = (
+            f"<:ERMCheck:1111089850720976906> {s_loa['type']} Request Accepted"
         )
+        embed.colour = 0xED4348
+        embed.set_footer(text=f"Accepted by {interaction.user.name}")
 
-        await interaction.message.edit(embed=embed, view=self)
+        await interaction.message.edit(
+            embed=embed,
+            view=None,
+            content=f"<:ERMCheck:1111089850720976906>  **{interaction.user.name}** accepted **{user.name}**'s {s_loa['type']}.",
+        )
         await interaction.followup.send(
-            embed=create_invis_embed(
-                f'You have accepted this person\'s {s_loa["type"]} request! To extend, edit or modify this request, please use `/{s_loa["type"].lower()} admin`'
-            )
+            content=f"<:ERMCheck:1111089850720976906>  **{interaction.user.name}**, you accepted **{user.name}**'s {s_loa['type']}."
         )
 
         await self.bot.views.delete_by_id(self.id)
@@ -1089,11 +1044,9 @@ class LOAMenu(discord.ui.View):
                 and not interaction.user == interaction.guild.owner
             ):
                 await interaction.response.defer(ephemeral=True, thinking=True)
-                embed = discord.Embed(
-                    description=f"You do not have permissions to deny this person's request. If you believe to have received this message in error, please contact a server administrator.",
-                    color=0x2A2D31,
+                await interaction.followup.send(
+                    content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, you do not have permission to interact with this menu. Nice try, though."
                 )
-                return await interaction.followup.send(embed=embed)
         for item in self.children:
             item.disabled = True
         await interaction.message.edit(view=self)
@@ -1146,29 +1099,22 @@ class LOAMenu(discord.ui.View):
                 except:
                     try:
                         return await interaction.followup.send(
-                            create_invis_embed(
-                                interaction, "User could not be found in the server."
-                            ),
+                            content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, I couldn't find that user in this server.",
                             ephemeral=True,
                         )
                     except:
                         pass
                 settings = await self.bot.settings.find_by_id(interaction.guild.id)
                 mentionable = ""
-                success = discord.Embed(
-                    title=f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied",
-                    description=f"<:ArrowRight:1035003246445596774> Your {s_loa['type']} request in **{interaction.guild.name}** has been denied for **{reason}**.",
-                    color=0xFF3C3C,
+                await user.send(
+                    content=f"<:ERMClose:1111101633389146223>  **{user.name}**, your **{s_loa['type']}** has been denied in **{interaction.guild.name}** for **{reason}**."
                 )
-                await user.send(embed=success)
                 await self.bot.loas.update_by_id(s_loa)
 
         embed = interaction.message.embeds[0]
-        embed.title = f"<:ErrorIcon:1035000018165321808> {s_loa['type']} Denied"
-        embed.colour = 0xFF3C3C
-        embed.set_footer(
-            text=f"Staff Logging Module - Denied by {interaction.user.name}#{interaction.user.discriminator}"
-        )
+        embed.title = f"<:ERMClose:1111101633389146223> {s_loa['type']} Request Denied"
+        embed.colour = 0xED4348
+        embed.set_footer(text=f"Denied by {interaction.user.name}")
 
         await interaction.message.edit(embed=embed, view=self)
         self.value = True
@@ -1195,9 +1141,7 @@ class AddReminder(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1252,9 +1196,7 @@ class ManageReminders(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1282,9 +1224,7 @@ class ManageReminders(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1300,9 +1240,7 @@ class ManageReminders(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1316,9 +1254,7 @@ class CustomisePunishmentType(discord.ui.View):
             CreatePunishmentType, DeletePunishmentType, None
         ] = None
 
-    @discord.ui.button(
-        label="Create a punishment type", style=discord.ButtonStyle.green
-    )
+    @discord.ui.button(label="Create", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
             modal = CreatePunishmentType()
@@ -1333,15 +1269,11 @@ class CustomisePunishmentType(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
-    @discord.ui.button(
-        label="Delete a punishment type", style=discord.ButtonStyle.danger
-    )
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
             modal = DeletePunishmentType()
@@ -1356,9 +1288,7 @@ class CustomisePunishmentType(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1372,9 +1302,8 @@ class AddCustomCommand(discord.ui.View):
         self.view: typing.Union[MessageCustomisation, None] = None
 
     @discord.ui.button(
-        label="Create a custom command",
+        label="Create a Custom Command",
         style=discord.ButtonStyle.secondary,
-        emoji="<:Resume:1035269012445216858>",
     )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
@@ -1390,9 +1319,7 @@ class AddCustomCommand(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1419,7 +1346,6 @@ class MessageCustomisation(discord.ui.View):
     @discord.ui.button(
         label="Set Message",
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def content(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1433,16 +1359,13 @@ class MessageCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
     @discord.ui.button(
         label="Add Embed",
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def addembed(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1451,26 +1374,24 @@ class MessageCustomisation(discord.ui.View):
             if len(interaction.message.embeds) > 0:
                 return await int_invis_embed(
                     interaction,
-                    "You can only have one embed per custom command. This is a temporary restriction and will be removed soon.",
+                    "you can only have one embed per custom command. This is a temporary restriction and will be removed soon.",
                     ephemeral=True,
                 )
 
             newView = EmbedCustomisation(interaction.user.id, self)
             self.newView = newView
             await interaction.message.edit(
-                view=newView, embed=discord.Embed(colour=0x2A2D31, description="\u200b")
+                view=newView, embed=discord.Embed(colour=0xED4348, description="\u200b")
             )
             await int_invis_embed(
                 interaction,
-                'You can now customise your embed. Once you are done, click the "Finish" button to save your embed.\n\n`{user}` - Mention of the user running the command\n`{username}` - The name of the user running the command\n`{display_name}` - The nickname of the user running the command\n`{time}` - The current time, represented in the Discord format of timestamps\n`{server}` - The name of the current guild\n`{channel}` - The channel where the command is running.\n`{prefix}` - The prefix of the server\n\nNote that these prefixes will **not show in the preview** however will work when the command is run.',
+                'you can now customise your embed. Once you are done, click the "Finish" button to save your embed.\n\n`{user}` - Mention of the user running the command\n`{username}` - The name of the user running the command\n`{display_name}` - The nickname of the user running the command\n`{time}` - The current time, represented in the Discord format of timestamps\n`{server}` - The name of the current guild\n`{channel}` - The channel where the command is running.\n`{prefix}` - The prefix of the server\n\nNote that these prefixes will **not show in the preview** however will work when the command is run.',
                 ephemeral=True,
             )
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1482,7 +1403,7 @@ class MessageCustomisation(discord.ui.View):
             self.value = "finish"
             await int_invis_embed(
                 interaction,
-                "Your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
+                "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
                 ephemeral=True,
             )
             await interaction.message.delete()
@@ -1490,9 +1411,7 @@ class MessageCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1512,7 +1431,6 @@ class EmbedCustomisation(discord.ui.View):
     @discord.ui.button(
         label="Set Message",
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def content(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1526,16 +1444,13 @@ class EmbedCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
     @discord.ui.button(
         label="Remove Embed",
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def remove_embed(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1544,20 +1459,18 @@ class EmbedCustomisation(discord.ui.View):
             if len(interaction.message.embeds) > 0:
                 if self.parent_view is not None:
                     await interaction.message.edit(view=self.parent_view, embed=None)
-                    await int_invis_embed(interaction, "Embed removed.", ephemeral=True)
+                    await int_invis_embed(interaction, "embed removed.", ephemeral=True)
                 else:
                     newView = MessageCustomisation(interaction.user.id)
                     self.parent_view = newView
                     await interaction.message.edit(view=newView, embed=None)
                     return await int_invis_embed(
-                        interaction, "Embed removed.", ephemeral=True
+                        interaction, "embed removed.", ephemeral=True
                     )
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1570,7 +1483,7 @@ class EmbedCustomisation(discord.ui.View):
             self.value = "finish"
             await int_invis_embed(
                 interaction,
-                "Your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
+                "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
                 ephemeral=True,
             )
             await interaction.message.edit(view=None)
@@ -1580,9 +1493,7 @@ class EmbedCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1590,7 +1501,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Title",
         row=1,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_title(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1606,9 +1516,7 @@ class EmbedCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1616,7 +1524,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Description",
         row=1,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_description(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1632,9 +1539,7 @@ class EmbedCustomisation(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1642,7 +1547,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Embed Colour",
         row=1,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_color(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1659,18 +1563,16 @@ class EmbedCustomisation(discord.ui.View):
                 try:
                     embed.colour = int(modal.name.value.replace("#", ""), 16)
                 except:
-                    return await int_invis_embed(
+                    return await int_failure_embed(
                         interaction,
-                        "Invalid colour. Please try again.\n*Example: #ff0000*",
+                        "invalid colour. Please try again.\n*Example: #ff0000*",
                         ephemeral=True,
                     )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1678,7 +1580,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Thumbnail",
         row=2,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_thumbnail(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1692,16 +1593,14 @@ class EmbedCustomisation(discord.ui.View):
             try:
                 embed.set_thumbnail(url=modal.thumbnail.value)
             except:
-                return await int_invis_embed(
-                    interaction, "Invalid URL. Please try again.", ephemeral=True
+                return await int_failure_embed(
+                    interaction, "invalid URL. Please try again.", ephemeral=True
                 )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1709,7 +1608,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Image",
         row=2,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_image(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1723,16 +1621,14 @@ class EmbedCustomisation(discord.ui.View):
             try:
                 embed.set_image(url=modal.image.value)
             except:
-                return await int_invis_embed(
-                    interaction, "Invalid URL. Please try again.", ephemeral=True
+                return await int_failure_embed(
+                    interaction, "invalid URL. Please try again.", ephemeral=True
                 )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1740,7 +1636,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Add Field",
         row=3,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def add_field(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1763,16 +1658,14 @@ class EmbedCustomisation(discord.ui.View):
                     name=modal.name.value, value=modal.value.value, inline=inline
                 )
             except:
-                return await int_invis_embed(
-                    interaction, "Invalid field. Please try again.", ephemeral=True
+                return await int_failure_embed(
+                    interaction, "invalid field. Please try again.", ephemeral=True
                 )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1780,7 +1673,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Footer",
         row=3,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_footer(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1794,16 +1686,14 @@ class EmbedCustomisation(discord.ui.View):
             try:
                 embed.set_footer(text=modal.name.value, icon_url=modal.icon.value)
             except:
-                return await int_invis_embed(
-                    interaction, "Invalid footer. Please try again.", ephemeral=True
+                return await int_failure_embed(
+                    interaction, "invalid footer. Please try again.", ephemeral=True
                 )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1811,7 +1701,6 @@ class EmbedCustomisation(discord.ui.View):
         label="Set Author",
         row=3,
         style=discord.ButtonStyle.secondary,
-        emoji="<:ArrowRight:1035003246445596774>",
     )
     async def set_author(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -1829,16 +1718,14 @@ class EmbedCustomisation(discord.ui.View):
                     icon_url=modal.icon.value,
                 )
             except:
-                return await int_invis_embed(
-                    interaction, "Invalid author. Please try again.", ephemeral=True
+                return await int_failure_embed(
+                    interaction, "invalid author. Please try again.", ephemeral=True
                 )
             await interaction.message.edit(embed=embed)
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1861,9 +1748,7 @@ class RemoveReminder(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1888,9 +1773,7 @@ class RemoveCustomCommand(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -1910,9 +1793,7 @@ class RemoveWarning(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -1920,13 +1801,13 @@ class RemoveWarning(discord.ui.View):
             self.remove_item(item)
         self.value = True
 
-        success = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Removed Punishment",
-            description="<:ArrowRightW:1035023450592514048>I've successfully removed the punishment from the user.",
-            color=0x71C15F,
-        )
+        # success = discord.Embed(
+        #     title="<:CheckIcon:1035018951043842088> Removed Punishment",
+        #     description="<:ArrowRightW:1035023450592514048>I've successfully removed the punishment from the user.",
+        #     color=0x71C15F,
+        # )
 
-        await interaction.edit_original_response(embed=success, view=self)
+        # await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
@@ -1935,9 +1816,7 @@ class RemoveWarning(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -1945,13 +1824,13 @@ class RemoveWarning(discord.ui.View):
             self.remove_item(item)
         self.value = False
 
-        success = discord.Embed(
-            title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRightW:1035023450592514048>The punishment has not been removed from the user.",
-            color=0xFF3C3C,
-        )
-
-        await interaction.edit_original_response(embed=success, view=self)
+        # success = discord.Embed(
+        #     title="<:ErrorIcon:1035000018165321808> Cancelled",
+        #     description="<:ArrowRightW:1035023450592514048>The punishment has not been removed from the user.",
+        #     color=0xFF3C3C,
+        # )
+        #
+        # await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
 
@@ -1960,7 +1839,7 @@ class RequestReason(discord.ui.Modal, title="Edit Reason"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -1974,7 +1853,7 @@ class RequestData(discord.ui.Modal, title="Edit Reason"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -1993,7 +1872,7 @@ class CustomModal(discord.ui.Modal, title="Edit Reason"):
             setattr(self, key, item)
 
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2008,7 +1887,7 @@ class SetContent(discord.ui.Modal, title="Set Message Content"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2036,7 +1915,7 @@ class DeletePunishmentType(discord.ui.Modal, title="Delete Punishment Type"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2067,7 +1946,7 @@ class SetTitle(discord.ui.Modal, title="Set Embed Title"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2082,7 +1961,7 @@ class CustomCommandSettings(discord.ui.Modal, title="Custom Command Settings"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2097,7 +1976,7 @@ class SetDescription(discord.ui.Modal, title="Set Embed Description"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2109,7 +1988,7 @@ class SetColour(discord.ui.Modal, title="Set Embed Colour"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2121,7 +2000,7 @@ class SetImage(discord.ui.Modal, title="Set Image"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2143,7 +2022,7 @@ class AddField(discord.ui.Modal, title="Add Field"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2162,7 +2041,7 @@ class SetFooter(discord.ui.Modal, title="Set Footer"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2188,7 +2067,7 @@ class SetAuthor(discord.ui.Modal, title="Set Author"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2202,7 +2081,7 @@ class SetThumbnail(discord.ui.Modal, title="Set Thumbnail"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2212,7 +2091,7 @@ class TimeRequest(discord.ui.Modal, title="Temporary Ban"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await int_invis_embed(
-            interaction, "Your response has been submitted.", ephemeral=True
+            interaction, "your response has been submitted.", ephemeral=True
         )
         self.stop()
 
@@ -2228,7 +2107,6 @@ class ChangeWarningType(discord.ui.Select):
                 option = discord.SelectOption(
                     label=str(option),
                     value=str(option),
-                    emoji="<:MalletWhite:1035258530422341672>",
                 )
                 selected_options.append(option)
                 using_options = True
@@ -2243,31 +2121,26 @@ class ChangeWarningType(discord.ui.Select):
                     label="Warning",
                     value="Warn",
                     description="A warning, the smallest form of logged punishment",
-                    emoji="<:WarningIcon:1035258528149033090>",
                 ),
                 discord.SelectOption(
                     label="Kick",
                     value="Kick",
                     description="Removing a user from the game, usually given after warnings",
-                    emoji="<:MalletWhite:1035258530422341672>",
                 ),
                 discord.SelectOption(
                     label="Ban",
                     value="Ban",
                     description="A permanent form of removing a user from the game, given after kicks",
-                    emoji="<:MalletWhite:1035258530422341672>",
                 ),
                 discord.SelectOption(
                     label="Temporary Ban",
                     value="Temporary Ban",
                     description="Given after kicks, not enough to warrant a permanent removal",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
                 discord.SelectOption(
                     label="BOLO",
                     value="BOLO",
                     description="Cannot be found in the game, be on the lookout",
-                    emoji="<:Search:1035353785184288788>",
                 ),
             ]
         super().__init__(
@@ -2303,9 +2176,7 @@ class ChangeWarningType(discord.ui.Select):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -2319,19 +2190,16 @@ class EditWarningSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Edit reason",
                 value="edit",
-                emoji="<:EditIcon:1042550862834323597>",
                 description="Edit the reason of the punishment",
             ),
             discord.SelectOption(
                 label="Change punishment type",
                 value="change",
-                emoji="<:EditIcon:1042550862834323597>",
                 description="Change the punishment type to a higher or lower severity",
             ),
             discord.SelectOption(
                 label="Delete punishment",
                 value="delete",
-                emoji="<:TrashIcon:1042550860435181628>",
                 description="Delete the punishment from the database. This is irreversible.",
             ),
         ]
@@ -2364,9 +2232,11 @@ class EditWarningSelect(discord.ui.Select):
                     item.disabled = True
                 self.value = "type"
                 view = WarningDropdownMenu(interaction.user.id, self.inherited_options)
-                await int_invis_embed(
-                    interaction,
-                    "What type would you like the punishment to be?",
+                await interaction.message.edit(
+                    content="<:ERMPending:1111097561588183121> **{},** please select a new punishment type.".format(
+                        interaction.user.name
+                    ),
+                    embed=None,
                     view=view,
                 )
                 await view.wait()
@@ -2383,13 +2253,11 @@ class EditWarningSelect(discord.ui.Select):
                 await interaction.edit_original_response(view=self.view)
                 self.view.stop()
             else:
-                await int_invis_embed(interaction, "You have not picked an option.")
+                await int_failure_embed(interaction, "you have not picked an option.")
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -2426,13 +2294,10 @@ class RemoveBOLO(discord.ui.View):
             item.disabled = True
         self.value = True
 
-        success = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Removed BOLO",
-            description="<:ArrowRightW:1035023450592514048>I've successfully removed the BOLO from the user.",
-            color=0x71C15F,
+        await interaction.edit_original_response(
+            content=f"<:ERMCheck:1111089850720976906> **{interaction.user.name}**, I've removed the BOLO from that user.",
+            view=self,
         )
-
-        await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
@@ -2441,9 +2306,7 @@ class RemoveBOLO(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -2451,13 +2314,10 @@ class RemoveBOLO(discord.ui.View):
             item.disabled = True
         self.value = False
 
-        success = discord.Embed(
-            title="<:ErrorIcon:1035000018165321808> Cancelled",
-            description="<:ArrowRightW:1035023450592514048>The punishment has not been removed from the user.",
-            color=0xFF3C3C,
+        await interaction.edit_original_response(
+            content=f"<:ERMCheck:1111089850720976906> **{interaction.user.name}**, sounds good! I won't remove that punishment.",
+            view=self,
         )
-
-        await interaction.edit_original_response(embed=success, view=self)
         self.stop()
 
 
@@ -2476,9 +2336,7 @@ class EnterRobloxUsername(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         self.modal = RobloxUsername()
@@ -2506,9 +2364,7 @@ class RequestDataView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         self.modal = RequestData(self.title, self.label)
@@ -2544,9 +2400,7 @@ class CustomModalView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         self.modal = CustomModal(self.label, self.options)
@@ -2601,14 +2455,12 @@ class GoogleSpreadsheetModification(discord.ui.View):
 
         sheet.transfer_ownership(permission_id)
 
-        success = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Success!",
-            description=f"<:ArrowRightW:1035023450592514048>I have gave ownership to this email. This email now has **full access** to the document. You can view the spreadsheet [here]({self.url}).",
-            color=0x71C15F,
-        )
         self.remove_item(button)
 
-        await interaction.edit_original_response(embed=success, view=self)
+        await interaction.edit_original_response(
+            content=f"<:ERMCheck:1111089850720976906> **{interaction.user.name}**, I've sent the ownership request to your email.",
+            view=self,
+        )
 
 
 class LinkView(discord.ui.View):
@@ -2662,15 +2514,11 @@ class RequestGoogleSpreadsheet(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.followup.send(
-            embed=create_invis_embed(
-                "We are currently creating the Google spreadsheet, please wait."
-            )
+            content=f"<:ERMPending:1111097561588183121> **{interaction.user.name}**, we are currently generating your Google Spreadsheet."
         )
         client = gspread.authorize(
             ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes)
@@ -2711,16 +2559,14 @@ class RequestGoogleSpreadsheet(discord.ui.View):
 
         sheet.share(None, perm_type="anyone", role="writer")
 
-        success = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Google Spreadsheet",
-            description=f"<:ArrowRightW:1035023450592514048>I've successfully created a Google Spreadsheet for you. You can access it [here]({sheet.url}).",
-            color=0x71C15F,
-        )
         view = GoogleSpreadsheetModification(
             self.config, self.scopes, "Open Google Spreadsheet", sheet.url
         )
 
-        await interaction.edit_original_response(embed=success, view=view)
+        await interaction.edit_original_response(
+            content=f"<:ERMCheck:1111089850720976906> **{interaction.user.name}**, good news! We have your spreadsheet. You can access it with the button below.",
+            view=view,
+        )
 
         self.stop()
 
@@ -2740,9 +2586,7 @@ class Verification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -2759,9 +2603,7 @@ class Verification(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -2781,6 +2623,15 @@ class CustomSelectMenu(discord.ui.View):
         self.user_id = user_id
 
         self.add_item(CustomDropdown(self.user_id, options))
+
+
+class MultiPaginatorMenu(discord.ui.View):
+    def __init__(self, user_id, options: list, pages: dict):
+        super().__init__(timeout=None)
+        self.value = None
+        self.user_id = user_id
+
+        self.add_item(MultiPaginatorDropdown(self.user_id, options, pages))
 
 
 class WarningDropdownMenu(discord.ui.View):
@@ -2853,9 +2704,7 @@ class RoleSelect(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -2900,9 +2749,7 @@ class UserSelect(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -2949,9 +2796,7 @@ class ChannelSelect(discord.ui.View):
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
 
@@ -2970,9 +2815,7 @@ class CheckMark(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -2985,9 +2828,7 @@ class CheckMark(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
-                embed=create_invis_embed(
-                    "You are not the user that has initialised this menu. Only the user that has initialised this menu can use this menu."
-                ),
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
         await interaction.response.defer()
@@ -3007,18 +2848,22 @@ class CompleteReminder(discord.ui.View):
         await interaction.response.defer()
         embed = interaction.message.embeds[0]
         embed.set_footer(
-            text="Completed by {0.name}#{0.discriminator}".format(interaction.user),
+            text="Completed by {0.name}".format(interaction.user),
             icon_url=interaction.user.avatar.url,
         )
-        embed.timestamp = datetime.datetime.utcnow()
-        embed.color = 0x71C15F
-        embed.title = "<:CheckIcon:1035018951043842088> Reminder Completed!"
+        embed.timestamp = datetime.datetime.now()
+        embed.color = 0xED4348
+        embed.title = "<:ERMCheck:1111089850720976906> Reminder Completed"
 
         for item in self.children:
             item.disabled = True
             item.label = "Completed"
             item.style = discord.ButtonStyle.green
 
-        await interaction.message.edit(embed=embed, view=self)
+        await interaction.message.edit(
+            embed=embed,
+            view=self,
+            content=f"<:ERMCheck:1111089850720976906>  **{interaction.user.name}** completed this reminder.",
+        )
 
         self.stop()

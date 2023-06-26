@@ -1,6 +1,6 @@
 import datetime
 from io import BytesIO
-
+import pytz
 import discord
 import gspread as gspread
 import num2words
@@ -13,7 +13,7 @@ from reactionmenu import ViewButton, ViewMenu
 from erm import credentials_dict, is_management, scope
 from menus import CustomSelectMenu, GoogleSpreadsheetModification
 from utils.timestamp import td_format
-from utils.utils import invis_embed, request_response
+from utils.utils import invis_embed, request_response, failure_embed
 
 
 class ActivityManagement(commands.Cog):
@@ -22,7 +22,9 @@ class ActivityManagement(commands.Cog):
 
     @commands.hybrid_group(name="activity")
     async def activity(self, ctx):
-        return await invis_embed(ctx, "You have not picked a subcommand.")
+        return await ctx.reply(
+            f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** you have not entered a subcommand."
+        )
 
     @activity.command(
         name="report",
@@ -33,11 +35,16 @@ class ActivityManagement(commands.Cog):
     async def activity_report(self, ctx):
         # return await invis_embed(ctx,  "This feature has not been released yet.")
         bot = self.bot
+        if bot.shift_management_disabled:
+            return await failure_embed(
+                ctx,
+                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+            )
+
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
-            return await invis_embed(
-                ctx,
-                "You have not set up the bot yet. Please run `/setup` to set up the bot.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
 
         view = CustomSelectMenu(
@@ -47,43 +54,37 @@ class ActivityManagement(commands.Cog):
                     label="1 day",
                     value="1d",
                     description="Shows the activity of staff members within the last day",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
                 discord.SelectOption(
                     label="7 days",
                     value="7d",
                     description="Shows the activity of staff members within the last week",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
                 discord.SelectOption(
                     label="14 days",
                     value="14d",
                     description="Shows the activity of staff members within the last 2 weeks",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
                 discord.SelectOption(
                     label="28 days",
                     value="28d",
                     description="Shows the activity of staff members within the last month",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
                 discord.SelectOption(
                     label="Custom",
                     value="custom",
                     description="Choose a custom time period",
-                    emoji="<:Clock:1035308064305332224>",
                 ),
             ],
         )
-        await invis_embed(
-            ctx,
-            "Choose a period of time you would like to receive a report on.",
+        activity_msg = await ctx.reply(
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, choose a period of time for me to report on.",
             view=view,
         )
         timeout = await view.wait()
         if timeout:
-            return await invis_embed(
-                ctx, "You took too long to respond. Please try again."
+            return await activity_msg.edit(
+                content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** you took too long to respond. Prompt timed out."
             )
 
         starting_period = None
@@ -91,21 +92,24 @@ class ActivityManagement(commands.Cog):
         if view.value.endswith("d"):
             amount_of_days = view.value.removesuffix("d")
             amount = int(amount_of_days)
-            datetime_obj = datetime.datetime.utcnow()
+            datetime_obj = datetime.datetime.now(tz=pytz.UTC).replace(tzinfo=pytz.UTC)
             ending_period = datetime_obj
             starting_period = datetime_obj - datetime.timedelta(days=amount)
         elif view.value == "custom":
             msg = await request_response(
                 bot,
                 ctx,
-                "When do you want this period of time to start?\n*Use a date, example: 5/11/2022*",
+                embed=discord.Embed(
+                    color=0xED4348,
+                    description="<:ERMModify:1111100050718867577> **PRO TIP:** Use s/m/d for time formatting.",
+                ),
+                question="when do you want this period of time to start?",
             )
             try:
                 start_date = parser.parse(msg.content)
             except:
-                return await invis_embed(
-                    ctx,
-                    "We were unable to translate your date. Please try again in another date format.",
+                return await msg.edit(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** we were unable to translate your time. Try again in the correct format."
                 )
 
             msg = await request_response(
@@ -114,9 +118,8 @@ class ActivityManagement(commands.Cog):
             try:
                 end_date = parser.parse(msg.content)
             except:
-                return await invis_embed(
-                    ctx,
-                    "We were unable to translate your date. Please try again in another date format.",
+                return await msg.edit(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** we were unable to translate your time. Try again in the correct format."
                 )
 
             starting_period = start_date
@@ -124,7 +127,7 @@ class ActivityManagement(commands.Cog):
 
         embeds = []
         embed = discord.Embed(
-            title="<:Clock:1035308064305332224> Activity Report", color=0x2A2D31
+            title="<:ERMSchedule:1111091306089939054> Activity Report", color=0xED4348
         )
 
         embed.set_footer(text="Click 'Next' to see users who are on LoA.")
@@ -136,19 +139,12 @@ class ActivityManagement(commands.Cog):
                 if len(shift_types.get("types")) > 1:
                     shift_types = shift_types.get("types")
 
-                    shift_embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description=f"<:ArrowRight:1035003246445596774> You have {num2words.num2words(len(shift_types))} shift types, {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select one of these options to show on the report. If you want to view the total time between these types, select `All`.",
-                        color=0x2A2D31,
-                    )
-
                     view = CustomSelectMenu(
                         ctx.author.id,
                         [
                             discord.SelectOption(
                                 label=i["name"],
                                 value=i["id"],
-                                emoji="<:Clock:1035308064305332224>",
                                 description=i["name"],
                             )
                             for i in shift_types
@@ -157,13 +153,15 @@ class ActivityManagement(commands.Cog):
                             discord.SelectOption(
                                 label="All",
                                 value="all",
-                                emoji="<:Clock:1035308064305332224>",
                                 description="Data from all shift types",
                             )
                         ],
                     )
 
-                    msg = await ctx.send(embed=shift_embed, view=view)
+                    msg = await activity_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to view the activity for.",
+                        view=view,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -179,115 +177,113 @@ class ActivityManagement(commands.Cog):
                             if shift_list:
                                 shift_type = shift_list[0]
                             else:
-                                return await invis_embed(
-                                    ctx,
-                                    "If you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
+                                return await activity_msg.edit(
+                                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** something really bad just happened. Please contact support."
                                 )
 
         all_staff = [{"id": None, "total_seconds": 0, "moderations": 0}]
 
         if shift_type != 0 and shift_type is not None:
-            async for document in bot.shift_storage.db.find(
+            print(f"Starting period: {starting_period}")
+            print(f"Ending period: {ending_period}")
+            quantifiers = {
+                "$gte": starting_period.timestamp(),
+                "$lte": ending_period.timestamp(),
+            }
+
+            async for document in bot.shift_management.shifts.db.find(
                 {
-                    "shifts": {
-                        "$elemMatch": {
-                            "startTimestamp": {
-                                "$gte": starting_period.timestamp(),
-                                "$lte": ending_period.timestamp(),
-                            },
-                            "guild": ctx.guild.id,
-                            "type": shift_type["id"],
-                        }
-                    }
+                    "StartEpoch": quantifiers,
+                    "Guild": ctx.guild.id,
+                    "Type": shift_type["name"],
+                    "EndEpoch": {"$ne": 0},
                 }
             ):
                 total_seconds = 0
                 moderations = 0
-                if "shifts" in document.keys():
-                    if isinstance(document["shifts"], list):
-                        for shift in document["shifts"]:
-                            if isinstance(shift, dict):
-                                if shift["guild"] == ctx.guild.id:
-                                    if (
-                                        shift["startTimestamp"]
-                                        >= starting_period.timestamp()
-                                        and shift["startTimestamp"]
-                                        <= ending_period.timestamp()
-                                        and shift.get("type") == shift_type["id"]
-                                    ):
-                                        total_seconds += int(shift["totalSeconds"])
-                                        moderations += (
-                                            len(shift["moderations"])
-                                            if "moderations" in shift.keys()
-                                            else 0
-                                        )
-                                        if document["_id"] not in [
-                                            item["id"] for item in all_staff
-                                        ]:
-                                            all_staff.append(
-                                                {
-                                                    "id": document["_id"],
-                                                    "total_seconds": total_seconds,
-                                                    "moderations": moderations,
-                                                }
-                                            )
-                                        else:
-                                            for item in all_staff:
-                                                if item["id"] == document["_id"]:
-                                                    item[
-                                                        "total_seconds"
-                                                    ] = total_seconds
-                                                    item["moderations"] = moderations
+                break_seconds = 0
+
+                for breaks in document["Breaks"]:
+                    break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
+
+                print(document)
+                total_seconds += (
+                    int(
+                        (
+                            document["EndEpoch"]
+                            if document["EndEpoch"] != 0
+                            else document["StartEpoch"]
+                        )
+                    )
+                    - int(document["StartEpoch"])
+                    + document["AddedTime"]
+                    - document["RemovedTime"]
+                    - break_seconds
+                )
+                moderations += len(document["Moderations"])
+                if document["UserID"] not in [item["id"] for item in all_staff]:
+                    all_staff.append(
+                        {
+                            "id": document["UserID"],
+                            "total_seconds": total_seconds,
+                            "moderations": moderations,
+                        }
+                    )
+                else:
+                    for item in all_staff:
+                        if item["id"] == document["UserID"]:
+                            item["total_seconds"] += total_seconds
+                            item["moderations"] += moderations
         else:
-            async for document in bot.shift_storage.db.find(
+            print(f"Starting period: {starting_period}")
+            print(f"Ending period: {ending_period}")
+            quantifiers = {
+                "$gte": starting_period.timestamp(),
+                "$lte": ending_period.timestamp(),
+            }
+
+            async for document in bot.shift_management.shifts.db.find(
                 {
-                    "shifts": {
-                        "$elemMatch": {
-                            "startTimestamp": {
-                                "$gte": starting_period.timestamp(),
-                                "$lte": ending_period.timestamp(),
-                            },
-                            "guild": ctx.guild.id,
-                        }
-                    }
+                    "StartEpoch": quantifiers,
+                    "Guild": ctx.guild.id,
+                    "EndEpoch": {"$ne": 0},
                 }
             ):
                 total_seconds = 0
                 moderations = 0
-                if "shifts" in document.keys():
-                    if isinstance(document["shifts"], list):
-                        for shift in document["shifts"]:
-                            if isinstance(shift, dict):
-                                if shift["guild"] == ctx.guild.id:
-                                    if (
-                                        shift["startTimestamp"]
-                                        >= starting_period.timestamp()
-                                        and shift["startTimestamp"]
-                                        <= ending_period.timestamp()
-                                    ):
-                                        total_seconds += int(shift["totalSeconds"])
-                                        moderations += (
-                                            len(shift["moderations"])
-                                            if "moderations" in shift.keys()
-                                            else 0
-                                        )
-                                        if document["_id"] not in [
-                                            item["id"] for item in all_staff
-                                        ]:
-                                            all_staff.append(
-                                                {
-                                                    "id": document["_id"],
-                                                    "total_seconds": total_seconds,
-                                                    "moderations": moderations,
-                                                }
-                                            )
-                                        else:
-                                            for item in all_staff:
-                                                if item["id"] == document["_id"]:
-                                                    item[
-                                                        "total_seconds"
-                                                    ] = total_seconds
-                                                    item["moderations"] = moderations
+                break_seconds = 0
+
+                for breaks in document["Breaks"]:
+                    break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
+                print(document)
+
+                total_seconds += (
+                    int(
+                        (
+                            document["EndEpoch"]
+                            if document["EndEpoch"] != 0
+                            else document["StartEpoch"]
+                        )
+                    )
+                    - int(document["StartEpoch"])
+                    + document["AddedTime"]
+                    - document["RemovedTime"]
+                    - break_seconds
+                )
+                moderations += len(document["Moderations"])
+                if document["UserID"] not in [item["id"] for item in all_staff]:
+                    all_staff.append(
+                        {
+                            "id": document["UserID"],
+                            "total_seconds": total_seconds,
+                            "moderations": moderations,
+                        }
+                    )
+                else:
+                    for item in all_staff:
+                        if item["id"] == document["UserID"]:
+                            item["total_seconds"] += total_seconds
+                            item["moderations"] += moderations
 
         staff_roles = []
         config_item = await bot.settings.find_by_id(ctx.guild.id)
@@ -374,7 +370,9 @@ class ActivityManagement(commands.Cog):
                         )
 
         if len(all_staff) == 0:
-            return await invis_embed(ctx, "No shifts were made in your server.")
+            return await activity_msg.edit(
+                content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** no shifts were made in this server."
+            )
         for item in all_staff:
             if item["id"] is None:
                 all_staff.remove(item)
@@ -392,24 +390,21 @@ class ActivityManagement(commands.Cog):
         data = []
         for index, value in enumerate(sorted_staff):
             print(value)
-            try:
-                member = await ctx.guild.fetch_member(value["id"])
-            except discord.NotFound:
-                member = None
+            member = ctx.guild.get_member(value["id"])
             if value["total_seconds"] > quota:
-                met_quota = "<:CheckIcon:1035018951043842088>"
+                met_quota = "<:ERMCheck:1111089850720976906>"
             else:
-                met_quota = "<:ErrorIcon:1035000018165321808>"
+                met_quota = "<:ERMClose:1111101633389146223>"
             if member:
-                string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
+                string += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
                 if value["moderations"]:
                     data.append(
                         [
                             index + 1,
                             "YES"
-                            if met_quota == "<:CheckIcon:1035018951043842088>"
+                            if met_quota == "<:ERMCheck:1111089850720976906>"
                             else "NO",
-                            f"{member.name}#{member.discriminator}",
+                            f"{member.name}",
                             member.top_role.name,
                             td_format(
                                 datetime.timedelta(seconds=value["total_seconds"])
@@ -422,9 +417,9 @@ class ActivityManagement(commands.Cog):
                         [
                             index + 1,
                             "YES"
-                            if met_quota == "<:CheckIcon:1035018951043842088>"
+                            if met_quota == "<:ERMCheck:1111089850720976906>"
                             else "NO",
-                            f"{member.name}#{member.discriminator}",
+                            f"{member.name}",
                             member.top_role.name,
                             td_format(
                                 datetime.timedelta(seconds=value["total_seconds"])
@@ -433,12 +428,12 @@ class ActivityManagement(commands.Cog):
                         ]
                     )
             else:
-                string += f"<:ArrowRightW:1035023450592514048> **{index + 1}.** `{value['id']}` - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
+                string += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**{index + 1}.** `{value['id']}` - {td_format(datetime.timedelta(seconds=value['total_seconds']))} {met_quota}\n"
                 data.append(
                     [
                         index + 1,
                         "YES"
-                        if met_quota == "<:CheckIcon:1035018951043842088>"
+                        if met_quota == "<:ERMCheck:1111089850720976906>"
                         else "NO",
                         value["id"],
                         "Not in server",
@@ -479,7 +474,7 @@ class ActivityManagement(commands.Cog):
             if member:
                 loas.append(
                     (
-                        f"{member.name}#{member.discriminator}",
+                        f"{member.name}",
                         value["type"],
                         value["reason"],
                         formatted_data,
@@ -495,7 +490,7 @@ class ActivityManagement(commands.Cog):
                 )
                 additional_data.append(
                     [
-                        f"{member.name}#{member.discriminator}",
+                        f"{member.name}",
                         member.top_role.name,
                         formatted_data,
                         value["type"],
@@ -525,30 +520,32 @@ class ActivityManagement(commands.Cog):
         try:
             bbytes = strAR.encode("utf-8")
         except:
-            return await invis_embed(ctx, "No shift data has been found.")
+            return await activity_msg.edit(
+                content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** no shift data was found."
+            )
 
         embeds.append(embed)
 
         for string_obj in splitted_str:
             if len(embeds[-1].fields) == 0:
                 embeds[-1].add_field(
-                    name="<:Clock:1035308064305332224> Shifts", value=string_obj
+                    name="<:ERMUser:1111098647485108315> Shifts", value=string_obj
                 )
             else:
                 if len(embeds[-1].fields) >= 3:
                     new_embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Activity Report",
-                        color=0x2A2D31,
+                        title="<:ERMSchedule:1111091306089939054> Activity Report",
+                        color=0xED4348,
                     )
                     new_embed.add_field(
-                        name="<:Clock:1035308064305332224> Shifts", value=string_obj
+                        name="<:ERMUser:1111098647485108315> Shifts", value=string_obj
                     )
                     embeds.append(new_embed)
                 else:
                     embeds[-1].add_field(name="\u200b", value=string_obj, inline=False)
 
         embed2 = discord.Embed(
-            title="<:Clock:1035308064305332224> Activity Notices", color=0x2A2D31
+            title="<:ERMActivity:1113209176664064060> Activity Notices", color=0xED4348
         )
 
         embed2.set_footer(text="Click 'Next' to see more information.")
@@ -557,50 +554,50 @@ class ActivityManagement(commands.Cog):
         for member, type, reason, total_time, duration, start, end in loas:
             if len(embeds[-1].fields) >= 3:
                 new_embed = discord.Embed(
-                    title="<:Clock:1035308064305332224> Activity Notices",
-                    color=0x2A2D31,
+                    title="<:ERMSchedule:1111091306089939054> Activity Notices",
+                    color=0xED4348,
                 )
                 new_embed.add_field(
-                    name=f"<:Clock:1035308064305332224> {member}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Type:** {'Reduced Activity' if type.lower() == 'ra' else 'Leave of Absence'}\n<:ArrowRightW:1035023450592514048> **Reason:** {reason}\n<:ArrowRightW:1035023450592514048> **Time on Shift:** {total_time}\n<:ArrowRightW:1035023450592514048> **Duration:** {duration}\n<:ArrowRightW:1035023450592514048> **Start:** <t:{start}>\n<:ArrowRightW:1035023450592514048> **Expires at:** <t:{end}>",
+                    name=f"<:ERMUser:1111098647485108315> {member}",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Type:** {'Reduced Activity' if type.lower() == 'ra' else 'Leave of Absence'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reason:** {reason}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time on Shift:** {total_time}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Duration:** {duration}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Start:** <t:{start}>\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Expires at:** <t:{end}>",
                     inline=False,
                 )
                 embeds.append(new_embed)
             else:
                 embeds[-1].add_field(
-                    name=f"<:Clock:1035308064305332224> {member}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Type:** {'Reduced Activity' if type.lower() == 'ra' else 'Leave of Absence'}\n<:ArrowRightW:1035023450592514048> **Reason:** {reason}\n<:ArrowRightW:1035023450592514048> **Time on Shift:** {total_time}\n<:ArrowRightW:1035023450592514048> **Duration:** {duration}\n<:ArrowRightW:1035023450592514048> **Start:** <t:{start}>\n<:ArrowRightW:1035023450592514048> **Expires at:** <t:{end}>",
+                    name=f"<:ERMUser:1111098647485108315> {member}",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Type:** {'Reduced Activity' if type.lower() == 'ra' else 'Leave of Absence'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Reason:** {reason}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time on Shift:** {total_time}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Duration:** {duration}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Start:** <t:{start}>\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Expires at:** <t:{end}>",
                     inline=False,
                 )
 
         for index, em in enumerate(embeds):
             if len(em.fields) == 0:
                 print("0 em fields")
-                if em.title == "<:Clock:1035308064305332224> Activity Notices":
+                if em.title == "<:ERMSchedule:1111091306089939054> Activity Notices":
                     em.add_field(
-                        name="<:Clock:1035308064305332224> Currently on LoA",
-                        value="<:ArrowRight:1035003246445596774> No Activity Notices found.",
+                        name="<:ERMUser:1111098647485108315> Currently on LoA",
+                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>No Activity Notices found.",
                     )
                     embeds[index] = em
                 else:
                     em.add_field(
-                        name="<:Clock:1035308064305332224> Shifts",
-                        value="<:ArrowRight:1035003246445596774> No shifts found.",
+                        name="<:ERMActivity:1113209176664064060> Shifts",
+                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>No shifts found.",
                     )
                     embeds[index] = em
             elif em.fields[0].value == "":
                 print("empty em field")
-                if em.title == "<:Clock:1035308064305332224> Activity Notices":
+                if em.title == "<:ERMSchedule:1111091306089939054> Activity Notices":
                     em.set_field_at(
-                        name="<:Clock:1035308064305332224> Currently on LoA",
-                        value="<:ArrowRight:1035003246445596774> No Activity Notices found.",
+                        name="<:ERMUser:1111098647485108315> Currently on LoA",
+                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>No Activity Notices found.",
                         index=0,
                     )
                     embeds[index] = em
                 else:
                     em.set_field_at(
-                        name="<:Clock:1035308064305332224> Shifts",
-                        value="<:ArrowRight:1035003246445596774> No shifts found.",
+                        name="<:ERMSchedule:1111091306089939054> Shifts",
+                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>No shifts found.",
                         index=0,
                     )
                     embeds[index] = em
@@ -613,20 +610,23 @@ class ActivityManagement(commands.Cog):
         menu = ViewMenu(
             gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None
         )
-        menu.add_pages(embeds)
+        for page_embed in embeds:
+            menu.add_page(embed=page_embed, content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** here is the activity report for **{ctx.guild.name}**.")
+
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         print(bbytes)
         file = discord.File(fp=BytesIO(bbytes), filename="raw_activity_report.txt")
 
         async def task():
-            await ctx.send(file=file)
+            await ctx.reply(
+                file=file,
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's a file preview of the activity report.",
+            )
 
         async def google_task():
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description="<a:Loading:1044067865453670441> Your command is loading! We are currently taking our time to ensure that your ERM experience is bug-free!",
+            msg = await ctx.reply(
+                content=f"<a:Loading:1044067865453670441>**{ctx.author.name}**, we're loading your Google Spreadsheet."
             )
-            msg = await ctx.send(embed=embed)
 
             client = gspread.authorize(
                 ServiceAccountCredentials.from_json_keyfile_dict(
@@ -660,16 +660,15 @@ class ActivityManagement(commands.Cog):
 
             sheet.share(None, perm_type="anyone", role="writer")
 
-            success = discord.Embed(
-                title="<:CheckIcon:1035018951043842088> Google Spreadsheet",
-                description=f"<:ArrowRightW:1035023450592514048>I've successfully created a Google Spreadsheet for you. You can access it [here]({sheet.url}).",
-                color=0x71C15F,
-            )
             view = GoogleSpreadsheetModification(
                 credentials_dict, scope, "Open Google Spreadsheet", sheet.url
             )
 
-            await msg.edit(embed=success, view=view)
+            await msg.edit(
+                content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, good news! We have your spreadsheet. You can access it with the button below.",
+                view=view,
+            ),
+
             menu.remove_button(spread)
             await menu.refresh_menu_items()
 
@@ -703,6 +702,7 @@ class ActivityManagement(commands.Cog):
         )
         menu.add_button(spread)
         await menu.start()
+        await activity_msg.delete()
 
 
 async def setup(bot):

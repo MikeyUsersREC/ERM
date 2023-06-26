@@ -11,9 +11,9 @@ from menus import (
     RoleSelect,
     SettingsSelectMenu,
     YesNoColourMenu,
-    YesNoMenu, CustomExecutionButton,
+    YesNoMenu,
 )
-from utils.utils import create_invis_embed, invis_embed, request_response
+from utils.utils import request_response, failure_embed, pending_embed
 
 
 class Configuration(commands.Cog):
@@ -34,9 +34,9 @@ class Configuration(commands.Cog):
     async def viewconfig(self, ctx):
         bot = self.bot
         if not await bot.settings.find_by_id(ctx.guild.id):
-            return await invis_embed(
+            return await failure_embed(
                 ctx,
-                "The server has not been set up yet. Please run `/setup` to set up the server.",
+                "this server is not setup! Run `/setup` to setup the bot.",
             )
 
         settingContents = await bot.settings.find_by_id(ctx.guild.id)
@@ -267,21 +267,25 @@ class Configuration(commands.Cog):
                 item = "None"
 
         embed = discord.Embed(
-            title="<:support:1035269007655321680> Server Configuration",
-            description=f"<:ArrowRight:1035003246445596774> Here are the current settings for **{ctx.guild.name}**:",
-            color=0x2A2D31,
+            title="<:ERMConfig:1113208218521456835> Server Configuration",
+            color=0xED4348,
         )
+        embed.set_author(
+            name=ctx.author.name,
+            icon_url=ctx.author.display_avatar.url,
+        )
+        embed.set_thumbnail(url=ctx.guild.icon.url)
         embed.add_field(
-            name="<:SettingIcon:1035353776460152892>Verification",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}".format(
+            name="<:ERMList:1111099396990435428> Verification",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Role:** {}".format(
                 settingContents["verification"]["enabled"], verification_role
             ),
             inline=False,
         )
 
         embed.add_field(
-            name="<:MessageIcon:1035321236793860116> Anti-ping",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Bypass Role:** {}\n<:ArrowRightW:1035023450592514048>**Use Hierarchy:** {}".format(
+            name="<:ERMList:1111099396990435428> Anti-ping",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Bypass Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Use Hierarchy:** {}".format(
                 settingContents["antiping"]["enabled"],
                 antiping_role,
                 bypass_role,
@@ -293,8 +297,8 @@ class Configuration(commands.Cog):
         )
 
         embed.add_field(
-            name="<:staff:1035308057007230976> Staff Management",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Staff Role:** {}\n<:ArrowRightW:1035023450592514048>**Management Role:** {}\n<:ArrowRightW:1035023450592514048>**LOA Role:** {}\n<:ArrowRightW:1035023450592514048>**RA Role:** {}".format(
+            name="<:ERMList:1111099396990435428> Staff Management",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Staff Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Management Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**LOA Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**RA Role:** {}".format(
                 settingContents["staff_management"]["enabled"],
                 staff_management_channel,
                 staff_role,
@@ -305,8 +309,8 @@ class Configuration(commands.Cog):
             inline=False,
         )
         embed.add_field(
-            name="<:MalletWhite:1035258530422341672> Punishments",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}".format(
+            name="<:ERMList:1111099396990435428> Punishments",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Channel:** {}".format(
                 settingContents["punishments"]["enabled"], punishments_channel
             ),
             inline=False,
@@ -346,16 +350,16 @@ class Configuration(commands.Cog):
                 kick_ban_webhook_channel = kick_ban_webhook_channel.mention
 
         embed.add_field(
-            name="<:SyncIcon:1071821068551073892> Game Sync",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Webhook Channel:** {}\n<:ArrowRightW:1035023450592514048>**Kick/Ban Webhook Channel:** {}".format(
+            name="<:ERMList:1111099396990435428> Game Sync",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Webhook Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Kick/Ban Webhook Channel:** {}".format(
                 moderation_sync_enabled, sync_webhook_channel, kick_ban_webhook_channel
             ),
             inline=False,
         )
 
         embed.add_field(
-            name="<:Search:1035353785184288788> Shift Management",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Nickname Prefix:** {}\n<:ArrowRightW:1035023450592514048>**Quota:** {}\n<:ArrowRightW:1035023450592514048>**Maximum Staff On Duty:** {}".format(
+            name="<:ERMList:1111099396990435428> Shift Management",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Nickname Prefix:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Maximum Staff On Duty:** {}".format(
                 settingContents["shift_management"]["enabled"],
                 shift_management_channel,
                 shift_role,
@@ -370,8 +374,8 @@ class Configuration(commands.Cog):
             inline=False,
         )
         embed.add_field(
-            name="<:FlagIcon:1035258525955395664> Customisation",
-            value="<:ArrowRightW:1035023450592514048>**Color:** {}\n<:ArrowRightW:1035023450592514048>**Prefix:** `{}`\n<:ArrowRightW:1035023450592514048>**Brand Name:** {}\n<:ArrowRightW:1035023450592514048>**Thumbnail URL:** {}\n<:ArrowRightW:1035023450592514048>**Footer Text:** {}\n<:ArrowRightW:1035023450592514048>**Compact Mode:** {}\n<:ArrowRightW:1035023450592514048>**Ban Channel:** {}\n<:ArrowRightW:1035023450592514048>**Kick Channel:** {}\n<:ArrowRightW:1035023450592514048>**BOLO Channel:** {}".format(
+            name="<:ERMList:1111099396990435428> Customisation",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Color:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Prefix:** `{}`\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Brand Name:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Thumbnail URL:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Footer Text:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Compact Mode:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Ban Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Kick Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**BOLO Channel:** {}".format(
                 settingContents["customisation"]["color"],
                 settingContents["customisation"]["prefix"],
                 settingContents["customisation"]["brand_name"],
@@ -394,8 +398,8 @@ class Configuration(commands.Cog):
             game_security_enabled = "False"
 
         embed.add_field(
-            name="<:WarningIcon:1035258528149033090> Game Security",
-            value="<:ArrowRightW:1035023450592514048>**Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Channel:** {}\n<:ArrowRightW:1035023450592514048>**Role:** {}\n<:ArrowRightW:1035023450592514048>**Webhook Channel:** {}".format(
+            name="<:ERMList:1111099396990435428> Game Security",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Role:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Webhook Channel:** {}".format(
                 game_security_enabled, aa_channel, aa_role, webhook_channel
             ),
             inline=False,
@@ -473,8 +477,8 @@ class Configuration(commands.Cog):
                 item = "None"
 
         embed.add_field(
-            name="<:SConductTitle:1053359821308567592> Game Logging",
-            value="<:ArrowRightW:1035023450592514048>**Message Logging Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Message Logging Channel:** {}\n<:ArrowRightW:1035023450592514048>**STS Logging Enabled:** {}\n<:ArrowRightW:1035023450592514048>**STS Logging Channel:** {}\n<:ArrowRightW:1035023450592514048>**Priority Logging Enabled:** {}\n<:ArrowRightW:1035023450592514048>**Priority Logging Channel:** {}".format(
+            name="<:ERMList:1111099396990435428> Game Logging",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Message Logging Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Message Logging Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**STS Logging Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**STS Logging Channel:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Priority Logging Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Priority Logging Channel:** {}".format(
                 message_logging_enabled,
                 message_logging_channel,
                 sts_logging_enabled,
@@ -486,16 +490,16 @@ class Configuration(commands.Cog):
         )
 
         embed.add_field(
-            name="<:staff:1035308057007230976> Privacy",
-            value="<:ArrowRightW:1035023450592514048>**Global Warnings:** {}".format(
+            name="<:ERMList:1111099396990435428> Privacy",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Global Warnings:** {}".format(
                 await check_privacy(bot, ctx.guild.id, "global_warnings")
             ),
             inline=False,
         )
 
         embed.add_field(
-            name="<:Clock:1035308064305332224> Shift Types",
-            value="<:ArrowRightW:1035023450592514048> **To view Shift Types, use the Select Menu below.**",
+            name="<:ERMList:1111099396990435428> Shift Types",
+            value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **To view Shift Types, use the Select Menu below.**",
             inline=False,
         )
 
@@ -506,7 +510,6 @@ class Configuration(commands.Cog):
                     label="View Shift Types",
                     value="view",
                     description="View all shift types.",
-                    emoji="<:Clock:1035308064305332224>",
                 )
             ],
         )
@@ -514,7 +517,7 @@ class Configuration(commands.Cog):
         for field in embed.fields:
             field.inline = False
 
-        await ctx.send(embed=embed, view=view)
+        await ctx.reply(embed=embed, view=view)
         timeout = await view.wait()
         if timeout:
             return
@@ -525,14 +528,13 @@ class Configuration(commands.Cog):
                 shift_types = {"enabled": False, "types": []}
 
             embed = discord.Embed(
-                title="<:Clock:1035308064305332224> Shift Types",
-                description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                color=0x2A2D31,
+                title="<:ERMLog:1113210855891423302> Shift Types",
+                color=0xED4348,
             )
 
             embed.add_field(
-                name="<:QMark:1035308059532202104> Basic Configuration",
-                value=f"<:ArrowRightW:1035023450592514048> **Enabled:** {shift_types.get('enabled')}",
+                name="<:ERMList:1111099396990435428> Basic Configuration",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Enabled:** {shift_types.get('enabled')}",
                 inline=False,
             )
 
@@ -549,20 +551,24 @@ class Configuration(commands.Cog):
                     channel = f"<#{type.get('channel')}>"
 
                 embed.add_field(
-                    name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                    value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
+                    name=f"<:ERMList:1111099396990435428> {type.get('name')}",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Name:** {type.get('name')}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Default:** {type.get('default')}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Role:** {roles}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Channel:** {channel}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
                     inline=False,
                 )
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                embed.set_thumbnail(url=ctx.guild.icon.url)
 
             if len(embed.fields) == 1:
                 embed.add_field(
-                    name="<:Pause:1035308061679689859> Shift Types",
-                    value=f"<:ArrowRight:1035003246445596774> No shift types have been added.",
+                    name="<:ERMList:1111099396990435428> Shift Types",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> No shift types have been added.",
                     inline=False,
                 )
 
-            await ctx.send(embed=embed)
-            return
+            await ctx.reply(embed=embed, view=view)
 
     @config_group.command(
         name="change",
@@ -573,27 +579,25 @@ class Configuration(commands.Cog):
     async def changeconfig(self, ctx):
         bot = self.bot
         if not await bot.settings.find_by_id(ctx.guild.id):
-            return await invis_embed(
+            return await failure_embed(
                 ctx,
-                "The server has not been set up yet. Please run `/setup` to set up the server.",
+                "this server is not setup! Run `/setup` to setup the bot.",
             )
 
         settingContents = await bot.settings.find_by_id(ctx.guild.id)
 
         category = SettingsSelectMenu(ctx.author.id)
 
-        embed = discord.Embed(
-            title="<:EditIcon:1042550862834323597> Change Configuration",
-            description="<:ArrowRight:1035003246445596774> What category would you like to configure?",
-            color=0x2A2D31,
+        config_msg = await ctx.reply(
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, which module would you like to change the configuration for?",
+            view=category,
         )
-        await ctx.send(embed=embed, view=category)
 
         await category.wait()
         category = category.value
 
         if category == "verification":
-            question = "What do you want to do with verification?"
+            question = "what do you want to do with verification?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -615,13 +619,10 @@ class Configuration(commands.Cog):
                 ],
             )
 
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
 
             await customselect.wait()
             content = customselect.value
@@ -631,13 +632,10 @@ class Configuration(commands.Cog):
                 settingContents["verification"]["enabled"] = False
             elif content == "role":
                 view = RoleSelect(ctx.author.id)
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> What roles do you want to be given on Verification?",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["verification"]["role"] = (
                     [role.id for role in view.value]
@@ -645,12 +643,12 @@ class Configuration(commands.Cog):
                     else []
                 )
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "Please pick one of the options. `enable`, `disable`, `role`. Please run this command again with correct parameters.",
+                    "pick one of the options. `enable`, `disable`, `role`. Run this command again with correct parameters.",
                 )
         elif category == "antiping":
-            question = "What do you want to do with antiping?"
+            question = "what do you want to do with antiping?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -686,13 +684,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable":
@@ -702,15 +697,13 @@ class Configuration(commands.Cog):
             elif content == "role":
                 view = RoleSelect(ctx.author.id)
                 question = (
-                    "What roles do you want to use for antiping? (e.g. `@Don't ping`)"
+                    "what roles do you want to use for antiping? (e.g. `@Don't ping`)"
                 )
 
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["antiping"]["role"] = (
                     [role.id for role in view.value]
@@ -723,14 +716,11 @@ class Configuration(commands.Cog):
                 or content == "bypass-role"
             ):
                 view = RoleSelect(ctx.author.id)
-                question = "What roles do you want to use as a bypass role? (e.g. `@Antiping Bypass`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what roles do you want to use as a bypass role? (e.g. `@Antiping Bypass`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
 
                 await view.wait()
                 settingContents["antiping"]["bypass_role"] = (
@@ -744,12 +734,12 @@ class Configuration(commands.Cog):
             elif content == "disable_hierarchy" or content == "disable-hierarchy":
                 settingContents["antiping"]["use_hierarchy"] = False
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "You have not selected one of the options. Please run this command again.",
+                    "you have not selected one of the options. Run this command again.",
                 )
         elif category == "staff_management":
-            question = "What do you want to do with staff management?"
+            question = "what do you want to do with staff management?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -795,13 +785,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable":
@@ -810,12 +797,10 @@ class Configuration(commands.Cog):
                 settingContents["staff_management"]["enabled"] = False
             elif content == "channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> What channel would you want to use for Staff Management (e.g. LOA Requests)",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, what channel would you like to use for Staff Management? (eg. LOA Requests)?",
+                    view=view,
                 )
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["staff_management"]["channel"] = (
                     view.value[0].id if view.value else None
@@ -823,15 +808,12 @@ class Configuration(commands.Cog):
             elif content == "staff_role":
                 view = RoleSelect(ctx.author.id)
                 question = (
-                    "What roles do you want to use as staff roles? (e.g. `@Staff`)"
+                    "what roles do you want to use as staff roles? (e.g. `@Staff`)"
                 )
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["staff_management"]["role"] = (
                     [role.id for role in view.value]
@@ -841,14 +823,11 @@ class Configuration(commands.Cog):
 
             elif content == "management_role":
                 view = RoleSelect(ctx.author.id)
-                question = "What roles do you want to use as management roles? (e.g. `@Management`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what roles do you want to use as management roles? (e.g. `@Management`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["staff_management"]["management_role"] = (
                     [role.id for role in view.value]
@@ -857,14 +836,11 @@ class Configuration(commands.Cog):
                 )
             elif content == "loa_role":
                 view = RoleSelect(ctx.author.id)
-                question = "What roles do you want to use as a LOA role? (e.g. `@LOA`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what roles do you want to use as a LOA role? (e.g. `@LOA`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["staff_management"]["loa_role"] = (
                     [role.id for role in view.value]
@@ -873,14 +849,11 @@ class Configuration(commands.Cog):
                 )
             elif content == "ra_role":
                 view = RoleSelect(ctx.author.id)
-                question = "What roles do you want to use as a RA role? (e.g. `@RA`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what roles do you want to use as a RA role? (e.g. `@RA`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["staff_management"]["ra_role"] = (
                     [role.id for role in view.value]
@@ -890,24 +863,22 @@ class Configuration(commands.Cog):
             elif content == "privacy_mode":
                 view = EnableDisableMenu(ctx.author.id)
                 question = "Do you want to enable Privacy Mode? This will anonymize the person who denies/accepts/voids a LoA/RA."
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 if view.value == True:
                     settingContents["staff_management"]["privacy_mode"] = True
                 elif view.value == False:
                     settingContents["customisation"]["privacy_mode"] = False
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "You have not selected one of the options. Please run this command again.",
+                    "you have not selected one of the options. Run this command again.",
                 )
         elif category == "punishments":
-            question = "What do you want to do with punishments?"
+            question = "what do you want to do with punishments?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -943,12 +914,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> What would you like to change in the Punishments module?",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable":
@@ -957,67 +926,55 @@ class Configuration(commands.Cog):
                 settingContents["punishments"]["enabled"] = False
             elif content == "channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want to use for punishments? (e.g. `#punishments`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want to use for punishments? (e.g. `#punishments`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["punishments"]["channel"] = (
                     view.value[0].id if view.value else None
                 )
             elif content == "ban_channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want to use for bans? (e.g. `#bans`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want to use for bans? (e.g. `#bans`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["customisation"]["ban_channel"] = (
                     view.value[0].id if view.value else None
                 )
             elif content == "kick_channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want to use for kicks? (e.g. `#kicks`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want to use for kicks? (e.g. `#kicks`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["customisation"]["kick_channel"] = (
                     view.value[0].id if view.value else None
                 )
             elif content == "bolo_channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want to use for BOLOs? (e.g. `#bolos`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want to use for BOLOs? (e.g. `#bolos`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["customisation"]["bolo_channel"] = (
                     view.value[0].id if view.value else None
                 )
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "You have not selected one of the options. Please run this command again.",
+                    "you have not selected one of the options. Run this command again.",
                 )
         elif category == "moderation_sync":
-            question = "What do you want to do with Game Sync?"
+            question = "what do you want to do with Game Sync?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -1043,12 +1000,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> What would you like to change in the Game Sync module?",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable":
@@ -1069,14 +1024,11 @@ class Configuration(commands.Cog):
                 settingContents["moderation_sync"]["enabled"] = False
             elif content == "channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = 'What channel do you want to use for Game Sync? (e.g. `#command-logs`)\n*This channel is where the "Command Usage" embeds are sent.*'
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = 'what channel do you want to use for Game Sync? (e.g. `#command-logs`)\n*This channel is where the "Command Usage" embeds are sent.*'
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 if not settingContents.get("moderation_sync"):
                     settingContents["moderation_sync"] = {
@@ -1089,14 +1041,11 @@ class Configuration(commands.Cog):
                 )
             elif content == "kick_channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = 'What channel do you want to use for Game Sync? (e.g. `#kick-ban-logs`)\n*This channel is where the "Player Kicked" embeds are sent.*'
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = 'what channel do you want to use for Game Sync? (e.g. `#kick-ban-logs`)\n*This channel is where the "Player Kicked" embeds are sent.*'
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 if not settingContents.get("moderation_sync"):
                     settingContents["moderation_sync"] = {
@@ -1108,7 +1057,7 @@ class Configuration(commands.Cog):
                     view.value[0].id if view.value else None
                 )
         elif category == "shift_management":
-            question = "What do you want to do with shift management?"
+            question = "what do you want to do with shift management?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -1150,13 +1099,10 @@ class Configuration(commands.Cog):
                 ],
             )
 
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable":
@@ -1166,7 +1112,7 @@ class Configuration(commands.Cog):
             elif content == "quota":
                 content = (
                     await request_response(
-                        bot, ctx, "What would you like the quota to be? (s/m/h/d)"
+                        bot, ctx, "what would you like the quota to be? (s/m/h/d)"
                     )
                 ).content
                 content = content.strip()
@@ -1182,9 +1128,9 @@ class Configuration(commands.Cog):
                     if content.endswith("d"):
                         total_seconds = int(content.removesuffix("d")) * 60 * 60 * 24
                 else:
-                    return await invis_embed(
+                    return await failure_embed(
                         ctx,
-                        "We could not translate your time. Remember to end it with s/m/h/d.",
+                        "we could not translate your time. Remember to end it with s/m/h/d.",
                     )
 
                 settingContents["shift_management"]["quota"] = total_seconds
@@ -1205,14 +1151,11 @@ class Configuration(commands.Cog):
                         )
                     ],
                 )
-                question = "What do you want to use a Nickname Prefix? (e.g. `𝗦𝘁𝗮𝗳𝗳 |`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what do you want to use a Nickname Prefix? (e.g. `𝗦𝘁𝗮𝗳𝗳 |`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["shift_management"][
                     "nickname"
@@ -1244,14 +1187,11 @@ class Configuration(commands.Cog):
                     ],
                 )
 
-                question = "What do you want the Maximum Staff limit to be?"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "Wwat do you want the Maximum Staff limit to be?"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
 
                 if view.value == "custom":
@@ -1271,21 +1211,18 @@ class Configuration(commands.Cog):
                             )
                         ],
                     )
-                    question = "What do you want the maximum amount of staff allowed online to be? (e.g. 5)"
-                    embed = discord.Embed(
-                        title="<:EditIcon:1042550862834323597> Change Configuration",
-                        description=f"<:ArrowRight:1035003246445596774> {question}",
-                        color=0x2A2D31,
+                    question = "what do you want the maximum amount of staff allowed online to be? (e.g. 5)"
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                        view=view,
                     )
-
-                    await ctx.send(embed=embed, view=view)
                     await view.wait()
                     try:
                         int(view.modal.max_staff.value)
                     except (ValueError, TypeError):
-                        return await invis_embed(
+                        return await failure_embed(
                             ctx,
-                            "That is not a valid number to set as a Maximum Staff Limit. Please try again by rerunning this command.",
+                            "that is not a valid number to set as a Maximum Staff Limit. Try again by rerunning this command.",
                         )
                     settingContents["shift_management"]["maximum_staff"] = int(
                         view.modal.max_staff.value
@@ -1297,14 +1234,11 @@ class Configuration(commands.Cog):
 
             elif content == "channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want to use for shift management? (e.g. shift logons)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want to use for shift management? (e.g. shift logons)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["shift_management"]["channel"] = (
                     view.value[0].id if view.value else None
@@ -1312,15 +1246,12 @@ class Configuration(commands.Cog):
             elif content == "role":
                 view = RoleSelect(ctx.author.id)
                 question = (
-                    "What roles do you want to use as a On-Duty role? (e.g. `@On-Duty`)"
+                    "what roles do you want to use as a On-Duty role? (e.g. `@On-Duty`)"
                 )
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["shift_management"]["role"] = (
                     [role.id for role in view.value]
@@ -1328,12 +1259,12 @@ class Configuration(commands.Cog):
                     else []
                 )
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "Please pick one of the options. `enable`, `disable`, `channel`. Please run this command again with correct parameters.",
+                    "pick one of the options. `enable`, `disable`, `channel`. Run this command again with correct parameters.",
                 )
         elif category == "shift_types":
-            question = "What do you want to do with shift types?"
+            question = "what do you want to do with Shift Types?"
 
             customselect = CustomSelectMenu(
                 ctx.author.id,
@@ -1351,13 +1282,11 @@ class Configuration(commands.Cog):
                 ],
             )
 
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
+                embed=None,
             )
-
-            await ctx.send(embed=embed, view=customselect)
 
             timeout = await customselect.wait()
             if timeout:
@@ -1372,16 +1301,21 @@ class Configuration(commands.Cog):
                     shift_types = {"enabled": False, "types": []}
 
                 embed = discord.Embed(
-                    title="<:Clock:1035308064305332224> Shift Types",
-                    description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                    color=0x2A2D31,
+                    title="<:ERMLog:1113210855891423302> Shift Types",
+                    color=0xED4348,
                 )
 
                 embed.add_field(
-                    name="<:QMark:1035308059532202104> Basic Configuration",
-                    value=f"<:ArrowRightW:1035023450592514048> **Enabled:** {shift_types.get('enabled')}",
+                    name="<:ERMList:1111099396990435428> Basic Configuration",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Enabled:** {shift_types.get('enabled')}",
                     inline=False,
                 )
+
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                embed.set_thumbnail(url=ctx.guild.icon.url)
 
                 for type in shift_types.get("types"):
                     roles = type.get("role")
@@ -1396,61 +1330,28 @@ class Configuration(commands.Cog):
                         channel = f"<#{type.get('channel')}>"
 
                     embed.add_field(
-                        name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                        value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
+                        name=f"<:ERMList:1111099396990435428> {type.get('name')}",
+                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Name:** {type.get('name')}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Default:** {type.get('default')}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Role:** {roles}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Channel:** {channel}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
                         inline=False,
                     )
 
                 if len(embed.fields) == 1:
                     embed.add_field(
-                        name="<:Pause:1035308061679689859> Shift Types",
-                        value=f"<:ArrowRight:1035003246445596774> No shift types have been added.",
+                        name="<:ERMList:1111099396990435428> Shift Types",
+                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> No shift types have been added.",
                         inline=False,
                     )
 
-                await ctx.send(embed=embed)
-                return
+                return await config_msg.edit(
+                    embed=embed,
+                    view=None,
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, you are **viewing** Shift Types.",
+                )
+
             elif customselect.value == "manage":
                 shift_types = settingContents.get("shift_types")
                 if shift_types is None:
                     shift_types = {"enabled": False, "types": []}
-
-                embed = discord.Embed(
-                    title="<:Clock:1035308064305332224> Shift Types",
-                    description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                    color=0x2A2D31,
-                )
-
-                embed.add_field(
-                    name="<:QMark:1035308059532202104> Basic Configuration",
-                    value=f"<:ArrowRightW:1035023450592514048> **Enabled:** {shift_types.get('enabled')}",
-                    inline=False,
-                )
-
-                for type in shift_types.get("types"):
-                    roles = type.get("role")
-                    if type.get("role") is None or len(type.get("role")) == 0:
-                        roles = "None"
-                    else:
-                        roles = ", ".join([f"<@&{role}>" for role in type.get("role")])
-
-                    if type.get("channel") is None:
-                        channel = "None"
-                    else:
-                        channel = f"<#{type.get('channel')}>"
-
-                    embed.add_field(
-                        name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                        value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
-                        inline=False,
-                    )
-
-                if len(embed.fields) == 1:
-                    embed.add_field(
-                        name="<:Pause:1035308061679689859> Shift Types",
-                        value=f"<:ArrowRight:1035003246445596774> No shift types have been added.",
-                        inline=False,
-                    )
 
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -1483,7 +1384,11 @@ class Configuration(commands.Cog):
                     ],
                 )
 
-                await ctx.send(embed=embed, view=view)
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** how would you like to manage Shift Types?",
+                    view=view,
+                    embed=None,
+                )
                 await view.wait()
                 if view.value == "enable":
                     shift_types["enabled"] = True
@@ -1495,16 +1400,10 @@ class Configuration(commands.Cog):
                     await bot.settings.update_by_id(settingContents)
                 elif view.value == "add":
                     if len(shift_types.get("types")) >= 25:
-                        return await invis_embed(
+                        return await failure_embed(
                             ctx,
-                            "You cannot have more than 25 shift types due to discord limitations. Please remove some shift types before adding more.",
+                            "you cannot have more than 25 shift types due to discord limitations. Please remove some shift types before adding more.",
                         )
-
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description=f"<:ArrowRight:1035003246445596774> Select the button below to begin the creation of a Shift Type.",
-                        color=0x2A2D31,
-                    )
 
                     view = CustomModalView(
                         ctx.author.id,
@@ -1524,7 +1423,11 @@ class Configuration(commands.Cog):
                         ],
                     )
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** click the buttom below to start the creation process of Shift Types.",
+                        view=view,
+                        embed=None,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -1534,15 +1437,13 @@ class Configuration(commands.Cog):
                     else:
                         return
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description="<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                        color=0x2A2D31,
-                    )
-
                     view = YesNoColourMenu(ctx.author.id)
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** would you like this Shift Type to be default?",
+                        view=view,
+                        embed=None,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -1552,29 +1453,23 @@ class Configuration(commands.Cog):
                     else:
                         default = False
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description="<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                        color=0x2A2D31,
-                    )
-
                     view = YesNoColourMenu(ctx.author.id)
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** would you like a role to be assigned when someone goes on duty with this shift type?",
+                        view=view,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
 
                     if view.value is True:
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                            color=0x2A2D31,
-                        )
-
                         view = RoleSelect(ctx.author.id)
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** got it. What roles would you like to be assigned?",
+                            view=view,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1583,26 +1478,17 @@ class Configuration(commands.Cog):
                     else:
                         roles = []
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description="<:ArrowRight:1035003246445596774> Do you want a Nickname Prefix to be added to someone's name when they are on-duty for this shift type?",
-                        color=0x2A2D31,
-                    )
-
                     view = YesNoColourMenu(ctx.author.id)
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** do you want a Nickname Prefix to be added to someone's name when they are on-duty for this shift type?",
+                        view=view,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
 
                     if view.value is True:
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description="<:ArrowRight:1035003246445596774> What do you want to be the Nickname Prefix?",
-                            color=0x2A2D31,
-                        )
-
                         view = CustomModalView(
                             ctx.author.id,
                             "Nickname Prefix",
@@ -1619,7 +1505,10 @@ class Configuration(commands.Cog):
                             ],
                         )
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** got it. What would you like the nickname prefix to be?",
+                            view=view,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1628,29 +1517,23 @@ class Configuration(commands.Cog):
                     else:
                         nickname = None
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description="<:ArrowRight:1035003246445596774> Do you want this type to send to a different channel than the currently configured one?",
-                        color=0x2A2D31,
-                    )
-
                     view = YesNoColourMenu(ctx.author.id)
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** do you want this type to send in a different channel that's not the configured one?",
+                        view=view,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
 
                     if view.value is True:
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description="<:ArrowRight:1035003246445596774> What channel do you want to this type to send to?",
-                            color=0x2A2D31,
-                        )
-
                         view = ChannelSelect(ctx.author.id, limit=1)
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}** got it. What channel would you like this shift type to log in?",
+                            view=view,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1659,10 +1542,8 @@ class Configuration(commands.Cog):
                         if channel:
                             channel = channel[0]
                         else:
-                            return await ctx.send(
-                                embed=create_invis_embed(
-                                    "You did not select a channel. Please try again."
-                                )
+                            return await config_msg.edit(
+                                f"<:ERMClose:1111101633389146223> **{ctx.author.id},** you did not select a channel."
                             )
                     else:
                         channel = None
@@ -1682,15 +1563,10 @@ class Configuration(commands.Cog):
                     settingContents["_id"] = settingContents.get("_id") or ctx.guild.id
                     await bot.settings.update_by_id(settingContents)
                 elif view.value == "edit":
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to edit.",
-                        color=0x2A2D31,
-                    )
                     if len(shift_types.get("types")) == 0:
-                        return await invis_embed(
+                        return await failure_embed(
                             ctx,
-                            "There are no shift types to edit. Please create a shift type before attempting to delete one.",
+                            "there are no shift types to edit. Create a shift type before attempting to delete one.",
                         )
 
                     view = CustomSelectMenu(
@@ -1705,43 +1581,27 @@ class Configuration(commands.Cog):
                         ],
                     )
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, which Shift Type would you like to edit?",
+                        view=view,
+                        embed=None,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
 
-                    shift_type = [
-                        type
-                        for type in shift_types.get("types")
-                        if type.get("id") == int(view.value)
-                    ]
-                    if len(shift_type) == 0:
-                        return await invis_embed(ctx, "That shift type does not exist.")
+                    shift_item = None
 
-                    shift_type = shift_type[0]
+                    for item in shift_types.get("types"):
+                        print(item)
+                        if item.get("id") == int(view.value):
+                            shift_type = item
+                            break
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description=f"<:ArrowRight:1035003246445596774> What would you like to edit about this shift type?",
-                        color=0x2A2D31,
-                    )
-
-                    roles = type.get("role")
-                    if type.get("role") is None or len(type.get("role")) == 0:
-                        roles = "None"
-                    else:
-                        roles = ", ".join([f"<@&{role}>" for role in type.get("role")])
-
-                    if type.get("channel") is None:
-                        channel = "None"
-                    else:
-                        channel = f"<#{type.get('channel')}>"
-
-                    embed.add_field(
-                        name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                        value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
-                        inline=False,
-                    )
+                    if shift_type is None:
+                        return await failure_embed(
+                            ctx, "that shift type does not exist."
+                        )
 
                     view = CustomSelectMenu(
                         ctx.author.id,
@@ -1774,18 +1634,16 @@ class Configuration(commands.Cog):
                         ],
                     )
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, what do you want to edit about that Shift Type?",
+                        view=view,
+                        embed=None,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
 
                     if view.value == "name":
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> What would you like to change the name of this shift type to?",
-                            color=0x2A2D31,
-                        )
-
                         view = CustomModalView(
                             ctx.author.id,
                             "Edit Shift Type Name",
@@ -1804,7 +1662,11 @@ class Configuration(commands.Cog):
                             ],
                         )
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, what would you like to change the name of this shift type to?",
+                            view=view,
+                            embed=None,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1821,15 +1683,13 @@ class Configuration(commands.Cog):
                         )
                         await bot.settings.update_by_id(settingContents)
                     elif view.value == "default":
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                            color=0x2A2D31,
-                        )
-
                         view = YesNoColourMenu(ctx.author.id)
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, would you like this Shift Type to be default?",
+                            view=view,
+                            embed=None,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1847,30 +1707,24 @@ class Configuration(commands.Cog):
                         )
                         await bot.settings.update_by_id(settingContents)
                     elif view.value == "role":
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                            color=0x2A2D31,
-                        )
-
                         view = YesNoColourMenu(ctx.author.id)
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, would you like a role to be assigned when someone goes on duty with this shift type?",
+                            view=view,
+                        )
                         timeout = await view.wait()
 
                         if timeout:
                             return
 
                         if view.value is True:
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                color=0x2A2D31,
-                            )
-
                             view = RoleSelect(ctx.author.id)
 
-                            await ctx.send(embed=embed, view=view)
+                            await config_msg.edit(
+                                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, got it. What roles would you like to be assigned?",
+                                view=view,
+                            )
                             timeout = await view.wait()
 
                             if timeout:
@@ -1890,30 +1744,24 @@ class Configuration(commands.Cog):
                         )
                         await bot.settings.update_by_id(settingContents)
                     elif view.value == "channel":
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> Do you want this shift type to be sent to a different channel than the one configured in Shift Management?",
-                            color=0x2A2D31,
-                        )
-
                         view = YesNoColourMenu(ctx.author.id)
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, do you want this type to send in a different channel that's not the configured one?",
+                            view=view,
+                        )
                         timeout = await view.wait()
 
                         if timeout:
                             return
 
                         if view.value is True:
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> What channel do you want logs of this shift type to be sent to?",
-                                color=0x2A2D31,
-                            )
-
                             view = ChannelSelect(ctx.author.id, limit=1)
 
-                            await ctx.send(embed=embed, view=view)
+                            await config_msg.edit(
+                                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, got it. What channel would you like this shift type to log in?",
+                                view=view,
+                            )
                             timeout = await view.wait()
 
                             if timeout:
@@ -1923,11 +1771,10 @@ class Configuration(commands.Cog):
                             if channel:
                                 channel = channel[0].id
                             else:
-                                return await ctx.send(
-                                    embed=create_invis_embed(
-                                        "You did not select a channel. Please try again."
-                                    )
+                                return await ctx.reply(
+                                    f"<:ERMClose:1111101633389146223> **{ctx.author.id}**, you did not select a channel."
                                 )
+
                         else:
                             channel = None
 
@@ -1937,12 +1784,6 @@ class Configuration(commands.Cog):
                         )
                         await bot.settings.update_by_id(settingContents)
                     elif view.value == "nickname":
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> What nickname prefix do you want for people on duty of this type?",
-                            color=0x2A2D31,
-                        )
-
                         view = CustomModalView(
                             ctx.author.id,
                             "Edit Shift Type Nickname",
@@ -1961,7 +1802,10 @@ class Configuration(commands.Cog):
                             ],
                         )
 
-                        await ctx.send(embed=embed, view=view)
+                        await config_msg.edit(
+                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, got it. What would you like the nickname prefix to be?",
+                            view=view,
+                        )
                         timeout = await view.wait()
                         if timeout:
                             return
@@ -1979,19 +1823,13 @@ class Configuration(commands.Cog):
                         await bot.settings.update_by_id(settingContents)
                 elif view.value == "delete":
                     if len(shift_types.get("types")) == 0:
-                        return await invis_embed(
-                            ctx, "There are no shift types to delete."
+                        return await failure_embed(
+                            ctx, "there are no shift types to delete."
                         )
 
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Shift Types",
-                        description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to delete.",
-                        color=0x2A2D31,
-                    )
-
                     if len(shift_types.get("types")) == 0:
-                        return await invis_embed(
-                            ctx, "There are no shift types to delete."
+                        return await failure_embed(
+                            ctx, "uh, there are no shift types to delete."
                         )
                     view = CustomSelectMenu(
                         ctx.author.id,
@@ -2005,7 +1843,11 @@ class Configuration(commands.Cog):
                         ],
                     )
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, select the shift type you wish to delete",
+                        view=view,
+                        embed=None,
+                    )
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -2016,7 +1858,9 @@ class Configuration(commands.Cog):
                         if type.get("id") == int(view.value)
                     ]
                     if len(shift_type) == 0:
-                        return await invis_embed(ctx, "That shift type does not exist.")
+                        return await failure_embed(
+                            ctx, "that shift type does not exist."
+                        )
 
                     shift_type = shift_type[0]
 
@@ -2024,126 +1868,11 @@ class Configuration(commands.Cog):
                     settingContents["_id"] = settingContents.get("_id") or ctx.guild.id
                     await bot.settings.update_by_id(settingContents)
 
-        elif category == "customisation":
-            # color, prefix, brand name, thumbnail url, footer text, ban channel
-            question = "What would you like to customize?"
-            customselect = CustomSelectMenu(
-                ctx.author.id,
-                [
-                    discord.SelectOption(
-                        label="Color",
-                        description="Change the color of the embeds",
-                        value="color",
-                    ),
-                    discord.SelectOption(
-                        label="Prefix",
-                        description="Change the prefix of the bot",
-                        value="prefix",
-                    ),
-                    discord.SelectOption(
-                        label="Brand Name",
-                        description="Used in some embeds to identify the server",
-                        value="brand_name",
-                    ),
-                    discord.SelectOption(
-                        label="Thumbnail URL",
-                        description="Used in some embeds for customisation",
-                        value="thumbnail_url",
-                    ),
-                    discord.SelectOption(
-                        label="Footer Text",
-                        description="Used in some embeds for customisation",
-                        value="footer_text",
-                    ),
-                ],
-            )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
-            )
-
-            await ctx.send(embed=embed, view=customselect)
-            await customselect.wait()
-            content = customselect.value
-            if content == "color":
-                content = (
-                    await request_response(
-                        bot,
-                        ctx,
-                        "What color do you want to use for the server? (e.g. `#00FF00`)",
-                    )
-                ).content
-                convertedContent = await discord.ext.commands.ColourConverter().convert(
-                    ctx, content
-                )
-                settingContents["customisation"]["color"] = convertedContent.value
-            elif content == "prefix":
-                content = (
-                    await request_response(
-                        bot,
-                        ctx,
-                        "What prefix do you want to use for the server? (e.g. `!`)",
-                    )
-                ).content
-                settingContents["customisation"]["prefix"] = content
-            elif content == "brand_name":
-                content = (
-                    await request_response(
-                        bot,
-                        ctx,
-                        "What brand name do you want to use for the server? (e.g. `My Server`)",
-                    )
-                ).content
-                settingContents["customisation"]["brand_name"] = content
-            elif content == "thumbnail_url":
-                content = (
-                    await request_response(
-                        bot,
-                        ctx,
-                        "What thumbnail url do you want to use for the server? (e.g. `https://i.imgur.com/...`)",
-                    )
-                ).content
-                settingContents["customisation"]["thumbnail_url"] = content
-            elif content == "footer_text":
-                content = (
-                    await request_response(
-                        bot,
-                        ctx,
-                        "What footer text do you want to use for the server? (e.g. `My Server`)",
-                    )
-                ).content
-                settingContents["customisation"]["footer_text"] = content
-            elif content == "server_code":
-                content = (
-                    await request_response(
-                        bot, ctx, "What server code do you use for your ER:LC server?"
-                    )
-                ).content
-                settingContents["customisation"]["server_code"] = content
-            elif content == "compact_mode":
-                view = EnableDisableMenu(ctx.author.id)
-                await invis_embed(
-                    ctx,
-                    "Do you want to enable Compact Mode? This will disable most of the emojis used within the bot.",
-                    view=view,
-                )
-                await view.wait()
-                if view.value == True:
-                    settingContents["customisation"]["compact_mode"] = True
-                elif view.value == False:
-                    settingContents["customisation"]["compact_mode"] = False
-
-            else:
-                return await invis_embed(
-                    ctx,
-                    "You did not pick any of the options. Please run this command again with correct parameters.",
-                )
         elif category == "privacy":
             privacyConfig = await bot.privacy.find_by_id(ctx.guild.id)
             if privacyConfig is None:
                 privacyConfig = {"_id": ctx.guild.id, "global_warnings": True}
-            question = "What would you like to change?"
+            question = "what would you like to change?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -2159,13 +1888,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
             if content == "enable_global_warnings":
@@ -2173,13 +1899,11 @@ class Configuration(commands.Cog):
             if content == "disable_global_warnings":
                 privacyConfig["global_warnings"] = False
             await bot.privacy.upsert(privacyConfig)
-            successEmbed = discord.Embed(
-                title="<:CheckIcon:1035018951043842088> Success!",
-                description="<:ArrowRight:1035003246445596774> Your configuration has been changed.",
-                color=0x71C15F,
+            return await config_msg.edit(
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your configuration has been changed.",
+                view=None,
+                embed=None,
             )
-
-            return await ctx.send(embed=successEmbed)
         elif category == "game_logging":
             if not settingContents.get("game_logging"):
                 settingContents["game_logging"] = {
@@ -2188,7 +1912,7 @@ class Configuration(commands.Cog):
                     "priority": {"enabled": False, "channel": None},
                 }
 
-            question = "What would you like to manage?"
+            question = "what would you like to manage?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -2209,13 +1933,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
             await customselect.wait()
             content = customselect.value
 
@@ -2223,7 +1944,7 @@ class Configuration(commands.Cog):
                 return
 
             if content == "message":
-                question = "What would you like to change?"
+                question = "what would you like to change?"
 
                 customselect = CustomSelectMenu(
                     ctx.author.id,
@@ -2245,13 +1966,10 @@ class Configuration(commands.Cog):
                         ),
                     ],
                 )
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=customselect,
                 )
-
-                await ctx.send(embed=embed, view=customselect)
                 timeout = await customselect.wait()
                 if timeout:
                     return
@@ -2262,15 +1980,12 @@ class Configuration(commands.Cog):
                 elif content == "disable_message_logging":
                     settingContents["game_logging"]["message"]["enabled"] = False
                 elif content == "set_message_logging_channel":
-                    embed = discord.Embed(
-                        title="<:EditIcon:1042550862834323597> Change Configuration",
-                        description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for message logging?",
-                        color=0x2A2D31,
-                    )
-
                     view = ChannelSelect(ctx.author.id, limit=1)
 
-                    await ctx.send(embed=embed, view=view)
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                        view=view,
+                    )
 
                     timeout = await view.wait()
                     if timeout:
@@ -2285,7 +2000,7 @@ class Configuration(commands.Cog):
                             channel[0].id if channel else None
                         )
             elif content == "sts":
-                question = "What would you like to change?"
+                question = "what would you like to change?"
 
                 customselect = CustomSelectMenu(
                     ctx.author.id,
@@ -2308,13 +2023,10 @@ class Configuration(commands.Cog):
                     ],
                 )
 
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=customselect,
                 )
-
-                await ctx.send(embed=embed, view=customselect)
                 timeout = await customselect.wait()
                 if timeout:
                     return
@@ -2327,13 +2039,13 @@ class Configuration(commands.Cog):
                 elif content == "set_sts_logging_channel":
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
-                        description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for STS logging?",
-                        color=0x2A2D31,
+                        description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> what channel do you want to set for STS logging?",
+                        color=0xED4348,
                     )
 
                     view = ChannelSelect(ctx.author.id, limit=1)
 
-                    await ctx.send(embed=embed, view=view)
+                    await ctx.reply(embed=embed, view=view)
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -2346,7 +2058,7 @@ class Configuration(commands.Cog):
                         channel[0].id if channel else None
                     )
             elif content == "priority":
-                question = "What would you like to change?"
+                question = "what would you like to change?"
 
                 customselect = CustomSelectMenu(
                     ctx.author.id,
@@ -2369,13 +2081,10 @@ class Configuration(commands.Cog):
                     ],
                 )
 
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=customselect,
                 )
-
-                await ctx.send(embed=embed, view=customselect)
                 timeout = await customselect.wait()
                 if timeout:
                     return
@@ -2400,13 +2109,13 @@ class Configuration(commands.Cog):
                 elif content == "set_priority_logging_channel":
                     embed = discord.Embed(
                         title="<:EditIcon:1042550862834323597> Change Configuration",
-                        description=f"<:ArrowRight:1035003246445596774> What channel do you want to set for Priority logging?",
-                        color=0x2A2D31,
+                        description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> what channel do you want to set for Priority logging?",
+                        color=0xED4348,
                     )
 
                     view = ChannelSelect(ctx.author.id, limit=1)
 
-                    await ctx.send(embed=embed, view=view)
+                    await ctx.reply(embed=embed, view=view)
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -2423,17 +2132,14 @@ class Configuration(commands.Cog):
                     settingContents["game_logging"]["priority"]["channel"] = (
                         channel[0].id if channel else None
                     )
-
-            successEmbed = discord.Embed(
-                title="<:CheckIcon:1035018951043842088> Success!",
-                description="<:ArrowRight:1035003246445596774> Your configuration has been changed.",
-                color=0x71C15F,
-            )
-
             await bot.settings.update_by_id(settingContents)
-            return await ctx.send(embed=successEmbed)
+            return await config_msg.edit(
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your configuration has been changed.",
+                view=None,
+                embed=None,
+            )
         elif category == "security":
-            question = "What do you want to do with Game Security?"
+            question = "what do you want to do with Game Security?"
             customselect = CustomSelectMenu(
                 ctx.author.id,
                 [
@@ -2464,13 +2170,10 @@ class Configuration(commands.Cog):
                     ),
                 ],
             )
-            embed = discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-                color=0x2A2D31,
+            await config_msg.edit(
+                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                view=customselect,
             )
-
-            await ctx.send(embed=embed, view=customselect)
 
             await customselect.wait()
             content = customselect.value
@@ -2484,15 +2187,12 @@ class Configuration(commands.Cog):
                 settingContents["game_security"]["enabled"] = False
             elif content == "role":
                 view = RoleSelect(ctx.author.id)
-                question = "What roles do you want to be mentioned when abuse is detected? (e.g. `@Leadership`)"
+                question = "what roles do you want to be mentioned when abuse is detected? (e.g. `@Leadership`)"
 
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["game_security"]["role"] = (
                     [role.id for role in view.value]
@@ -2502,78 +2202,46 @@ class Configuration(commands.Cog):
             elif content == "webhook_channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
                 question = (
-                    "What channel are ER:LC webhooks sent to? (e.g. `#kicks-and-bans`)"
+                    "what channel are ER:LC webhooks sent to? (e.g. `#kicks-and-bans`)"
                 )
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["game_security"]["webhook_channel"] = (
                     view.value[0].id if view.value else None
                 )
             elif content == "channel":
                 view = ChannelSelect(ctx.author.id, limit=1)
-                question = "What channel do you want Anti-Abuse reports to go to? (e.g. `#admin-abuse`)"
-                embed = discord.Embed(
-                    title="<:EditIcon:1042550862834323597> Change Configuration",
-                    description=f"<:ArrowRight:1035003246445596774> {question}",
-                    color=0x2A2D31,
+                question = "what channel do you want Anti-Abuse reports to go to? (e.g. `#admin-abuse`)"
+                await config_msg.edit(
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                    view=view,
                 )
-
-                await ctx.send(embed=embed, view=view)
                 await view.wait()
                 settingContents["game_security"]["channel"] = (
                     view.value[0].id if view.value else None
                 )
             else:
-                return await invis_embed(
+                return await failure_embed(
                     ctx,
-                    "Please pick one of the options. `enable`, `disable`, `role`, `channel`, `webhook_channel`. Please run this command again with correct parameters.",
+                    "pick one of the options. `enable`, `disable`, `role`, `channel`, `webhook_channel`. Run this command again with correct parameters.",
                 )
         else:
-            return await invis_embed(
+            return await failure_embed(
                 ctx,
-                "You did not pick any of the options. Please run this command again with correct parameters.",
+                "you did not pick any of the options. Run this command again with correct parameters.",
             )
 
         if category != "shift_types":
             await bot.settings.update_by_id(settingContents)
 
-        successEmbed = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Success!",
-            description="<:ArrowRight:1035003246445596774> Your configuration has been changed.",
-            color=0x71C15F,
+        await config_msg.edit(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your configuration has been changed.",
+            view=None,
+            embed=None,
         )
-        view = discord.ui.View()
-
-        run_again = False
-        async def callback(interaction: discord.Interaction, button: discord.ui.Button):
-            nonlocal run_again
-            run_again = True
-            await interaction.response.send_message(embed=discord.Embed(
-                title="<:EditIcon:1042550862834323597> Change Configuration",
-                description=f"<a:Loading:1044067865453670441> Currently loading your configuration..",
-                color=0x2A2D31,
-            ), ephemeral=True, delete_after=4)
-            button.view.stop()
-
-        view.add_item(
-            CustomExecutionButton(
-                ctx.author.id,
-                label="Rerun",
-                style=discord.ButtonStyle.grey,
-                func=callback
-            )
-        )
-
-        await ctx.send(embed=successEmbed, view=view)
-        await view.wait()
-        if run_again:
-            await ctx.invoke(ctx.command)
 
     @commands.hybrid_command(
         name="setup",
@@ -2609,44 +2277,43 @@ class Configuration(commands.Cog):
             discord.SelectOption(
                 label="All features",
                 value="all",
-                emoji="<:Setup:1035006520817090640>",
                 description="All features of the bot, contains all of the features below",
             ),
             discord.SelectOption(
                 label="Staff Management",
                 value="staff_management",
-                emoji="<:staff:1035308057007230976>",
                 description="Inactivity Notices, and managing staff members",
             ),
             discord.SelectOption(
                 label="Punishments",
                 value="punishments",
-                emoji="<:MalletWhite:1035258530422341672>",
                 description="Punishing community members for rule infractions",
             ),
             discord.SelectOption(
                 label="Shift Management",
                 value="shift_management",
-                emoji="<:Search:1035353785184288788>",
                 description="Shifts (duty manage, duty admin), and where logs should go",
             ),
         ]
 
         welcome = discord.Embed(
-            title="<:Setup:1035006520817090640> Which features would you like enabled?",
-            color=0xFFFFFF,
+            color=0xED4348,
         )
-        welcome.description = "Toggle which modules of ERM you would like to use.\n\n<:ArrowRight:1035003246445596774> All *(default)*\n*All features of the bot*\n\n<:ArrowRight:1035003246445596774> Staff Management\n*Manage your staff members, LoAs, and more!*\n\n<:ArrowRight:1035003246445596774> Punishments\n*Roblox moderation, staff logging systems, and more!*\n\n<:ArrowRight:1035003246445596774> Shift Management\n*Manage staff member's shifts, view who's in game!*"
+        welcome.description = "<:ERMCheck:1111089850720976906> **All *(default)***\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>All features of the bot\n\n<:ERMAdmin:1111100635736187011> **Staff Management**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Manage your staff members, LoAs, and more!\n\n<:ERMPunish:1111095942075138158> **Punishments**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Roblox moderation, staff logging systems, and more!\n\n<:ERMSchedule:1111091306089939054> **Shift Management**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Manage staff member's shifts, view who's in game!"
 
         view = MultiSelectMenu(ctx.author.id, options)
 
-        await ctx.send(embed=welcome, view=view)
+        await ctx.reply(
+            embed=welcome,
+            view=view,
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, setting up ERM is easy! You're on the interactive setup wizard. Below, select the module(s) you would like to enable.",
+        )
 
         await view.wait()
         if not view.value:
-            return await invis_embed(
+            return await failure_embed(
                 ctx,
-                "<:Setup:1035006520817090640> You have took too long to respond. Please try again.",
+                "you took too long to respond. Try again.",
             )
 
         if "all" in view.value:
@@ -2662,27 +2329,27 @@ class Configuration(commands.Cog):
                 settingContents["staff_management"]["enabled"] = True
 
         if settingContents["staff_management"]["enabled"]:
-            question = "What channel do you want to use for staff management?"
+            question = "what channel do you want to use for staff management?"
             view = ChannelSelect(ctx.author.id, limit=1)
-            await invis_embed(ctx, question, view=view)
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             convertedContent = view.value
             settingContents["staff_management"]["channel"] = (
                 convertedContent[0].id if convertedContent else None
             )
 
-            question = "What role would you like to use for your staff role? (e.g. @Staff)\n*You can select multiple roles.*"
+            question = "what role would you like to use for your staff role? (e.g. @Staff)\n*You can select multiple roles.*"
             view = RoleSelect(ctx.author.id)
-            await invis_embed(ctx, question, view=view)
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             convertedContent = view.value
             settingContents["staff_management"]["role"] = (
                 [role.id for role in convertedContent] if convertedContent else []
             )
 
-            question = "What role would you like to use for your Management role? (e.g. @Management)\n*You can select multiple roles.*"
+            question = "what role would you like to use for your Management role? (e.g. @Management)\n*You can select multiple roles.*"
             view = RoleSelect(ctx.author.id)
-            await invis_embed(ctx, question, view=view)
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             convertedContent = view.value
             settingContents["staff_management"]["management_role"] = (
@@ -2690,19 +2357,14 @@ class Configuration(commands.Cog):
             )
 
             view = YesNoMenu(ctx.author.id)
-            question = "Do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?"
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-            )
-
-            await ctx.send(embed=embed, view=view)
+            question = "do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?"
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             if view.value is not None:
                 if view.value:
-                    question = "What role(s) would you like to be given?\n*You can select multiple roles.*"
+                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
                     view = RoleSelect(ctx.author.id)
-                    await invis_embed(ctx, question, view=view)
+                    await pending_embed(ctx, question, view=view)
                     await view.wait()
                     convertedContent = view.value
                     settingContents["staff_management"]["loa_role"] = (
@@ -2712,19 +2374,14 @@ class Configuration(commands.Cog):
                     )
 
             view = YesNoMenu(ctx.author.id)
-            question = "Do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?"
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-            )
-
-            await ctx.send(embed=embed, view=view)
+            question = "do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?"
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             if view.value is not None:
                 if view.value:
-                    question = "What role(s) would you like to be given?\n*You can select multiple roles.*"
+                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
                     view = RoleSelect(ctx.author.id)
-                    await invis_embed(ctx, question, view=view)
+                    await pending_embed(ctx, question, view=view)
                     await view.wait()
                     convertedContent = view.value
                     settingContents["staff_management"]["ra_role"] = (
@@ -2733,18 +2390,18 @@ class Configuration(commands.Cog):
                         else []
                     )
         if settingContents["punishments"]["enabled"]:
-            question = "What channel do you want to use for punishments?"
+            question = "what channel do you want to use for punishments?"
             view = ChannelSelect(ctx.author.id, limit=1)
-            await invis_embed(ctx, question, view=view)
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             convertedContent = view.value
             settingContents["punishments"]["channel"] = (
                 convertedContent[0].id if convertedContent else None
             )
         if settingContents["shift_management"]["enabled"]:
-            question = "What channel do you want to use for shift management? (e.g. shift signups, etc.)"
+            question = "what channel do you want to use for shift management? (e.g. shift signups, etc.)"
             view = ChannelSelect(ctx.author.id, limit=1)
-            await invis_embed(ctx, question, view=view)
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             convertedContent = view.value
             settingContents["shift_management"]["channel"] = (
@@ -2752,19 +2409,14 @@ class Configuration(commands.Cog):
             )
 
             view = YesNoMenu(ctx.author.id)
-            question = "Do you want a role to be assigned to staff members when they are in game?"
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-            )
-
-            await ctx.send(embed=embed, view=view)
+            question = "do you want a role to be assigned to staff members when they are in game?"
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             if view.value is not None:
                 if view.value:
-                    question = "What role(s) would you like to be given?\n*You can select multiple roles.*"
+                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
                     view = RoleSelect(ctx.author.id, limit=1)
-                    await invis_embed(ctx, question, view=view)
+                    await pending_embed(ctx, question, view=view)
                     await view.wait()
                     convertedContent = view.value
                     settingContents["shift_management"]["role"] = (
@@ -2774,19 +2426,14 @@ class Configuration(commands.Cog):
                     )
 
             view = YesNoMenu(ctx.author.id)
-            question = "Do you have a weekly quota? (e.g. `2h`, `90m`, `7h`)"
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-            )
-
-            await ctx.send(embed=embed, view=view)
+            question = "do you have a weekly quota? (e.g. `2h`, `90m`, `7h`)"
+            await pending_embed(ctx, question, view=view)
             await view.wait()
             if view.value is not None:
                 if view.value:
                     content = (
                         await request_response(
-                            bot, ctx, "What would you like the quota to be? (s/m/h/d)"
+                            bot, ctx, "what would you like the quota to be? (s/m/h/d)"
                         )
                     ).content
                     content = content.strip()
@@ -2804,691 +2451,33 @@ class Configuration(commands.Cog):
                                 int(content.removesuffix("d")) * 60 * 60 * 24
                             )
                     else:
-                        return await invis_embed(
+                        return await failure_embed(
                             ctx,
-                            "We could not translate your time. Remember to end it with s/m/h/d.",
+                            "we could not translate your time. Remember to end it with s/m/h/d.",
                         )
 
                     settingContents["shift_management"]["quota"] = total_seconds
 
-            view = YesNoMenu(ctx.author.id)
-            question = "Do you have multiple shift types?"
-            embed = discord.Embed(
-                color=0x2A2D31,
-                description=f"<:ArrowRight:1035003246445596774> {question}",
-            )
-
-            await ctx.send(embed=embed, view=view)
-            await view.wait()
-            if view.value is not None:
-                if view.value is True:
-
-                    async def func():
-                        shift_types = settingContents.get("shift_types")
-                        if shift_types is None:
-                            shift_types = {"enabled": False, "types": []}
-
-                        embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Shift Types",
-                            description=f"<:ArrowRight:1035003246445596774> Here is the Shift Types configuration for **{ctx.guild.name}**:",
-                            color=0x2A2D31,
-                        )
-
-                        embed.add_field(
-                            name="<:QMark:1035308059532202104> Basic Configuration",
-                            value=f"<:ArrowRightW:1035023450592514048> **Enabled:** {shift_types.get('enabled')}",
-                            inline=False,
-                        )
-
-                        for type in shift_types.get("types"):
-                            roles = type.get("role")
-                            if type.get("role") is None or len(type.get("role")) == 0:
-                                roles = "None"
-                            else:
-                                roles = ", ".join(
-                                    [f"<@&{role}>" for role in type.get("role")]
-                                )
-
-                            if type.get("channel") is None:
-                                channel = "None"
-                            else:
-                                channel = f"<#{type.get('channel')}>"
-
-                            embed.add_field(
-                                name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                                value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
-                                inline=False,
-                            )
-
-                        if len(embed.fields) == 1:
-                            embed.add_field(
-                                name="<:Pause:1035308061679689859> Shift Types",
-                                value=f"<:ArrowRight:1035003246445596774> No shift types have been added.",
-                                inline=False,
-                            )
-
-                        view = CustomSelectMenu(
-                            ctx.author.id,
-                            [
-                                discord.SelectOption(
-                                    label="Enable Shift Types",
-                                    description="Enable Shift Types",
-                                    value="enable",
-                                ),
-                                discord.SelectOption(
-                                    label="Disable Shift Types",
-                                    description="Disable Shift Types",
-                                    value="disable",
-                                ),
-                                discord.SelectOption(
-                                    label="Finish",
-                                    description="Finish the configuration",
-                                    value="finish",
-                                    emoji="<:CheckIcon:1035018951043842088>",
-                                ),
-                                discord.SelectOption(
-                                    label="Add Shift Type",
-                                    description="Add a Shift Type",
-                                    value="add",
-                                ),
-                                discord.SelectOption(
-                                    label="Edit Shift Type",
-                                    description="Edit a Shift Type",
-                                    value="edit",
-                                ),
-                                discord.SelectOption(
-                                    label="Remove Shift Type",
-                                    description="Remove a Shift Type",
-                                    value="delete",
-                                ),
-                            ],
-                        )
-
-                        await ctx.send(embed=embed, view=view)
-                        await view.wait()
-                        if view.value == "enable":
-                            shift_types["enabled"] = True
-                            settingContents["shift_types"] = shift_types
-                            settingContents["_id"] = (
-                                settingContents.get("_id") or ctx.guild.id
-                            )
-                            await bot.settings.update_by_id(settingContents)
-                            await func()
-                        elif view.value == "disable":
-                            shift_types["enabled"] = False
-                            settingContents["shift_types"] = shift_types
-                            settingContents["_id"] = (
-                                settingContents.get("_id") or ctx.guild.id
-                            )
-
-                            await bot.settings.update_by_id(settingContents)
-                            await func()
-                        elif view.value == "add":
-                            if len(shift_types.get("types")) >= 24:
-                                return await invis_embed(
-                                    ctx,
-                                    "You cannot have more than 24 shift types due to Discord limitations. Please remove some shift types before adding more.",
-                                )
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description=f"<:ArrowRight:1035003246445596774> Select the button below to begin the creation of a Shift Type.",
-                                color=0x2A2D31,
-                            )
-
-                            view = CustomModalView(
-                                ctx.author.id,
-                                "Create a Shift Type",
-                                "Create a Shift Type",
-                                [
-                                    (
-                                        "name",
-                                        discord.ui.TextInput(
-                                            placeholder="Name of the Shift Type",
-                                            label="Name",
-                                            required=True,
-                                            min_length=1,
-                                            max_length=32,
-                                        ),
-                                    )
-                                ],
-                            )
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.modal.name.value:
-                                name = view.modal.name.value
-                            else:
-                                return
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                                color=0x2A2D31,
-                            )
-
-                            view = YesNoColourMenu(ctx.author.id)
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.value is True:
-                                default = True
-                            else:
-                                default = False
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                                color=0x2A2D31,
-                            )
-
-                            view = YesNoColourMenu(ctx.author.id)
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.value is True:
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = RoleSelect(ctx.author.id)
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    return
-
-                                roles = view.value
-                            else:
-                                roles = []
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> Do you want a Nickname Prefix to be added to someone's name when they are on-duty for this shift type?",
-                                color=0x2A2D31,
-                            )
-
-                            view = YesNoColourMenu(ctx.author.id)
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.value is True:
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description="<:ArrowRight:1035003246445596774> What do you want to be the Nickname Prefix?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = CustomModalView(
-                                    ctx.author.id,
-                                    "Nickname Prefix",
-                                    "Nickname Prefix",
-                                    [
-                                        (
-                                            "nickname",
-                                            discord.ui.TextInput(
-                                                placeholder="Nickname Prefix",
-                                                label="Nickname Prefix",
-                                                max_length=20,
-                                            ),
-                                        )
-                                    ],
-                                )
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    return
-
-                                nickname = view.modal.nickname.value
-                            else:
-                                nickname = None
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description="<:ArrowRight:1035003246445596774> Do you want this type to send to a different channel than the currently configured one?",
-                                color=0x2A2D31,
-                            )
-
-                            view = YesNoColourMenu(ctx.author.id)
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.value is True:
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description="<:ArrowRight:1035003246445596774> What channel do you want to this type to send to?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = ChannelSelect(ctx.author.id, limit=1)
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    return
-
-                                channel = view.value
-                                if channel:
-                                    channel = channel[0]
-                                else:
-                                    return await ctx.send(
-                                        embed=create_invis_embed(
-                                            "You must select a channel for successful shift type creation. Please try again."
-                                        )
-                                    )
-                            else:
-                                channel = None
-
-                            shift_types["types"].append(
-                                {
-                                    "id": next(generator),
-                                    "name": name,
-                                    "default": default,
-                                    "role": [role.id for role in roles],
-                                    "channel": channel.id if channel else None,
-                                    "nickname": nickname,
-                                }
-                            )
-
-                            settingContents["shift_types"] = shift_types
-                            settingContents["_id"] = (
-                                settingContents.get("_id") or ctx.guild.id
-                            )
-
-                            await bot.settings.update_by_id(settingContents)
-                            await func()
-                        elif view.value == "edit":
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to edit.",
-                                color=0x2A2D31,
-                            )
-                            if len(shift_types.get("types")) == 0:
-                                return await invis_embed(
-                                    ctx,
-                                    "There are no shift types to edit. Please create a shift type before attempting to delete one.",
-                                )
-
-                            view = CustomSelectMenu(
-                                ctx.author.id,
-                                [
-                                    discord.SelectOption(
-                                        label=type.get("name"),
-                                        description=type.get("name"),
-                                        value=type.get("id"),
-                                    )
-                                    for type in shift_types.get("types")
-                                ],
-                            )
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            shift_type = [
-                                type
-                                for type in shift_types.get("types")
-                                if type.get("id") == int(view.value)
-                            ]
-                            if len(shift_type) == 0:
-                                return await invis_embed(
-                                    ctx, "That shift type does not exist."
-                                )
-
-                            shift_type = shift_type[0]
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description=f"<:ArrowRight:1035003246445596774> What would you like to edit about this shift type?",
-                                color=0x2A2D31,
-                            )
-
-                            roles = type.get("role")
-                            if type.get("role") is None or len(type.get("role")) == 0:
-                                roles = "None"
-                            else:
-                                roles = ", ".join(
-                                    [f"<@&{role}>" for role in type.get("role")]
-                                )
-
-                            if type.get("channel") is None:
-                                channel = "None"
-                            else:
-                                channel = f"<#{type.get('channel')}>"
-
-                            embed.add_field(
-                                name=f"<:Pause:1035308061679689859> {type.get('name')}",
-                                value=f"<:ArrowRightW:1035023450592514048> **Name:** {type.get('name')}\n<:ArrowRightW:1035023450592514048> **Default:** {type.get('default')}\n<:ArrowRightW:1035023450592514048> **Role:** {roles}\n<:ArrowRightW:1035023450592514048> **Channel:** {channel}\n<:ArrowRightW:1035023450592514048> **Nickname Prefix:** {type.get('nickname') if type.get('nickname') else 'None'}",
-                                inline=False,
-                            )
-
-                            view = CustomSelectMenu(
-                                ctx.author.id,
-                                [
-                                    discord.SelectOption(
-                                        label="Name",
-                                        description="Edit the name of the shift type",
-                                        value="name",
-                                    ),
-                                    discord.SelectOption(
-                                        label="Default",
-                                        description="Change whether this is the default shift type",
-                                        value="default",
-                                    ),
-                                    discord.SelectOption(
-                                        label="Roles",
-                                        description="Edit the roles that are assigned when someone is on shift for this type",
-                                        value="role",
-                                    ),
-                                    discord.SelectOption(
-                                        label="Channel",
-                                        description="Change the channel logs for this shift type are sent",
-                                        value="channel",
-                                    ),
-                                    discord.SelectOption(
-                                        label="Nickname",
-                                        description="Edit the nickname that is given to someone when they are on shift for this type",
-                                        value="nickname",
-                                    ),
-                                ],
-                            )
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            if view.value == "name":
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description=f"<:ArrowRight:1035003246445596774> What would you like to change the name of this shift type to?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = CustomModalView(
-                                    ctx.author.id,
-                                    "Edit Shift Type Name",
-                                    "Edit Shift Type Name",
-                                    [
-                                        (
-                                            "name",
-                                            discord.ui.TextInput(
-                                                placeholder="Name of the Shift Type",
-                                                label="Name",
-                                                required=True,
-                                                min_length=1,
-                                                max_length=32,
-                                            ),
-                                        )
-                                    ],
-                                )
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    return
-
-                                if view.modal.name.value:
-                                    name = view.modal.name.value
-                                else:
-                                    return
-
-                                shift_type["name"] = name
-
-                                settingContents["_id"] = (
-                                    settingContents.get("_id") or ctx.guild.id
-                                )
-                                await bot.settings.update_by_id(settingContents)
-                            elif view.value == "default":
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description=f"<:ArrowRight:1035003246445596774> Would you like this Shift Type to be default?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = YesNoColourMenu(ctx.author.id)
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    return
-
-                                if view.value is True:
-                                    for item in shift_types.get("types"):
-                                        item["default"] = False
-
-                                    shift_type["default"] = True
-                                else:
-                                    shift_type["default"] = False
-
-                                settingContents["_id"] = (
-                                    settingContents.get("_id") or ctx.guild.id
-                                )
-                                await bot.settings.update_by_id(settingContents)
-                            elif view.value == "role":
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description=f"<:ArrowRight:1035003246445596774> Do you want a role to be assigned when someone is on shift for this type?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = YesNoColourMenu(ctx.author.id)
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-
-                                if timeout:
-                                    return
-
-                                if view.value is True:
-                                    embed = discord.Embed(
-                                        title="<:Clock:1035308064305332224> Shift Types",
-                                        description="<:ArrowRight:1035003246445596774> What roles do you want to be assigned when someone is on shift for this type?",
-                                        color=0x2A2D31,
-                                    )
-
-                                    view = RoleSelect(ctx.author.id)
-
-                                    await ctx.send(embed=embed, view=view)
-                                    timeout = await view.wait()
-
-                                    if timeout:
-                                        return
-
-                                    roles = (
-                                        [role.id for role in view.value]
-                                        if [role.id for role in view.value]
-                                        else None
-                                    )
-                                else:
-                                    roles = []
-
-                                shift_type["role"] = roles
-                                settingContents["_id"] = (
-                                    settingContents.get("_id") or ctx.guild.id
-                                )
-                                await bot.settings.update_by_id(settingContents)
-                            elif view.value == "channel":
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description=f"<:ArrowRight:1035003246445596774> Do you want this shift type to be sent to a different channel than the one configured in Shift Management?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = YesNoColourMenu(ctx.author.id)
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-
-                                if timeout:
-                                    return
-
-                                if view.value is True:
-                                    embed = discord.Embed(
-                                        title="<:Clock:1035308064305332224> Shift Types",
-                                        description="<:ArrowRight:1035003246445596774> What channel do you want logs of this shift type to be sent to?",
-                                        color=0x2A2D31,
-                                    )
-
-                                    view = ChannelSelect(ctx.author.id, limit=1)
-
-                                    await ctx.send(embed=embed, view=view)
-                                    timeout = await view.wait()
-
-                                    if timeout:
-                                        return
-
-                                    channel = view.value
-                                    if channel:
-                                        channel = channel[0].id
-                                    else:
-                                        return await ctx.send(
-                                            embed=create_invis_embed(
-                                                "You did not select a channel. Please try again."
-                                            )
-                                        )
-                                else:
-                                    channel = None
-
-                                shift_type["channel"] = channel
-                                settingContents["_id"] = (
-                                    settingContents.get("_id") or ctx.guild.id
-                                )
-                                await bot.settings.update_by_id(settingContents)
-                            elif view.value == "nickname":
-                                embed = discord.Embed(
-                                    title="<:Clock:1035308064305332224> Shift Types",
-                                    description=f"<:ArrowRight:1035003246445596774> What nickname prefix do you want for people on duty of this type?",
-                                    color=0x2A2D31,
-                                )
-
-                                view = CustomModalView(
-                                    ctx.author.id,
-                                    "Edit Shift Type Nickname",
-                                    "Edit Shift Type Nickname",
-                                    [
-                                        (
-                                            "nickname",
-                                            discord.ui.TextInput(
-                                                placeholder="Nickname Prefix",
-                                                label="Nickname Prefix",
-                                                required=True,
-                                                min_length=1,
-                                                max_length=20,
-                                            ),
-                                        )
-                                    ],
-                                )
-
-                                await ctx.send(embed=embed, view=view)
-                                timeout = await view.wait()
-                                if timeout:
-                                    await func()
-                                    return
-
-                                if view.modal.nickname.value:
-                                    nickname = view.modal.nickname.value
-                                else:
-                                    await func()
-
-                                shift_type["nickname"] = nickname
-
-                                settingContents["_id"] = (
-                                    settingContents.get("_id") or ctx.guild.id
-                                )
-                                await bot.settings.update_by_id(settingContents)
-                                await func()
-                            await func()
-                        elif view.value == "delete":
-                            if len(shift_types.get("types")) == 0:
-                                return await invis_embed(
-                                    ctx, "There are no shift types to delete."
-                                )
-
-                            embed = discord.Embed(
-                                title="<:Clock:1035308064305332224> Shift Types",
-                                description=f"<:ArrowRight:1035003246445596774> Select the Shift Type you want to delete.",
-                                color=0x2A2D31,
-                            )
-
-                            view = CustomSelectMenu(
-                                ctx.author.id,
-                                [
-                                    discord.SelectOption(
-                                        label=type.get("name"),
-                                        description=type.get("name"),
-                                        value=type.get("id"),
-                                    )
-                                    for type in shift_types.get("types")
-                                ],
-                            )
-
-                            await ctx.send(embed=embed, view=view)
-                            timeout = await view.wait()
-                            if timeout:
-                                return
-
-                            shift_type = [
-                                type
-                                for type in shift_types.get("types")
-                                if type.get("id") == int(view.value)
-                            ]
-                            if len(shift_type) == 0:
-                                return await invis_embed(
-                                    ctx, "That shift type does not exist."
-                                )
-
-                            shift_type = shift_type[0]
-
-                            shift_types.get("types").remove(shift_type)
-                            settingContents["_id"] = (
-                                settingContents.get("_id") or ctx.guild.id
-                            )
-
-                            await bot.settings.update_by_id(settingContents)
-                            await func()
-
-                    await func()
-
-        privacyDefault = {"_id": ctx.guild.id, "global_warnings": True}
-
-        view = YesNoMenu(ctx.author.id)
-        question = "Do you want your server's warnings to be able to be queried across the bot? (e.g. `globalsearch`)"
-        embed = discord.Embed(
-            color=0x2A2D31, description=f"<:ArrowRight:1035003246445596774> {question}"
-        )
-
-        await ctx.send(embed=embed, view=view)
-        await view.wait()
-        if view.value is not None:
-            if view.value == True:
-                privacyDefault["global_warnings"] = True
-            else:
-                privacyDefault["global_warnings"] = False
-
-        if not await bot.privacy.find_by_id(ctx.guild.id):
-            await bot.privacy.insert(privacyDefault)
-        else:
-            await bot.privacy.update_by_id(privacyDefault)
+            # privacyDefault = {"_id": ctx.guild.id, "global_warnings": True}
+
+            # view = YesNoMenu(ctx.author.id)
+            # question = "Do you want your server's warnings to be able to be queried across the bot? (e.g. `globalsearch`)"
+            # embed = discord.Embed(
+            #     color=0xED4348, description=f"<:ArrowRight:1035003246445596774> {question}"
+            # )
+            #
+            # await ctx.reply(embed=embed, view=view)
+            # await view.wait()
+            # if view.value is not None:
+            #     if view.value == True:
+            #         privacyDefault["global_warnings"] = True
+            #     else:
+            #         privacyDefault["global_warnings"] = False
+            #
+            # if not await bot.privacy.find_by_id(ctx.guild.id):
+            #     await bot.privacy.insert(privacyDefault)
+            # else:
+            #     await bot.privacy.update_by_id(privacyDefault)
 
         settingContents["_id"] = ctx.guild.id
         if not await bot.settings.find_by_id(ctx.guild.id):
@@ -3496,13 +2485,9 @@ class Configuration(commands.Cog):
         else:
             await bot.settings.update_by_id(settingContents)
 
-        embed = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Setup Complete",
-            color=0x71C15F,
-            description="<:ArrowRight:1035003246445596774>ERM has been set up and is ready for use!\n*If you want to change these settings, run the command again!*",
+        await ctx.reply(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your configuration has been changed."
         )
-
-        await ctx.send(embed=embed)
 
 
 async def setup(bot):

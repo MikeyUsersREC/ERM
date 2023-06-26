@@ -2,9 +2,11 @@ import logging
 
 import discord
 from discord import app_commands
+from discord.app_commands import AppCommandGroup
 from discord.ext import commands
 
-from utils.utils import invis_embed
+from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu
+from utils.utils import invis_embed, failure_embed
 
 
 class Utility(commands.Cog):
@@ -17,39 +19,10 @@ class Utility(commands.Cog):
         extras={"category": "Utility"},
     )
     async def ping(self, ctx):
-        uptime = f"<t:{int(self.bot.start_time)}>"
-
         latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(
-            title="<:SettingIcon:1035353776460152892> Service Status",
-            color=0x2A2D31,
-            description="*This will go over the current status of ERM.*",
+        await ctx.reply(
+            f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** all is good! My ping is **{latency}ms**!"
         )
-        embed.add_field(
-            name="<:UptimeIconW:1035269010272550932> Latency", value=f"{latency}ms"
-        )
-
-        embed.add_field(
-            name="<:MessageIcon:1035321236793860116> Uptime", value=f"{uptime}"
-        )
-
-        data = await self.bot.db.command("ping")
-
-        status: str | None = None
-
-        if list(data.keys())[0] == "ok":
-            status = "Connected"
-        else:
-            status = "Not Connected"
-        embed.add_field(
-            name="<:Search:1035353785184288788> Database", value=f"{status}"
-        )
-        if ctx.guild:
-            embed.set_footer(
-                text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}"
-            )
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-        await ctx.send(embed=embed)
 
     @commands.hybrid_command(
         name="support",
@@ -59,16 +32,17 @@ class Utility(commands.Cog):
     )
     async def support_server(self, ctx):
         # using an embed
+        # [**Support Server**](https://discord.gg/5pMmJEYazQ)
         embed = discord.Embed(
-            title="<:support:1035269007655321680> Support Server",
-            description="<:ArrowRight:1035003246445596774> Join the [**Support Server**](https://discord.gg/5pMmJEYazQ) to get help with the bot!",
-            color=0x2A2D31,
-        )
-        embed.set_footer(
-            text=f"Shard {str(ctx.guild.shard_id)} | Guild ID: {str(ctx.guild.id)}"
+            color=0xED4348,
+            description="<:ERMModify:1111100050718867577> **PRO TIP:** Most of your questions can be answered on our [documentation](https://docs.ermbot.xyz)!",
         )
 
-        await ctx.send(embed=embed)
+        await ctx.reply(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** need some help? **Join the support server by clicking the button below!**",
+            embed=embed,
+            view=LinkView(label="Support Server", url="https://discord.gg/5pMmJEYazQ"),
+        )
 
     @commands.hybrid_command(
         name="help",
@@ -85,129 +59,303 @@ class Utility(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if configItem is None:
-            return await invis_embed(
+            return await failure_embed(
                 ctx,
-                "The server has not been set up yet. Please run `/setup` to set up the server.",
+                "the server has not been set up yet. Please run `/setup` to set up the server.",
             )
 
         if command == None:
             embed = discord.Embed(
                 title="<:support:1035269007655321680> Command List | Emergency Response Management",
-                color=0x2A2D31,
+                color=0xED4348,
             )
 
             categories = []
             commands = []
 
             category_to_emoji = {
-                "Punishments": "<:MalletWhite:1035258530422341672>",
-                "Staff Management": "<:staff:1035308057007230976>",
-                "Configuration": "<:FlagIcon:1035258525955395664>",
-                "Miscellaneous": "<:QMark:1035308059532202104>",
-                "Search": "<:Search:1035353785184288788>",
-                "Utility": "<:SettingIcon:1035353776460152892>",
+                "Punishments": "<:ERMPunish:1111095942075138158> ",
+                "Staff Management": "<:ERMStaff:1058104030280286278>",
+                "Configuration": "<:ERMConfig:1113208218521456835>",
+                "Miscellaneous": "<:ERMMisc:1113215605424795648>",
+                "Search": "<:ERMSearch:1113208889626865684>",
+                "Utility": "<:ERMUtility:1113208636320272414>",
                 "Shift Management": "<:Clock:1035308064305332224>",
-                "Reminders": "<:Resume:1035269012445216858>",
-                "Activity Management": "<:Pause:1035308061679689859>",
+                "Reminders": "<:ERMReminder:1113211641736208506>",
+                "Activity Management": "<:ERMActivity:1113209176664064060>",
                 "Custom Commands": "<:QMark:1035308059532202104>",
-                "Verification": "<:SettingIcon:1035353776460152892>",
-                "Game Logging": "<:SConductTitle:1053359821308567592>",
-                "Moderation Sync": "<:SyncIcon:1071821068551073892>",
-                "Privacy": "<:Privacy:1081047358810365993>",
+                "Verification": "<:ERMVerify:1113210530719600741>",
+                "Game Logging": "<:ERMLog:1113210855891423302>",
+                "Game Sync": "<:ERMSync:1113209904979771494>",
+                "Privacy": "<:ERMSecurity:1113209656370802879>",
             }
 
-            for command in bot.walk_commands():
-                try:
-                    command.category = command.extras["category"]
-                except:
-                    command.category = "Miscellaneous"
-
-                if command.extras.get("legacy") is True:
+            temps = {}
+            temp_cmds = []
+            for cmd in bot.walk_commands():
+                if cmd is None:
                     continue
 
-                if isinstance(command, discord.ext.commands.core.Command):
-                    if command.hidden:
-                        continue
-                    if command.parent is not None:
+                if cmd.extras.get("legacy") is True:
+                    continue
+
+                if isinstance(cmd, discord.ext.commands.core.Group):
+                    for c in cmd.commands:
+                        if c is None:
+                            continue
                         if (
-                            isinstance(command.parent, discord.ext.commands.core.Group)
-                            and not command.parent.name == "jishaku"
-                            and not command.parent.name == "jsk"
+                            isinstance(c.parent, discord.ext.commands.core.Group)
+                            and not c.parent.name == "jishaku"
+                            and not c.parent.name == "jsk"
                         ):
-                            if command.parent.name not in ["voice"]:
-                                command.full_name = (
-                                    f"{command.parent.name} {command.name}"
-                                )
+                            if c.parent.name not in ["voice"]:
+                                c.full_name = f"{c.parent.name} {c.name}"
+                                temps[c] = None
                             else:
                                 continue
                         else:
                             continue
-                    else:
-                        command.full_name = f"{command.name}"
-
-                if isinstance(command, discord.ext.commands.core.Group):
                     continue
 
-                if command.category not in categories:
-                    categories.append(command.category)
-                    commands.append(command)
+                if cmd.parent is not None:
+                    if (
+                        isinstance(cmd.parent, discord.ext.commands.core.Group)
+                        and not cmd.parent.name == "jishaku"
+                        and not cmd.parent.name == "jsk"
+                    ):
+                        if cmd.parent.name not in ["voice"]:
+                            cmd.full_name = f"{cmd.parent.name} {cmd.name}"
+
+                        else:
+                            continue
+                    else:
+                        continue
                 else:
-                    commands.append(command)
+                    cmd.full_name = f"{cmd.name}"
+                temps[cmd] = None
+            print(temps)
+            temp_apps = []
+
+            for command in await bot.tree.fetch_commands():
+                # print(repr(command))
+                # if command.name == "activity":
+                #     print(dir(command))
+
+                if command.options:
+                    for a in command.options:
+                        if f"{command.name} {a.name}" in [
+                            cd.qualified_name for cd in temps
+                        ]:
+                            temps[
+                                list(
+                                    filter(
+                                        lambda x: x is not None,
+                                        [
+                                            cd
+                                            if cd.qualified_name
+                                            == f"{command.name} {a.name}"
+                                            else None
+                                            for cd in temps
+                                        ],
+                                    )
+                                )[0]
+                            ] = a
+                else:
+                    if command.name in [cd.qualified_name for cd in temps]:
+                        temps[
+                            list(
+                                filter(
+                                    lambda x: x is not None,
+                                    [
+                                        cd
+                                        if cd.qualified_name == command.name
+                                        else None
+                                        for cd in temps
+                                    ],
+                                )
+                            )[0]
+                        ] = command
+
+                # if isinstance(command, discord.app_commands.AppCommand):
+                #
+                #     # if command.parent is not None:
+                #     #     if (
+                #     #         isinstance(command.parent, discord.ext.commands.core.Group)
+                #     #         and not command.parent.name == "jishaku"
+                #     #         and not command.parent.name == "jsk"
+                #     #     ):
+                #     #         if command.parent.name not in ["voice"]:
+                #     #             command.full_name = (
+                #     #                 f"{command.parent.name} {command.name}"
+                #     #             )
+                #     #         else:
+                #     #             continue
+                #     #     else:
+                #     #         continue
+                #     # else:
+                #     #     command.full_name = f"{command.name}"
+                #
+
+                # if isinstance(command, discord.ext.commands.core.Group):
+                #     continue
+                #
+                # if (command.extras.get("category", "Miscellaneous")) not in categories:
+                #     categories.append(command.category)
+                #     commands.append(command)
+                # else:
+                #     commands.append(command)
+            #
+            # for i in temp_cmds.copy():
+            #     if i is None:
+            #         temp_cmds.remove(i)
+            #
+            # for i in temp_apps.copy():
+            #     if i is None:
+            #         temp_apps.remove(i)
+
+            # return await ctx.reply(temps)
+            for k, v in temps.copy().items():
+                if v is None:
+                    del temps[k]
+
+            for command, app_command in temps.items():
+                if (command.extras.get("category", "Miscellaneous")) not in categories:
+                    categories.append(command.extras.get("category", "Miscellaneous"))
+                    # commands.append(command)
+
+            category_embeds = {}
 
             for category in categories:
+                embed = discord.Embed(
+                    color=0xED4348, title="<:ERMHelp:1111318459305951262> Command Help"
+                )
                 full_category = category_to_emoji[category] + " " + category
                 print(commands)
                 string = "\n".join(
                     [
-                        f"<:ArrowRight:1035003246445596774> `/{command}` | *{command.description}*"
-                        for command in commands
-                        if command.category == category
+                        f"<:ERMList:1111099396990435428> {app.mention}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{app.description}"
+                        if isinstance(app, AppCommandGroup)
+                        else f"<:ERMList:1111099396990435428> </{app.name}:{app.id}>\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{app.description}"
+                        for command, app in temps.items()
+                        if (command.extras.get("category", "Miscellaneous")) == category
                     ]
                 )
+                embed.description = string
 
                 logging.info(len(string))
+                embed.set_author(
+                    name=ctx.author.name, icon_url=ctx.author.display_avatar.url
+                )
+                embed.set_footer(
+                    text="Use the dropdown below to select a module to view the commands of."
+                )
+                category_embeds[category] = embed
 
-                if len(string) < 1024:
-                    embed.add_field(name=full_category, value=string, inline=False)
-
-                else:
-                    splitted_lines = string.splitlines()
-
-                    for i in range(0, len(splitted_lines), 5):
-                        has_full_category = False
-                        for field in embed.fields:
-                            if field.name == full_category:
-                                has_full_category = True
-
-                        if not has_full_category:
-                            embed.add_field(
-                                name=full_category,
-                                value="\n".join(splitted_lines[i : i + 5]),
-                                inline=False,
-                            )
-                        else:
-                            embed.add_field(
-                                name="\u200b",
-                                value="\n".join(splitted_lines[i : i + 5]),
-                                inline=False,
-                            )
-            embed.set_footer(
-                text="Use /help <command> for specific help on a command.",
-                icon_url="https://cdn.discordapp.com/emojis/1035258528149033090.webp?size=60&quality=lossless",
+            await ctx.reply(
+                f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** select an option.",
+                view=MultiPaginatorMenu(
+                    ctx.author.id,
+                    [
+                        discord.SelectOption(
+                            label="Punishments",
+                            description="Commands related to punishments.",
+                            emoji="<:ERMPunish:1111095942075138158>",
+                            value="Punishments",
+                        ),
+                        discord.SelectOption(
+                            label="Staff Management",
+                            description="Commands related to staff management.",
+                            emoji="<:ERMStaff:1058104030280286278>",
+                            value="Staff Management",
+                        ),
+                        discord.SelectOption(
+                            label="Configuration",
+                            description="Commands related to configuration.",
+                            emoji="<:ERMConfig:1113208218521456835>",
+                            value="Configuration",
+                        ),
+                        discord.SelectOption(
+                            label="Miscellaneous",
+                            description="Commands that don't fit into any other category.",
+                            emoji="<:ERMMisc:1113215605424795648>",
+                            value="Miscellaneous",
+                        ),
+                        discord.SelectOption(
+                            label="Search",
+                            description="Commands related to ROBLOX searching.",
+                            emoji="<:ERMSearch:1113208889626865684>",
+                            value="Search",
+                        ),
+                        discord.SelectOption(
+                            label="Utility",
+                            description="Commands that are useful",
+                            emoji="<:ERMUtility:1113208636320272414>",
+                            value="Utility",
+                        ),
+                        discord.SelectOption(
+                            label="Shift Management",
+                            description="Commands related to shift management.",
+                            emoji="<:ERMSchedule:1111091306089939054>",
+                            value="Shift Management",
+                        ),
+                        discord.SelectOption(
+                            label="Reminders",
+                            description="Commands related to reminders.",
+                            emoji="<:ERMReminder:1113211641736208506>",
+                            value="Reminders",
+                        ),
+                        discord.SelectOption(
+                            label="Activity Management",
+                            description="Commands related to activity management.",
+                            emoji="<:ERMActivity:1113209176664064060>",
+                            value="Activity Management",
+                        ),
+                        discord.SelectOption(
+                            label="Custom Commands",
+                            description="Commands related to custom commands.",
+                            emoji="<:ERMCustomCommands:1113210178448396348>",
+                            value="Custom Commands",
+                        ),
+                        discord.SelectOption(
+                            label="Verification",
+                            description="Commands related to verification.",
+                            emoji="<:ERMVerify:1113210530719600741>",
+                            value="Verification",
+                        ),
+                        discord.SelectOption(
+                            label="Game Logging",
+                            description="Commands related to game logging.",
+                            emoji="<:ERMLog:1113210855891423302>",
+                            value="Game Logging",
+                        ),
+                        discord.SelectOption(
+                            label="Game Sync",
+                            description="Commands related to game syncing.",
+                            emoji="<:ERMSync:1113209904979771494>",
+                            value="Game Sync",
+                        ),
+                        discord.SelectOption(
+                            label="Privacy",
+                            description="Commands related to privacy.",
+                            emoji="<:ERMSecurity:1113209656370802879>",
+                            value="Privacy",
+                        ),
+                    ],
+                    category_embeds,
+                ),
             )
 
-            await ctx.send(embed=embed)
         else:
             command = bot.get_command(command)
             if command is None:
-                return await invis_embed(ctx, "That command does not exist.")
+                return await failure_embed(ctx, "that command does not exist.")
 
             embed = discord.Embed(
-                title="<:SettingIcon:1035353776460152892> Command Information | {}".format(
+                title="<:ERMConfig:1113208218521456835> Command Information | {}".format(
                     command.name
                 ),
-                description=f"<:ArrowRight:1035003246445596774> {command.description.split('[')[0]}",
-                color=0x2A2D31,
+                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> {command.description.split('[')[0]}",
+                color=0xED4348,
             )
 
             embed.set_footer(
@@ -215,21 +363,66 @@ class Utility(commands.Cog):
             )
 
             embed.add_field(
-                name="<:QMark:1035308059532202104> Usage",
-                value="<:ArrowRight:1035003246445596774> `{}`".format(command.usage),
+                name="<:ERMList:1111099396990435428> Usage",
+                value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912> `{}`".format(
+                    command.usage
+                ),
                 inline=False,
             )
 
             if command.aliases:
                 embed.add_field(
-                    name="<:Search:1035353785184288788> Aliases",
-                    value="<:ArrowRight:1035003246445596774> `{}`".format(
+                    name="<:ERMList:1111099396990435428> Aliases",
+                    value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912> `{}`".format(
                         ", ".join(command.aliases)
                     ),
                     inline=False,
                 )
+            embed.set_author(
+                name=ctx.author.name,
+                icon_url=ctx.author.display_avatar.url,
+            )
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+            await ctx.reply(
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, looks like you want to know about a specific command. You'll find helpful information below.",
+                embed=embed,
+            )
 
-            await ctx.send(embed=embed)
+    @commands.hybrid_command(
+        name="about",
+        aliases=["info"],
+        description="Information about ERM",
+        extras={"category": "Utility"},
+    )
+    async def about(self, ctx):
+        # using an embed
+        # [**Support Server**](https://discord.gg/5pMmJEYazQ)
+        embed = discord.Embed(
+            title="<:erm:1067182038685323274> About ERM",
+            color=0xED4348,
+        )
+        embed.add_field(
+            name=f"<:ERMList:1111099396990435428> What is ERM?",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>ERM is a Discord bot that is used for things like Shift Logging, Punishment Logging, Leave of Absences, and much more. We integrate many next-gen Discord features to our bot and are commonly known as the most feature-rich bot of our market.",
+            inline=False,
+        )
+        embed.add_field(
+            name=f"<:ERMList:1111099396990435428> Links",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Website**](https://ermbot.xyz)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Support Server**](https://discord.gg/erm-systems-987798554972143728)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Invite**](https://discord.com/oauth2/authorize?client_id=978662093408591912&scope=bot%20applications.commands&permissions=8)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Documentation**](https://docs.ermbot.xyz)",
+            inline=False,
+        )
+        embed.set_author(
+            name=ctx.author.name,
+            icon_url=ctx.author.display_avatar.url,
+        )
+        await ctx.reply(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** looks like you're interested in ERM, let me run down what we are.",
+            embed=embed,
+            view=LinkView(
+                label="Feature List",
+                url="https://docs.ermbot.xyz/overview/our-features",
+            ),
+        )
 
 
 async def setup(bot):

@@ -9,7 +9,7 @@ import num2words
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
-from erm import generator
+from utils.utils import generator
 from menus import CustomSelectMenu
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
@@ -191,7 +191,7 @@ class OnMessage(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:LinkIcon:1044004006109904966> Message Logging",
                                         description=f"<:ArrowRight:1035003246445596774> Please enter the message you would like to log.",
-                                        color=0x2A2D31,
+                                        color=0xED4348,
                                     )
 
                                     announcement = msg
@@ -199,7 +199,7 @@ class OnMessage(commands.Cog):
                                     embed = discord.Embed(
                                         title="<:MessageIcon:1035321236793860116> Message Logged",
                                         description="*A new message has been logged in the server.*",
-                                        color=0x2A2D31,
+                                        color=0xED4348,
                                     )
 
                                     embed.set_author(
@@ -260,26 +260,25 @@ class OnMessage(commands.Cog):
                                     code = embed.footer.text.split("Server: ")[1]
                                     if command.count(",") + 1 >= 5:
                                         embed = discord.Embed(
-                                            title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
-                                            description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                            color=0x2A2D31,
+                                            title="<:ERMAlert:1113237478892130324> Excessive Moderations Detected",
+                                            color=0xED4348,
                                         )
 
                                         embed.add_field(
-                                            name="<:Search:1035353785184288788> Staff Member:",
-                                            value=f"<:ArrowRight:1035003246445596774> {user.split(':')[0] + ']' + user.split(']')[1]}",
+                                            name="<:ERMAdmin:1111100635736187011> Staff Member:",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{user.split(':')[0] + ']' + user.split(']')[1]}",
                                             inline=False,
                                         )
 
                                         embed.add_field(
-                                            name="<:MalletWhite:1035258530422341672> Trigger:",
-                                            value=f"<:ArrowRight:1035003246445596774> **{command.count(',') + 1}** kicks/bans in a single command.",
+                                            name="<:ERMPunish:1111095942075138158> Trigger:",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**{command.count(',') + 1}** kicks/bans in a single command.",
                                             inline=False,
                                         )
 
                                         embed.add_field(
-                                            name="<:EditIcon:1042550862834323597> Explanation",
-                                            value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(':')[0].replace('[', '').replace(']', '')} simultaneously kicked/banned {command.count(',') + 1} people from **{code}**",
+                                            name="<:ERMMisc:1113215605424795648> Explanation",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>On <t:{int(message.created_at.timestamp())}>, {user.split(':')[0].replace('[', '').replace(']', '')} simultaneously kicked/banned {command.count(',') + 1} people from **{code}**",
                                             inline=False,
                                         )
 
@@ -307,26 +306,25 @@ class OnMessage(commands.Cog):
                                         )
                                     if " all" in command:
                                         embed = discord.Embed(
-                                            title="<:WarningIcon:1035258528149033090> Excessive Moderations Detected",
-                                            description="*ERM has detected that a staff member has kicked/banned an excessive amount of players in the in-game server.*",
-                                            color=0x2A2D31,
+                                            title="<:ERMAlert:1113237478892130324> Excessive Moderations Detected",
+                                            color=0xED4348,
                                         )
 
                                         embed.add_field(
-                                            name="<:Search:1035353785184288788> Staff Member:",
-                                            description=f"<:ArrowRight:1035003246445596774> {user}",
+                                            name="<:ERMAdmin:1111100635736187011> Staff Member:",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{user}",
                                             inline=False,
                                         )
 
                                         embed.add_field(
-                                            name="<:MalletWhite:1035258530422341672> Trigger:",
-                                            value=f"<:ArrowRight:1035003246445596774> Kicking/banning everyone in the server.",
+                                            name="<:ERMPunish:1111095942075138158> Trigger:",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Kicking/Banning everyone in the server",
                                             inline=False,
                                         )
 
                                         embed.add_field(
-                                            name="<:EditIcon:1042550862834323597> Explanation",
-                                            value=f"<:ArrowRight:1035003246445596774> On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[').replace(']')} kicked/banned everyone from **{code}**",
+                                            name="<:ERMMisc:1113215605424795648> Explanation",
+                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[').replace(']')} kicked/banned everyone from **{code}**",
                                             inline=False,
                                         )
 

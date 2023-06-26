@@ -29,49 +29,37 @@ class GameLogging(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
-            return await invis_embed(
-                ctx,
-                "You have not setup ERM. Please setup ERM via the `/setup` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
 
         if not configItem.get("game_logging"):
-            return await invis_embed(
-                ctx,
-                "You have not setup game logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for game logging! Run `/config change` to setup game logging."
             )
 
         if not configItem["game_logging"].get("message"):
-            return await invis_embed(
-                ctx,
-                "You have not setup Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for message logging! Run `/config change` to setup message logging."
             )
 
         if not configItem["game_logging"].get("message").get("enabled"):
-            return await invis_embed(
-                ctx,
-                "You have not enabled Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not enabled message logging! Run `/config change` to enable message logging."
             )
 
         if not configItem["game_logging"].get("message").get("channel"):
-            return await invis_embed(
-                ctx,
-                "You have not set a channel for Message logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a channel for message logging! Run `/config change` to setup a channel."
             )
 
         channel = ctx.guild.get_channel(
             configItem["game_logging"]["message"]["channel"]
         )
         if not channel:
-            return await invis_embed(
-                ctx,
-                "The channel you have set for Message logging is invalid. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a valid channel for message logging."
             )
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> Message Logging",
-            description=f"<:ArrowRight:1035003246445596774> Please enter the message you would like to log.",
-            color=0x2A2D31,
-        )
 
         view = CustomModalView(
             ctx.author.id,
@@ -91,7 +79,10 @@ class GameLogging(commands.Cog):
             ],
         )
 
-        await ctx.send(embed=embed, view=view)
+        message_msg = await ctx.reply(
+            f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what message would you like to log?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -100,37 +91,33 @@ class GameLogging(commands.Cog):
             announcement = view.modal.announcement.value
 
             embed = discord.Embed(
-                title="<:MessageIcon:1035321236793860116> Message Logged",
-                description="*A new message has been logged in the server.*",
-                color=0x2A2D31,
-            )
+                title="<:ERMCheck:1111089850720976906>  Message Logged",
+                color=0xED4348,
+            ).set_thumbnail(url=ctx.author.display_avatar.url)
 
             embed.set_author(
                 name=ctx.author.name, icon_url=ctx.author.display_avatar.url
             )
 
             embed.add_field(
-                name="<:staff:1035308057007230976> Staff Member",
-                value=f"<:ArrowRight:1035003246445596774> {ctx.author.mention}",
+                name="<:ERMAdmin:1111100635736187011> Staff Member",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{ctx.author.mention}",
                 inline=False,
             )
 
             embed.add_field(
-                name="<:MessageIcon:1035321236793860116> Message",
-                value=f"<:ArrowRight:1035003246445596774> `{announcement}`",
+                name="<:ERMList:1111099396990435428> Message",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{announcement}",
                 inline=False,
             )
 
-            await channel.send(embed=embed)
+            if channel is None:
+                return
 
-            success_embed = discord.Embed(
-                title="<:CheckIcon:1035018951043842088> Success!",
-                description=f"<:ArrowRight:1035003246445596774> The message has been logged.",
-                color=0x71C15F,
+            await message_msg.edit(
+                content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, I've logged your message.",
+                view=None,
             )
-
-            await ctx.send(embed=success_embed)
-        return
 
     @game.command(
         name="sts",
@@ -141,51 +128,41 @@ class GameLogging(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
-            return await invis_embed(
-                ctx,
-                "You have not setup ERM. Please setup ERM via the `/setup` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
 
         if not configItem.get("game_logging"):
-            return await invis_embed(
-                ctx,
-                "You have not setup game logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for game logging! Run `/config change` to setup game logging."
             )
 
-        if not configItem["game_logging"].get("sts"):
-            return await invis_embed(
-                ctx,
-                "You have not setup STS logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+        if not configItem["game_logging"].get("message"):
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for STS logging! Run `/config change` to setup STS logging."
             )
 
         if not configItem["game_logging"].get("sts").get("enabled"):
-            return await invis_embed(
-                ctx,
-                "You have not enabled STS logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not enabled STS logging! Run `/config change` to enable STS logging."
             )
 
         if not configItem["game_logging"].get("sts").get("channel"):
-            return await invis_embed(
-                ctx,
-                "You have not set a channel for STS logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a channel for STS logging! Run `/config change` to setup a channel."
             )
 
         channel = ctx.guild.get_channel(configItem["game_logging"]["sts"]["channel"])
         if not channel:
-            return await invis_embed(
-                ctx,
-                "The channel you have set for STS logging is invalid. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a valid channel for STS logging."
             )
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> STS Logging",
-            description=f"<:ArrowRight:1035003246445596774> Which staff members were involved in the Shoulder-to-Shoulder?",
-            color=0x2A2D31,
-        )
-
         view = UserSelect(ctx.author.id)
 
-        await ctx.send(embed=embed, view=view)
+        sts_msg = await ctx.reply(
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** which staff members took part in this STS?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -194,12 +171,6 @@ class GameLogging(commands.Cog):
             members = view.value
         else:
             return
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> STS Logging",
-            description=f"<:ArrowRight:1035003246445596774> What was the reason for the Shoulder-to-Shoulder?",
-            color=0x2A2D31,
-        )
 
         view = CustomModalView(
             ctx.author.id,
@@ -219,7 +190,10 @@ class GameLogging(commands.Cog):
             ],
         )
 
-        await ctx.send(embed=embed, view=view)
+        await sts_msg.edit(
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what was the reason for this STS?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -228,12 +202,6 @@ class GameLogging(commands.Cog):
             reason = view.modal.reason.value
         else:
             return
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> STS Logging",
-            description=f"<:ArrowRight:1035003246445596774> How long did the Shoulder-to-Shoulder take? (s/m/h/d)\n*Examples: 10s, 15m, 12h, 14m*",
-            color=0x2A2D31,
-        )
 
         view = CustomModalView(
             ctx.author.id,
@@ -253,7 +221,14 @@ class GameLogging(commands.Cog):
             ],
         )
 
-        await ctx.send(embed=embed, view=view)
+        await sts_msg.edit(
+            embed=discord.Embed(
+                color=0xED4348,
+                description="<:ERMModify:1111100050718867577> **PRO TIP:** Use s/m/d for time formatting.",
+            ),
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** how long did this STS last?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -264,18 +239,20 @@ class GameLogging(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="<:MessageIcon:1035321236793860116> STS Logged",
-            description="*A new STS has been logged in the server.*",
-            color=0x2A2D31,
-        )
+            title="<:ERMCheck:1111089850720976906>  STS Logged",
+            color=0xED4348,
+        ).set_thumbnail(url=ctx.author.display_avatar.url)
 
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
         embed.add_field(
-            name="<:staff:1035308057007230976> Staff Members",
+            name="<:ERMAdmin:1111100635736187011> Staff Members",
             value="\n".join(
                 [
-                    (f"<:ArrowRight:1035003246445596774> " + member.mention)
+                    (
+                        f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>"
+                        + member.mention
+                    )
                     for member in members
                 ]
             ),
@@ -283,8 +260,8 @@ class GameLogging(commands.Cog):
         )
 
         embed.add_field(
-            name="<:EditIcon:1042550862834323597> Reason",
-            value=f"<:ArrowRight:1035003246445596774> {reason}",
+            name="<:ERMList:1111099396990435428> Reason",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{reason}",
             inline=False,
         )
 
@@ -299,20 +276,19 @@ class GameLogging(commands.Cog):
             duration = int(duration[:-1]) * 60 * 60 * 24
 
         embed.add_field(
-            name="<:EditIcon:1042550862834323597> Duration",
-            value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=duration))}",
+            name="<:ERMSchedule:1111091306089939054> Duration",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=duration))}",
             inline=False,
         )
 
+        if channel is None:
+            return
         await channel.send(embed=embed)
 
-        success_embed = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Success!",
-            description=f"<:ArrowRight:1035003246445596774> This STS has been logged.",
-            color=0x71C15F,
+        await sts_msg.edit(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've logged your STS.",
+            view=None,
         )
-
-        await ctx.send(embed=success_embed)
 
     @game.command(
         name="priority",
@@ -323,54 +299,42 @@ class GameLogging(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
-            return await invis_embed(
-                ctx,
-                "You have not setup ERM. Please setup ERM via the `/setup` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
 
         if not configItem.get("game_logging"):
-            return await invis_embed(
-                ctx,
-                "You have not setup game logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for priority logging! Run `/config change` to setup priority logging."
             )
 
         if not configItem["game_logging"].get("priority"):
-            return await invis_embed(
-                ctx,
-                "You have not setup Priority logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup for Priority logging! Run `/config change` to setup Priority logging."
             )
 
         if not configItem["game_logging"].get("priority").get("enabled"):
-            return await invis_embed(
-                ctx,
-                "You have not enabled Priority logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not enabled Priority logging! Run `/config change` to enable Priority logging."
             )
 
         if not configItem["game_logging"].get("priority").get("channel"):
-            return await invis_embed(
-                ctx,
-                "You have not set a channel for Priority logging. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a channel for Priority logging! Run `/config change` to setup a channel."
             )
 
         channel = ctx.guild.get_channel(
             configItem["game_logging"]["priority"]["channel"]
         )
         if not channel:
-            return await invis_embed(
-                ctx,
-                "The channel you have set for Priority logging is invalid. Please setup relevant game logging configurations via the `/config change` command before running this command.",
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server has not set a valid channel for Priority logging."
             )
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> Priority Logging",
-            description=f"<:ArrowRight:1035003246445596774> Please provide some basic information regarding the Priority.",
-            color=0x2A2D31,
-        )
 
         view = CustomModalView(
             ctx.author.id,
-            "Information",
-            "Information",
+            "Reason",
+            "Reason",
             [
                 (
                     "reason",
@@ -395,7 +359,10 @@ class GameLogging(commands.Cog):
             ],
         )
 
-        await ctx.send(embed=embed, view=view)
+        prio_msg = await ctx.reply(
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what was the reason for this priority?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -411,12 +378,6 @@ class GameLogging(commands.Cog):
             return
 
         users = users.split("\n")
-
-        embed = discord.Embed(
-            title="<:LinkIcon:1044004006109904966> Priority Logging",
-            description=f"<:ArrowRight:1035003246445596774> How long will the priority take? (s/m/h/d)\n*Examples: 10s, 15m, 12h, 14m*",
-            color=0x2A2D31,
-        )
 
         view = CustomModalView(
             ctx.author.id,
@@ -436,7 +397,14 @@ class GameLogging(commands.Cog):
             ],
         )
 
-        await ctx.send(embed=embed, view=view)
+        await prio_msg.edit(
+            embed=discord.Embed(
+                color=0xED4348,
+                description="<:ERMModify:1111100050718867577> **PRO TIP:** Use s/m/d for time formatting.",
+            ),
+            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** how long will this priority last?",
+            view=view,
+        )
         timeout = await view.wait()
         if timeout:
             return
@@ -447,24 +415,29 @@ class GameLogging(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="<:FlagIcon:1035258525955395664> Priority Logged",
-            description="*A new priority has been logged in the server.*",
-            color=0x2A2D31,
-        )
+            title="<:ERMCheck:1111089850720976906>  Priority Logged",
+            color=0xED4348,
+        ).set_thumbnail(url=ctx.author.display_avatar.url)
 
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
         embed.add_field(
-            name="<:staff:1035308057007230976> Players",
+            name="<:ERMUser:1111098647485108315>  Players",
             value="\n".join(
-                [(f"<:ArrowRight:1035003246445596774> " + player) for player in users]
+                [
+                    (
+                        f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>"
+                        + player
+                    )
+                    for player in users
+                ]
             ),
             inline=False,
         )
 
         embed.add_field(
-            name="<:EditIcon:1042550862834323597> Reason",
-            value=f"<:ArrowRight:1035003246445596774> {reason}",
+            name="<:ERMList:1111099396990435428>  Reason",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{reason}",
             inline=False,
         )
 
@@ -479,20 +452,21 @@ class GameLogging(commands.Cog):
             duration = int(duration[:-1]) * 60 * 60 * 24
 
         embed.add_field(
-            name="<:EditIcon:1042550862834323597> Duration",
-            value=f"<:ArrowRight:1035003246445596774> {td_format(datetime.timedelta(seconds=duration))}",
+            name="<:ERMSchedule:1111091306089939054>  Duration",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=duration))}",
             inline=False,
         )
 
+        if channel is None:
+            return
+
         await channel.send(embed=embed)
 
-        success_embed = discord.Embed(
-            title="<:CheckIcon:1035018951043842088> Success!",
-            description=f"<:ArrowRight:1035003246445596774> This priority has been logged.",
-            color=0x71C15F,
+        await prio_msg.edit(
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've logged your priority.",
+            view=None,
+            embed=None,
         )
-
-        await ctx.send(embed=success_embed)
 
 
 async def setup(bot):

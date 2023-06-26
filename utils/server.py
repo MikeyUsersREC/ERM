@@ -68,7 +68,7 @@ class Server(commands.Cog):
     async def get_staff_guilds(self, request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
-        user_id = json_data.get('user')
+        user_id = json_data.get("user")
         if not guild_ids:
             return web.json_response({"error": "Invalid guilds"}, status=400)
 
@@ -90,11 +90,7 @@ class Server(commands.Cog):
                     user = await guild.fetch_member(user_id)
                 except:
                     continue
-                mock_context = MockContext(
-                    bot=self.bot,
-                    author=user,
-                    guild=guild
-                )
+                mock_context = MockContext(bot=self.bot, author=user, guild=guild)
 
                 permission_level = 0
                 if await management_predicate(mock_context):
@@ -104,7 +100,13 @@ class Server(commands.Cog):
 
                 if permission_level > 0:
                     guilds.append(
-                        {"id": str(guild.id), "name": str(guild.name), "icon_url": icon, "member_count": str(guild.member_count), "permission_level": permission_level}
+                        {
+                            "id": str(guild.id),
+                            "name": str(guild.name),
+                            "icon_url": icon,
+                            "member_count": str(guild.member_count),
+                            "permission_level": permission_level,
+                        }
                     )
 
         return web.json_response(guilds)
@@ -112,29 +114,21 @@ class Server(commands.Cog):
     async def check_staff_level(self, request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
-        user_id = json_data.get('user')
+        user_id = json_data.get("user")
         if not guild_id or not user_id:
             return web.json_response({"error": "Invalid guild"}, status=400)
 
         try:
             guild = await self.bot.fetch_guild(guild_id)
         except (discord.Forbidden, discord.HTTPException):
-            return web.json_response({
-                "error": "Could not find guild"
-            })
+            return web.json_response({"error": "Could not find guild"})
 
         try:
             user = await guild.fetch_member(user_id)
         except (discord.Forbidden, discord.HTTPException):
-            return web.json_response({
-                "permission_level": 0
-            })
+            return web.json_response({"permission_level": 0})
 
-        mock_context = MockContext(
-            bot=self.bot,
-            author=user,
-            guild=guild
-        )
+        mock_context = MockContext(bot=self.bot, author=user, guild=guild)
 
         permission_level = 0
         if await management_predicate(mock_context):
@@ -142,10 +136,7 @@ class Server(commands.Cog):
         elif await is_staff(mock_context):
             permission_level = 1
 
-        return web.json_response({
-            "permission_level": permission_level
-        })
-
+        return web.json_response({"permission_level": permission_level})
 
     async def get_guild_settings(self, request):
         json_data = await request.json()

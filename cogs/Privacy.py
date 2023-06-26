@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 
 from menus import CustomExecutionButton, CustomSelectMenu
-from utils.utils import create_invis_embed
 
 
 class Privacy(commands.Cog):
@@ -23,20 +22,30 @@ class Privacy(commands.Cog):
 
         async for document in bot.consent.db.find({"_id": ctx.author.id}):
             punishments_enabled = (
-                document.get("punishments") if document.get("punishments") is not None else True
+                document.get("punishments")
+                if document.get("punishments") is not None
+                else True
             )
             shift_reports_enabled = (
-                document.get("shift_reports") if document.get("shift_reports") is not None else True
+                document.get("shift_reports")
+                if document.get("shift_reports") is not None
+                else True
             )
             ai_enabled = (
-                document.get('ai_predictions') if document.get('ai_predictions') is not None else True
+                document.get("ai_predictions")
+                if document.get("ai_predictions") is not None
+                else True
             )
             selected = document
-        embed = discord.Embed(
-            title="<:SettingIcon:1035353776460152892> Notification Settings",
-            description=f"*This is where you change user settings of ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **AI Predictions:** `{'Enabled' if ai_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if ai_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
-            color=0x2A2D31,
-        ).set_thumbnail(url=ctx.author.display_avatar.url)
+        embed = (
+            discord.Embed(
+                title="<:ERMUser:1111098647485108315> Notification Settings",
+                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
+                color=0xED4348,
+            )
+            .set_thumbnail(url=ctx.author.display_avatar.url)
+            .set_author(icon_url=ctx.author.display_avatar.url, name=ctx.author.name)
+        )
 
         custom_view = discord.ui.View()
 
@@ -59,11 +68,17 @@ class Privacy(commands.Cog):
                         ),
                     ],
                 )
-                embed = discord.Embed(
-                    title="<:SettingIcon:1035353776460152892> Notification Settings",
-                    description=f"*This is where you change user settings of ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **AI Predictions:** `{'Enabled' if ai_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if ai_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2A2D31,
-                ).set_thumbnail(url=ctx.author.display_avatar.url)
+                embed = (
+                    discord.Embed(
+                        title="<:ERMUser:1111098647485108315> Notification Settings",
+                        description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
+                        color=0xED4348,
+                    )
+                    .set_thumbnail(url=ctx.author.display_avatar.url)
+                    .set_author(
+                        icon_url=ctx.author.display_avatar.url, name=ctx.author.name
+                    )
+                )
                 await interaction.response.send_message(
                     embed=embed, view=view, ephemeral=True
                 )
@@ -77,13 +92,11 @@ class Privacy(commands.Cog):
                     else:
                         selected["punishments"] = True
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have enabled punishment alerts.",
-                        color=0x71C15F,
-                    )
+
                     await interaction.edit_original_response(
-                        embed=embed, view=None
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled punishment alerts.",
+                        embed=None,
+                        view=None,
                     )
                 elif view.value == "disable":
                     if selected is None:
@@ -93,23 +106,21 @@ class Privacy(commands.Cog):
                     else:
                         selected["punishments"] = False
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have disabled punishment alerts.",
-                        color=0x71C15F,
+                    await interaction.edit_original_response(
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled punishment alerts.",
+                        embed=None,
+                        view=None,
                     )
-                    await interaction.edit_original_response(embed=embed, view=None)
-
             else:
                 await interaction.response.send_message(
-                    embed=create_invis_embed(
-                        "You are not the individual that has activated this menu. Refrain from interacting with this view."
-                    ),
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this isn't your embed to modify.",
+                    embed=None,
+                    view=None,
                     ephemeral=True,
                 )
 
         async def punishment_predictions(
-                interaction: discord.Interaction, button: discord.ui.Button
+            interaction: discord.Interaction, button: discord.ui.Button
         ):
             if interaction.user.id == ctx.author.id:
                 view = CustomSelectMenu(
@@ -128,9 +139,9 @@ class Privacy(commands.Cog):
                     ],
                 )
                 embed = discord.Embed(
-                    title="<:SettingIcon:1035353776460152892> Notification Settings",
-                    description=f"*This is where you change user settings of ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **AI Predictions:** `{'Enabled' if ai_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if ai_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2A2D31,
+                    title="<:ERMUser:1111098647485108315> Notification Settings",
+                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
+                    color=0xED4348,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
                 await interaction.response.send_message(
                     embed=embed, view=view, ephemeral=True
@@ -145,13 +156,9 @@ class Privacy(commands.Cog):
                     else:
                         selected["ai_predictions"] = True
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have enabled AI Predictions.",
-                        color=0x71C15F,
-                    )
+                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled AI Predictions."
                     await interaction.edit_original_response(
-                        embed=embed, view=None
+                        content=content, embed=None, view=None
                     )
                 elif view.value == "disable":
                     if selected is None:
@@ -161,20 +168,19 @@ class Privacy(commands.Cog):
                     else:
                         selected["ai_predictions"] = False
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have disabled AI Predictions.",
-                        color=0x71C15F,
+                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled AI Predictions."
+                    await interaction.edit_original_response(
+                        content=content, embed=None, view=None
                     )
-                    await interaction.edit_original_response(embed=embed, view=None)
 
             else:
                 await interaction.response.send_message(
-                    embed=create_invis_embed(
-                        "You are not the individual that has activated this menu. Refrain from interacting with this view."
-                    ),
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this isn't your embed to modify.",
+                    embed=None,
+                    view=None,
                     ephemeral=True,
                 )
+
         async def shift_reports(
             interaction: discord.Interaction, button: discord.ui.Button
         ):
@@ -195,9 +201,9 @@ class Privacy(commands.Cog):
                     ],
                 )
                 embed = discord.Embed(
-                    title="<:SettingIcon:1035353776460152892> Notification Settings",
-                    description=f"*This is where you change user settings of ERM.*\n\n<:ArrowRightW:1035023450592514048> **Punishment Alerts:** `{'Enabled' if punishments_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if punishments_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **Shift Reports:** `{'Enabled' if shift_reports_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if shift_reports_enabled is True else '<:ErrorIcon:1035000018165321808>'}\n<:ArrowRightW:1035023450592514048> **AI Predictions:** `{'Enabled' if ai_enabled is True else 'Disabled'}` {'<:CheckIcon:1035018951043842088>' if ai_enabled is True else '<:ErrorIcon:1035000018165321808>'}",
-                    color=0x2A2D31,
+                    title="<:ERMUser:1111098647485108315> Notification Settings",
+                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
+                    color=0xED4348,
                 ).set_thumbnail(url=ctx.author.display_avatar.url)
                 await interaction.response.send_message(
                     embed=embed, view=view, ephemeral=True
@@ -212,14 +218,10 @@ class Privacy(commands.Cog):
                     else:
                         selected["shift_reports"] = True
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have enabled shift reports.",
-                        color=0x71C15F,
+                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled Shift Reports."
+                    await interaction.edit_original_response(
+                        content=content, embed=None, view=None
                     )
-
-                    await interaction.edit_original_response(embed=embed, view=None)
-
 
                 elif view.value == "disable":
                     if selected is None:
@@ -229,13 +231,10 @@ class Privacy(commands.Cog):
                     else:
                         selected["shift_reports"] = False
                         await bot.consent.update_by_id(selected)
-                    embed = discord.Embed(
-                        title="<:CheckIcon:1035018951043842088> Success!",
-                        description="<:ArrowRight:1035003246445596774> You have disabled shift reports.",
-                        color=0x71C15F,
+                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled Shift Reports."
+                    await interaction.edit_original_response(
+                        content=content, embed=None, view=None
                     )
-                    await interaction.edit_original_response(embed=embed, view=None)
-
 
         buttons = [
             CustomExecutionButton(
@@ -254,14 +253,14 @@ class Privacy(commands.Cog):
                 ctx.author.id,
                 label="AI Predictions",
                 style=discord.ButtonStyle.secondary,
-                func=punishment_predictions
-            )
+                func=punishment_predictions,
+            ),
         ]
 
         for child in buttons:
             custom_view.add_item(child)
 
-        await ctx.send(embed=embed, view=custom_view)
+        await ctx.reply(embed=embed, view=custom_view)
 
 
 async def setup(bot):

@@ -100,25 +100,20 @@ class Punishments(commands.Cog):
 
         embed.add_field(
             name="<:ERMList:1111099396990435428> Moderations",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Kicks:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Bans:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **BOLOs:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Custom:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
             inline=True,
         )
         embed.add_field(
             name="<:ERMList:1111099396990435428> Activity Notices",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **LOAs Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **LOAs Denied:** {len(denied_leaves)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **RAs Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **RAs Denied:** {len(denied_ras)}",
+            value=f"<:ArrowRightW:1035023450592514048> **LOAs:** {len(leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_leaves)}\n<:ArrowRightW:1035023450592514048> **Reduced Activity:** {len(reduced_activity)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_ras)}",
             inline=True,
         )
 
         embed.add_field(
             name="<:ERMList:1111099396990435428> Shifts",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['EndEpoch']) - (x['StartEpoch']) + (x['AddedTime']) - x['RemovedTime'] - sum(b['EndEpoch'] - b['StartEpoch'] for b in x['Breaks']) for x in all_shifts])))}\n",
+            value=f"<:ArrowRightW:1035023450592514048> **Shifts:** {len(all_shifts)}\n<:ArrowRightW:1035023450592514048> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['EndEpoch']) - (x['StartEpoch']) + (x['AddedTime']) - x['RemovedTime'] - sum(b['EndEpoch'] - b['StartEpoch'] for b in x['Breaks']) for x in all_shifts])))}\n",
             inline=True,
         )
-        embed.set_author(
-            name=ctx.author.name,
-            icon_url=ctx.author.display_avatar.url,
-        )
-        embed.set_thumbnail(url=ctx.guild.icon.url)
 
         await ctx.reply(embed=embed)
 

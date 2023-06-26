@@ -9,15 +9,33 @@ import aiohttp
 import discord.mentions
 import dns.resolver
 import motor.motor_asyncio
+import pytz
 import sentry_sdk
 from decouple import config
 from discord import app_commands
 from discord.ext import tasks
 from roblox import client as roblox
 from sentry_sdk.integrations.pymongo import PyMongoIntegration
-from snowflake import SnowflakeGenerator
-from zuid import ZUID
 
+from datamodels.ShiftManagement import ShiftManagement
+from datamodels.APITokens import APITokens
+from datamodels.ActivityNotices import ActivityNotices
+from datamodels.Analytics import Analytics
+from datamodels.Consent import Consent
+from datamodels.CustomCommands import CustomCommands
+from datamodels.Errors import Errors
+from datamodels.FiveMLinks import FiveMLinks
+from datamodels.Flags import Flags
+from datamodels.LinkStrings import LinkStrings
+from datamodels.Privacy import Privacy
+from datamodels.PunishmentTypes import PunishmentTypes
+from datamodels.Reminders import Reminders
+from datamodels.Settings import Settings
+from datamodels.OldShiftManagement import OldShiftManagement
+from datamodels.SyncedUsers import SyncedUsers
+from datamodels.Verification import Verification
+from datamodels.Views import Views
+from datamodels.Warnings import Warnings
 from menus import CompleteReminder, LOAMenu
 from utils.mongo import Document
 from utils.utils import *
@@ -47,14 +65,13 @@ scope = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [
             459374864067723275,
             528805861762662400,
             877195103335231558,
-            333991360199917568
+            333991360199917568,
         ]:  # Implement your own conditions here
             return True
 
@@ -80,23 +97,26 @@ class Bot(commands.AutoShardedBot):
             raise Exception("Invalid environment")
 
         bot.start_time = time.time()
-        bot.warnings = Document(bot.db, "warnings")
-        bot.settings = Document(bot.db, "settings")
-        bot.shifts = Document(bot.db, "shifts")
-        bot.errors = Document(bot.db, "errors")
-        bot.shift_storage = Document(bot.db, "shift_storage")
-        bot.loas = Document(bot.db, "leave_of_absences")
-        bot.reminders = Document(bot.db, "reminders")
-        bot.custom_commands = Document(bot.db, "custom_commands")
-        bot.analytics = Document(bot.db, "analytics")
-        bot.punishment_types = Document(bot.db, "punishment_types")
-        bot.privacy = Document(bot.db, "privacy")
-        bot.verification = Document(bot.db, "verification")
-        bot.flags = Document(bot.db, "flags")
-        bot.views = Document(bot.db, "views")
-        bot.synced_users = Document(bot.db, "synced_users")
-        bot.consent = Document(bot.db, "consent")
-        bot.api_tokens = Document(bot.db, "api_tokens")
+        # bot.warnings = Warnings(bot.db, "warnings")
+        bot.old_shift_management = OldShiftManagement(bot.db, "shifts", "shift_storage")
+        bot.shift_management = ShiftManagement(bot.db, "shift_management")
+        bot.errors = Errors(bot.db, "errors")
+        bot.loas = ActivityNotices(bot.db, "leave_of_absences")
+        bot.reminders = Reminders(bot.db, "reminders")
+        bot.custom_commands = CustomCommands(bot.db, "custom_commands")
+        bot.analytics = Analytics(bot.db, "analytics")
+        bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
+        bot.privacy = Privacy(bot.db, "privacy")
+        bot.verification = Verification(bot.db, "verification")
+        bot.flags = Flags(bot.db, "flags")
+        bot.views = Views(bot.db, "views")
+        bot.synced_users = SyncedUsers(bot.db, "synced_users")
+        bot.api_tokens = APITokens(bot.db, "api_tokens")
+        bot.link_strings = LinkStrings(bot.db, "link_strings")
+        bot.fivem_links = FiveMLinks(bot.db, "fivem_links")
+        bot.consent = Consent(bot.db, "consent")
+        bot.punishments = Warnings(bot)
+        bot.settings = Settings(bot.db, "settings")
 
         Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
         Events = [m.name for m in iter_modules(["events"], prefix="events.")]
@@ -133,7 +153,7 @@ class Bot(commands.AutoShardedBot):
         bot.is_synced = True
         check_reminders.start()
         check_loa.start()
-        GDPR.start()
+        # GDPR.start()
         change_status.start()
         logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -148,9 +168,15 @@ class Bot(commands.AutoShardedBot):
 
 
 bot = Bot(
-    command_prefix=get_prefix, case_insensitive=True, intents=intents, help_command=None
+    command_prefix=get_prefix,
+    case_insensitive=True,
+    intents=intents,
+    help_command=None,
+    allowed_mentions=discord.AllowedMentions(replied_user=False),
 )
 bot.is_synced = False
+bot.shift_management_disabled = False
+bot.punishments_disabled = False
 bot.bloxlink_api_key = bloxlink_api_key
 environment = config("ENVIRONMENT", default="DEVELOPMENT")
 
@@ -192,27 +218,27 @@ async def AutoDefer(ctx: commands.Context):
 client = roblox.Client()
 
 
-def is_staff():
-    async def predicate(ctx):
-        print(vars(ctx.bot))
-        guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
-        if guild_settings:
-            if "role" in guild_settings["staff_management"].keys():
-                if guild_settings["staff_management"]["role"] != "":
-                    if isinstance(guild_settings["staff_management"]["role"], list):
-                        for role in guild_settings["staff_management"]["role"]:
-                            if role in [role.id for role in ctx.author.roles]:
-                                return True
-                    elif isinstance(guild_settings["staff_management"]["role"], int):
-                        if guild_settings["staff_management"]["role"] in [
-                            role.id for role in ctx.author.roles
-                        ]:
+async def staff_predicate(ctx):
+    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+    if guild_settings:
+        if "role" in guild_settings["staff_management"].keys():
+            if guild_settings["staff_management"]["role"] != "":
+                if isinstance(guild_settings["staff_management"]["role"], list):
+                    for role in guild_settings["staff_management"]["role"]:
+                        if role in [role.id for role in ctx.author.roles]:
                             return True
-        if ctx.author.guild_permissions.manage_messages:
-            return True
-        return False
+                elif isinstance(guild_settings["staff_management"]["role"], int):
+                    if guild_settings["staff_management"]["role"] in [
+                        role.id for role in ctx.author.roles
+                    ]:
+                        return True
+    if ctx.author.guild_permissions.manage_messages:
+        return True
+    return False
 
-    return commands.check(predicate)
+
+def is_staff():
+    return commands.check(staff_predicate)
 
 
 async def management_predicate(ctx):
@@ -347,9 +373,10 @@ async def crp_data_to_mongo(jsonData, guildId: int):
 
 bot.erm_team = {
     "i_imikey": "Bot Developer",
-    "mbrinkley": "Community Manager",
+    "mbrinkley": "First Community Manager - Removed",
     "theoneandonly_5567": "Executive Manager",
     "royalcrests": "Website Developer & Asset Designer",
+    "1friendlydoge": "Data Scientist - a friendly doge",
 }
 
 
@@ -379,240 +406,154 @@ else:
     raise Exception("Invalid environment")
 try:
     mongo_url = config("MONGO_URL", default=None)
-    github_token = config("GITHUB_TOKEN", default=None)
 except:
     mongo_url = ""
-    github_token = ""
-generator = SnowflakeGenerator(192)
-error_gen = ZUID(prefix="error_", length=10)
-system_code_gen = ZUID(prefix="erm-systems-", length=7)
 
 
 # status change discord.ext.tasks
-@tasks.loop(minutes=3)
-async def update_bot_status():
-    try:
-        # get channel from bot
-        channel = bot.get_channel(988082136542236733)
-        # get last message from channel
-        last_message = None
-        async for message in channel.history(limit=1):
-            last_message = message
-        # get last message content
-        if last_message == None:
-            embed = discord.Embed(title="Bot Status", color=discord.Color.red())
-
-            embed.set_thumbnail(url=bot.user.display_avatar.url)
-            embed.add_field(
-                name="Last ping",
-                value=f"<t:{int(datetime.datetime.now().timestamp())}:R>",
-            )
-            embed.add_field(name="Status", value="<:online:989218581764014161> Online")
-            embed.add_field(name="Pings", value="1")
-            embed.add_field(
-                name="Note",
-                value=f"This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}",
-                inline=False,
-            )
-
-            await channel.send(embed=embed)
-        else:
-            last_embed = last_message.embeds[0]
-            pings = None
-
-            for field in last_embed.fields:
-                if field.name == "Pings":
-                    pings = int(field.value)
-
-            embed = discord.Embed(title="Bot Status", color=discord.Color.red())
-            embed.set_thumbnail(url=bot.user.display_avatar.url)
-            embed.add_field(
-                name="Last ping",
-                value=f"<t:{int(datetime.datetime.now().timestamp())}:R>",
-            )
-            embed.add_field(name="Status", value="<:online:989218581764014161> Online")
-            embed.add_field(name="Pings", value=str(pings + 1))
-            embed.add_field(
-                name="Note",
-                value=f"This is updated every 3 minutes. If you see the last ping was over 3 minutes ago, contact {discord.utils.get(channel.guild.members, id=635119023918415874).mention}",
-                inline=False,
-            )
-
-            await last_message.edit(embed=embed)
-    except:
-        logging.info("Failing updating the status.")
 
 
-@tasks.loop(minutes=1)
+@tasks.loop(hours=1)
 async def change_status():
     logging.info("Changing status")
-
-    users = 0
-    for guild in bot.guilds:
-        if guild is not None:
-            if guild.member_count is not None:
-                users += guild.member_count
-
-    status = f"{users:,} users"
+    status = f"/help | ermbot.xyz"
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name=status)
     )
 
-
-@tasks.loop(hours=24)
-async def GDPR():
-    # if the date in each warning is more than 30 days ago, redact the staff's username and tag
-    # using mongodb (warnings)
-    # get all warnings
-    # iterate through each warning, to check the date via the time variable stored in "d/m/y h:m:s"
-    async for userentry in bot.warnings.db.find({}):
-        for warning in userentry["warnings"]:
-            try:
-                date = datetime.datetime.strptime(warning["Time"], "%m/%d/%Y, %H:%M:%S")
-                now = datetime.datetime.now()
-                diff = now - date
-                diff_days = diff.days
-                if diff_days > 30:
-                    # get the staff's id
-                    if type(warning["Moderator"]) == list:
-                        warning["Moderator"][0] = "[redacted ~ GDPR]"
-                    else:
-                        warning["Moderator"] = "[redacted ~ GDPR]"
-
-                        await bot.warnings.update_by_id(userentry)
-            except:
-                pass
-
-
 @tasks.loop(minutes=1)
 async def check_reminders():
-    async for guildObj in bot.reminders.db.find({}):
-        for item in guildObj["reminders"]:
-            try:
-                if item.get('paused') is True:
-                    continue
-                dT = datetime.datetime.now()
-                interval = item["interval"]
-                full = None
-                num = None
+    try:
+        async for guildObj in bot.reminders.db.find({}):
+            for item in guildObj["reminders"]:
+                try:
+                    if item.get("paused") is True:
+                        continue
+                    dT = datetime.datetime.now()
+                    interval = item["interval"]
+                    full = None
+                    num = None
 
-                tD = dT + datetime.timedelta(seconds=interval)
+                    tD = dT + datetime.timedelta(seconds=interval)
 
-                if tD.timestamp() - item["lastTriggered"] >= interval:
-                    guild = bot.get_guild(int(guildObj["_id"]))
-                    if not guild:
-                        raise Exception
-                    channel = guild.get_channel(int(item["channel"]))
-                    if not channel:
-                        raise Exception
+                    if tD.timestamp() - item["lastTriggered"] >= interval:
+                        guild = bot.get_guild(int(guildObj["_id"]))
+                        if not guild:
+                            raise Exception
+                        channel = guild.get_channel(int(item["channel"]))
+                        if not channel:
+                            raise Exception
 
-                    roles = []
-                    try:
-                        for role in item["role"]:
-                            roles.append(guild.get_role(int(role)).mention)
-                    except:
-                        roles = [""]
+                        roles = []
+                        try:
+                            for role in item["role"]:
+                                roles.append(guild.get_role(int(role)).mention)
+                        except:
+                            roles = [""]
 
-                    if (
-                        item.get("completion_ability")
-                        and item.get("completion_ability") is True
-                    ):
-                        view = CompleteReminder()
-                    else:
-                        view = None
-                    embed = discord.Embed(
-                        title="<:Clock:1035308064305332224> Notification",
-                        description=f"{item['message']}",
-                        color=0x2A2D31,
-                    )
-                    lastTriggered = tD.timestamp()
-                    item["lastTriggered"] = lastTriggered
-                    await bot.reminders.update_by_id(guildObj)
+                        if (
+                            item.get("completion_ability")
+                            and item.get("completion_ability") is True
+                        ):
+                            view = CompleteReminder()
+                        else:
+                            view = None
+                        embed = discord.Embed(
+                            title="<:Clock:1035308064305332224> Notification",
+                            description=f"{item['message']}",
+                            color=0xED4348,
+                        )
+                        lastTriggered = tD.timestamp()
+                        item["lastTriggered"] = lastTriggered
+                        await bot.reminders.update_by_id(guildObj)
 
-                    await channel.send(" ".join(roles), embed=embed, view=view)
-            except Exception as e:
-                print("Could not send reminder: {}".format(str(e)))
-                pass
-
+                        await channel.send(" ".join(roles), embed=embed, view=view)
+                except Exception as e:
+                    print("Could not send reminder: {}".format(str(e)))
+                    pass
+    except:
+        pass
 
 @tasks.loop(minutes=1)
 async def check_loa():
-    loas = bot.loas
+    try:
+        loas = bot.loas
 
-    async for loaObject in bot.loas.db.find({}):
-        if (
-            datetime.datetime.utcnow().timestamp() > loaObject["expiry"]
-            and loaObject["expired"] == False
-        ):
-            if loaObject["accepted"] is True:
-                loaObject["expired"] = True
-                await bot.loas.update_by_id(loaObject)
-                guild = bot.get_guild(loaObject["guild_id"])
-                if guild:
-                    embed = discord.Embed(
-                        title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
-                        description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
-                        color=0x2A2D31,
-                    )
-                    member = guild.get_member(loaObject["user_id"])
-                    settings = await bot.settings.find_by_id(guild.id)
-                    roles = [None]
-                    if settings is not None:
-                        if "loa_role" in settings["staff_management"]:
-                            try:
-                                if isinstance(
-                                    settings["staff_management"]["loa_role"], int
-                                ):
-                                    roles = [
-                                        discord.utils.get(
-                                            guild.roles,
-                                            id=settings["staff_management"]["loa_role"],
-                                        )
-                                    ]
-                                elif isinstance(
-                                    settings["staff_management"]["loa_role"], list
-                                ):
-                                    roles = [
-                                        discord.utils.get(guild.roles, id=role)
-                                        for role in settings["staff_management"][
-                                            "loa_role"
+        async for loaObject in bot.loas.db.find({}):
+            if (
+                datetime.datetime.now().timestamp() > loaObject["expiry"]
+                and loaObject["expired"] == False
+            ):
+                if loaObject["accepted"] is True:
+                    loaObject["expired"] = True
+                    await bot.loas.update_by_id(loaObject)
+                    guild = bot.get_guild(loaObject["guild_id"])
+                    if guild:
+                        embed = discord.Embed(
+                            title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
+                            description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
+                            color=0xED4348,
+                        )
+                        member = guild.get_member(loaObject["user_id"])
+                        settings = await bot.settings.find_by_id(guild.id)
+                        roles = [None]
+                        if settings is not None:
+                            if "loa_role" in settings["staff_management"]:
+                                try:
+                                    if isinstance(
+                                        settings["staff_management"]["loa_role"], int
+                                    ):
+                                        roles = [
+                                            discord.utils.get(
+                                                guild.roles,
+                                                id=settings["staff_management"]["loa_role"],
+                                            )
                                         ]
-                                    ]
-                            except:
-                                pass
+                                    elif isinstance(
+                                        settings["staff_management"]["loa_role"], list
+                                    ):
+                                        roles = [
+                                            discord.utils.get(guild.roles, id=role)
+                                            for role in settings["staff_management"][
+                                                "loa_role"
+                                            ]
+                                        ]
+                                except:
+                                    pass
 
-                    docs = bot.loas.db.find(
-                        {
-                            "user_id": loaObject["user_id"],
-                            "guild_id": loaObject["guild_id"],
-                        }
-                    )
-                    should_remove_roles = True
-                    async for doc in docs:
-                        if doc["type"] == loaObject["type"]:
-                            if not doc["expired"]:
-                                if not doc == loaObject:
-                                    should_remove_roles = False
-                                    break
+                        docs = bot.loas.db.find(
+                            {
+                                "user_id": loaObject["user_id"],
+                                "guild_id": loaObject["guild_id"],
+                                "accepted": True,
+                                "expired": False,
+                                "denied": False,
+                            }
+                        )
+                        should_remove_roles = True
+                        async for doc in docs:
+                            if doc["type"] == loaObject["type"]:
+                                if not doc["expired"]:
+                                    if not doc == loaObject:
+                                        should_remove_roles = False
+                                        break
 
-                    if should_remove_roles:
-                        if roles is not [None]:
+                        if should_remove_roles:
                             for role in roles:
-                                if role:
-                                    for rl in roles:
-                                        if rl is not None:
-                                            if member:
-                                                if rl in member.roles:
-                                                    try:
-                                                        await member.remove_roles(rl)
-                                                    except:
-                                                        pass
-                    if member:
-                        try:
-                            await member.send(embed=embed)
-                        except discord.Forbidden:
-                            pass
-
+                                if role is not None:
+                                    if member:
+                                        if role in member.roles:
+                                            try:
+                                                await member.remove_roles(role, reason="LOA Expired", atomic=True)
+                                            except:
+                                                pass
+                        if member:
+                            try:
+                                await member.send(embed=embed)
+                            except discord.Forbidden:
+                                pass
+    except:
+        pass
 
 discord.utils.setup_logging(level=logging.INFO)
 
