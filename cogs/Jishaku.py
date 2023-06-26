@@ -42,60 +42,60 @@ class CustomDebugCog(*OPTIONAL_FEATURES, *STANDARD_FEATURES):
         embed.set_thumbnail(url=owner.display_avatar.url)
         await ctx.send(embed=embed)
 
-    async def cog_before_invoke(self, ctx: commands.Context):
-        try:
-            channel: discord.TextChannel = await self.bot.fetch_channel(LOGGING_CHANNEL)
-        except (discord.NotFound, discord.Forbidden):
-            pass
-        else:
-            selected_webhook = None
-            try:
-                for webhook in await channel.webhooks():
-                    if webhook.name == f"{ctx.author.name}#{ctx.author.discriminator}":
-                        selected_webhook = webhook
-            except discord.Forbidden:
-                return
-
-            if not selected_webhook:
-                selected_webhook = await channel.create_webhook(
-                    name=f"{ctx.author.name}#{ctx.author.discriminator}",
-                    avatar=(await ctx.author.display_avatar.read()),
-                    reason="Logs",
-                )
-
-            embed = discord.Embed()
-            if "`" in ctx.message.content:
-                codeblock = codeblock_converter(
-                    ctx.message.content[ctx.message.content.index("`") - 1 :]
-                )
-            else:
-                codeblock = None
-            if codeblock is not None:
-                if ctx.guild:
-                    embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`')-1]}```\n{codeblock.content}\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
-                else:
-                    embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`') - 1]}```\n{codeblock.content}"
-            else:
-                if ctx.guild:
-                    embed.description = f"```\n{ctx.message.content}```\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
-                else:
-                    embed.description = f"```\n{ctx.message.content}```"
-            embed.title = "Jishaku Logging"
-            embed.set_author(
-                name=f"{ctx.author.name}#{ctx.author.discriminator}",
-                icon_url=ctx.author.display_avatar.url,
-            )
-            embed.set_footer(text="️️©️ ERM Systems - Jishaku Logging Systems")
-            try:
-                await selected_webhook.send(embed=embed)
-            except ValueError:
-                await selected_webhook.delete()
-                selected_webhook = await channel.create_webhook(
-                    name=f"{ctx.author.name}#{ctx.author.discriminator}",
-                    avatar=(await ctx.author.display_avatar.read()),
-                    reason="Logs",
-                )
-                await selected_webhook.send(embed=embed)
+    # async def cog_before_invoke(self, ctx: commands.Context):
+    #     try:
+    #         channel: discord.TextChannel = await self.bot.fetch_channel(LOGGING_CHANNEL)
+    #     except (discord.NotFound, discord.Forbidden):
+    #         pass
+    #     else:
+    #         selected_webhook = None
+    #         try:
+    #             for webhook in await channel.webhooks():
+    #                 if webhook.name == f"{ctx.author.name}#{ctx.author.discriminator}":
+    #                     selected_webhook = webhook
+    #         except discord.Forbidden:
+    #             return
+    #
+    #         if not selected_webhook:
+    #             selected_webhook = await channel.create_webhook(
+    #                 name=f"{ctx.author.name}#{ctx.author.discriminator}",
+    #                 avatar=(await ctx.author.display_avatar.read()),
+    #                 reason="Logs",
+    #             )
+    #
+    #         embed = discord.Embed()
+    #         if "`" in ctx.message.content:
+    #             codeblock = codeblock_converter(
+    #                 ctx.message.content[ctx.message.content.index("`") - 1 :]
+    #             )
+    #         else:
+    #             codeblock = None
+    #         if codeblock is not None:
+    #             if ctx.guild:
+    #                 embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`')-1]}```\n{codeblock.content}\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+    #             else:
+    #                 embed.description = f"```\n{ctx.message.content[:ctx.message.content.index('`') - 1]}```\n{codeblock.content}"
+    #         else:
+    #             if ctx.guild:
+    #                 embed.description = f"```\n{ctx.message.content}```\n\n```\nServer Name: {ctx.guild.name}\nChannel Name: {ctx.channel.name}\nMember Count: {ctx.guild.member_count}\nOwner: {f'{ctx.guild.owner.name}#{ctx.guild.owner.discriminator}'}```"
+    #             else:
+    #                 embed.description = f"```\n{ctx.message.content}```"
+    #         embed.title = "Jishaku Logging"
+    #         embed.set_author(
+    #             name=f"{ctx.author.name}#{ctx.author.discriminator}",
+    #             icon_url=ctx.author.display_avatar.url,
+    #         )
+    #         embed.set_footer(text="️️©️ ERM Systems - Jishaku Logging Systems")
+    #         try:
+    #             await selected_webhook.send(embed=embed)
+    #         except ValueError:
+    #             await selected_webhook.delete()
+    #             selected_webhook = await channel.create_webhook(
+    #                 name=f"{ctx.author.name}#{ctx.author.discriminator}",
+    #                 avatar=(await ctx.author.display_avatar.read()),
+    #                 reason="Logs",
+    #             )
+    #             await selected_webhook.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(CustomDebugCog(bot=bot))
