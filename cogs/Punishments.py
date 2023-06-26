@@ -464,7 +464,7 @@ class Punishments(commands.Cog):
             )
             print(oid)
 
-            shift = await bot.shift_management.get_current_shift(ctx.author)
+            shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
             if shift:
                 shift["Moderations"].append(oid)
                 await bot.shift_management.shifts.update_by_id(shift)
@@ -1815,7 +1815,7 @@ class Punishments(commands.Cog):
                 until_epoch=endTimestamp,
             )
 
-            shift = await bot.shift_management.get_current_shift(ctx.author)
+            shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
             if shift:
                 shift["Moderations"].append(oid)
                 await bot.shift_management.shifts.update_by_id(shift["_id"], shift)

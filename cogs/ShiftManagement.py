@@ -83,7 +83,7 @@ class ShiftManagement(commands.Cog):
 
         # Get current shift
         shift = None
-        shift_data = await bot.shift_management.get_current_shift(member)
+        shift_data = await bot.shift_management.get_current_shift(member, ctx.guild.id)
         if shift_data:
             if shift_data["Guild"] == ctx.guild.id:
                 shift = shift_data
@@ -230,7 +230,7 @@ class ShiftManagement(commands.Cog):
             )
 
         shift = None
-        shift = await bot.shift_management.get_current_shift(member)
+        shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
         has_started = shift is not None
 
         print(shift)
@@ -681,7 +681,7 @@ class ShiftManagement(commands.Cog):
                 )
         elif view.value == "off":
             break_seconds = 0
-            shift = await bot.shift_management.get_current_shift(member)
+            shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
             if shift:
                 if shift["Guild"] != ctx.guild.id:
                     shift = None
@@ -1153,7 +1153,7 @@ class ShiftManagement(commands.Cog):
         if view.admin_value:
             if view.admin_value == "add":
                 settings = await bot.settings.get_settings(ctx.guild.id)
-                sh = await bot.shift_management.get_current_shift(member)
+                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if not sh:
                     if settings.get("shift_types"):
                         if (
@@ -1256,7 +1256,7 @@ class ShiftManagement(commands.Cog):
                         print("days")
                 else:
                     return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-                sh = await bot.shift_management.get_current_shift(member)
+                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if sh:
                     await bot.shift_management.add_time_to_shift(sh["_id"], seconds)
                 else:
@@ -1284,7 +1284,7 @@ class ShiftManagement(commands.Cog):
 
             if view.admin_value == "remove":
                 settings = await bot.settings.get_settings(ctx.guild.id)
-                sh = await bot.shift_management.get_current_shift(member)
+                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if not sh:
                     if settings.get("shift_types"):
                         if (
@@ -1381,7 +1381,7 @@ class ShiftManagement(commands.Cog):
                         print("days")
                 else:
                     return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-                sh = await bot.shift_management.get_current_shift(member)
+                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if sh:
                     await bot.shift_management.remove_time_from_shift(
                         sh["_id"], seconds
@@ -1467,7 +1467,7 @@ class ShiftManagement(commands.Cog):
 
                 embed.set_footer(text="Staff Logging Module")
 
-                sh = await bot.shift_management.get_current_shift(member)
+                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 await bot.shift_management.shifts.delete_by_id(sh["_id"])
 
                 if shift_channel is None:
@@ -1561,7 +1561,7 @@ class ShiftManagement(commands.Cog):
                 ctx, "Shift management is not enabled on this server."
             )
 
-        shift = await bot.shift_management.get_current_shift(ctx.author)
+        shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         view = ModificationSelectMenu(ctx.author.id)
 
         embed = discord.Embed(
@@ -1840,7 +1840,7 @@ class ShiftManagement(commands.Cog):
                         item["EndEpoch"] = ctx.message.created_at.timestamp()
                         shift["Breaks"][index] = item
 
-                sh = await bot.shift_management.get_current_shift(ctx.author)
+                sh = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
                 if sh:
                     if sh["Guild"] == ctx.guild.id:
                         await bot.shift_management.shifts.update_by_id(sh)
@@ -2585,7 +2585,7 @@ class ShiftManagement(commands.Cog):
 
             embed.set_footer(text="Staff Logging Module")
 
-            sh = await bot.shift_management.get_current_shift(ctx.author)
+            sh = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
             await bot.shift_management.shifts.delete_by_id(sh["_id"])
 
             if shift_channel is None:

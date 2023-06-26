@@ -99,8 +99,8 @@ class ShiftManagement:
         )
         return document
 
-    async def get_current_shift(self, member: discord.Member):
+    async def get_current_shift(self, member: discord.Member, guild_id: int):
         """
         Gets the current shift for the specified user.
         """
-        return await self.shifts.db.find_one({"UserID": member.id, "EndEpoch": 0})
+        return await self.shifts.db.find_one({"UserID": member.id, "EndEpoch": 0, "Guild": guild_id})
