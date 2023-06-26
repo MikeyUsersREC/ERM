@@ -1831,9 +1831,8 @@ class ShiftManagement(commands.Cog):
         if view.value == "on":
             if status == "on":
                 return await msg.edit(
-                    ctx,
-                    f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
-                    embed=None,
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
+                    embed=None, view=None
                 )
             elif status == "break":
                 for index, item in enumerate(shift["Breaks"].copy()):
