@@ -94,9 +94,7 @@ class ShiftManagement:
             if breaks["EndEpoch"] == 0:
                 breaks["EndEpoch"] = int(datetime.datetime.now().timestamp())
 
-        await self.shifts.db.update_one(
-            {"_id": ObjectId(identifier)}, {"$set": document}
-        )
+        await self.shifts.update_by_id(document)
         return document
 
     async def get_current_shift(self, member: discord.Member, guild_id: int):

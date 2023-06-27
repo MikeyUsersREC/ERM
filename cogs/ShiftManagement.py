@@ -981,6 +981,13 @@ class ShiftManagement(commands.Cog):
 
             print("9960")
 
+            try:
+                await bot.shift_management.end_shift(
+                    identifier=shift["_id"], guild_id=ctx.guild.id
+                )
+            except ValueError as e:
+                return await failure_embed(ctx, "shift not found. Could not end shift.")
+
             if shift.get("Nickname"):
                 if shift.get("Nickname") == member.nick:
                     nickname = None
@@ -1004,14 +1011,6 @@ class ShiftManagement(commands.Cog):
                     except Exception as e:
                         print(e)
                         pass
-
-            try:
-                await bot.shift_management.end_shift(
-                    identifier=shift["_id"], guild_id=ctx.guild.id
-                )
-            except ValueError as e:
-                return await failure_embed(ctx, "shift not found. Could not end shift.")
-
             role = None
             if shift_type:
                 if shift_type.get("role"):
@@ -2462,7 +2461,7 @@ class ShiftManagement(commands.Cog):
                             shift_types = None
                             if settings.get("shift_types"):
                                 if settings["shift_types"].get("types"):
-                                    shift_types = settings["shift_types"].get("types")
+                                    shift_types = settings["shift_types"].get("types", [])
                             else:
                                 shift_types = []
                             for s in shift_types:
