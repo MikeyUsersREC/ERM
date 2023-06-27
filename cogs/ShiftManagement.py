@@ -2074,9 +2074,8 @@ class ShiftManagement(commands.Cog):
                 )
             if status == "off":
                 return await msg.edit(
-                    ctx,
-                    f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already off-duty. You can go on-duty by selecting **On-Duty**.",
-                    embed=None,
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already off-duty. You can go on-duty by selecting **On-Duty**.",
+                    embed=None, view=None
                 )
 
             embed = discord.Embed(
@@ -2720,8 +2719,14 @@ class ShiftManagement(commands.Cog):
                 {"Guild": ctx.guild.id, "EndEpoch": 0}
             ):
                 if sh["Guild"] == ctx.guild.id:
-                    member = discord.utils.get(ctx.guild.members, id=sh["UserID"])
+                    # member = discord.utils.get(ctx.guild.members, id=sh["UserID"])
+                    try:
+                        member = await ctx.guild.fetch_member(sh["UserID"])
+                    except:
+                        member = None
+
                     if member:
+
                         time_delta = ctx.message.created_at.replace(
                             tzinfo=pytz.UTC
                         ) - datetime.datetime.fromtimestamp(
@@ -2784,8 +2789,13 @@ class ShiftManagement(commands.Cog):
                 {"Guild": ctx.guild.id, "Type": shift_type["name"], "EndEpoch": 0}
             ):
                 s = shift
-                member = discord.utils.get(ctx.guild.members, id=shift["UserID"])
+                # member = discord.utils.get(ctx.guild.members, id=shift["UserID"])
+                try:
+                    member = await ctx.guild.fetch_member(s["UserID"])
+                except:
+                    member = None
                 if member:
+                    print('Cannot find member')
                     time_delta = ctx.message.created_at.replace(
                         tzinfo=pytz.UTC
                     ) - datetime.datetime.fromtimestamp(s["StartEpoch"], tz=pytz.UTC)

@@ -68,7 +68,7 @@ class Punishments(commands.Cog):
         all_shifts = [
             i
             async for i in bot.shift_management.shifts.db.find(
-                {"Guild": ctx.guild.id, "UserID": user.id}
+                {"Guild": ctx.guild.id, "UserID": user.id, "EndEpoch": {"$ne": 0}}
             )
         ]
 

@@ -2,10 +2,11 @@ import datetime
 import logging
 
 import discord
+import pytz
 from discord.ext import commands
 from sentry_sdk import capture_exception, push_scope
 
-from erm import error_gen
+from utils.utils import error_gen
 
 
 class OnCommandError(commands.Cog):
@@ -24,73 +25,64 @@ class OnCommandError(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             return
         if isinstance(error, commands.CheckFailure):
-            embed = discord.Embed(
-                title="<:ErrorIcon:1035000018165321808> Permissions Error",
-                color=0xFF3C3C,
-                description="You do not have permission to use this command.",
-            )
             try:
-                return await ctx.send(embed=embed)
+                return await ctx.send(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you don't have permission to run that command."
+                )
             except:
                 pass
         if isinstance(error, commands.MissingRequiredArgument):
-            embed = discord.Embed(
-                title="<:ErrorIcon:1035000018165321808> Error",
-                color=0xFF3C3C,
-                description="You are missing a required argument to run this command.",
-            )
             try:
-                return await ctx.send(embed=embed)
+                return await ctx.send(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you're missing a required argument to run this command!"
+                )
             except:
                 pass
         try:
             embed = discord.Embed(
-                title="<:ErrorIcon:1035000018165321808> Bot Error",
-                color=discord.Color.red(),
+                color=0xED4348,
             )
 
-            try:
-                error_bef = str(error).split(":")[0]
-                error_beftwo = str(error).split(":")[1:]
-                error_after = error_bef + ":\n" + ":".join(error_beftwo)
-            except:
-                error_after = str(error)
-
-            embed.add_field(name="Error Details", value=error_after, inline=False)
             embed.add_field(
                 name="Support Server",
                 value="[Click here](https://discord.gg/5pMmJEYazQ)",
                 inline=False,
             )
             embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
-
             if not isinstance(
-                error,
-                (
-                    commands.CommandNotFound,
-                    commands.CheckFailure,
-                    commands.MissingRequiredArgument,
-                    discord.Forbidden,
-                ),
+                    error,
+                    (
+                            commands.CommandNotFound,
+                            commands.CheckFailure,
+                            commands.MissingRequiredArgument,
+                            discord.Forbidden,
+                    ),
             ):
-                await ctx.send(embed=embed)
+                await ctx.send(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, an error has occurred! Rest assured, it can probably be solved by going to our support server. **{error_id}**.",
+                    embed=embed,
+                )
         except Exception as e:
             logging.info(e)
         finally:
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
                 scope.level = "error"
-                await bot.errors.insert(
-                    {
-                        "_id": error_id,
-                        "error": str(error),
-                        "time": datetime.datetime.utcnow().strftime(
-                            "%m/%d/%Y, %H:%M:%S"
-                        ),
-                        "channel": ctx.channel.id,
-                        "guild": ctx.guild.id,
-                    }
-                )
+                try:
+                    await bot.errors.insert(
+                        {
+                            "_id": error_id,
+                            "error": str(error),
+                            "time": datetime.datetime.now(tz=pytz.UTC).strftime(
+                                "%m/%d/%Y, %H:%M:%S"
+                            ),
+                            "channel": ctx.channel.id,
+                            "guild": ctx.guild.id,
+                        }
+                    )
+                except:
+                    pass
+
                 capture_exception(error)
 
 
