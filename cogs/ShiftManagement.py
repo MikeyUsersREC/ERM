@@ -2724,7 +2724,8 @@ class ShiftManagement(commands.Cog):
                 if sh["Guild"] == ctx.guild.id:
                     member = discord.utils.get(ctx.guild.members, id=sh["UserID"])
                     if member:
-                        staff_members.append(member)
+                        if member not in staff_members:
+                            staff_members.append(member)
         else:
             async for shift in bot.shift_management.shifts.db.find(
                 {"Guild": ctx.guild.id, "Type": shift_type["name"], "EndEpoch": 0}
@@ -2732,7 +2733,8 @@ class ShiftManagement(commands.Cog):
                 s = shift
                 member = discord.utils.get(ctx.guild.members, id=shift["UserID"])
                 if member:
-                    staff_members.append(member)
+                    if member not in staff_members:
+                        staff_members.append(member)
 
         for member in staff_members:
             sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
