@@ -714,7 +714,7 @@ class ShiftManagement(commands.Cog):
                         shift_types = None
                         if settings.get("shift_types"):
                             if settings["shift_types"].get("types"):
-                                shift_types = settings["shift_types"].get("types")
+                                shift_types = settings["shift_types"].get("types", [])
                         else:
                             shift_types = []
                         for s in shift_types:
@@ -995,7 +995,7 @@ class ShiftManagement(commands.Cog):
                         settings = await bot.settings.get_settings(ctx.guild.id)
                         if settings.get("shift_types"):
                             if settings["shift_types"].get("types"):
-                                shift_types = settings["shift_types"].get("types")
+                                shift_types = settings["shift_types"].get("types", [])
                         else:
                             shift_types = []
                         for s in shift_types:
@@ -1079,7 +1079,7 @@ class ShiftManagement(commands.Cog):
                             shift_types = None
                             if settings.get("shift_types"):
                                 if settings["shift_types"].get("types"):
-                                    shift_types = settings["shift_types"].get("types")
+                                    shift_types = settings["shift_types"].get("types", [])
                             else:
                                 shift_types = []
                             for s in shift_types:
@@ -1425,7 +1425,7 @@ class ShiftManagement(commands.Cog):
                             shift_types = None
                             if settings.get("shift_types"):
                                 if settings["shift_types"].get("types"):
-                                    shift_types = settings["shift_types"].get("types")
+                                    shift_types = settings["shift_types"].get("types", [])
                             else:
                                 shift_types = []
                             for s in shift_types:
@@ -2188,7 +2188,7 @@ class ShiftManagement(commands.Cog):
                         shift_types = None
                         if settings.get("shift_types"):
                             if settings["shift_types"].get("types"):
-                                shift_types = settings["shift_types"].get("types")
+                                shift_types = settings["shift_types"].get("types", [])
                         else:
                             shift_types = []
                         for s in shift_types:
@@ -2543,7 +2543,7 @@ class ShiftManagement(commands.Cog):
                         shift_types = None
                         if settings.get("shift_types"):
                             if settings["shift_types"].get("types"):
-                                shift_types = settings["shift_types"].get("types")
+                                shift_types = settings["shift_types"].get("types", [])
                         else:
                             shift_types = []
                         for s in shift_types:
