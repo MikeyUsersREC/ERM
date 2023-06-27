@@ -2722,12 +2722,7 @@ class ShiftManagement(commands.Cog):
                 {"Guild": ctx.guild.id, "EndEpoch": 0}
             ):
                 if sh["Guild"] == ctx.guild.id:
-                    # member = discord.utils.get(ctx.guild.members, id=sh["UserID"])
-                    try:
-                        member = await ctx.guild.fetch_member(sh["UserID"])
-                    except:
-                        member = None
-
+                    member = discord.utils.get(ctx.guild.members, id=sh["UserID"])
                     if member:
                         staff_members.append(member)
         else:
@@ -2735,11 +2730,7 @@ class ShiftManagement(commands.Cog):
                 {"Guild": ctx.guild.id, "Type": shift_type["name"], "EndEpoch": 0}
             ):
                 s = shift
-                # member = discord.utils.get(ctx.guild.members, id=shift["UserID"])
-                try:
-                    member = await ctx.guild.fetch_member(s["UserID"])
-                except:
-                    member = None
+                member = discord.utils.get(ctx.guild.members, id=shift["UserID"])
                 if member:
                     staff_members.append(member)
 
