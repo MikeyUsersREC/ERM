@@ -2732,6 +2732,8 @@ class ShiftManagement(commands.Cog):
                         ) - datetime.datetime.fromtimestamp(
                             sh["StartEpoch"], tz=pytz.UTC
                         )
+
+
                         break_seconds = 0
                         if "Breaks" in sh.keys():
                             for item in sh["Breaks"]:
@@ -2743,9 +2745,9 @@ class ShiftManagement(commands.Cog):
                                         - item["StartEpoch"]
                                     )
 
-                        time_delta = time_delta - datetime.timedelta(
-                            seconds=break_seconds
-                        )
+                        # time_delta = time_delta - datetime.timedelta(
+                        #     seconds=break_seconds
+                        # )
 
                         added_seconds = 0
                         removed_seconds = 0
@@ -2810,7 +2812,7 @@ class ShiftManagement(commands.Cog):
                                     - item["StartEpoch"]
                                 )
 
-                    time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
+                    # time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
 
                     added_seconds = 0
                     removed_seconds = 0
@@ -2851,6 +2853,7 @@ class ShiftManagement(commands.Cog):
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
         added_staff = []
         for index, staff in enumerate(sorted_staff):
+            print(staff)
             member = discord.utils.get(ctx.guild.members, id=staff["id"])
             if not member:
                 continue
