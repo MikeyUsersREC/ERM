@@ -387,7 +387,7 @@ class ShiftManagement(commands.Cog):
             shift_types = settings.get("shift_types")
             shift_types = (
                 shift_types.get("types")
-                if shift_types.get("types") not in [None, []]
+                if (shift_types or {}).get("types") not in [None, []]
                 else []
             )
             if shift_types:
@@ -1726,7 +1726,7 @@ class ShiftManagement(commands.Cog):
                     shift_types = settings.get("shift_types")
                     shift_types = (
                         shift_types.get("types")
-                        if shift_types.get("types") is not None
+                        if (shift_types or {}).get("types") is not None
                         else []
                     )
                     if shift_types:
