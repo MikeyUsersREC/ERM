@@ -2713,6 +2713,9 @@ class ShiftManagement(commands.Cog):
         embeds.append(embed)
 
         all_staff = []
+        staff_members = []
+
+
 
         if not shift_type:
             async for sh in bot.shift_management.shifts.db.find(
@@ -2726,68 +2729,7 @@ class ShiftManagement(commands.Cog):
                         member = None
 
                     if member:
-
-                        time_delta = ctx.message.created_at.replace(
-                            tzinfo=pytz.UTC
-                        ) - datetime.datetime.fromtimestamp(
-                            sh["StartEpoch"], tz=pytz.UTC
-                        )
-
-
-                        break_seconds = 0
-                        if "Breaks" in sh.keys():
-                            for item in sh["Breaks"]:
-                                if item["EndEpoch"] == 0:
-                                    break_seconds += (
-                                        ctx.message.created_at.replace(
-                                            tzinfo=pytz.UTC
-                                        ).timestamp()
-                                        - item["StartEpoch"]
-                                    )
-
-                        # time_delta = time_delta - datetime.timedelta(
-                        #     seconds=break_seconds
-                        # )
-
-                        added_seconds = 0
-                        removed_seconds = 0
-                        if "AddedTime" in sh.keys():
-                            added_seconds = sh["AddedTime"]
-
-                        if "RemovedTime" in sh.keys():
-                            removed_seconds = sh["RemovedTime"]
-
-                        try:
-                            time_delta = time_delta + datetime.timedelta(
-                                seconds=added_seconds
-                            )
-                            time_delta = time_delta - datetime.timedelta(
-                                seconds=removed_seconds
-                            )
-                        except OverflowError:
-                            await failure_embed(
-                                ctx,
-                                f" the user **{member.mention}**'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
-                            )
-
-                        if list(
-                            filter(lambda x: x["id"] == sh["UserID"], all_staff)
-                        ) not in [[], None]:
-                            pass
-                            # for item in all_staff:
-
-                            #     if item["id"] == sh["UserID"]:
-                            #         item["total_seconds"] += time_delta.total_seconds()
-                            #         item["break_seconds"] += break_seconds
-                        else:
-                            all_staff.append(
-                                {
-                                    "id": sh["UserID"],
-                                    "total_seconds": time_delta.total_seconds(),
-                                    "break_seconds": break_seconds,
-                                }
-                            )
-
+                        staff_members.append(member)
         else:
             async for shift in bot.shift_management.shifts.db.find(
                 {"Guild": ctx.guild.id, "Type": shift_type["name"], "EndEpoch": 0}
@@ -2799,59 +2741,62 @@ class ShiftManagement(commands.Cog):
                 except:
                     member = None
                 if member:
-                    print('Cannot find member')
-                    time_delta = ctx.message.created_at.replace(
-                        tzinfo=pytz.UTC
-                    ) - datetime.datetime.fromtimestamp(s["StartEpoch"], tz=pytz.UTC)
-                    break_seconds = 0
-                    if "Breaks" in s.keys():
-                        for item in s["Breaks"]:
-                            if item["EndEpoch"] == 0:
-                                break_seconds = (
-                                    ctx.message.created_at.replace(
-                                        tzinfo=pytz.UTC
-                                    ).timestamp()
-                                    - item["StartEpoch"]
-                                )
+                    staff_members.append(member)
 
-                    # time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
+        for member in staff_members:
+            sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
 
-                    added_seconds = 0
-                    removed_seconds = 0
-                    if "AddedTime" in s.keys():
-                        added_seconds = s["AddedTime"]
 
-                    if "RemovedTime" in s.keys():
-                        removed_seconds = s["RemovedTime"]
+            time_delta = ctx.message.created_at.replace(
+                tzinfo=pytz.UTC
+            ) - datetime.datetime.fromtimestamp(
+                sh["StartEpoch"], tz=pytz.UTC
+            )
 
-                    try:
-                        time_delta = time_delta + datetime.timedelta(
-                            seconds=added_seconds
-                        )
-                        time_delta = time_delta - datetime.timedelta(
-                            seconds=removed_seconds
-                        )
-                    except OverflowError:
-                        await failure_embed(
-                            f" the users **{member.mention}**'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server."
+            break_seconds = 0
+            if "Breaks" in sh.keys():
+                for item in sh["Breaks"]:
+                    if item["EndEpoch"] == 0:
+                        break_seconds += (
+                                ctx.message.created_at.replace(
+                                    tzinfo=pytz.UTC
+                                ).timestamp()
+                                - item["StartEpoch"]
                         )
 
-                    if list(
-                        filter(lambda x: x["id"] == s["UserID"], all_staff)
-                    ) not in [[], None]:
-                        pass
-                        # for item in all_staff:
-                        #     if item["id"] == s["UserID"]:
-                        #         item["total_seconds"] += time_delta.total_seconds()
-                        #         item["break_seconds"] += break_seconds
-                    else:
-                        all_staff.append(
-                            {
-                                "id": s["UserID"],
-                                "total_seconds": time_delta.total_seconds(),
-                                "break_seconds": break_seconds,
-                            }
-                        )
+            # time_delta = time_delta - datetime.timedelta(
+            #     seconds=break_seconds
+            # )
+
+            added_seconds = 0
+            removed_seconds = 0
+            if "AddedTime" in sh.keys():
+                added_seconds = sh["AddedTime"]
+
+            if "RemovedTime" in sh.keys():
+                removed_seconds = sh["RemovedTime"]
+
+            try:
+                time_delta = time_delta + datetime.timedelta(
+                    seconds=added_seconds
+                )
+                time_delta = time_delta - datetime.timedelta(
+                    seconds=removed_seconds
+                )
+            except OverflowError:
+                await failure_embed(
+                    ctx,
+                    f" the user **{member.mention}**'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
+                )
+
+
+            all_staff.append(
+                {
+                    "id": sh["UserID"],
+                    "total_seconds": time_delta.total_seconds(),
+                    "break_seconds": break_seconds,
+                }
+            )
 
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
         added_staff = []
