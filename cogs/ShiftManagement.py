@@ -118,7 +118,7 @@ class ShiftManagement(commands.Cog):
             name="<:ERMMisc:1113215605424795648> Total Shift Time",
             value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=total_seconds))}",
         )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_author(icon_url=ctx.author.display_avatar.url, name=ctx.author.name)
         await ctx.reply(
             embed=embed,
