@@ -55,14 +55,7 @@ class StaffManagement(commands.Cog):
                     "guild_id": ctx.guild.id,
                     "type": "RA",
                     "expired": False,
-                    "accepted": True,
-                    "expiry": {
-                        "$gt": int(
-                            datetime.datetime.timestamp(
-                                datetime.datetime.now(tz=pytz.UTC)
-                            )
-                        )
-                    },
+                    "accepted": True
                 }
             )
         ]
@@ -923,16 +916,9 @@ class StaffManagement(commands.Cog):
             async for document in bot.loas.db.find(
                 {
                     "guild_id": ctx.guild.id,
-                    "type": "RA",
+                    "type": "LoA",
                     "expired": False,
                     "accepted": True,
-                    "expiry": {
-                        "$gt": int(
-                            datetime.datetime.timestamp(
-                                datetime.datetime.now(tz=pytz.UTC)
-                            )
-                        )
-                    },
                 }
             )
         ]

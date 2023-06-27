@@ -512,7 +512,7 @@ class ShiftManagement(commands.Cog):
                     ctx,
                     msg,
                     member,
-                    manage=True
+                    manage=False
                 )
             else:
                 settings = await bot.settings.find_by_id(ctx.guild.id)
@@ -1245,6 +1245,7 @@ class ShiftManagement(commands.Cog):
                         print("minutes")
                     if content.endswith("h"):
                         full = "hours"
+                        num = int(content[:-1])
                         seconds = num * 60 * 60
 
                         print("hours")
@@ -2069,8 +2070,8 @@ class ShiftManagement(commands.Cog):
                         break_seconds += int(endTimestamp - startTimestamp)
             else:
                 return await msg.edit(
-                    ctx,
-                    f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are not on-duty. You can go on-duty by selecting **On-Duty**.",
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are not on-duty. You can go on-duty by selecting **On-Duty**.",
+                    embed=None, view=None
                 )
             if status == "off":
                 return await msg.edit(
@@ -2090,7 +2091,7 @@ class ShiftManagement(commands.Cog):
                         shift_types = None
                         if settings.get("shift_types"):
                             if settings["shift_types"].get("types"):
-                                shift_types = settings["shift_types"].get("types")
+                                shift_types = settings["shift_types"].get("types", [])
                         else:
                             shift_types = []
                         for s in shift_types:
@@ -2521,8 +2522,8 @@ class ShiftManagement(commands.Cog):
                     configItem,
                     ctx,
                     msg,
-                    member,
-                    manage=False
+                    ctx.author,
+                    manage=True
                 )
         elif view.value == "void":
             if status == "off":

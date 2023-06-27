@@ -1308,6 +1308,13 @@ class Punishments(commands.Cog):
                 if view.modal.bolo:
                     id = view.modal.bolo.value
 
+                    try:
+                        id = int(id)
+                    except:
+                        return await msg.edit(
+                            content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** that is not a valid ID."
+                        )
+
                     matching_docs = []
                     matching_docs.append(
                         await bot.punishments.get_warning_by_snowflake(id)
