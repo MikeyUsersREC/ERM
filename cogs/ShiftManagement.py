@@ -2773,10 +2773,12 @@ class ShiftManagement(commands.Cog):
                         if list(
                             filter(lambda x: x["id"] == sh["UserID"], all_staff)
                         ) not in [[], None]:
-                            for item in all_staff:
-                                if item["id"] == sh["UserID"]:
-                                    item["total_seconds"] += time_delta.total_seconds()
-                                    item["break_seconds"] += break_seconds
+                            pass
+                            # for item in all_staff:
+
+                            #     if item["id"] == sh["UserID"]:
+                            #         item["total_seconds"] += time_delta.total_seconds()
+                            #         item["break_seconds"] += break_seconds
                         else:
                             all_staff.append(
                                 {
@@ -2837,10 +2839,11 @@ class ShiftManagement(commands.Cog):
                     if list(
                         filter(lambda x: x["id"] == s["UserID"], all_staff)
                     ) not in [[], None]:
-                        for item in all_staff:
-                            if item["id"] == s["UserID"]:
-                                item["total_seconds"] += time_delta.total_seconds()
-                                item["break_seconds"] += break_seconds
+                        pass
+                        # for item in all_staff:
+                        #     if item["id"] == s["UserID"]:
+                        #         item["total_seconds"] += time_delta.total_seconds()
+                        #         item["break_seconds"] += break_seconds
                     else:
                         all_staff.append(
                             {
