@@ -167,6 +167,22 @@ class Reminders(commands.Cog):
                             label="Reminder Name",
                             min_length=1,
                         ),
+                    ),
+                    (
+                        "time",
+                        discord.ui.TextInput(
+                            label="Reminder Interval",
+                            placeholder="1s, 1m, 1h",
+                            min_length=1,
+                        ),
+                    ),
+                    (
+                        "content",
+                        discord.ui.TextInput(
+                            label="Reminder Content",
+                            min_length=1,
+                            style=discord.TextStyle.long
+                        ),
                     )
                 ],
             )

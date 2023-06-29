@@ -1398,9 +1398,9 @@ class Punishments(commands.Cog):
                     )
                 )
 
-            user = await bot.punishments.find_warnings_by_spec(
+            user = [i async for i in bot.punishments.find_warnings_by_spec(
                 ctx.guild.id, user_id=roblox_user["id"], warning_type="Bolo"
-            )
+            )]
             bolos = []
 
             if user is None:
@@ -1690,9 +1690,9 @@ class Punishments(commands.Cog):
                     else:
                         avatar = ""
 
-            user = await bot.punishments.find_warnings_by_spec(
+            user = [i async for i in bot.punishments.find_warnings_by_spec(
                 ctx.guild.id, user_id=dataItem["id"]
-            )
+            )]
             if user in [[], None]:
                 embed.description = """\n<:ArrowRightW:1035023450592514048>**Warnings:** 0\n<:ArrowRightW:1035023450592514048>**Kicks:** 0\n<:ArrowRightW:1035023450592514048>**Bans:** 0\n`Banned:` <:ErrorIcon:1035000018165321808>"""
             else:
