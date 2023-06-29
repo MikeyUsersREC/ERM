@@ -219,7 +219,10 @@ class GameSync(commands.Cog):
                         name=ctx.author.name,
                         icon_url=ctx.author.display_avatar.url,
                     )
-                    embed.set_thumbnail(url=ctx.guild.icon.url)
+                    try:
+                        embed.set_thumbnail(url=ctx.guild.icon.url)
+                    except:
+                        pass
                     view = Verification(ctx.author.id)
                     await verify_msg.edit(
                         embed=None,

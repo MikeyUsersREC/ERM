@@ -274,7 +274,10 @@ class Configuration(commands.Cog):
             name=ctx.author.name,
             icon_url=ctx.author.display_avatar.url,
         )
-        embed.set_thumbnail(url=ctx.guild.icon.url)
+        try:
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+        except:
+            pass
         embed.add_field(
             name="<:ERMList:1111099396990435428> Verification",
             value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Enabled:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Role:** {}".format(

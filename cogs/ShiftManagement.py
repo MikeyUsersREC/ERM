@@ -2700,7 +2700,10 @@ class ShiftManagement(commands.Cog):
             name=f"{ctx.author.name}",
             icon_url=ctx.author.display_avatar.url,
         )
-        embed.set_thumbnail(url=ctx.guild.icon.url)
+        try:
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+        except:
+            pass
         embeds = []
         embeds.append(embed)
 
