@@ -456,7 +456,7 @@ class Punishments(commands.Cog):
                 ctx.author.id,
                 ctx.author.name,
                 requestJson["id"],
-                requestJson["name"].lower(),
+                requestJson["name"],
                 ctx.guild.id,
                 reason,
                 type.lower().title(),
@@ -1043,7 +1043,7 @@ class Punishments(commands.Cog):
                 Moderator = selected_item["Moderator"]
 
             embed = discord.Embed(
-                title="<:ERMPunish:1111095942075138158> Modify Punishment",
+                title="<:ERMPunish:1111095942075138158> Remove Punishment",
                 description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Type:** {selected_item['Type']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Reason:** {selected_item['Reason']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Moderator:** {Moderator}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**ID:** {selected_item['Snowflake']}\n",
                 color=0xED4348,
             )
@@ -1347,7 +1347,7 @@ class Punishments(commands.Cog):
                     await bot.punishments.remove_warning_by_snowflake(id)
 
                     await msg.edit(
-                        "<:ERMCheck:1111089850720976906> **{},** this BOLO been marked as complete.".format(
+                        content="<:ERMCheck:1111089850720976906> **{},** this BOLO been marked as complete.".format(
                             ctx.author.name
                         ),
                         view=None,
@@ -1409,14 +1409,6 @@ class Punishments(commands.Cog):
                         ctx.author.name
                     )
                 )
-
-            for warning in user["warnings"].copy():
-                if isinstance(warning, dict):
-                    if warning["Guild"] == ctx.guild.id and warning["Type"] in [
-                        "Bolo",
-                        "BOLO",
-                    ]:
-                        bolos.append(warning)
 
             if len(bolos) == 0:
                 return await ctx.reply(
@@ -1545,10 +1537,12 @@ class Punishments(commands.Cog):
 
                     await bot.punishments.remove_warning_by_snowflake(id)
 
-                    await ctx.reply(
-                        "<:ERMCheck:1111089850720976906> **{},** this BOLO been marked as complete.".format(
+                    await msg.edit(
+                        content="<:ERMCheck:1111089850720976906> **{},** this BOLO been marked as complete.".format(
                             ctx.author.name
-                        )
+                        ),
+                        view=None,
+                        embed=None,
                     )
                     return
 

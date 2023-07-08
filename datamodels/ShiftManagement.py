@@ -11,7 +11,7 @@ class ShiftManagement:
         self.shifts = Document(connection, current_shifts)
 
     async def add_shift_by_user(
-        self, member: discord.Member, shift_type: str, breaks: list[dict], guild: int
+        self, member: discord.Member, shift_type: str, breaks: list, guild: int
     ):
         """
         Adds a shift for the specified user to the database, with the provided

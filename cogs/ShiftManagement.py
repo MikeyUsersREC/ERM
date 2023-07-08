@@ -2704,6 +2704,8 @@ class ShiftManagement(commands.Cog):
             embed.set_thumbnail(url=ctx.guild.icon.url)
         except:
             pass
+
+
         embeds = []
         embeds.append(embed)
 
