@@ -66,12 +66,12 @@ scope = [
 ]
 
 class Bot(commands.AutoShardedBot):
+    # Set Jishaku Permissions
     async def is_owner(self, user: discord.User):
         if user.id in [
-            459374864067723275,
-            528805861762662400,
-            877195103335231558,
-            333991360199917568,
+            459374864067723275, # Noah
+            877195103335231558, # Larry
+            333991360199917568, # Doge
         ]:  # Implement your own conditions here
             return True
 
