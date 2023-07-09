@@ -521,16 +521,16 @@ class StaffManagement(commands.Cog):
             )
 
             try:
-                embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                embed.set_thumbnail(url=member.display_avatar.url)
                 embed.set_author(
-                    icon_url=ctx.author.display_avatar.url, name=ctx.author.name
+                    icon_url=member.display_avatar.url, name=member.name
                 )
 
             except:
                 pass
             embed.add_field(
                 name="<:ERMUser:1111098647485108315> Staff Member",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{ctx.author.mention}",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{member.mention}",
                 inline=False,
             )
 
@@ -607,12 +607,12 @@ class StaffManagement(commands.Cog):
 
             if ctx.interaction:
                 await ctx.interaction.followup.send(
-                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in your RA request.",
+                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in a RA request for **{member.name}**.",
                     ephemeral=True,
                 )
             else:
                 await ctx.reply(
-                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in your RA request."
+                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in a RA request for **{member.name}**."
                 )
 
         async def void_ra(ctx, member):
@@ -916,9 +916,9 @@ class StaffManagement(commands.Cog):
             async for document in bot.loas.db.find(
                 {
                     "guild_id": ctx.guild.id,
-                    "type": "LoA",
+                    "type": {"$in": ["LoA", "LOA"]},
                     "expired": False,
-                    "accepted": True,
+                    "accepted": True
                 }
             )
         ]
@@ -1171,7 +1171,7 @@ class StaffManagement(commands.Cog):
 
     @loa.command(
         name="admin",
-        description="Administrate a Leave of Absense request",
+        description="Administrate a Leave of Absence request",
         extras={"category": "Staff Management"},
         with_app_command=True,
     )
@@ -1340,14 +1340,14 @@ class StaffManagement(commands.Cog):
         async def create_loa(ctx, member):
             view = CustomModalView(
                 ctx.author.id,
-                "Create a Leave of Absense",
+                "Create a Leave of Absence",
                 "LOA Creation",
                 [
                     (
                         "reason",
                         discord.ui.TextInput(
                             label="Reason",
-                            placeholder="Reason for the Leave of Absense",
+                            placeholder="Reason for the Leave of Absence",
                             min_length=1,
                             max_length=200,
                             style=discord.TextStyle.short,
@@ -1357,7 +1357,7 @@ class StaffManagement(commands.Cog):
                         "duration",
                         discord.ui.TextInput(
                             label="Duration",
-                            placeholder="Duration of the Leave of Absense (s/m/h/d)",
+                            placeholder="Duration of the Leave of Absence (s/m/h/d)",
                             min_length=1,
                             max_length=5,
                             style=discord.TextStyle.short,
@@ -1397,16 +1397,16 @@ class StaffManagement(commands.Cog):
             )
 
             try:
-                embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                embed.set_thumbnail(url=member.display_avatar.url)
                 embed.set_author(
-                    icon_url=ctx.author.display_avatar.url, name=ctx.author.name
+                    icon_url=member.display_avatar.url, name=member.name
                 )
 
             except:
                 pass
             embed.add_field(
                 name="<:ERMUser:1111098647485108315> Staff Member",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{ctx.author.mention}",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{member.mention}",
                 inline=False,
             )
 
@@ -1483,12 +1483,12 @@ class StaffManagement(commands.Cog):
 
             if ctx.interaction:
                 await ctx.interaction.followup.send(
-                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in your LOA request.",
+                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in a LOA request for **{member.name}**.",
                     ephemeral=True,
                 )
             else:
                 await ctx.reply(
-                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in your LOA request."
+                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've sent in a LOA request for **{member.name}**."
                 )
 
         async def void_loa(ctx, member):
@@ -1607,8 +1607,8 @@ class StaffManagement(commands.Cog):
                             value="LoA",
                         ),
                         discord.SelectOption(
-                            label="Leave of Absense",
-                            description="A Leave of Absense Notice constitutes partial activity towards the server.",
+                            label="Leave of Absence",
+                            description="A Leave of Absence Notice constitutes partial activity towards the server.",
                             value="LOA",
                         ),
                     ],
@@ -1714,8 +1714,8 @@ class StaffManagement(commands.Cog):
             elif view.value == "end":
                 view = CustomModalView(
                     ctx.author.id,
-                    "Edit Leave of Absense",
-                    "Edit Leave of Absense",
+                    "Edit Leave of Absence",
+                    "Edit Leave of Absence",
                     [
                         (
                             "end",

@@ -100,17 +100,18 @@ class ShiftManagement(commands.Cog):
             if s["EndEpoch"] != 0:
                 shifts.append(s)
 
+        get_time = lambda i: (i["EndEpoch"] or datetime.datetime.now(tzinfo=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum(j['EndEpoch'] - j['StartEpoch'] for j in i['Breaks'])
+
         total_seconds = sum(
             [
-                i["EndEpoch"] - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"]
-                for i in shifts
+                get_time(i) for i in shifts
             ]
         )
 
         if shift:
             embed.add_field(
                 name="<:ERMActivity:1113209176664064060> Current Shift Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.datetime.now(tz=pytz.UTC) - datetime.datetime.fromtimestamp(shift['StartEpoch'], tz=pytz.UTC))}",
+                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_time(shift)))}",
                 inline=False,
             )
 
@@ -517,6 +518,7 @@ class ShiftManagement(commands.Cog):
             else:
                 settings = await bot.settings.find_by_id(ctx.guild.id)
                 shift_type = None
+                nickname_prefix = None
 
                 maximum_staff = settings["shift_management"].get("maximum_staff")
                 if maximum_staff not in [None, 0]:
@@ -1367,8 +1369,8 @@ class ShiftManagement(commands.Cog):
                         print("minutes")
                     if content.endswith("h"):
                         full = "hours"
+                        num = int(content[:-1])
                         seconds = num * 60 * 60
-
                         print("hours")
                     if content.endswith("d"):
                         full = "days"

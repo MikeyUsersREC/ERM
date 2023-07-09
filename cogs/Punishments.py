@@ -80,7 +80,7 @@ class Punishments(commands.Cog):
         moderations = []
 
         async for document in bot.punishments.db.find(
-            {"UserID": user.id, "Guild": ctx.guild.id}
+            {"ModeratorID": user.id, "Guild": ctx.guild.id}
         ):
             moderations.append(document)
 

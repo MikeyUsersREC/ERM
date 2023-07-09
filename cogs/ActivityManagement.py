@@ -101,7 +101,7 @@ class ActivityManagement(commands.Cog):
                 ctx,
                 embed=discord.Embed(
                     color=0xED4348,
-                    description="<:ERMModify:1111100050718867577> **PRO TIP:** Use s/m/d for time formatting.",
+                    description="<:ERMModify:1111100050718867577> **PRO TIP:** Use `dd/mm/yyyy` for time formatting.\n*e.g. 21/04/2023*",
                 ),
                 question="when do you want this period of time to start?",
             )
@@ -288,7 +288,7 @@ class ActivityManagement(commands.Cog):
         staff_roles = []
         config_item = await bot.settings.find_by_id(ctx.guild.id)
         if config_item["staff_management"].get("role"):
-            if config_item["staff_management"]["role"] is not None:
+            if config_item["staff_management"].get("role") is not None:
                 if isinstance(config_item["staff_management"]["role"], int):
                     staff_roles = [
                         ctx.guild.get_role(config_item["staff_management"]["role"])
@@ -313,7 +313,7 @@ class ActivityManagement(commands.Cog):
         management_roles = []
         config_item = await bot.settings.find_by_id(ctx.guild.id)
         if "management_role" in config_item["staff_management"]:
-            if config_item["staff_management"]["role"] is not None:
+            if config_item["staff_management"].get("management_role") is not None:
                 if isinstance(config_item["staff_management"]["management_role"], int):
                     management_roles = [
                         ctx.guild.get_role(
@@ -472,32 +472,35 @@ class ActivityManagement(commands.Cog):
 
             member = discord.utils.get(ctx.guild.members, id=value["member"])
             if member:
-                loas.append(
-                    (
-                        f"{member.name}",
-                        value["type"],
-                        value["reason"],
-                        formatted_data,
-                        td_format(
-                            datetime.timedelta(
-                                seconds=value["expiry"]
-                                - int(value["_id"].split("_")[2])
-                            )
-                        ),
-                        value["_id"].split("_")[2],
-                        value["expiry"],
+                try:
+                    loas.append(
+                        (
+                            f"{member.name}",
+                            value["type"],
+                            value["reason"],
+                            formatted_data,
+                            td_format(
+                                datetime.timedelta(
+                                    seconds=value["expiry"]
+                                    - int(value["_id"].split("_")[2])
+                                )
+                            ),
+                            value["_id"].split("_")[2],
+                            value["expiry"],
+                        )
                     )
-                )
-                additional_data.append(
-                    [
-                        f"{member.name}",
-                        member.top_role.name,
-                        formatted_data,
-                        value["type"],
-                        value["_id"].split("_")[2],
-                        value["expiry"],
-                    ]
-                )
+                    additional_data.append(
+                        [
+                            f"{member.name}",
+                            member.top_role.name,
+                            formatted_data,
+                            value["type"],
+                            value["_id"].split("_")[2],
+                            value["expiry"],
+                        ]
+                    )
+                except:
+                    pass
 
         additional_combined = []
         for item in additional_data:
