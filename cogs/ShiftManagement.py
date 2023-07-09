@@ -845,7 +845,7 @@ class ShiftManagement(commands.Cog):
                     kicks += 1
                 elif moderation["Type"] == "Ban":
                     bans += 1
-                elif moderation["Type"] == "BOLO":
+                elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
                     bolos += 1
                 elif moderation["Type"] not in [
                     "Warning",
@@ -2247,7 +2247,7 @@ class ShiftManagement(commands.Cog):
                     kicks += 1
                 elif moderation["Type"] == "Ban":
                     bans += 1
-                elif moderation["Type"] == "BOLO":
+                elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
                     bolos += 1
                 elif moderation["Type"] not in [
                     "Warning",
