@@ -283,7 +283,7 @@ class Warnings(Document):
         """
 
         selected_item = await self.db.find_one({"Snowflake": identifier})
-        if selected_item["Guild"] == guild_id:
+        if selected_item["Guild"] == guild_id or selected_item['Guild']:
             return await self.db.delete_one({"Snowflake": identifier})
         else:
             return ValueError("Warning does not exist.")
