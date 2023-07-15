@@ -100,7 +100,7 @@ class ShiftManagement(commands.Cog):
             if s["EndEpoch"] != 0:
                 shifts.append(s)
 
-        get_time = lambda i: (i["EndEpoch"] or datetime.datetime.now(tzinfo=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum(j['EndEpoch'] - j['StartEpoch'] for j in i['Breaks'])
+        get_time = lambda i: (i["EndEpoch"] or datetime.datetime.now(tz=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum(j['EndEpoch'] - j['StartEpoch'] for j in i['Breaks'])
 
         total_seconds = sum(
             [
@@ -496,7 +496,16 @@ class ShiftManagement(commands.Cog):
             )
         timeout = await view.wait()
         if timeout:
-            return
+            new_view = copy.copy(view)
+            new_view.clear_items()
+            new_view.add_item(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.secondary,
+                    label="You didn't respond in time!",
+                    disabled=True
+                )
+            )
+            return await msg.edit(view=new_view)
 
         if view.value == "on":
             if status == "on":
@@ -1822,9 +1831,18 @@ class ShiftManagement(commands.Cog):
                 view=view,
                 content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
             )
-        await view.wait()
-        if not view.value:
-            return
+        timeout = await view.wait()
+        if timeout:
+            new_view = copy.copy(view)
+            new_view.clear_items()
+            new_view.add_item(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.secondary,
+                    label="You didn't respond in time!",
+                    disabled=True
+                )
+            )
+            return await msg.edit(view=new_view)
 
         if view.value == "on":
             if status == "on":

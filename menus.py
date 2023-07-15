@@ -442,16 +442,17 @@ class SettingsSelectMenu(discord.ui.View):
 
 class ModificationSelectMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=600)
         self.value = None
         self.user_id = user_id
 
         self.add_item(ShiftModificationDropdown(self.user_id))
 
 
+
 class AdministrativeSelectMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=600)
         self.value = None
         self.admin_value = None
         self.user_id = user_id
