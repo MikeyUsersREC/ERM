@@ -145,23 +145,25 @@ class Search(commands.Cog):
 
             triggered_alerts = []
 
-            if User.is_banned:
-                triggered_alerts.append("IsBanned")
-            if (datetime.datetime.now(tz=pytz.UTC) - User.created).days < 100:
-                triggered_alerts.append("AccountAge")
-            if not User:
-                triggered_alerts.append("UserDoesNotExist")
-            if len(User.description) < 10:
-                triggered_alerts.append("NoDescription")
-            if any(x in User.name for x in ["alt", "alternative", "account"]):
-                triggered_alerts.append("SuspiciousUsername")
-            if await User.get_friend_count() <= 30:
-                triggered_alerts.append("NotManyFriends")
-            if len(await User.get_group_roles()) <= 5:
-                triggered_alerts.append("NotManyGroups")
-
-            if len(triggered_alerts) == 0:
-                triggered_alerts.append("NoAlerts")
+            try:
+                if User.is_banned:
+                    triggered_alerts.append("IsBanned")
+                if (datetime.datetime.now(tz=pytz.UTC) - User.created).days < 100:
+                    triggered_alerts.append("AccountAge")
+                if not User:
+                    triggered_alerts.append("UserDoesNotExist")
+                if len(User.description) < 10:
+                    triggered_alerts.append("NoDescription")
+                if any(x in User.name for x in ["alt", "alternative", "account"]):
+                    triggered_alerts.append("SuspiciousUsername")
+                if await User.get_friend_count() <= 30:
+                    triggered_alerts.append("NotManyFriends")
+                if len(await User.get_group_roles()) <= 5:
+                    triggered_alerts.append("NotManyGroups")
+                if len(triggered_alerts) == 0:
+                    triggered_alerts.append("NoAlerts")
+            except:
+                pass
 
             embed1 = discord.Embed(
                 title=f"<:ERMUser:1111098647485108315> {query} ({User.id})",
@@ -243,22 +245,26 @@ class Search(commands.Cog):
 
             listOfPerGuild = warnings
 
-            if User.is_banned:
-                triggered_alerts.append("IsBanned")
-            if (datetime.datetime.now(tz=pytz.UTC) - User.created).days < 100:
-                triggered_alerts.append("AccountAge")
-            if not User:
-                triggered_alerts.append("UserDoesNotExist")
-            if len(User.description) < 10:
-                triggered_alerts.append("NoDescription")
-            if any(x in User.name for x in ["alt", "alternative", "account"]):
-                triggered_alerts.append("SuspiciousUsername")
-            if len(listOfPerGuild) > 5:
-                triggered_alerts.append("MassPunishments")
-            if await User.get_friend_count() <= 30:
-                triggered_alerts.append("NotManyFriends")
-            if len(await User.get_group_roles()) <= 5:
-                triggered_alerts.append("NotManyGroups")
+            try:
+                if User.is_banned:
+                    triggered_alerts.append("IsBanned")
+                if (datetime.datetime.now(tz=pytz.UTC) - User.created).days < 100:
+                    triggered_alerts.append("AccountAge")
+                if not User:
+                    triggered_alerts.append("UserDoesNotExist")
+                if len(User.description) < 10:
+                    triggered_alerts.append("NoDescription")
+                if any(x in User.name for x in ["alt", "alternative", "account"]):
+                    triggered_alerts.append("SuspiciousUsername")
+                if len(listOfPerGuild) > 5:
+                    triggered_alerts.append("MassPunishments")
+                if await User.get_friend_count() <= 30:
+                    triggered_alerts.append("NotManyFriends")
+                if len(await User.get_group_roles()) <= 5:
+                    triggered_alerts.append("NotManyGroups")
+            except:
+                pass
+
 
             for warning in listOfPerGuild:
                 if warning["Type"].upper() == "BOLO":

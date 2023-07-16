@@ -2673,7 +2673,7 @@ class ShiftManagement(commands.Cog):
                         [
                             discord.SelectOption(
                                 label=i["name"],
-                                value=i["name"],
+                                value=i["id"],
                                 description=i["name"],
                             )
                             for i in shift_types
@@ -2689,8 +2689,8 @@ class ShiftManagement(commands.Cog):
 
                     msg = await ctx.reply(
                         content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                        view=view,
                         embed=None,
+                        view=view,
                     )
                     timeout = await view.wait()
                     if timeout:
@@ -2702,7 +2702,7 @@ class ShiftManagement(commands.Cog):
                         else:
                             shift_type = view.value
                             shift_list = [
-                                i for i in shift_types if i["name"] == shift_type
+                                i for i in shift_types if i["id"] == int(shift_type)
                             ]
                             if shift_list:
                                 shift_type = shift_list[0]
