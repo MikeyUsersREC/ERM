@@ -181,6 +181,7 @@ class Warnings(Document):
         warning_type: str | None = None,
         moderator_id: int | None = None,
         user_id: int | None = None,
+        bolo: bool = False,
     ):
         """
         Finds a warnings by a specification.
@@ -191,6 +192,7 @@ class Warnings(Document):
                 warning_type is None,
                 moderator_id is None,
                 user_id is None,
+                bolo is False
             ]
         ):
             return ValueError("At least one argument must be provided.")
@@ -214,6 +216,9 @@ class Warnings(Document):
             ]
         ):
             return self.db.find({"_id": identifier})
+
+        if bolo and not warning_type:
+            warning_type = {'$regex': 'bolo', '$options': 'i'}
 
         map = {
             "Snowflake": identifier,

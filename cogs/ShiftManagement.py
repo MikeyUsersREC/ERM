@@ -592,8 +592,8 @@ class ShiftManagement(commands.Cog):
                     if shift_type.get("nickname"):
                         nickname_prefix = shift_type.get("nickname")
                 else:
-                    if configItem["shift_management"].get("nickname"):
-                        nickname_prefix = configItem["shift_management"].get("nickname")
+                    if configItem["shift_management"].get("nickname_prefix"):
+                        nickname_prefix = configItem["shift_management"].get("nickname_prefix")
 
                 old_shift_type = None
                 if shift_type:
@@ -1058,6 +1058,7 @@ class ShiftManagement(commands.Cog):
                     embed=None,
                 )
             toggle = "on"
+            role = None
 
             if "Breaks" in shift.keys():
                 for item in shift["Breaks"]:
@@ -1079,6 +1080,7 @@ class ShiftManagement(commands.Cog):
                             "EndEpoch": 0,
                         }
                     ]
+
 
                 if shift.get("Nickname"):
                     if shift.get("Nickname") == member.nick:
@@ -1969,8 +1971,8 @@ class ShiftManagement(commands.Cog):
                     if shift_type.get("nickname"):
                         nickname_prefix = shift_type.get("nickname")
                 else:
-                    if configItem["shift_management"].get("nickname"):
-                        nickname_prefix = configItem["shift_management"].get("nickname")
+                    if configItem["shift_management"].get("nickname_prefix"):
+                        nickname_prefix = configItem["shift_management"].get("nickname_prefix")
 
                 if nickname_prefix:
                     current_name = (

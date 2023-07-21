@@ -84,7 +84,7 @@ class Punishments(commands.Cog):
         ):
             moderations.append(document)
 
-        leaves = list(filter(lambda x: x["type"] == "LoA", loas))
+        leaves = list(filter(lambda x: x["type"].lower() == "loa", loas))
         reduced_activity = list(filter(lambda x: x["type"] == "RA", loas))
         accepted_leaves = list(filter(lambda x: x["accepted"] == True, leaves))
         denied_leaves = list(filter(lambda x: x["denied"] == True, leaves))
@@ -1399,9 +1399,9 @@ class Punishments(commands.Cog):
                 )
 
             user = [i async for i in bot.punishments.find_warnings_by_spec(
-                ctx.guild.id, user_id=roblox_user["id"], warning_type="Bolo"
+                ctx.guild.id, user_id=roblox_user["id"], bolo=True
             )]
-            bolos = []
+            bolos = user
 
             if user is None:
                 return await ctx.reply(
@@ -1409,7 +1409,6 @@ class Punishments(commands.Cog):
                         ctx.author.name
                     )
                 )
-
             if len(bolos) == 0:
                 return await ctx.reply(
                     content="<:ERMClose:1111101633389146223> **{},** this user does not have any active BOLOs.".format(

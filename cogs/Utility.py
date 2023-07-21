@@ -240,6 +240,9 @@ class Utility(commands.Cog):
                         if (command.extras.get("category", "Miscellaneous")) == category
                     ]
                 )
+                for command, app in temps.items():
+                    print(f"{command.name} {app.name}")
+
                 embed.description = string
 
                 logging.info(len(string))
@@ -354,7 +357,7 @@ class Utility(commands.Cog):
                 title="<:ERMConfig:1113208218521456835> Command Information | {}".format(
                     command.name
                 ),
-                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> {command.description.split('[')[0]}",
+                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> {command.description}",
                 color=0xED4348,
             )
 

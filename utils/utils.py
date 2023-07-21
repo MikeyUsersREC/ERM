@@ -195,12 +195,14 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
 
     nickname_prefix = None
     changed_nick = False
+    role = None
+
     if shift_type:
         if shift_type.get("nickname"):
             nickname_prefix = shift_type.get("nickname")
     else:
-        if configItem["shift_management"].get("nickname"):
-            nickname_prefix = configItem["shift_management"].get("nickname")
+        if configItem["shift_management"].get("nickname_prefix"):
+            nickname_prefix = configItem["shift_management"].get("nickname_prefix")
 
     if nickname_prefix:
         current_name = (

@@ -4,7 +4,6 @@ from discord.ext import commands
 
 from menus import EnterRobloxUsername, LinkPathwayMenu, Verification
 
-
 class GameSync(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -211,23 +210,18 @@ class GameSync(commands.Cog):
                     )
 
                     embed = discord.Embed(color=0xED4348)
-                    embed.title = (
-                        f"<:ERMSecurity:1113209656370802879> Prove your Identity"
-                    )
-                    embed.description = f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 1:** Go to [placeholder link](https://www.roblox.com/games/11747455621/Verification)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 2:** Click **Authorize**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 3:** Click **Done**"
+                    embed.title = f"<:ERMSecurity:1113209656370802879> Prove your Identity"
+                    embed.description = f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 1:** Join our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 2:** Wait to be kicked in-game.\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 3:** Click on the **Done** button!"
+
                     embed.set_author(
                         name=ctx.author.name,
                         icon_url=ctx.author.display_avatar.url,
                     )
-                    try:
-                        embed.set_thumbnail(url=ctx.guild.icon.url)
-                    except:
-                        pass
                     view = Verification(ctx.author.id)
-                    await verify_msg.edit(
-                        embed=None,
+                    await ctx.reply(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** one last step! Join our verification game.",
+                        embed=embed,
                         view=view,
-                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, one last step! Join our verification game.",
                     )
                     await view.wait()
                     if view.value:
@@ -235,18 +229,19 @@ class GameSync(commands.Cog):
                             new_data = await bot.verification.find_by_id(ctx.author.id)
                             print(new_data)
                             if "isVerified" in new_data.keys():
-                                if new_data["isVerified"]:
-                                    return await after_verified(roblox_user["id"])
+                                if new_data["isVerified"] is True:
+                                    return await after_verified(roblox_user)
                                 else:
-                                    await verify_msg.edit(
-                                        content=f"You've not verified in the verification game."
+                                    await ctx.reply(
+                                        f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** it doesn't look like you verified! Try again."
                                     )
                                     return await run_pathway()
-                            else:
-                                await verify_msg.edit(
-                                    content=f"You've not verified in the verification game."
-                                )
-                                return await run_pathway()
+
+                        else:
+                            await ctx.reply(
+                                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** it doesn't look like you verified! Try again."
+                            )
+                            return await run_pathway()
 
             await run_pathway()
 

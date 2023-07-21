@@ -1161,7 +1161,7 @@ class Configuration(commands.Cog):
                 )
                 await view.wait()
                 settingContents["shift_management"][
-                    "nickname"
+                    "nickname_prefix"
                 ] = view.modal.nickname.value
             elif content == "maximum_staff":
                 view = CustomSelectMenu(
@@ -2040,15 +2040,13 @@ class Configuration(commands.Cog):
                 elif content == "disable_sts_logging":
                     settingContents["game_logging"]["sts"]["enabled"] = False
                 elif content == "set_sts_logging_channel":
-                    embed = discord.Embed(
-                        title="<:EditIcon:1042550862834323597> Change Configuration",
-                        description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> what channel do you want to set for STS logging?",
-                        color=0xED4348,
+                    view = ChannelSelect(ctx.author.id, limit=1)
+                    question = "what channel would you like to set for STS logging?"
+                    await config_msg.edit(
+                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {question}",
+                        view=view,
                     )
 
-                    view = ChannelSelect(ctx.author.id, limit=1)
-
-                    await ctx.reply(embed=embed, view=view)
                     timeout = await view.wait()
                     if timeout:
                         return
@@ -2056,10 +2054,11 @@ class Configuration(commands.Cog):
                     if not view.value:
                         return
 
-                    channel = view.value
-                    settingContents["game_logging"]["sts"]["channel"] = (
-                        channel[0].id if channel else None
-                    )
+                    if view.value:
+                        channel = view.value
+                        settingContents["game_logging"]["message"]["channel"] = (
+                            channel[0].id if channel else None
+                        )
             elif content == "priority":
                 question = "what would you like to change?"
 
