@@ -100,7 +100,7 @@ class ShiftManagement(commands.Cog):
             if s["EndEpoch"] != 0:
                 shifts.append(s)
 
-        get_time = lambda i: (i["EndEpoch"] or datetime.datetime.now(tz=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum(j['EndEpoch'] - j['StartEpoch'] for j in i['Breaks'])
+        get_time = lambda i: (i["EndEpoch"] if i['EndEpoch'] != 0 else datetime.datetime.now(tz=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum((j['EndEpoch'] if j['EndEpoch'] != 0 else datetime.datetime.now(tz=pytz.UTC).timestamp) - j['StartEpoch'] for j in i['Breaks'])
 
         total_seconds = sum(
             [
@@ -108,12 +108,20 @@ class ShiftManagement(commands.Cog):
             ]
         )
 
-        if shift:
-            embed.add_field(
-                name="<:ERMActivity:1113209176664064060> Current Shift Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_time(shift)))}",
-                inline=False,
-            )
+        try:
+            if shift:
+                embed.add_field(
+                    name="<:ERMActivity:1113209176664064060> Current Shift Time",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_time(shift)))}",
+                    inline=False,
+                )
+        except:
+            if shift:
+                embed.add_field(
+                    name="<:ERMActivity:1113209176664064060> Current Shift Time",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Could not display current shift time.",
+                    inline=False,
+                )
 
         embed.add_field(
             name="<:ERMMisc:1113215605424795648> Total Shift Time",

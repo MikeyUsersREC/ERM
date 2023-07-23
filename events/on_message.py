@@ -247,8 +247,8 @@ class OnMessage(commands.Cog):
                             ):
                                 print("used kick/ban command")
                                 if (
-                                        "Player Kicked" in embed.title
-                                        or "Player Banned" in embed.title
+                                        "Players Kicked" in embed.title
+                                        or "Players Banned" in embed.title
                                 ):
                                     print("command usage")
                                     raw_content = embed.description

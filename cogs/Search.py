@@ -175,16 +175,16 @@ class Search(commands.Cog):
             )
             try:
                 if await bot.flags.find_by_id(
-                    embed1.title.lower()
+                    embed1.title
                     .split("<:ERMUser:1111098647485108315> ")[1]
-                    .split(" ")[0]
+                    .split(" ")[0].lower()
                 ):
                     await staff_field(
                         bot,
                         embed1,
-                        embed1.title.lower()
+                        embed1.title
                         .split("<:ERMUser:1111098647485108315> ")[1]
-                        .split(" ")[0],
+                        .split(" ")[0].lower(),
                     )
             except:
                 pass
@@ -286,8 +286,21 @@ class Search(commands.Cog):
                 )
             embeds = [embed1, embed2]
 
-            if await bot.flags.find_by_id(embed1.title.lower().split(" ")[0]):
-                await staff_field(bot, embeds[0], embed1.title.lower().split(" ")[0])
+            try:
+                if await bot.flags.find_by_id(
+                        embed1.title
+                                .split("<:ERMUser:1111098647485108315> ")[1]
+                                .split(" ")[0].lower()
+                ):
+                    await staff_field(
+                        bot,
+                        embed1,
+                        embed1.title
+                        .split("<:ERMUser:1111098647485108315> ")[1]
+                        .split(" ")[0].lower(),
+                    )
+            except:
+                pass
 
             embeds[0].add_field(
                 name="<:ERMPunish:1111095942075138158> Punishments",

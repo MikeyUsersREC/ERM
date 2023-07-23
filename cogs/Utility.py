@@ -161,6 +161,7 @@ class Utility(commands.Cog):
                                 )[0]
                             ] = a
                 else:
+
                     if command.name in [cd.qualified_name for cd in temps]:
                         temps[
                             list(
@@ -175,6 +176,8 @@ class Utility(commands.Cog):
                                 )
                             )[0]
                         ] = command
+                    else:
+                        print('Skipped ' + command.name)
 
                 # if isinstance(command, discord.app_commands.AppCommand):
                 #
@@ -242,7 +245,9 @@ class Utility(commands.Cog):
                 )
                 for command, app in temps.items():
                     print(f"{command.name} {app.name}")
-
+                    if command.extras.get('category', 'Miscellaneous') == 'Search':
+                        print('!!!!!!')
+                    print(command.extras.get('category', 'Miscellaneous'))
                 embed.description = string
 
                 logging.info(len(string))
