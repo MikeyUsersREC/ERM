@@ -1538,7 +1538,8 @@ class ShiftManagement(commands.Cog):
                     await bot.shift_management.shifts.delete_by_id(i["_id"])
 
                 await msg.edit(
-                    embed=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}** I've cleared **{member.display_name}**'s shifts - per your request.",
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}** I've cleared **{member.display_name}**'s shifts - per your request.",
+                    embed=None,
                     view=None,
                 )
 
