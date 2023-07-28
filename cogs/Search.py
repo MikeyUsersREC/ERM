@@ -62,7 +62,7 @@ class Search(commands.Cog):
                 if r.status == 200:
                     robloxUser = await r.json()
                     if len(robloxUser["data"]) == 0:
-                        await ctx.reply(
+                        return await ctx.reply(
                             f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** I couldn't find **{user}**.",
                         )
                     robloxUser = robloxUser["data"][0]

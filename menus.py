@@ -1085,41 +1085,41 @@ class LOAMenu(discord.ui.View):
         s_loa = None
         for loa in await self.bot.loas.get_all():
             if (
-                loa["message_id"] == interaction.message.id
-                and loa["guild_id"] == interaction.guild.id
+                    loa["message_id"] == interaction.message.id
+                    and loa["guild_id"] == interaction.guild.id
             ):
                 s_loa = loa
-            if s_loa != None:
-                print(s_loa)
-                s_loa["denied"] = True
-                s_loa["denial_reason"] = reason
 
+        if s_loa:
+            s_loa["denied"] = True
+            s_loa["denial_reason"] = reason
+
+            try:
+                guild = self.bot.get_guild(s_loa["guild_id"])
+                user = guild.get_member(s_loa["user_id"])
+            except:
                 try:
-                    guild = self.bot.get_guild(s_loa["guild_id"])
-                    user = guild.get_member(s_loa["user_id"])
+                    return await interaction.followup.send(
+                        content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, I couldn't find that user in this server.",
+                        ephemeral=True,
+                    )
                 except:
-                    try:
-                        return await interaction.followup.send(
-                            content=f"<:ERMClose:1111101633389146223> **{interaction.user.name}**, I couldn't find that user in this server.",
-                            ephemeral=True,
-                        )
-                    except:
-                        pass
-                settings = await self.bot.settings.find_by_id(interaction.guild.id)
-                mentionable = ""
-                await user.send(
-                    content=f"<:ERMClose:1111101633389146223>  **{user.name}**, your **{s_loa['type']}** has been denied in **{interaction.guild.name}** for **{reason}**."
-                )
-                await self.bot.loas.update_by_id(s_loa)
+                    pass
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            mentionable = ""
+            await user.send(
+                content=f"<:ERMClose:1111101633389146223>  **{user.name}**, your **{s_loa['type']}** has been denied in **{interaction.guild.name}** for **{reason}**."
+            )
+            await self.bot.loas.update_by_id(s_loa)
 
-        embed = interaction.message.embeds[0]
-        embed.title = f"<:ERMClose:1111101633389146223> {s_loa['type']} Request Denied"
-        embed.colour = 0xED4348
-        embed.set_footer(text=f"Denied by {interaction.user.name}")
+            embed = interaction.message.embeds[0]
+            embed.title = f"<:ERMClose:1111101633389146223> {s_loa['type']} Request Denied"
+            embed.colour = 0xED4348
+            embed.set_footer(text=f"Denied by {interaction.user.name}")
 
-        await interaction.message.edit(embed=embed, view=self)
-        self.value = True
-        await self.bot.views.delete_by_id(self.id)
+            await interaction.message.edit(embed=embed, view=self)
+            self.value = True
+            await self.bot.views.delete_by_id(self.id)
 
         self.stop()
 
