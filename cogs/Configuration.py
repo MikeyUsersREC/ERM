@@ -2056,7 +2056,7 @@ class Configuration(commands.Cog):
 
                     if view.value:
                         channel = view.value
-                        settingContents["game_logging"]["message"]["channel"] = (
+                        settingContents["game_logging"]["sts"]["channel"] = (
                             channel[0].id if channel else None
                         )
             elif content == "priority":
