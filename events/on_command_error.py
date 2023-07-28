@@ -50,13 +50,13 @@ class OnCommandError(commands.Cog):
             )
             embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
             if not isinstance(
-                    error,
-                    (
-                            commands.CommandNotFound,
-                            commands.CheckFailure,
-                            commands.MissingRequiredArgument,
-                            discord.Forbidden,
-                    ),
+                error,
+                (
+                    commands.CommandNotFound,
+                    commands.CheckFailure,
+                    commands.MissingRequiredArgument,
+                    discord.Forbidden,
+                ),
             ):
                 await ctx.send(
                     content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, an error has occurred! Rest assured, it can probably be solved by going to our support server. **{error_id}**.",

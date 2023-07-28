@@ -72,8 +72,8 @@ class OnMessage(commands.Cog):
             if "game_security" in dataset.keys():
                 if "enabled" in dataset["game_security"].keys():
                     if (
-                            "channel" in dataset["game_security"].keys()
-                            and "webhook_channel" in dataset["game_security"].keys()
+                        "channel" in dataset["game_security"].keys()
+                        and "webhook_channel" in dataset["game_security"].keys()
                     ):
                         if dataset["game_security"]["enabled"] is True:
                             aa_detection = True
@@ -133,7 +133,7 @@ class OnMessage(commands.Cog):
 
                                     discord_user = 0
                                     async for document in bot.synced_users.db.find(
-                                            {"roblox": str(profile_link.split("/")[4])}
+                                        {"roblox": str(profile_link.split("/")[4])}
                                     ):
                                         discord_user = document["_id"]
 
@@ -172,15 +172,15 @@ class OnMessage(commands.Cog):
                                         return
 
                                     if (
-                                            not configItem["game_logging"]
-                                                    .get("message")
-                                                    .get("enabled")
+                                        not configItem["game_logging"]
+                                        .get("message")
+                                        .get("enabled")
                                     ):
                                         return
                                     if (
-                                            not configItem["game_logging"]
-                                                    .get("message")
-                                                    .get("channel")
+                                        not configItem["game_logging"]
+                                        .get("message")
+                                        .get("channel")
                                     ):
                                         return
                                     channel = ctx.guild.get_channel(
@@ -242,13 +242,13 @@ class OnMessage(commands.Cog):
                         ]:
                             print("embed desc")
                             if (
-                                    "kicked" in embed.description
-                                    or "banned" in embed.description
+                                "kicked" in embed.description
+                                or "banned" in embed.description
                             ):
                                 print("used kick/ban command")
                                 if (
-                                        "Players Kicked" in embed.title
-                                        or "Players Banned" in embed.title
+                                    "Players Kicked" in embed.title
+                                    or "Players Banned" in embed.title
                                 ):
                                     print("command usage")
                                     raw_content = embed.description
@@ -285,12 +285,12 @@ class OnMessage(commands.Cog):
                                         pings = []
                                         if "role" in dataset["game_security"].keys():
                                             if (
-                                                    dataset["game_security"]["role"]
-                                                    is not None
+                                                dataset["game_security"]["role"]
+                                                is not None
                                             ):
                                                 if isinstance(
-                                                        dataset["game_security"]["role"],
-                                                        list,
+                                                    dataset["game_security"]["role"],
+                                                    list,
                                                 ):
                                                     for role in dataset[
                                                         "game_security"
@@ -303,6 +303,12 @@ class OnMessage(commands.Cog):
                                         await aa_detection_channel.send(
                                             ",".join(pings) if pings != [] else "",
                                             embed=embed,
+                                            allowed_mentions=discord.AllowedMentions(
+                                                everyone=True,
+                                                users=True,
+                                                roles=True,
+                                                replied_user=True,
+                                            ),
                                         )
                                     if " all" in command:
                                         embed = discord.Embed(
@@ -331,12 +337,12 @@ class OnMessage(commands.Cog):
                                         pings = []
                                         if "role" in dataset["game_security"].keys():
                                             if (
-                                                    dataset["game_security"]["role"]
-                                                    is not None
+                                                dataset["game_security"]["role"]
+                                                is not None
                                             ):
                                                 if isinstance(
-                                                        dataset["game_security"]["role"],
-                                                        list,
+                                                    dataset["game_security"]["role"],
+                                                    list,
                                                 ):
                                                     for role in dataset[
                                                         "game_security"
@@ -349,6 +355,12 @@ class OnMessage(commands.Cog):
                                         await aa_detection_channel.send(
                                             ",".join(pings) if pings != [] else "",
                                             embed=embed,
+                                            allowed_mentions=discord.AllowedMentions(
+                                                everyone=True,
+                                                users=True,
+                                                roles=True,
+                                                replied_user=True,
+                                            ),
                                         )
 
         if message.author.bot:
@@ -358,8 +370,8 @@ class OnMessage(commands.Cog):
             return
 
         if (
-                dataset["antiping"]["enabled"] is False
-                or dataset["antiping"]["role"] is None
+            dataset["antiping"]["enabled"] is False
+            or dataset["antiping"]["role"] is None
         ):
             return
 
@@ -379,8 +391,8 @@ class OnMessage(commands.Cog):
                 for role in antiping_roles:
                     if role != None:
                         if (
-                                message.author.top_role > role
-                                or message.author.top_role == role
+                            message.author.top_role > role
+                            or message.author.top_role == role
                         ):
                             return
 
@@ -425,8 +437,8 @@ class OnMessage(commands.Cog):
                     else:
                         if role is not None:
                             if (
-                                    role in mention.roles
-                                    and not role in message.author.roles
+                                role in mention.roles
+                                and not role in message.author.roles
                             ):
                                 embed = discord.Embed(
                                     title=f"Do not ping {role.name}!",

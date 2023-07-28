@@ -175,16 +175,16 @@ class Search(commands.Cog):
             )
             try:
                 if await bot.flags.find_by_id(
-                    embed1.title
-                    .split("<:ERMUser:1111098647485108315> ")[1]
-                    .split(" ")[0].lower()
+                    embed1.title.split("<:ERMUser:1111098647485108315> ")[1]
+                    .split(" ")[0]
+                    .lower()
                 ):
                     await staff_field(
                         bot,
                         embed1,
-                        embed1.title
-                        .split("<:ERMUser:1111098647485108315> ")[1]
-                        .split(" ")[0].lower(),
+                        embed1.title.split("<:ERMUser:1111098647485108315> ")[1]
+                        .split(" ")[0]
+                        .lower(),
                     )
             except:
                 pass
@@ -265,7 +265,6 @@ class Search(commands.Cog):
             except:
                 pass
 
-
             for warning in listOfPerGuild:
                 if warning["Type"].upper() == "BOLO":
                     triggered_alerts.append("HasBOLO")
@@ -288,16 +287,16 @@ class Search(commands.Cog):
 
             try:
                 if await bot.flags.find_by_id(
-                        embed1.title
-                                .split("<:ERMUser:1111098647485108315> ")[1]
-                                .split(" ")[0].lower()
+                    embed1.title.split("<:ERMUser:1111098647485108315> ")[1]
+                    .split(" ")[0]
+                    .lower()
                 ):
                     await staff_field(
                         bot,
                         embed1,
-                        embed1.title
-                        .split("<:ERMUser:1111098647485108315> ")[1]
-                        .split(" ")[0].lower(),
+                        embed1.title.split("<:ERMUser:1111098647485108315> ")[1]
+                        .split(" ")[0]
+                        .lower(),
                     )
             except:
                 pass
@@ -513,6 +512,7 @@ class Search(commands.Cog):
             embed=embed,
             content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, alright. Here's some information about **{query}**.",
         )
+
     #
     # @commands.hybrid_command(
     #     name="globalsearch",

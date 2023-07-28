@@ -1,7 +1,8 @@
+import asyncio
 import copy
 import datetime
 from io import BytesIO
-
+from utils.flags import DutyManageOptions
 import discord
 import num2words
 import pytz
@@ -100,13 +101,27 @@ class ShiftManagement(commands.Cog):
             if s["EndEpoch"] != 0:
                 shifts.append(s)
 
-        get_time = lambda i: (i["EndEpoch"] if i['EndEpoch'] != 0 else datetime.datetime.now(tz=pytz.UTC).timestamp()) - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"] - sum((j['EndEpoch'] if j['EndEpoch'] != 0 else datetime.datetime.now(tz=pytz.UTC).timestamp) - j['StartEpoch'] for j in i['Breaks'])
-
-        total_seconds = sum(
-            [
-                get_time(i) for i in shifts
-            ]
+        get_time = (
+            lambda i: (
+                i["EndEpoch"]
+                if i["EndEpoch"] != 0
+                else datetime.datetime.now(tz=pytz.UTC).timestamp()
+            )
+            - i["StartEpoch"]
+            + i["AddedTime"]
+            - i["RemovedTime"]
+            - sum(
+                (
+                    j["EndEpoch"]
+                    if j["EndEpoch"] != 0
+                    else datetime.datetime.now(tz=pytz.UTC).timestamp
+                )
+                - j["StartEpoch"]
+                for j in i["Breaks"]
+            )
         )
+
+        total_seconds = sum([get_time(i) for i in shifts])
 
         try:
             if shift:
@@ -162,9 +177,11 @@ class ShiftManagement(commands.Cog):
             return await failure_embed(
                 ctx, "shift management is not enabled on this server."
             )
-        
-        if not configItem['shift_management'].get('quota'):
-            return await ctx.send(f'<:ERMCheck:1111089850720976906> **{ctx.author.name}**, this server **does not** have a quota.')
+
+        if not configItem["shift_management"].get("quota"):
+            return await ctx.send(
+                f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, this server **does not** have a quota."
+            )
 
         shifts = [
             i
@@ -174,8 +191,8 @@ class ShiftManagement(commands.Cog):
         ]
 
         for i in shifts:
-            if i['EndEpoch'] == 0:
-                i['EndEpoch'] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            if i["EndEpoch"] == 0:
+                i["EndEpoch"] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 
         total_seconds = sum(
             [
@@ -184,23 +201,34 @@ class ShiftManagement(commands.Cog):
             ]
         )
 
-        quota_formatted = td_format(datetime.timedelta(seconds=configItem['shift_management']['quota']))
+        quota_formatted = td_format(
+            datetime.timedelta(seconds=configItem["shift_management"]["quota"])
+        )
 
-        if total_seconds >= configItem['shift_management']['quota']:
+        if total_seconds >= configItem["shift_management"]["quota"]:
             if member != ctx.author:
-                return await ctx.send(f'<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has completed the quota!')
+                return await ctx.send(
+                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has completed the quota!"
+                )
             else:
                 return await ctx.send(
-                    f'<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have completed the quota!')
+                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have completed the quota!"
+                )
 
         else:
-            met_quota_formatted = td_format(datetime.timedelta(seconds=configItem['shift_management']['quota'] - total_seconds))
+            met_quota_formatted = td_format(
+                datetime.timedelta(
+                    seconds=configItem["shift_management"]["quota"] - total_seconds
+                )
+            )
             if member != ctx.author:
                 return await ctx.send(
-                    f'<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has **not met** the quota! They need **{met_quota_formatted}** more.')
+                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has **not met** the quota! They need **{met_quota_formatted}** more."
+                )
             else:
-                return await ctx.send(f'<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have **not met** the quota. You need **{met_quota_formatted}** more.')
-
+                return await ctx.send(
+                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have **not met** the quota. You need **{met_quota_formatted}** more."
+                )
 
     @duty.command(
         name="admin",
@@ -510,7 +538,7 @@ class ShiftManagement(commands.Cog):
                 discord.ui.Button(
                     style=discord.ButtonStyle.secondary,
                     label="You didn't respond in time!",
-                    disabled=True
+                    disabled=True,
                 )
             )
             return await msg.edit(view=new_view)
@@ -523,14 +551,7 @@ class ShiftManagement(commands.Cog):
                 )
             elif status == "break":
                 await end_break(
-                    bot,
-                    shift,
-                    shift_type,
-                    configItem,
-                    ctx,
-                    msg,
-                    member,
-                    manage=False
+                    bot, shift, shift_type, configItem, ctx, msg, member, manage=False
                 )
             else:
                 settings = await bot.settings.find_by_id(ctx.guild.id)
@@ -582,7 +603,7 @@ class ShiftManagement(commands.Cog):
                                 return await failure_embed(
                                     ctx,
                                     "something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).",
-                        )
+                                )
                         else:
                             return
                     else:
@@ -601,7 +622,9 @@ class ShiftManagement(commands.Cog):
                         nickname_prefix = shift_type.get("nickname")
                 else:
                     if configItem["shift_management"].get("nickname_prefix"):
-                        nickname_prefix = configItem["shift_management"].get("nickname_prefix")
+                        nickname_prefix = configItem["shift_management"].get(
+                            "nickname_prefix"
+                        )
 
                 old_shift_type = None
                 if shift_type:
@@ -744,9 +767,7 @@ class ShiftManagement(commands.Cog):
                             "nickname_prefix", ""
                         )
                     try:
-                        await member.edit(
-                            nick=member.nick.replace(nickname, "")
-                        )
+                        await member.edit(nick=member.nick.replace(nickname, ""))
                     except Exception as e:
                         print(e)
                         pass
@@ -862,7 +883,7 @@ class ShiftManagement(commands.Cog):
                     kicks += 1
                 elif moderation["Type"] == "Ban":
                     bans += 1
-                elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
+                elif moderation["Type"] == "BOLO" or moderation["Type"] == "Bolo":
                     bolos += 1
                 elif moderation["Type"] not in [
                     "Warning",
@@ -1089,7 +1110,6 @@ class ShiftManagement(commands.Cog):
                         }
                     ]
 
-
                 if shift.get("Nickname"):
                     if shift.get("Nickname") == member.nick:
                         nickname = None
@@ -1103,19 +1123,18 @@ class ShiftManagement(commands.Cog):
                             for s in shift_types:
                                 if s["name"] == shift.get("Type"):
                                     shift_type = s
-                                    nickname = s["nickname"] if s.get("nickname") else None
+                                    nickname = (
+                                        s["nickname"] if s.get("nickname") else None
+                                    )
                         if nickname is None:
                             nickname = settings["shift_management"].get(
                                 "nickname_prefix", ""
                             )
                         try:
-                            await member.edit(
-                                nick=member.nick.replace(nickname, "")
-                            )
+                            await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
                             print(e)
                             pass
-
 
                 await bot.shift_management.shifts.update_by_id(shift)
 
@@ -1158,14 +1177,7 @@ class ShiftManagement(commands.Cog):
 
             else:
                 await end_break(
-                    bot,
-                    shift,
-                    shift_type,
-                    configItem,
-                    ctx,
-                    msg,
-                    member,
-                    manage=False
+                    bot, shift, shift_type, configItem, ctx, msg, member, manage=False
                 )
         if view.admin_value:
             if view.admin_value == "add":
@@ -1448,15 +1460,15 @@ class ShiftManagement(commands.Cog):
                             for s in shift_types:
                                 if s["name"] == shift.get("Type"):
                                     shift_type = s
-                                    nickname = s["nickname"] if s.get("nickname") else None
+                                    nickname = (
+                                        s["nickname"] if s.get("nickname") else None
+                                    )
                         if nickname is None:
                             nickname = settings["shift_management"].get(
                                 "nickname_prefix", ""
                             )
                         try:
-                            await member.edit(
-                                nick=member.nick.replace(nickname, "")
-                            )
+                            await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
                             print(e)
                             pass
@@ -1546,10 +1558,37 @@ class ShiftManagement(commands.Cog):
     @duty.command(
         name="manage",
         description="Manage your own shift in an easy way!",
-        extras={"category": "Shift Management"},
+        extras={"category": "Shift Management", "ignoreDefer": True},
     )
     @is_staff()
-    async def manage(self, ctx):
+    async def manage(self, ctx, flags: DutyManageOptions):
+        option_selected = None
+
+        if flags.without_command_execution is True:
+            print(1)
+            if ctx.interaction:
+                print(2)
+                await ctx.interaction.response.defer(ephemeral=True, thinking=True)
+            else:
+                await ctx.defer()
+        else:
+            await ctx.defer()
+
+        if flags is not None:
+            print(1556)
+            option_selected = {
+                flags.onduty: "on",
+                flags.togglebreak: "break",
+                flags.offduty: "off",
+            }.get(True)
+
+            print(flags.onduty)
+            print(flags.togglebreak)
+            print(flags.offduty)
+        else:
+            print(1563)
+        print(option_selected)
+
         if self.bot.shift_management_disabled is True:
             return await failure_embed(
                 ctx,
@@ -1830,19 +1869,34 @@ class ShiftManagement(commands.Cog):
                 )
 
             embed2.set_footer(text=f"Currently online staff: {currently_active}")
-            msg = await ctx.reply(
-                embeds=[embed, embed2],
-                view=view,
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
-            )
+
+            if option_selected is None:
+                msg = await ctx.reply(
+                    embeds=[embed, embed2],
+                    view=view,
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
+                )
+            else:
+                msg = await ctx.reply(
+                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** please wait."
+                )
         else:
             embed.set_footer(text=f"Currently online staff: {currently_active}")
-            msg = await ctx.reply(
-                embed=embed,
-                view=view,
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
-            )
-        timeout = await view.wait()
+            if option_selected is None:
+                msg = await ctx.reply(
+                    embed=embed,
+                    view=view,
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
+                )
+            else:
+                msg = await ctx.reply(
+                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** please wait."
+                )
+        if msg.components:
+            timeout = await view.wait()
+        else:
+            timeout = False
+        print(1877)
         if timeout:
             new_view = copy.copy(view)
             new_view.clear_items()
@@ -1850,24 +1904,42 @@ class ShiftManagement(commands.Cog):
                 discord.ui.Button(
                     style=discord.ButtonStyle.secondary,
                     label="You didn't respond in time!",
-                    disabled=True
+                    disabled=True,
                 )
             )
-            return await msg.edit(view=new_view)
+            try:
+                await msg.edit(view=new_view)
+            except:
+                pass
+            return
 
+        if option_selected:
+            view.value = option_selected
+
+        print(1897)
         if view.value == "on":
             if status == "on":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
-                    embed=None, view=None
-                )
+                if msg is not None:
+                    return await msg.edit(
+                        content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
+                        embed=None,
+                        view=None,
+                    )
+                else:
+                    return await ctx.send(
+                        content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
+                        embed=None,
+                        view=None,
+                    )
             elif status == "break":
                 for index, item in enumerate(shift["Breaks"].copy()):
                     if item["EndEpoch"] == 0:
                         item["EndEpoch"] = ctx.message.created_at.timestamp()
                         shift["Breaks"][index] = item
 
-                sh = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+                sh = await bot.shift_management.get_current_shift(
+                    ctx.author, ctx.guild.id
+                )
                 if sh:
                     if sh["Guild"] == ctx.guild.id:
                         await bot.shift_management.shifts.update_by_id(sh)
@@ -1981,7 +2053,9 @@ class ShiftManagement(commands.Cog):
                         nickname_prefix = shift_type.get("nickname")
                 else:
                     if configItem["shift_management"].get("nickname_prefix"):
-                        nickname_prefix = configItem["shift_management"].get("nickname_prefix")
+                        nickname_prefix = configItem["shift_management"].get(
+                            "nickname_prefix"
+                        )
 
                 if nickname_prefix:
                     current_name = (
@@ -2079,7 +2153,8 @@ class ShiftManagement(commands.Cog):
 
                 await shift_channel.send(embed=embed)
                 await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your shift is now active.", embed=None,
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your shift is now active.",
+                    embed=None,
                     view=None,
                 )
         elif view.value == "off":
@@ -2097,12 +2172,14 @@ class ShiftManagement(commands.Cog):
             else:
                 return await msg.edit(
                     content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are not on-duty. You can go on-duty by selecting **On-Duty**.",
-                    embed=None, view=None
+                    embed=None,
+                    view=None,
                 )
             if status == "off":
                 return await msg.edit(
                     content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already off-duty. You can go on-duty by selecting **On-Duty**.",
-                    embed=None, view=None
+                    embed=None,
+                    view=None,
                 )
 
             embed = discord.Embed(
@@ -2276,7 +2353,7 @@ class ShiftManagement(commands.Cog):
                     kicks += 1
                 elif moderation["Type"] == "Ban":
                     bans += 1
-                elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
+                elif moderation["Type"] == "BOLO" or moderation["Type"] == "Bolo":
                     bolos += 1
                 elif moderation["Type"] not in [
                     "Warning",
@@ -2470,7 +2547,6 @@ class ShiftManagement(commands.Cog):
                     }
                 )
 
-
                 await bot.shift_management.shifts.update_by_id(shift)
 
                 await msg.edit(
@@ -2491,7 +2567,9 @@ class ShiftManagement(commands.Cog):
                             for s in shift_types:
                                 if s["name"] == shift.get("Type"):
                                     shift_type = s
-                                    nickname = s["nickname"] if s.get("nickname") else None
+                                    nickname = (
+                                        s["nickname"] if s.get("nickname") else None
+                                    )
                         if nickname is None:
                             nickname = settings["shift_management"].get(
                                 "nickname_prefix", ""
@@ -2546,7 +2624,7 @@ class ShiftManagement(commands.Cog):
                     ctx,
                     msg,
                     ctx.author,
-                    manage=True
+                    manage=True,
                 )
         elif view.value == "void":
             if status == "off":
@@ -2736,14 +2814,11 @@ class ShiftManagement(commands.Cog):
         except:
             pass
 
-
         embeds = []
         embeds.append(embed)
 
         all_staff = []
         staff_members = []
-
-
 
         if not shift_type:
             async for sh in bot.shift_management.shifts.db.find(
@@ -2767,22 +2842,17 @@ class ShiftManagement(commands.Cog):
         for member in staff_members:
             sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
 
-
             time_delta = ctx.message.created_at.replace(
                 tzinfo=pytz.UTC
-            ) - datetime.datetime.fromtimestamp(
-                sh["StartEpoch"], tz=pytz.UTC
-            )
+            ) - datetime.datetime.fromtimestamp(sh["StartEpoch"], tz=pytz.UTC)
 
             break_seconds = 0
             if "Breaks" in sh.keys():
                 for item in sh["Breaks"]:
                     if item["EndEpoch"] == 0:
                         break_seconds += (
-                                ctx.message.created_at.replace(
-                                    tzinfo=pytz.UTC
-                                ).timestamp()
-                                - item["StartEpoch"]
+                            ctx.message.created_at.replace(tzinfo=pytz.UTC).timestamp()
+                            - item["StartEpoch"]
                         )
 
             # time_delta = time_delta - datetime.timedelta(
@@ -2798,18 +2868,13 @@ class ShiftManagement(commands.Cog):
                 removed_seconds = sh["RemovedTime"]
 
             try:
-                time_delta = time_delta + datetime.timedelta(
-                    seconds=added_seconds
-                )
-                time_delta = time_delta - datetime.timedelta(
-                    seconds=removed_seconds
-                )
+                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
+                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
             except OverflowError:
                 await failure_embed(
                     ctx,
                     f" the user **{member.mention}**'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
                 )
-
 
             all_staff.append(
                 {
@@ -3407,8 +3472,10 @@ class ShiftManagement(commands.Cog):
             )
             for embed in embeds:
                 if embed is not None:
-                    menu.add_page(embed=embed,
-                                  content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.")
+                    menu.add_page(
+                        embed=embed,
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                    )
 
             menu._pc = _PageController(menu.pages)
             menu.add_buttons([ViewButton.back(), ViewButton.next()])
@@ -3423,17 +3490,35 @@ class ShiftManagement(commands.Cog):
             )
             if len(menu.pages) == 1:
                 try:
-                    return await msg.edit(embed=embed, file=file, view=view, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.")
+                    return await msg.edit(
+                        embed=embed,
+                        file=file,
+                        view=view,
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                    )
                 except UnboundLocalError:
-                    return await ctx.reply(embed=embed, file=file, view=view, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.")
+                    return await ctx.reply(
+                        embed=embed,
+                        file=file,
+                        view=view,
+                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                    )
             if view:
                 for child in view.children:
                     menu._ViewMenu__view.add_item(child)
 
             try:
-                await msg.edit(embed=embeds[0], view=menu._ViewMenu__view, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.")
+                await msg.edit(
+                    embed=embeds[0],
+                    view=menu._ViewMenu__view,
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                )
             except UnboundLocalError:
-                await ctx.reply(embed=embeds[0], view=menu._ViewMenu__view, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.")
+                await ctx.reply(
+                    embed=embeds[0],
+                    view=menu._ViewMenu__view,
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                )
 
     @duty.command(
         name="clearall",

@@ -55,7 +55,7 @@ class StaffManagement(commands.Cog):
                     "guild_id": ctx.guild.id,
                     "type": "RA",
                     "expired": False,
-                    "accepted": True
+                    "accepted": True,
                 }
             )
         ]
@@ -522,9 +522,7 @@ class StaffManagement(commands.Cog):
 
             try:
                 embed.set_thumbnail(url=member.display_avatar.url)
-                embed.set_author(
-                    icon_url=member.display_avatar.url, name=member.name
-                )
+                embed.set_author(icon_url=member.display_avatar.url, name=member.name)
 
             except:
                 pass
@@ -682,7 +680,9 @@ class StaffManagement(commands.Cog):
         async def edit_ra(ctx, member):
             if len(active_ras) == 0:
                 return await ra_admin_msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** the user **{member.name}** has no active RAs.", embed=None, view=None
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** the user **{member.name}** has no active RAs.",
+                    embed=None,
+                    view=None,
                 )
 
             ra_object = active_ras[0]
@@ -918,7 +918,7 @@ class StaffManagement(commands.Cog):
                     "guild_id": ctx.guild.id,
                     "type": {"$in": ["LoA", "LOA"]},
                     "expired": False,
-                    "accepted": True
+                    "accepted": True,
                 }
             )
         ]
@@ -1398,9 +1398,7 @@ class StaffManagement(commands.Cog):
 
             try:
                 embed.set_thumbnail(url=member.display_avatar.url)
-                embed.set_author(
-                    icon_url=member.display_avatar.url, name=member.name
-                )
+                embed.set_author(icon_url=member.display_avatar.url, name=member.name)
 
             except:
                 pass
@@ -1558,7 +1556,9 @@ class StaffManagement(commands.Cog):
         async def edit_loa(ctx, member):
             if len(active_loas) == 0:
                 return await loa_admin_msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** the user **{member.name}** has no active LOAs.", embed=None, view=None
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** the user **{member.name}** has no active LOAs.",
+                    embed=None,
+                    view=None,
                 )
 
             loa_object = active_loas[0]

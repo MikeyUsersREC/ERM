@@ -173,6 +173,7 @@ async def get_prefix(bot, message):
 
     return commands.when_mentioned_or(prefix)(bot, message)
 
+
 async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage: bool):
     for item in shift["Breaks"]:
         if item["EndEpoch"] == 0:
@@ -190,7 +191,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
         await msg.edit(
             embed=None,
             view=None,
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've ended **{member.name}**'s break."
+            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've ended **{member.name}**'s break.",
         )
 
     nickname_prefix = None
@@ -205,9 +206,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             nickname_prefix = configItem["shift_management"].get("nickname_prefix")
 
     if nickname_prefix:
-        current_name = (
-            member.nick if member.nick else member.name
-        )
+        current_name = member.nick if member.nick else member.name
         new_name = "{}{}".format(nickname_prefix, current_name)
 
         try:
@@ -244,9 +243,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
                 try:
                     await member.add_roles(rl)
                 except:
-                    await failure_embed(
-                        ctx, f"could not add {rl} to {member.mention}"
-                    )
+                    await failure_embed(ctx, f"could not add {rl} to {member.mention}")
 
 
 async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:

@@ -482,19 +482,20 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         )
 
 
-attachment_instance = discord.Attachment(
-    data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock()
-)
-
-
-class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
-    """
-    A MagicMock subclass to mock Attachment objects.
-    Instances of this class will follow the specifications of `discord.Attachment` instances. For
-    more information, see the `MockGuild` docstring.
-    """
-
-    spec_set = attachment_instance
+#
+# attachment_instance = discord.Attachment(
+#     data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock()
+# )
+#
+#
+# class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
+#     """
+#     A MagicMock subclass to mock Attachment objects.
+#     Instances of this class will follow the specifications of `discord.Attachment` instances. For
+#     more information, see the `MockGuild` docstring.
+#     """
+#
+#     spec_set = attachment_instance
 
 
 message_reference_instance = discord.MessageReference(

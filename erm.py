@@ -65,6 +65,7 @@ scope = [
     "https://www.googleapis.com/auth/drive",
 ]
 
+
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [
@@ -171,7 +172,9 @@ bot = Bot(
     case_insensitive=True,
     intents=intents,
     help_command=None,
-    allowed_mentions=discord.AllowedMentions(replied_user=False),
+    allowed_mentions=discord.AllowedMentions(
+        replied_user=False, everyone=False, roles=False
+    ),
 )
 bot.is_synced = False
 bot.shift_management_disabled = False
@@ -211,6 +214,9 @@ async def AutoDefer(ctx: commands.Context):
         if ctx.command.extras.get("ephemeral") is True:
             if ctx.interaction:
                 return await ctx.defer(ephemeral=True)
+        if ctx.command.extras.get("ignoreDefer") is True:
+            return
+
     await ctx.defer()
 
 
@@ -420,6 +426,7 @@ async def change_status():
         activity=discord.Activity(type=discord.ActivityType.watching, name=status)
     )
 
+
 @tasks.loop(minutes=1)
 async def check_reminders():
     try:
@@ -473,6 +480,7 @@ async def check_reminders():
     except:
         pass
 
+
 @tasks.loop(minutes=1)
 async def check_loa():
     try:
@@ -505,7 +513,9 @@ async def check_loa():
                                         roles = [
                                             discord.utils.get(
                                                 guild.roles,
-                                                id=settings["staff_management"]["loa_role"],
+                                                id=settings["staff_management"][
+                                                    "loa_role"
+                                                ],
                                             )
                                         ]
                                     elif isinstance(
@@ -543,7 +553,11 @@ async def check_loa():
                                     if member:
                                         if role in member.roles:
                                             try:
-                                                await member.remove_roles(role, reason="LOA Expired", atomic=True)
+                                                await member.remove_roles(
+                                                    role,
+                                                    reason="LOA Expired",
+                                                    atomic=True,
+                                                )
                                             except:
                                                 pass
                         if member:
@@ -553,6 +567,7 @@ async def check_loa():
                                 pass
     except:
         pass
+
 
 discord.utils.setup_logging(level=logging.INFO)
 

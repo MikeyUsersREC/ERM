@@ -614,7 +614,10 @@ class ActivityManagement(commands.Cog):
             gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None
         )
         for page_embed in embeds:
-            menu.add_page(embed=page_embed, content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** here is the activity report for **{ctx.guild.name}**.")
+            menu.add_page(
+                embed=page_embed,
+                content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** here is the activity report for **{ctx.guild.name}**.",
+            )
 
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         print(bbytes)

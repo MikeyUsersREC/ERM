@@ -1,6 +1,7 @@
 import datetime
 import typing
-
+from copy import copy
+from utils.flags import DutyManageOptions, PunishOptions
 import discord
 
 from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed
@@ -447,7 +448,6 @@ class ModificationSelectMenu(discord.ui.View):
         self.user_id = user_id
 
         self.add_item(ShiftModificationDropdown(self.user_id))
-
 
 
 class AdministrativeSelectMenu(discord.ui.View):
@@ -2570,6 +2570,152 @@ class RequestGoogleSpreadsheet(discord.ui.View):
         )
 
         self.stop()
+
+
+class LiveMenu(discord.ui.View):
+    def __init__(self, bot, ctx):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.context = ctx
+
+    async def execute_command(
+        self,
+        interaction: discord.Interaction,
+        arguments: str,
+        command: discord.ext.commands.HybridCommand = None,
+        extra_args: dict = None,
+        concatenate_to_last_argument: bool = False,
+        flag_class: discord.ext.commands.FlagConverter = DutyManageOptions,
+    ):
+        if command is None:
+            # assume default
+            command = self.bot.get_command("duty manage")
+        mockinteraction = copy(interaction)
+        mockinteraction._cs_command = command
+        mockinteraction.user = self.context.author
+
+        fakecontext = await discord.ext.commands.Context.from_interaction(
+            mockinteraction
+        )
+        mockcontext = copy(fakecontext)
+        can_run = await command.can_run(mockcontext)
+
+        if not can_run:
+            await interaction.response.send_message(
+                content="<:ERMClose:1111101633389146223> You do not have permission to run this command!",
+                ephemeral=True,
+            )
+            return
+
+        mockcontext.command = command
+        mockcontext.author = self.context.author
+
+        if not concatenate_to_last_argument:
+            await mockcontext.invoke(
+                command,
+                flags=await flag_class.convert(mockcontext, arguments),
+                **extra_args,
+            )
+        else:
+            index = 0
+            for key, value in extra_args.copy().items():
+                if index == len(extra_args) - 1:
+                    value += (" " + arguments)
+                    extra_args[key] = value
+                index += 1
+
+
+                await mockcontext.invoke(
+                    command,
+                    **extra_args
+                )
+
+    @discord.ui.button(
+        label="On Duty", style=discord.ButtonStyle.green, custom_id="on_duty-execution"
+    )
+    async def on_duty(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.execute_command(
+            interaction, "/onduty=True /without_command_execution=True"
+        )
+
+    @discord.ui.button(
+        label="Toggle Break",
+        style=discord.ButtonStyle.secondary,
+        custom_id="toggle_break-execution",
+    )
+    async def toggle_break(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.execute_command(
+            interaction, "/togglebreak=True /without_command_execution=True"
+        )
+
+    @discord.ui.button(
+        label="Off Duty",
+        style=discord.ButtonStyle.danger,
+        custom_id="off_duty-execution",
+    )
+    async def off_duty(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.execute_command(
+            interaction, "/offduty=True /without_command_execution=True"
+        )
+
+    @discord.ui.button(
+        label="Log Punishment",
+        style=discord.ButtonStyle.secondary,
+        custom_id="punish-execution",
+        row=1,
+    )
+    async def punish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.user = None
+        self.punish_type = None
+        self.reason = None
+
+        class PunishModal(discord.ui.Modal):
+            def __init__(modal):
+                super().__init__(title="Log Punishment", timeout=None)
+                modal.add_item(
+                    discord.ui.TextInput(label="ROBLOX User", placeholder="ROBLOX User")
+                )
+                modal.add_item(
+                    discord.ui.TextInput(
+                        label="Punishment Type", placeholder="Punishment Type"
+                    )
+                )
+                modal.add_item(
+                    discord.ui.TextInput(label="Reason", placeholder="Reason")
+                )
+
+            async def on_submit(modal, interaction: discord.Interaction):
+                for item in modal.children:
+                    if item.label == "ROBLOX User":
+                        self.user = item.value
+                    elif item.label == "Punishment Type":
+                        self.punish_type = item.value
+                    elif item.label == "Reason":
+                        self.reason = item.value
+                modal.stop()
+                await self.execute_command(
+                    interaction,
+                    "\n/ephemeral=True /without_command_execution=True",
+                    command=self.bot.get_command("punish"),
+                    extra_args={
+                        "user": self.user,
+                        "type": self.punish_type,
+                        "reason": self.reason,
+                    },
+                    concatenate_to_last_argument=True,
+                    flag_class=PunishOptions,
+                )
+
+        await interaction.response.send_modal(PunishModal())
+        self.user = None
+        self.punish_type = None
+        self.reason = None
 
 
 class Verification(discord.ui.View):

@@ -101,4 +101,6 @@ class ShiftManagement:
         """
         Gets the current shift for the specified user.
         """
-        return await self.shifts.db.find_one({"UserID": member.id, "EndEpoch": 0, "Guild": guild_id})
+        return await self.shifts.db.find_one(
+            {"UserID": member.id, "EndEpoch": 0, "Guild": guild_id}
+        )

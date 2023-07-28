@@ -97,5 +97,6 @@ class CustomDebugCog(*OPTIONAL_FEATURES, *STANDARD_FEATURES):
     #             )
     #             await selected_webhook.send(embed=embed)
 
+
 async def setup(bot):
     await bot.add_cog(CustomDebugCog(bot=bot))

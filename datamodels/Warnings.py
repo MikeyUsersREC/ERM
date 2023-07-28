@@ -192,7 +192,7 @@ class Warnings(Document):
                 warning_type is None,
                 moderator_id is None,
                 user_id is None,
-                bolo is False
+                bolo is False,
             ]
         ):
             return ValueError("At least one argument must be provided.")
@@ -218,7 +218,7 @@ class Warnings(Document):
             return self.db.find({"_id": identifier})
 
         if bolo and not warning_type:
-            warning_type = {'$regex': 'bolo', '$options': 'i'}
+            warning_type = {"$regex": "bolo", "$options": "i"}
 
         map = {
             "Snowflake": identifier,
@@ -245,20 +245,25 @@ class Warnings(Document):
         """
         Removes a warning from the database by a particular specification. Useful for removing many warnings at one time.
         """
-        print('!!!!')
+        print("!!!!")
         if all(
             [
                 identifier is None,
                 warning_type is None,
                 moderator_id is None,
                 user_id is None,
-                guild_id is None
+                guild_id is None,
             ]
         ):
             return ValueError("At least one argument must be provided.")
 
         if identifier is not None and all(
-            [warning_type is None, moderator_id is None, user_id is None, guild_id is None  ]
+            [
+                warning_type is None,
+                moderator_id is None,
+                user_id is None,
+                guild_id is None,
+            ]
         ):
             return await self.db.delete_many({"Snowflake": identifier})
 
@@ -276,7 +281,7 @@ class Warnings(Document):
 
         print(map)
         async for i in self.db.aggregate([{"$match": map}]):
-            print('!')
+            print("!")
             await self.recovery.insert(i)
             await self.db.delete_one({"_id": i["_id"]})
 
@@ -288,7 +293,7 @@ class Warnings(Document):
         """
 
         selected_item = await self.db.find_one({"Snowflake": identifier})
-        if selected_item["Guild"] == (guild_id or selected_item['Guild']):
+        if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
             return await self.db.delete_one({"Snowflake": identifier})
         else:
             return ValueError("Warning does not exist.")

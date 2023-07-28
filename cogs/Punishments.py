@@ -27,6 +27,7 @@ from menus import (
 )
 from utils.AI import AI
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
+from utils.flags import PunishOptions
 from utils.utils import (
     failure_embed,
     removesuffix,
@@ -120,7 +121,7 @@ class Punishments(commands.Cog):
     @commands.hybrid_command(
         name="punish",
         description="Punish a user",
-        extras={"category": "Punishments"},
+        extras={"category": "Punishments", "ignoreDefer": True},
         usage="punish <user> <type> <reason>",
     )
     @is_staff()
@@ -132,6 +133,30 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
+        query, _, flags = reason.rpartition("\n")
+
+        if (flags := flags.strip()).startswith("/"):
+            # There are actually options here
+            flags = PunishOptions.convert(ctx, flags)
+        else:
+            # This line is actually the last line of the query and no option was given
+            query += f"\n{flags}"
+
+        reason = query
+
+        if isinstance(flags, PunishOptions):
+            if flags.without_command_execution is True:
+                print(1)
+                if ctx.interaction:
+                    print(2)
+                    await ctx.interaction.response.defer(ephemeral=True, thinking=True)
+                else:
+                    await ctx.defer()
+            else:
+                await ctx.defer()
+        else:
+            await ctx.defer()
+
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,
@@ -464,7 +489,9 @@ class Punishments(commands.Cog):
             )
             print(oid)
 
-            shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+            shift = await bot.shift_management.get_current_shift(
+                ctx.author, ctx.guild.id
+            )
             if shift:
                 shift["Moderations"].append(oid)
                 await bot.shift_management.shifts.update_by_id(shift)
@@ -989,7 +1016,7 @@ class Punishments(commands.Cog):
                 else:
                     return await msg.edit(
                         content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** this action has been cancelled!",
-                view=None,
+                        view=None,
                     )
 
                 return await msg.edit(
@@ -1398,9 +1425,12 @@ class Punishments(commands.Cog):
                     )
                 )
 
-            user = [i async for i in bot.punishments.find_warnings_by_spec(
-                ctx.guild.id, user_id=roblox_user["id"], bolo=True
-            )]
+            user = [
+                i
+                async for i in bot.punishments.find_warnings_by_spec(
+                    ctx.guild.id, user_id=roblox_user["id"], bolo=True
+                )
+            ]
             bolos = user
 
             if user is None:
@@ -1683,9 +1713,12 @@ class Punishments(commands.Cog):
                     else:
                         avatar = ""
 
-            user = [i async for i in bot.punishments.find_warnings_by_spec(
-                ctx.guild.id, user_id=dataItem["id"]
-            )]
+            user = [
+                i
+                async for i in bot.punishments.find_warnings_by_spec(
+                    ctx.guild.id, user_id=dataItem["id"]
+                )
+            ]
             if user in [[], None]:
                 embed.description = """\n<:ArrowRightW:1035023450592514048>**Warnings:** 0\n<:ArrowRightW:1035023450592514048>**Kicks:** 0\n<:ArrowRightW:1035023450592514048>**Bans:** 0\n`Banned:` <:ErrorIcon:1035000018165321808>"""
             else:
@@ -1815,7 +1848,9 @@ class Punishments(commands.Cog):
                 until_epoch=endTimestamp,
             )
 
-            shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+            shift = await bot.shift_management.get_current_shift(
+                ctx.author, ctx.guild.id
+            )
             if shift:
                 shift["Moderations"].append(oid)
                 await bot.shift_management.shifts.update_by_id(shift)

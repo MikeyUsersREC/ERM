@@ -38,7 +38,7 @@ class OnError(commands.Cog):
                         "error": str(error),
                         "time": datetime.datetime.now(tz=pytz.UTC).strftime(
                             "%m/%d/%Y, %H:%M:%S"
-                        )
+                        ),
                     }
                 )
             except:

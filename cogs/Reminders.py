@@ -181,9 +181,9 @@ class Reminders(commands.Cog):
                         discord.ui.TextInput(
                             label="Reminder Content",
                             min_length=1,
-                            style=discord.TextStyle.long
+                            style=discord.TextStyle.long,
                         ),
-                    )
+                    ),
                 ],
             )
             await msg.edit(

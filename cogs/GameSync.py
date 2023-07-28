@@ -4,6 +4,7 @@ from discord.ext import commands
 
 from menus import EnterRobloxUsername, LinkPathwayMenu, Verification
 
+
 class GameSync(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -210,7 +211,9 @@ class GameSync(commands.Cog):
                     )
 
                     embed = discord.Embed(color=0xED4348)
-                    embed.title = f"<:ERMSecurity:1113209656370802879> Prove your Identity"
+                    embed.title = (
+                        f"<:ERMSecurity:1113209656370802879> Prove your Identity"
+                    )
                     embed.description = f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 1:** Join our [ROBLOX game](https://www.roblox.com/games/11747455621/Verification)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 2:** Wait to be kicked in-game.\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Step 3:** Click on the **Done** button!"
 
                     embed.set_author(
