@@ -38,4 +38,5 @@ class OnMemberUpdate(commands.Cog):
                     async with session.post(f"{url_var}/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
                         pass
 
-
+async def setup(bot):
+    await bot.add_cog(OnMemberUpdate(bot))
