@@ -612,7 +612,7 @@ class ServerAPI(commands.Cog):
 
     async def start_server(self):
         api.include_router(APIRoutes(self.bot).router)
-        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info")
+        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
         self.server = uvicorn.Server(self.config)
         await self.server.serve()
 

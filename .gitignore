@@ -8,3 +8,5 @@ cache/*
 Pipfile.lock
 .DS_Store
 .git/
+package.json
+package_lock.json
