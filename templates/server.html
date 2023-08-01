@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<!-- Font Awesome -->
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+		<!-- Google Fonts -->
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+		<!-- Bootstrap core CSS -->
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+		<!-- Material Design Bootstrap -->
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<style>
+body {
+	background: linear-gradient(to top right, #454d55, rgb(0, 0, 0)) no-repeat center center fixed;
+	background-size: full;
+}
+
+
+.avatar {
+	margin-top: auto;
+	margin-bottom: auto;
+	margin: 8%;
+}
+.margin {
+	margin-top: auto;
+	margin-bottom: auto;
+	margin: 8%;
+}
+img {
+	border-radius: 50%;
+}
+
+.missing-pfp {
+	height: 256px;
+	width: 256px
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.863)
+}
+
+.nav-item {
+	font-weight: 400;
+	margin-top: auto;
+	margin-bottom: auto;
+	margin-left: 20px;
+	font-family: "Roboto", sans-serif;
+}
+
+
+
+.label {
+	margin-top: 20px;
+	margin-bottom: 10px;
+	font-weight: 400;
+}
+
+.container {
+	width: 100%;
+	height: 300px;
+	grid-template-columns: repeat(4, 45px);
+	grid-template-rows: repeat(4, 45px);
+	grid-gap: 0.5em;
+}
+
+.card {
+	margin-top: 25px;
+	margin-bottom: 25px;
+}
+
+.card-header {
+	background-color: black;
+}
+
+.btn {
+    font-family: "Roboto", sans-serif;
+    font-weight: 700;
+}
+
+.alert{
+  display:none;
+  position: fixed;
+  bottom: 0px;
+  right: 0px;
+}
+
+.fa {
+margin-right:.5em;
+}
+</style>
+		<!-- Bootstrap CSS -->
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+		<title>{{guildName}} | ERM</title>
+	</head>
+	<body>
+		<!-- Image and text -->
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+			<div class="container-fluid">
+			  <a class="navbar-brand" href="#">
+				<img src="https://cdn.discordapp.com/avatars/978662093408591912/925649975fe85dca0dc45a70935b12fa.webp?size=128" width="45" height="45" class="d-inline-block align-top" alt="" loading="lazy">					
+			  </a>
+			  <button class="navbar-toggler" type="button" data-mdb-toggle="collapse"
+				data-mdb-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+				aria-label="Toggle navigation">
+				<i class="fas fa-bars"></i>
+			  </button>
+			  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+				  <li class="nav-item">
+					<a class="nav-link" href="#">About</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="https://discord.com/api/oauth2/authorize?client_id=978662093408591912&permissions=8&scope=bot">Invite</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="https://discord.gg/5pMmJEYazQ">Support</a>
+				  </li>
+				  <li class="nav-item">
+					<a class="nav-link" href="/login">Dashboard</a>
+				  </li>
+				</ul>
+			  </div>
+			</div>
+		  </nav>
+	<div class="avatar">
+	<center>
+	{% if guild.icon_url is not none %}
+		<img src="{{guildIcon}}" class="{{guild.class_color}} avatar missing-pfp">
+	{% else %}
+		<img src="https://cdn.discordapp.com/embed/avatars/0.png?size=32" class="{{guild.class_color}} missing-pfp">
+	{% endif %}
+	</center>
+	</div>
+	<div class="margin">
+	<center>
+        <h2>{{guildName}}!</h2>
+        <h6>Here you can modify the settings of this guild.</h6>
+	</center></div>
+
+	<div class="margin">
+	<center>
+		<div class="container">
+			<div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-2 row-cols-xl-3">
+				<div class="col sm-6">
+					<div class="card text-white bg-dark mb-3">
+						<div class="card-header">
+							<h4 class="card-text">Verification</h4>
+						</div>
+						<div class="card-body">
+							<form action="" method="post">
+								<div class="form-group">
+									<label for="verification-enabled" class="label">Verification</label>
+									<select class="form-control" id="verification-enabled" name="verification">
+										{% if guild["settings"]["verification"]["enabled"] == true %}
+										<option value="True" selected>Enabled</option>
+										<option value="False">Disabled</option>
+										{% else %}
+										<option value="False" selected>Disabled</option>
+										<option value="False">Enabled</option>
+										{% endif %}
+									</select>
+									<label for="verification-role" class="label">Verification Role</label>
+									<select class="form-control" id="verification-role" name="verification-role">
+										{% for role in guildRoles %}
+											{% if role.id == guild['settings']['verification']['role'] %}
+												<option value="{{role.id}}" selected>{{role.name}}</option>
+											{% else %}
+												<option value="{{role.id}}">{{role.name}}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+								</div>
+								<button type="submit" class="btn btn-dark submitbtn">Save</button>
+							</form>
+						</div>
+					</div>
+				</div>
+				<div class="col sm-6">
+					<div class="card text-white bg-dark">
+							<div class="card-header">
+								<h4 class="card-text">Anti-ping</h4>
+							</div>
+							<div class="card-body">
+								<form action="" method="post">
+									<div class="form-group">
+										<label for="antiping-enabled" class="label">Anti-ping</label>
+										<select class="form-control" id="antiping-enabled" name="antiping">
+											{% if guild['settings']['antiping']['enabled'] == true %}
+											<option value="True" selected>Enabled</option>
+											<option value="False">Disabled</option>
+											{% else %}
+											<option value="False" selected>Disabled</option>
+											<option value="False">Enabled</option>
+											{% endif %}
+										</select>
+										<label for="antiping-role" class="label">Anti-ping Role</label>
+										<select class="form-control" id="antiping-role" name="antiping-role">
+											{% for role in guildRoles %}
+												{% if role.id == guild["settings"]["antiping"]["role"] %}
+													<option value="{{role['id']}}" selected>{{role["name"]}}</option>
+												{% else %}
+													<option value="{{role['id']}}">{{role["name"]}}</option>
+												{% endif %}
+											{% endfor %}
+										</select>
+										<label for="antiping-bypass_role" class="label">Bypass Role</label>
+										<select class="form-control" id="antiping-bypass_role" name="antiping-role">
+											{% for role in guildRoles %}
+												{% if role.id == guild["settings"]["antiping"]["role"] %}
+													<option value="{{role['id']}}" selected>{{role["name"]}}</option>
+												{% else %}
+													<option value="{{role['id']}}">{{role["name"]}}</option>
+												{% endif %}
+											{% endfor %}
+										</select>
+										
+									</div>
+									<button type="submit" class="btn btn-dark submitbtn">Save</button>
+								</form>
+							</div>
+
+					</div>
+				</div>
+				<div class="col sm-6">
+					<div class="card text-white bg-dark">
+						<div class="card-header">
+							<h4 class="card-text">Staff Management</h4>
+						</div>
+						<div class="card-body">
+							<form action="" method="post">
+								<div class="form-group">
+									<label for="staff_management-enabled" class="label">Staff Management</label>
+									<select class="form-control" id="staff_management-enabled" name="staff_management">
+										{% if guild['settings']['staff_management']['enabled'] == true %}
+										<option value="True" selected>Enabled</option>
+										<option value="False">Disabled</option>
+										{% else %}
+										<option value="False" selected>Disabled</option>
+										<option value="False">Enabled</option>
+										{% endif %}
+									</select>
+									<label for="staff_management-channel" class="label">Logging Channel</label>
+									<select class="form-control" id="staff_management-channel" name="staff_management-channel">
+										{% for channel in guildChannels %}
+											{% if channel["id"] == guild["settings"]["staff_management"]["channel"] %}
+												<option value="{{channel['id']}}" selected>{{channel["name"]}}</option>
+											{% else %}
+												<option value="{{channel['id']}}">{{channel["name"]}}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+									
+								</div>
+								<button type="submit" class="btn btn-dark submitbtn">Save</button>
+							</form>
+						</div>
+					</div>
+				</div>
+				<div class="col sm-6">
+					<div class="card text-white bg-dark">
+						<div class="card-header">
+							<h4 class="card-text">Punishments</h4>
+						</div>
+						<div class="card-body">
+							<form action="" method="post">
+								<div class="form-group">
+									<label for="punishments-enabled" class="label">Punishments</label>
+									<select class="form-control" id="punishments-enabled" name="punishments-enabled">
+										{% if guild['settings']['staff_management']['enabled'] == true %}
+										<option value="True" selected>Enabled</option>
+										<option value="False">Disabled</option>
+										{% else %}
+										<option value="False" selected>Disabled</option>
+										<option value="False">Enabled</option>
+										{% endif %}
+									</select>
+									<label for="punishments-channel" class="label">Logging Channel</label>
+									<select class="form-control" id="punishments-channel" name="punishments-channel">
+										{% for channel in guildChannels %}
+											{% if channel['id'] == guild["settings"]["punishments"]["channel"] %}
+												<option value="{{channel['id']}}" selected>{{channel["name"]}}</option>
+											{% else %}
+												<option value="{{channel['id']}}">{{channel["name"]}}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+									
+								</div>
+								<button type="submit" class="submitbtn" id="punishments-submit">Save</button>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>		
+		
+			<div class="alert alert-success alert-dismissible fade show" role="alert" id="alert">
+				<button type="button" class="close" aria-label="Close">
+				  <span aria-hidden="true">&times;</span>
+				</button>
+				<p><i class="fa fa-check-circle"></i>Your settings have been saved.</p>
+			  </div>
+		<script>
+			var elements = document.querySelectorAll('button[type="submit"]');
+			console.log(elements)
+			for (var i = 0; i < elements.length; i++) {
+				elements[i].addEventListener('click', (e) => {
+					e.preventDefault();
+					fetch('/dashboard/{{guildID}}', {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"Accept": "application/json"
+						},
+						body: JSON.stringify(
+							{
+								staff_management: {
+									enabled: document.getElementById("staff_management-enabled").value,
+									channel: document.getElementById("staff_management-channel").value
+								},
+								punishments: {
+									enabled: document.getElementById("punishments-enabled").value,
+									channel: document.getElementById("punishments-channel").value
+								},
+								antiping: {
+									enabled: document.getElementById("antiping-enabled").value,
+									role: document.getElementById("antiping-role").value,
+									bypass_role: document.getElementById("antiping-bypass_role").value,
+								},
+								verification: {
+									enabled: document.getElementById("verification-enabled").value,
+									role: document.getElementById("verification-role").value
+								}
+								// shift_management: {
+								// 	enabled: document.getElementById("shift_management-enabled").value,
+								// 	channel: document.getElementById("shift_management-channel").value
+								// }
+								// customisation: {
+								// 	color: document.getElementById('customisation-color').value,
+								// 	prefix: document.getElementById('customisation-prefix').value,
+								// 	brand_name: document.getElementById('customisation-brand_name').value,
+								// 	thumbnail_url: document.getElementById('customisation-thumbnail_url').value,
+								// 	footer_text: document.getElementById('customisation-footer_text').value,
+								// 	ban_channel: document.getElementById('customisation-ban_channel').value,
+								// }
+							}
+						),
+
+					});
+					alert('Successfully saved!')
+				}
+				)
+			}
+		</script>
+
+		<!-- Optional JavaScript -->
+		<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+		<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+		<!-- JQuery -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<!-- Bootstrap tooltips -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+		<!-- Bootstrap core JavaScript -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/js/bootstrap.min.js"></script>
+		<!-- MDB core JavaScript -->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+	</body>
+</html>
