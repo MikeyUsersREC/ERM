@@ -57,7 +57,7 @@ class APIRoutes:
     def GET_status(self):
         return {"guilds": len(self.bot.guilds), "ping": round(self.bot.latency * 1000)}
 
-    async def GET_get_mutual_guilds(self, request: Request):
+    async def POST_get_mutual_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         if not guild_ids:
@@ -84,7 +84,7 @@ class APIRoutes:
         return {"guilds": guilds}
 
 
-    async def GET_get_staff_guilds(self, request: Request):
+    async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
@@ -130,7 +130,7 @@ class APIRoutes:
 
         return guilds
 
-    async def GET_check_staff_level(self, request: Request):
+    async def POST_check_staff_level(self, request: Request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
         user_id = json_data.get("user")
@@ -157,7 +157,7 @@ class APIRoutes:
 
         return {"permission_level": permission_level}
 
-    async def GET_get_guild_settings(self, request: Request):
+    async def POST_get_guild_settings(self, request: Request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
         if not guild_id:
@@ -193,7 +193,7 @@ class APIRoutes:
 
         return settings
 
-    async def GET_get_last_warnings(self, request):
+    async def POST_get_last_warnings(self, request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
         # NOTE: This API is deprecated.

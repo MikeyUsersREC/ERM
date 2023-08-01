@@ -280,8 +280,8 @@ class Punishments(commands.Cog):
         except:
             stop_exception = True
         auth_enabled = config("AI_API_ENABLED")
-        if auth_enabled in ["TRUE", True]:
-            stop_exception = auth_enabled
+        if auth_enabled in ["FALSE", False]:
+            stop_exception = True
         new_past = []
         warns = []
         past = []
