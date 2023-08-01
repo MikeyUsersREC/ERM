@@ -279,7 +279,9 @@ class Punishments(commands.Cog):
             agent = AI(config("AI_API_URL"), config("AI_API_AUTH"))
         except:
             stop_exception = True
-
+        auth_enabled = config("AI_API_ENABLED")
+        if auth_enabled in ["TRUE", True]:
+            stop_exception = auth_enabled
         new_past = []
         warns = []
         past = []
@@ -379,15 +381,17 @@ class Punishments(commands.Cog):
                 if x not in ["Warning", "Kick", "Ban", "Bolo"]:
                     new_past.remove(i)
             print(new_past)
-            try:
-                recommended = await agent.recommended_punishment(reason, new_past)
-            except:
-                stop_exception = True
+            if not stop_exception:
+                try:
+                    recommended = await agent.recommended_punishment(reason, new_past)
+                except:
+                    stop_exception = True
         else:
-            try:
-                recommended = await agent.recommended_punishment(reason, None)
-            except:
-                stop_exception = True
+            if not stop_exception:
+                try:
+                    recommended = await agent.recommended_punishment(reason, None)
+                except:
+                    stop_exception = True
 
         changed_type = None
         did_change_type = None
