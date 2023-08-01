@@ -1,7 +1,7 @@
 import datetime
 import typing
 from copy import copy
-from utils.flags import DutyManageOptions, PunishOptions
+from utils.flags import DutyManageOptions, PunishOptions, SearchOptions
 import discord
 
 from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed
@@ -2625,10 +2625,10 @@ class LiveMenu(discord.ui.View):
                 index += 1
 
 
-                await mockcontext.invoke(
-                    command,
-                    **extra_args
-                )
+            await mockcontext.invoke(
+                command,
+                **extra_args
+            )
 
     @discord.ui.button(
         label="On Duty", style=discord.ButtonStyle.green, custom_id="on_duty-execution"
@@ -2670,7 +2670,7 @@ class LiveMenu(discord.ui.View):
         custom_id="punish-execution",
         row=1,
     )
-    async def punish(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def _punish(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.user = None
         self.punish_type = None
         self.reason = None
@@ -2690,7 +2690,7 @@ class LiveMenu(discord.ui.View):
                     discord.ui.TextInput(label="Reason", placeholder="Reason")
                 )
 
-            async def on_submit(modal, interaction: discord.Interaction):
+            async def on_submit(modal, modal_interaction: discord.Interaction):
                 for item in modal.children:
                     if item.label == "ROBLOX User":
                         self.user = item.value
@@ -2698,9 +2698,8 @@ class LiveMenu(discord.ui.View):
                         self.punish_type = item.value
                     elif item.label == "Reason":
                         self.reason = item.value
-                modal.stop()
                 await self.execute_command(
-                    interaction,
+                    modal_interaction,
                     "\n/ephemeral=True /without_command_execution=True",
                     command=self.bot.get_command("punish"),
                     extra_args={
@@ -2717,6 +2716,73 @@ class LiveMenu(discord.ui.View):
         self.punish_type = None
         self.reason = None
 
+    @discord.ui.button(
+        label="Search",
+        style=discord.ButtonStyle.secondary,
+        custom_id="search-execution",
+        row=1,
+    )
+    async def _search(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.user = None
+
+        class SearchModal(discord.ui.Modal):
+            def __init__(modal):
+                super().__init__(title="Search User", timeout=None)
+                modal.add_item(
+                    discord.ui.TextInput(label="ROBLOX User", placeholder="ROBLOX User")
+                )
+
+            async def on_submit(modal, modal_interaction: discord.Interaction):
+                for item in modal.children:
+                    if item.label == "ROBLOX User":
+                        self.user = item.value
+                await self.execute_command(
+                    modal_interaction,
+                    "/ephemeral=True /without_command_execution=True",
+                    command=self.bot.get_command("search"),
+                    extra_args={
+                        "query": self.user
+                    },
+                    flag_class=SearchOptions,
+                )
+
+        await interaction.response.send_modal(SearchModal())
+        self.user = None
+
+    @discord.ui.button(
+        label="Active BOLOs",
+        style=discord.ButtonStyle.secondary,
+        custom_id="bolos-execution",
+        row=1,
+    )
+    async def _bolos(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.user = None
+
+        class SearchModal(discord.ui.Modal):
+            def __init__(modal):
+                super().__init__(title="BOLO Search", timeout=None)
+                modal.add_item(
+                    discord.ui.TextInput(label="ROBLOX User", placeholder="Optional, leave empty for all", required=False)
+                )
+
+            async def on_submit(modal, modal_interaction: discord.Interaction):
+                for item in modal.children:
+                    if item.label == "ROBLOX User":
+                        self.user = item.value
+                args = {}
+                if self.user.strip() != "":
+                    args['user'] = self.user
+
+                await self.execute_command(
+                    modal_interaction,
+                    "/ephemeral=True /without_command_execution=True",
+                    command=self.bot.get_command("bolo active"),
+                    extra_args=args,
+                    flag_class=SearchOptions,
+                )
+
+        await interaction.response.send_modal(SearchModal())
+        self.user = None
 
 class Verification(discord.ui.View):
     def __init__(self, user_id):

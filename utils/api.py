@@ -6,11 +6,13 @@ import uvicorn
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
-from erm import Bot
+from erm import Bot, management_predicate, is_staff, staff_predicate
 from typing import Annotated
 from decouple import config
 
 from pydantic import BaseModel
+
+from helpers import MockContext
 from utils.utils import tokenGenerator
 
 
@@ -54,6 +56,158 @@ class APIRoutes:
 
     def GET_status(self):
         return {"guilds": len(self.bot.guilds), "ping": round(self.bot.latency * 1000)}
+
+    async def GET_get_mutual_guilds(self, request: Request):
+        json_data = await request.json()
+        guild_ids = json_data.get("guilds")
+        if not guild_ids:
+            return HTTPException(status_code=400, detail="No guild ids given")
+
+        guilds = []
+        for i in guild_ids:
+            guild: discord.Guild = self.bot.get_guild(int(i))
+            if not guild:
+                continue
+            if guild.get_member(self.bot.user.id):
+                try:
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
+                    icon = str(icon)
+                except Exception as e:
+                    print(e)
+                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
+
+                guilds.append(
+                    {"id": str(guild.id), "name": str(guild.name), "icon_url": icon}
+                )
+
+        return {"guilds": guilds}
+
+
+    async def GET_get_staff_guilds(self, request: Request):
+        json_data = await request.json()
+        guild_ids = json_data.get("guilds")
+        user_id = json_data.get("user")
+        if not guild_ids:
+            return HTTPException(status_code=400, detail="No guilds specified")
+
+        guilds = []
+        for i in guild_ids:
+            guild: discord.Guild = self.bot.get_guild(int(i))
+            if not guild:
+                continue
+            if guild.get_member(self.bot.user.id):
+                try:
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
+                    icon = str(icon)
+                except Exception as e:
+                    print(e)
+                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
+
+                try:
+                    user = await guild.fetch_member(user_id)
+                except:
+                    continue
+                mock_context = MockContext(bot=self.bot, author=user, guild=guild)
+
+                permission_level = 0
+                if await management_predicate(mock_context):
+                    permission_level = 2
+                elif await staff_predicate(mock_context):
+                    permission_level = 1
+
+                if permission_level > 0:
+                    guilds.append(
+                        {
+                            "id": str(guild.id),
+                            "name": str(guild.name),
+                            "icon_url": icon,
+                            "member_count": str(guild.member_count),
+                            "permission_level": permission_level,
+                        }
+                    )
+
+        return guilds
+
+    async def GET_check_staff_level(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        user_id = json_data.get("user")
+        if not guild_id or not user_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            user = await guild.fetch_member(user_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return {"permission_level": 0}
+
+        mock_context = MockContext(bot=self.bot, author=user, guild=guild)
+
+        permission_level = 0
+        if await management_predicate(mock_context):
+            permission_level = 2
+        elif await staff_predicate(mock_context):
+            permission_level = 1
+
+        return {"permission_level": permission_level}
+
+    async def GET_get_guild_settings(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        return settings
+
+    async def POST_update_guild_settings(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        for key, value in json_data.items():
+            if key == "guild":
+                continue
+            if isinstance(value, dict):
+                settings = await self.bot.settings.find_by_id(guild_id)
+                if not settings:
+                    return HTTPException(status_code=400, detail="Invalid guild")
+                for k, v in value.items():
+                    settings[key][k] = v
+        await self.bot.settings.update_by_id(settings)
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return HTTPException(status_code=404, detail="Guild does not have settings attribute")
+
+        return settings
+
+    async def GET_get_last_warnings(self, request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        # NOTE: This API is deprecated.
+        return HTTPException(status_code=500, detail="This API is deprecated")
+
+        # warning_objects = {}
+        # async for document in self.bot.warnings.db.find(
+        #         {"Guild": guild_id}
+        # ).sort([("$natural", -1)]).limit(10):
+        #     warning_objects[document["_id"]] = list(
+        #         filter(lambda x: x["Guild"] == guild_id, document["warnings"])
+        #     )
+
+        # return warning_objects
 
     async def GET_get_token(
         self, authorization: Annotated[str | None, Header()], request: Request

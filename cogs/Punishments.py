@@ -27,7 +27,7 @@ from menus import (
 )
 from utils.AI import AI
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
-from utils.flags import PunishOptions
+from utils.flags import PunishOptions, SearchOptions
 from utils.utils import (
     failure_embed,
     removesuffix,
@@ -133,29 +133,35 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
-        # query, _, flags = reason.rpartition("\n")
-        #
-        # if (flags := flags.strip()).startswith("/"):
-        #     # There are actually options here
-        #     flags = PunishOptions.convert(ctx, flags)
-        # else:
-        #     # This line is actually the last line of the query and no option was given
-        #     query += f"\n{flags}"
-        #
-        # reason = query
-        #
-        # if isinstance(flags, PunishOptions):
-        #     if flags.without_command_execution is True:
-        #         print(1)
-        #         if ctx.interaction:
-        #             print(2)
-        #             await ctx.interaction.response.defer(ephemeral=True, thinking=True)
-        #         else:
-        #             await ctx.defer()
-        #     else:
-        #         await ctx.defer()
-        # else:
-        #     await ctx.defer()
+        query, _, flags = reason.rpartition("\n")
+        print(123)
+        if (flags := flags.strip()).startswith("/"):
+            # There are actually options here
+            print(456)
+            flags = await PunishOptions.convert(ctx, flags)
+        else:
+            # This line is actually the last line of the query and no option was given
+            query += f"\n{flags}"
+
+        reason = query
+
+        if isinstance(flags, PunishOptions):
+            if flags.without_command_execution is True:
+                print(1)
+                if ctx.interaction:
+                    print(2)
+                    await ctx.interaction.response.defer(ephemeral=True, thinking=True)
+                else:
+                    await ctx.defer()
+            else:
+                await ctx.defer()
+        else:
+            await ctx.defer()
+
+
+
+        if reason.startswith("\n"):
+            reason = reason.removeprefix('\n')
 
         if self.bot.punishments_disabled is True:
             return await failure_embed(
@@ -1221,7 +1227,21 @@ class Punishments(commands.Cog):
     @app_commands.autocomplete(user=user_autocomplete)
     @app_commands.describe(user="The user to search for.")
     @is_staff()
-    async def active(self, ctx, user: str = None):
+    async def active(self, ctx, user: str = None, flags: SearchOptions = None):
+        if isinstance(flags, SearchOptions) and flags is not None:
+            if flags.without_command_execution is True:
+                print(1)
+                if ctx.interaction:
+                    print(2)
+                    await ctx.interaction.response.defer(ephemeral=True, thinking=True)
+                else:
+                    await ctx.defer()
+            else:
+                await ctx.defer()
+        else:
+            await ctx.defer()
+
+
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,

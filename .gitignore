@@ -6,4 +6,5 @@ requirements.txt
 cache/*
 .pytest_cache
 Pipfile.lock
-
+.DS_Store
+.git/

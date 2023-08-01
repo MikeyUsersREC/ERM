@@ -36,12 +36,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip3 install num2words sentry_sdk[pymongo] discord.py hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
+          pip3 install num2words discord.py hikari dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest typing_extensions
 
 
       - name: Install later dependencies
         run: |
-          pip3 install --upgrade reactionmenu jishaku oauth2client gspread
+          pip3 install --upgrade reactionmenu jishaku oauth2client gspread sentry_sdk[pymongo]
 
       - name: Run test suite
         run: |

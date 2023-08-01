@@ -388,8 +388,8 @@ bot.erm_team = {
 async def staff_field(bot: Bot, embed, query):
     flag = await bot.flags.find_by_id(query)
     embed.add_field(
-        name="<:FlagIcon:1035258525955395664> Flags",
-        value=f"<:ArrowRight:1035003246445596774> {flag['rank']}",
+        name="<:ERMAdmin:1111100635736187011> Flags",
+        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{flag['rank']}",
         inline=False,
     )
     return embed
@@ -473,7 +473,10 @@ async def check_reminders():
                         item["lastTriggered"] = lastTriggered
                         await bot.reminders.update_by_id(guildObj)
 
-                        await channel.send(" ".join(roles), embed=embed, view=view)
+                        await channel.send(" ".join(roles), embed=embed, view=view,
+                            allowed_mentions = discord.AllowedMentions(
+                                replied_user=True, everyone=True, roles=True, users=True
+                        ))
                 except Exception as e:
                     print("Could not send reminder: {}".format(str(e)))
                     pass

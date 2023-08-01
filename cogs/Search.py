@@ -11,6 +11,7 @@ from roblox import client as roblox
 
 from erm import check_privacy, is_staff, staff_field
 from utils.autocompletes import user_autocomplete
+from utils.flags import SearchOptions
 from utils.utils import invis_embed, failure_embed
 
 client = roblox.Client()
@@ -33,7 +34,21 @@ class Search(commands.Cog):
     @app_commands.describe(
         query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username."
     )
-    async def search(self, ctx, *, query):
+    async def search(self, ctx, *, query, flags: SearchOptions = None):
+
+        if isinstance(flags, SearchOptions) and flags is not None:
+            if flags.without_command_execution is True:
+                print(1)
+                if ctx.interaction:
+                    print(2)
+                    await ctx.interaction.response.defer(ephemeral=True, thinking=True)
+                else:
+                    await ctx.defer()
+            else:
+                await ctx.defer()
+        else:
+            await ctx.defer()
+
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,
