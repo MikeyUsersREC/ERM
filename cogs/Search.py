@@ -25,7 +25,7 @@ class Search(commands.Cog):
         name="search",
         aliases=["s"],
         description="Searches for a user in the warning database.",
-        extras={"category": "Search"},
+        extras={"category": "Search", "ignoreDefer": True},
         usage="<user>",
         with_app_command=True,
     )
