@@ -627,6 +627,7 @@ class ShiftManagement(commands.Cog):
                         )
 
                 old_shift_type = None
+                shift_type_item = None
                 if shift_type:
                     old_shift_type = shift_type
                     shift_type = shift_type["name"]
@@ -649,13 +650,13 @@ class ShiftManagement(commands.Cog):
 
                 role = None
 
-                if shift_type:
-                    if old_shift_type:
-                        shift_type = old_shift_type
-                    if shift_type.get("role"):
+                if old_shift_type:
+                    # if old_shift_type:
+                    #     shift_type = old_shift_type
+                    if old_shift_type.get("role"):
                         role = [
                             discord.utils.get(ctx.guild.roles, id=role)
-                            for role in shift_type.get("role")
+                            for role in old_shift_type.get("role")
                         ]
                 else:
                     if configItem["shift_management"]["role"]:
