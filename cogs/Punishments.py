@@ -534,7 +534,7 @@ class Punishments(commands.Cog):
                     should_dm = True
 
                     async for doc in bot.consent.db.find({"_id": member.id}):
-                        if document.get("punishments"):
+                        if doc.get("punishments"):
                             if document.get("punishments") is False:
                                 should_dm = False
 
@@ -1225,7 +1225,7 @@ class Punishments(commands.Cog):
     @bolo.command(
         name="active",
         description="View the server's active BOLOs.",
-        extras={"category": "Punishments"},
+        extras={"category": "Punishments", "ignoreDefer": True},
         aliases=["search", "lookup"],
     )
     @app_commands.autocomplete(user=user_autocomplete)
