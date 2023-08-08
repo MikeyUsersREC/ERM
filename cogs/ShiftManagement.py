@@ -278,6 +278,11 @@ class ShiftManagement(commands.Cog):
             title=f"<:ERMAdmin:1111100635736187011> {member.name}",
         )
 
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_author(
+            icon_url=ctx.author.display_avatar.url, name=ctx.author.name
+        )
+
         quota_seconds = None
         met_quota = None
         member_seconds = 0
@@ -445,11 +450,6 @@ class ShiftManagement(commands.Cog):
                     "id": 0,
                     "role": settings["shift_management"].get("role"),
                 }
-
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_author(
-                icon_url=ctx.author.display_avatar.url, name=ctx.author.name
-            )
 
             if shift_type:
                 if shift_type.get("channel"):
@@ -1198,7 +1198,6 @@ class ShiftManagement(commands.Cog):
                                         label=item["name"],
                                         value=item["id"],
                                         description=item["name"],
-                                        emoji="<:Clock:1035308064305332224>",
                                     )
                                     for item in settings["shift_types"]["types"]
                                 ],
@@ -1260,33 +1259,37 @@ class ShiftManagement(commands.Cog):
                     return await failure_embed(ctx, "you didn't provide a time!")
 
                 content = content.strip()
-                if content.endswith(("s", "m", "h", "d")):
-                    full = None
-                    seconds = 0
-                    if content.endswith("s"):
-                        full = "seconds"
-                        num = int(content[:-1])
-                        seconds = num
-                        print("seconds")
-                    if content.endswith("m"):
-                        full = "minutes"
-                        num = int(content[:-1])
-                        seconds = num * 60
-                        print("minutes")
-                    if content.endswith("h"):
-                        full = "hours"
-                        num = int(content[:-1])
-                        seconds = num * 60 * 60
+                try:
+                    if content.endswith(("s", "m", "h", "d")):
+                        full = None
+                        seconds = 0
+                        if content.endswith("s"):
+                            full = "seconds"
+                            num = int(content[:-1])
+                            seconds = num
+                            print("seconds")
+                        if content.endswith("m"):
+                            full = "minutes"
+                            num = int(content[:-1])
+                            seconds = num * 60
+                            print("minutes")
+                        if content.endswith("h"):
+                            full = "hours"
+                            num = int(content[:-1])
+                            seconds = num * 60 * 60
 
-                        print("hours")
-                    if content.endswith("d"):
-                        full = "days"
-                        num = int(content[:-1])
-                        seconds = num * 60 * 60 * 24
+                            print("hours")
+                        if content.endswith("d"):
+                            full = "days"
+                            num = int(content[:-1])
+                            seconds = num * 60 * 60 * 24
 
-                        print("days")
-                else:
+                            print("days")
+                    else:
+                        return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
+                except:
                     return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
+
                 sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if sh:
                     await bot.shift_management.add_time_to_shift(sh["_id"], seconds)
@@ -1329,7 +1332,6 @@ class ShiftManagement(commands.Cog):
                                         label=item["name"],
                                         value=item["id"],
                                         description=item["name"],
-                                        emoji="<:Clock:1035308064305332224>",
                                     )
                                     for item in settings["shift_types"]["types"]
                                 ],
@@ -1386,31 +1388,35 @@ class ShiftManagement(commands.Cog):
                 else:
                     return await failure_embed(ctx, "you didn't provide a time!")
                 content = content.strip()
-                if content.endswith(("s", "m", "h", "d")):
-                    full = None
-                    seconds = 0
-                    if content.endswith("s"):
-                        full = "seconds"
-                        num = int(content[:-1])
-                        seconds = num
-                        print("seconds")
-                    if content.endswith("m"):
-                        full = "minutes"
-                        num = int(content[:-1])
-                        seconds = num * 60
-                        print("minutes")
-                    if content.endswith("h"):
-                        full = "hours"
-                        num = int(content[:-1])
-                        seconds = num * 60 * 60
-                        print("hours")
-                    if content.endswith("d"):
-                        full = "days"
-                        num = int(content[:-1])
-                        seconds = num * 60 * 60 * 24
+                try:
+                    if content.endswith(("s", "m", "h", "d")):
+                        full = None
+                        seconds = 0
+                        if content.endswith("s"):
+                            full = "seconds"
+                            num = int(content[:-1])
+                            seconds = num
+                            print("seconds")
+                        if content.endswith("m"):
+                            full = "minutes"
+                            num = int(content[:-1])
+                            seconds = num * 60
+                            print("minutes")
+                        if content.endswith("h"):
+                            full = "hours"
+                            num = int(content[:-1])
+                            seconds = num * 60 * 60
 
-                        print("days")
-                else:
+                            print("hours")
+                        if content.endswith("d"):
+                            full = "days"
+                            num = int(content[:-1])
+                            seconds = num * 60 * 60 * 24
+
+                            print("days")
+                    else:
+                        return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
+                except:
                     return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
                 sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
                 if sh:

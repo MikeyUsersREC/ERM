@@ -6,7 +6,8 @@ import discord
 import pytz
 from discord import app_commands
 from discord.ext import commands
-from reactionmenu import ViewButton, ViewMenu
+from reactionmenu import ViewButton, ViewMenu, Page
+from reactionmenu.abc import _PageController
 from roblox import client as roblox
 
 from erm import check_privacy, is_staff, staff_field
@@ -226,7 +227,7 @@ class Search(commands.Cog):
                     else:
                         avatar = ""
 
-            await ctx.reply(embed=embed1)
+            await ctx.reply(embed=embed1, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** here's the logs for **{query}**.")
 
         if len(RESULTS) > 1:
             return await ctx.reply(
@@ -396,9 +397,16 @@ class Search(commands.Cog):
             menu.add_buttons([ViewButton.back(), ViewButton.next()])
             new_embeds = []
             for embed in embeds:
-                new_embeds.append(embed)
-            menu.add_pages(new_embeds)
-            await menu.start()
+                menu.add_page(embed=embed, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** here's the logs for **{query}**.")
+            #     new_embeds.append(embed)
+            # menu.add_pages(new_embeds)
+            pagecontroller = _PageController(menu.pages)
+            menu._pc = pagecontroller
+            await ctx.reply(
+                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** here's the logs for **{query}**.",
+                embed=embeds[0],
+                view=menu.__ViewMenu__view
+            )
 
     @commands.hybrid_command(
         name="userid",

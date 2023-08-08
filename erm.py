@@ -427,11 +427,11 @@ async def change_status():
     )
 
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=1, reconnect=True)
 async def check_reminders():
     try:
         async for guildObj in bot.reminders.db.find({}):
-            for item in guildObj["reminders"]:
+            for item in guildObj["reminders"].copy():
                 try:
                     if item.get("paused") is True:
                         continue
@@ -479,12 +479,14 @@ async def check_reminders():
                         ))
                 except Exception as e:
                     print("Could not send reminder: {}".format(str(e)))
+                    guildObj['reminders'].remove(item)
+                    await bot.reminders.update_by_id(guildObj)
                     pass
     except:
         pass
 
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
     try:
         loas = bot.loas

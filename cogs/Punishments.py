@@ -51,7 +51,7 @@ class Punishments(commands.Cog):
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,
-                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
             )
 
         bot = self.bot
@@ -101,22 +101,27 @@ class Punishments(commands.Cog):
 
         embed.add_field(
             name="<:ERMList:1111099396990435428> Moderations",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Kicks:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Bans:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **BOLOs:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Custom:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Warning', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Kicks:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Kick', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Bans:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] == 'Ban', moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **BOLOs:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] in ['BOLO', 'Bolo'], moderations)))}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Custom:** {len(list(filter(lambda x: (x[0] if isinstance(x, list) else x)['Type'] not in ['Warning', 'Kick', 'Ban', 'BOLO', 'Bolo'], moderations)))}",
             inline=True,
         )
         embed.add_field(
             name="<:ERMList:1111099396990435428> Activity Notices",
-            value=f"<:ArrowRightW:1035023450592514048> **LOAs:** {len(leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_leaves)}\n<:ArrowRightW:1035023450592514048> **Reduced Activity:** {len(reduced_activity)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Fill:1074858542718263366> **Denied:** {len(denied_ras)}",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **LOAs:** {len(leaves)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Accepted:** {len(accepted_leaves)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Denied:** {len(denied_leaves)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reduced Activity:** {len(reduced_activity)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Accepted:** {len(accepted_ras)}\n{INVISIBLE_CHAR}<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Denied:** {len(denied_ras)}",
             inline=True,
         )
 
         embed.add_field(
             name="<:ERMList:1111099396990435428> Shifts",
-            value=f"<:ArrowRightW:1035023450592514048> **Shifts:** {len(all_shifts)}\n<:ArrowRightW:1035023450592514048> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['EndEpoch']) - (x['StartEpoch']) + (x['AddedTime']) - x['RemovedTime'] - sum(b['EndEpoch'] - b['StartEpoch'] for b in x['Breaks']) for x in all_shifts])))}\n",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Shifts:** {len(all_shifts)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Shift Time:** {td_format(datetime.timedelta(seconds=sum([(x['EndEpoch']) - (x['StartEpoch']) + (x['AddedTime']) - x['RemovedTime'] - sum(b['EndEpoch'] - b['StartEpoch'] for b in x['Breaks']) for x in all_shifts])))}\n",
             inline=True,
         )
+        embed.set_thumbnail(url=ctx.author.display_avatar)
+        embed.set_author(
+            name=f"{ctx.author.name}",
+            icon_url=ctx.author.display_avatar.url,
+        )
 
-        await ctx.reply(embed=embed)
+        await ctx.reply(embed=embed, content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** here's those modstats you requested.")
 
     @commands.hybrid_command(
         name="punish",
@@ -1948,7 +1953,7 @@ class Punishments(commands.Cog):
         except:
             return await failure_embed(
                 ctx,
-                "this user does not exist on the Roblox platform. Please try again with a valid username.",
+                "this user does not exist on the ROBLOX platform. Please try again with a valid username.",
             )
 
 

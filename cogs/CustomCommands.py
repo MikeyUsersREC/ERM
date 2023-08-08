@@ -530,7 +530,11 @@ class CustomCommands(commands.Cog):
         for embed in selected["message"]["embeds"]:
             embeds.append(await interpret_embed(bot, ctx, channel, embed))
 
+
         if ctx.interaction:
+            if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
+                return await ctx.interaction.followup.send(
+                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, due to Discord limitations - I am unable to send your reminder. Your message is most likely empty.")
             await ctx.interaction.followup.send(
                 content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've just run the custom command in **{channel}**."
             ),
@@ -541,9 +545,12 @@ class CustomCommands(commands.Cog):
                 embeds=embeds,
             )
         else:
+            if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
+                return await ctx.reply(content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, due to Discord limitations - I am unable to send your reminder. Your message is most likely empty.")
             await ctx.reply(
                 content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've just run the custom command in **{channel}**."
             )
+
             await channel.send(
                 content=await interpret_content(
                     bot, ctx, channel, selected["message"]["content"]
