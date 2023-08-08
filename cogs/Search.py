@@ -405,7 +405,7 @@ class Search(commands.Cog):
             await ctx.reply(
                 content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** here's the logs for **{query}**.",
                 embed=embeds[0],
-                view=menu.__ViewMenu__view
+                view=menu._ViewMenu__view
             )
 
     @commands.hybrid_command(
