@@ -15,6 +15,7 @@ from decouple import config
 from discord import app_commands
 from discord.ext import tasks
 from roblox import client as roblox
+from sentry_sdk import push_scope, capture_exception
 from sentry_sdk.integrations.pymongo import PyMongoIntegration
 
 from datamodels.ShiftManagement import ShiftManagement
@@ -611,4 +612,11 @@ if __name__ == "__main__":
         },
     )
 
-    bot.run(bot_token)
+    while True:
+        try:
+            bot.run(bot_token)
+        except Exception as e:
+            with push_scope() as scope:
+                scope.level = "error"
+                capture_exception(e)
+
