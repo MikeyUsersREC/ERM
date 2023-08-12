@@ -612,11 +612,10 @@ if __name__ == "__main__":
         },
     )
 
-    while True:
-        try:
-            bot.run(bot_token)
-        except Exception as e:
-            with push_scope() as scope:
-                scope.level = "error"
-                capture_exception(e)
+    try:
+        bot.run(bot_token)
+    except Exception as e:
+        with push_scope() as scope:
+            scope.level = "error"
+            capture_exception(e)
 
