@@ -43,6 +43,7 @@ from utils.utils import *
 
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ["8.8.8.8"]
+setup = False
 
 try:
     sentry_url = config("SENTRY_URL")
@@ -80,92 +81,96 @@ class Bot(commands.AutoShardedBot):
         return await super().is_owner(user)
 
     async def setup_hook(self) -> None:
-        bot = self
-        # await bot.load_extension('utils.routes')
-        logging.info(
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!".format(
-                bot.user.name
-            )
-        )
-        global startTime
-        startTime = time.time()
-        bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
-        if environment == "DEVELOPMENT":
-            bot.db = bot.mongo["beta"]
-        elif environment == "PRODUCTION":
-            bot.db = bot.mongo["erm"]
-        else:
-            raise Exception("Invalid environment")
-
-        bot.start_time = time.time()
-        # bot.warnings = Warnings(bot.db, "warnings")
-        bot.old_shift_management = OldShiftManagement(bot.db, "shifts", "shift_storage")
-        bot.shift_management = ShiftManagement(bot.db, "shift_management")
-        bot.errors = Errors(bot.db, "errors")
-        bot.loas = ActivityNotices(bot.db, "leave_of_absences")
-        bot.reminders = Reminders(bot.db, "reminders")
-        bot.custom_commands = CustomCommands(bot.db, "custom_commands")
-        bot.analytics = Analytics(bot.db, "analytics")
-        bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
-        bot.privacy = Privacy(bot.db, "privacy")
-        bot.verification = Verification(bot.db, "verification")
-        bot.flags = Flags(bot.db, "flags")
-        bot.views = Views(bot.db, "views")
-        bot.synced_users = SyncedUsers(bot.db, "synced_users")
-        bot.api_tokens = APITokens(bot.db, "api_tokens")
-        bot.link_strings = LinkStrings(bot.db, "link_strings")
-        bot.fivem_links = FiveMLinks(bot.db, "fivem_links")
-        bot.consent = Consent(bot.db, "consent")
-        bot.punishments = Warnings(bot)
-        bot.settings = Settings(bot.db, "settings")
-
-        Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
-        Events = [m.name for m in iter_modules(["events"], prefix="events.")]
-
-        for extension in Extensions:
-            try:
-                await bot.load_extension(extension)
-                logging.info(f"Loaded {extension}")
-            except Exception as e:
-                logging.error(f"Failed to load extension {extension}.", exc_info=e)
-
-        for extension in Events:
-            try:
-                await bot.load_extension(extension)
-                logging.info(f"Loaded {extension}")
-            except Exception as e:
-                logging.error(f"Failed to load extension {extension}.", exc_info=e)
-
-        bot.error_list = []
-        logging.info("Connected to MongoDB!")
-
-        # await bot.load_extension("jishaku")
-        await bot.load_extension("utils.hot_reload")
-        # await bot.load_extension('utils.server')
-
-        if not bot.is_synced:  # check if slash commands have been synced
-            bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
-        if environment == "DEVELOPMENT":
-            await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-
-        else:
-            await bot.tree.sync()
-            # guild specific: leave blank if global (global registration can take 1-24 hours)
-        bot.is_synced = True
-        check_reminders.start()
-        check_loa.start()
-        # GDPR.start()
-        change_status.start()
-        logging.info("Setup_hook complete! All tasks are now running!")
-
-        async for document in self.views.db.find({}):
-            if document["view_type"] == "LOAMenu":
-                for index, item in enumerate(document["args"]):
-                    if item == "SELF":
-                        document["args"][index] = self
-                self.add_view(
-                    LOAMenu(*document["args"]), message_id=document["message_id"]
+        global setup
+        if not setup:
+            bot = self
+            # await bot.load_extension('utils.routes')
+            logging.info(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!".format(
+                    bot.user.name
                 )
+            )
+            global startTime
+            startTime = time.time()
+            bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
+            if environment == "DEVELOPMENT":
+                bot.db = bot.mongo["beta"]
+            elif environment == "PRODUCTION":
+                bot.db = bot.mongo["erm"]
+            else:
+                raise Exception("Invalid environment")
+
+            bot.start_time = time.time()
+            # bot.warnings = Warnings(bot.db, "warnings")
+            bot.old_shift_management = OldShiftManagement(bot.db, "shifts", "shift_storage")
+            bot.shift_management = ShiftManagement(bot.db, "shift_management")
+            bot.errors = Errors(bot.db, "errors")
+            bot.loas = ActivityNotices(bot.db, "leave_of_absences")
+            bot.reminders = Reminders(bot.db, "reminders")
+            bot.custom_commands = CustomCommands(bot.db, "custom_commands")
+            bot.analytics = Analytics(bot.db, "analytics")
+            bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
+            bot.privacy = Privacy(bot.db, "privacy")
+            bot.verification = Verification(bot.db, "verification")
+            bot.flags = Flags(bot.db, "flags")
+            bot.views = Views(bot.db, "views")
+            bot.synced_users = SyncedUsers(bot.db, "synced_users")
+            bot.api_tokens = APITokens(bot.db, "api_tokens")
+            bot.link_strings = LinkStrings(bot.db, "link_strings")
+            bot.fivem_links = FiveMLinks(bot.db, "fivem_links")
+            bot.consent = Consent(bot.db, "consent")
+            bot.punishments = Warnings(bot)
+            bot.settings = Settings(bot.db, "settings")
+
+            Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
+            Events = [m.name for m in iter_modules(["events"], prefix="events.")]
+
+            for extension in Extensions:
+                try:
+                    await bot.load_extension(extension)
+                    logging.info(f"Loaded {extension}")
+                except Exception as e:
+                    logging.error(f"Failed to load extension {extension}.", exc_info=e)
+
+            for extension in Events:
+                try:
+                    await bot.load_extension(extension)
+                    logging.info(f"Loaded {extension}")
+                except Exception as e:
+                    logging.error(f"Failed to load extension {extension}.", exc_info=e)
+
+            bot.error_list = []
+            logging.info("Connected to MongoDB!")
+
+            # await bot.load_extension("jishaku")
+            await bot.load_extension("utils.hot_reload")
+            # await bot.load_extension('utils.server')
+
+            if not bot.is_synced:  # check if slash commands have been synced
+                bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
+            if environment == "DEVELOPMENT":
+                await bot.tree.sync(guild=discord.Object(id=987798554972143728))
+
+            else:
+                await bot.tree.sync()
+                # guild specific: leave blank if global (global registration can take 1-24 hours)
+            bot.is_synced = True
+            check_reminders.start()
+            check_loa.start()
+            # GDPR.start()
+            change_status.start()
+            logging.info("Setup_hook complete! All tasks are now running!")
+
+            async for document in self.views.db.find({}):
+                if document["view_type"] == "LOAMenu":
+                    for index, item in enumerate(document["args"]):
+                        if item == "SELF":
+                            document["args"][index] = self
+                    self.add_view(
+                        LOAMenu(*document["args"]), message_id=document["message_id"]
+                    )
+            global setup
+            setup = True
 
 
 bot = Bot(

@@ -1,7 +1,8 @@
 import logging
 
 from discord.ext import commands
-
+global on_ready
+on_ready = False
 
 class OnReady(commands.Cog):
     def __init__(self, bot):
@@ -9,7 +10,10 @@ class OnReady(commands.Cog):
 
     @commands.Cog.listener("on_ready")
     async def on_ready(self):
-        logging.info("{} has connected to gateway!".format(self.bot.user.name))
+        global on_ready
+        if on_ready:
+            logging.info("{} has connected to gateway!".format(self.bot.user.name))
+            on_ready = False
 
     @commands.Cog.listener('on_shard_connect')
     async def on_shard_connect(self, sid: int):
