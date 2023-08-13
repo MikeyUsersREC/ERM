@@ -1,7 +1,6 @@
 import logging
 
 from discord.ext import commands
-global on_ready
 on_ready = False
 
 class OnReady(commands.Cog):

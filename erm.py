@@ -169,7 +169,6 @@ class Bot(commands.AutoShardedBot):
                     self.add_view(
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
-            global setup
             setup = True
 
 
