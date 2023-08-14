@@ -606,7 +606,7 @@ credentials_dict = {
     "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=""),
 }
 
-if __name__ == "__main__":
+def run():
     sentry_sdk.init(
         dsn=sentry_url,
         traces_sample_rate=1.0,
@@ -623,3 +623,6 @@ if __name__ == "__main__":
             scope.level = "error"
             capture_exception(e)
 
+
+if __name__ == "__main__":
+    run()
