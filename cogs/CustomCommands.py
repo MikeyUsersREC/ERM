@@ -258,6 +258,7 @@ class CustomCommands(commands.Cog):
                     embed_list.append(discord.Embed.from_dict(embed))
 
                 if embed_list:
+                    view = MessageCustomisation(ctx.author.id)
                     await new_msg.edit(content=content, embeds=embed_list, view=view)
                 else:
                     view = MessageCustomisation(ctx.author.id)
