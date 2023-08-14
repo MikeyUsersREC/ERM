@@ -270,7 +270,7 @@ class CustomCommands(commands.Cog):
                 resultingMessage = view.msg
                 print(view.msg)
                 if new_msg.embeds:
-                    for embed in resultingMessage.embeds:
+                    for embed in new_msg.embeds:
                         embeds.append(embed.to_dict())
 
                 name = command
@@ -282,7 +282,7 @@ class CustomCommands(commands.Cog):
                             "name": cmd.get("name"),
                             "id": cmd.get("id"),
                             "message": {
-                                "content": resultingMessage.content,
+                                "content": new_msg.content,
                                 "embeds": embeds,
                             },
                             "channel": cmd.get("channel"),
