@@ -544,6 +544,9 @@ class CustomCommands(commands.Cog):
                     bot, ctx, channel, selected["message"]["content"]
                 ),
                 embeds=embeds,
+                allowed_mentions=discord.AllowedMentions(
+                    everyone=True, users=True, roles=True, replied_user=True
+                )
             )
         else:
             if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:

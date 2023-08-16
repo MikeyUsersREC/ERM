@@ -579,7 +579,6 @@ async def check_loa():
         pass
 
 
-discord.utils.setup_logging(level=logging.INFO)
 
 intents = discord.Intents.default()
 intents.message_content = True
