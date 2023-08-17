@@ -602,10 +602,6 @@ class APIRoutes:
             member, {"guild": guild, "shift": associated_shift}
         )
 
-    async def POST_verify(
-        self, authorization: Annotated[str | None, Header()], request: Request
-    ):
-        if authorization
 
 
 api = FastAPI()
