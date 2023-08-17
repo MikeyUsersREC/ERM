@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import pprint
@@ -186,7 +187,7 @@ bot.shift_management_disabled = False
 bot.punishments_disabled = False
 bot.bloxlink_api_key = bloxlink_api_key
 environment = config("ENVIRONMENT", default="DEVELOPMENT")
-
+internal_command_storage = {}
 
 def running():
     if bot:
@@ -215,6 +216,7 @@ async def AutoDefer(ctx: commands.Context):
             }
         )
 
+    internal_command_storage[ctx] = datetime.datetime.now(tz=pytz.UTC).timestamp()
     if ctx.command:
         if ctx.command.extras.get("ephemeral") is True:
             if ctx.interaction:
@@ -223,6 +225,14 @@ async def AutoDefer(ctx: commands.Context):
             return
 
     await ctx.defer()
+
+@bot.after_invoke
+async def loggingCommandExecution(ctx: commands.Context):
+    if ctx in internal_command_storage.keys():
+        logging.info("Command " + ctx.command.name + " was run by " + ctx.author.name + " (" + str(ctx.author.id) + ")" + " and lasted {} seconds".format(str(float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx]))))
+        logging.info(("Shard ID ::: " + str(ctx.guild.shard_id)) if ctx.guild is not None else 'Shard ID ::: {}'.format("-1, Direct Messages"))
+    else:
+        logging.info("Command could not be found in internal context storage. Please report.")
 
 
 client = roblox.Client()
