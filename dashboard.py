@@ -118,9 +118,9 @@ async def dashboardServerPOST(guild_id):
     guild = await ipcClient.request("get_guild", guild_id=guild_id)
 
     if settingsChange == None:
-       # # # print("Variable was null or undefined.")
+        pass
     else:
-       # # # print(settingsChange)
+        pass
 
     for configItem in guild["settings"]:
         if configItem in settingsChange.keys():

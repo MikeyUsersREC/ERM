@@ -602,6 +602,11 @@ class APIRoutes:
             member, {"guild": guild, "shift": associated_shift}
         )
 
+    async def POST_verify(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        if authorization
+
 
 api = FastAPI()
 
@@ -625,6 +630,7 @@ class ServerAPI(commands.Cog):
             await self.start_server()
         except:
             # print('REALLY BAD ERROR.')
+            pass
     async def cog_unload(self) -> None:
         await self.stop_server()
 
