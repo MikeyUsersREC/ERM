@@ -38,7 +38,7 @@ class OnCommandError(commands.Cog):
                 )
             except:
                 pass
-        print(str(error))
+        # print(str(error))
         try:
             embed = discord.Embed(
                 color=0xED4348,

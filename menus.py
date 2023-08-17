@@ -405,7 +405,7 @@ class MultiDropdown(discord.ui.Select):
             elif isinstance(option, discord.SelectOption):
                 optionList.append(option)
 
-       # print(optionList)
+       # # print(optionList)
 
         # The placeholder is what will be shown when no option is chosen
         # The min and max values indicate we can only pick one of the three options
@@ -962,8 +962,8 @@ class LOAMenu(discord.ui.View):
                 self.remove_item(item)
         await interaction.message.edit(view=self)
         s_loa = None
-       # print(self)
-       # print(self.bot)
+       # # print(self)
+       # # print(self.bot)
         for loa in await self.bot.loas.get_all():
             if (
                 loa["message_id"] == interaction.message.id
@@ -2405,9 +2405,9 @@ class CustomModalView(discord.ui.View):
                 ephemeral=True,
             )
         self.modal = CustomModal(self.label, self.options)
-        print(self.options)
-        print(self.modal.children)
-        print(self.modal)
+        # print(self.options)
+        # print(self.modal.children)
+        # print(self.modal)
         await interaction.response.send_modal(self.modal)
         await self.modal.wait()
         self.stop()
@@ -2482,12 +2482,12 @@ class RequestGoogleSpreadsheet(discord.ui.View):
         additional_data=None,
         label="Google Spreadsheet",
     ):
-        print(type)
+        # print(type)
         if type:
             self.type = type
         else:
             self.type = "lb"
-        print(additional_data)
+        # print(additional_data)
         if additional_data:
             self.additional_data = additional_data
         else:
@@ -2546,7 +2546,7 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             LoAs = sheet.get_worksheet(1)
             LoAs.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
             cell_list = LoAs.range("D13:H999")
-            print(self.additional_data)
+            # print(self.additional_data)
             for cell, new_value in zip(cell_list, self.additional_data):
                 if isinstance(new_value, int):
                     cell.value = f"=({new_value}/ 86400 + DATE(1970, 1, 1))"

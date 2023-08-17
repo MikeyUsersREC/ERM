@@ -268,7 +268,7 @@ class CustomCommands(commands.Cog):
 
                 embeds = []
                 resultingMessage = view.msg
-               # #print(view.msg)
+               # ## # print(view.msg)
                 if new_msg.embeds:
                     for embed in new_msg.embeds:
                         embeds.append(embed.to_dict())

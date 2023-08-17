@@ -196,7 +196,7 @@ class Verification(commands.Cog):
                     # else:
                     #     await invis_embed(ctx, 'You have not put the system code in your description. Please try again.')
                     new_data = await bot.verification.find_by_id(ctx.author.id)
-                   # print(new_data)
+                   # # print(new_data)
                     if "isVerified" in new_data.keys():
                         if new_data["isVerified"]:
                             return await after_verified(roblox_user)

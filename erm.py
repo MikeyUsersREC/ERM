@@ -350,7 +350,7 @@ async def crp_data_to_mongo(jsonData, guildId: int):
                 except Exception as e:
                     pass
 
-       # print(f"Request JSON: {requestJSON}")
+       # # print(f"Request JSON: {requestJSON}")
         for user in requestJSON["data"]:
             name = user["name"]
             userItem = None
@@ -491,7 +491,7 @@ async def check_reminders():
                                 replied_user=True, everyone=True, roles=True, users=True
                         ))
                 except Exception as e:
-                   # print("Could not send reminder: {}".format(str(e)))
+                   # # print("Could not send reminder: {}".format(str(e)))
                     guildObj['reminders'].remove(item)
                     await bot.reminders.update_by_id(guildObj)
                     pass

@@ -213,7 +213,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             await member.edit(nick=new_name)
             changed_nick = True
         except Exception as e:
-           # print(e)
+           # # print(e)
             pass
 
     if shift_type:

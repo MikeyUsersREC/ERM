@@ -184,8 +184,8 @@ class ActivityManagement(commands.Cog):
         all_staff = [{"id": None, "total_seconds": 0, "moderations": 0}]
 
         if shift_type != 0 and shift_type is not None:
-           # #print(f"Starting period: {starting_period}")
-           # #print(f"Ending period: {ending_period}")
+           # ## # print(f"Starting period: {starting_period}")
+           # ## # print(f"Ending period: {ending_period}")
             quantifiers = {
                 "$gte": starting_period.timestamp(),
                 "$lte": ending_period.timestamp(),
@@ -206,7 +206,7 @@ class ActivityManagement(commands.Cog):
                 for breaks in document["Breaks"]:
                     break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
 
-               # #print(document)
+               # ## # print(document)
                 total_seconds += (
                     int(
                         (
@@ -235,8 +235,8 @@ class ActivityManagement(commands.Cog):
                             item["total_seconds"] += total_seconds
                             item["moderations"] += moderations
         else:
-           # #print(f"Starting period: {starting_period}")
-           # #print(f"Ending period: {ending_period}")
+           # ## # print(f"Starting period: {starting_period}")
+           # ## # print(f"Ending period: {ending_period}")
             quantifiers = {
                 "$gte": starting_period.timestamp(),
                 "$lte": ending_period.timestamp(),
@@ -255,7 +255,7 @@ class ActivityManagement(commands.Cog):
 
                 for breaks in document["Breaks"]:
                     break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
-               # #print(document)
+               # ## # print(document)
 
                 total_seconds += (
                     int(
@@ -353,7 +353,7 @@ class ActivityManagement(commands.Cog):
                 )
 
         loa_staff = []
-       # #print(all_staff)
+       # ## # print(all_staff)
 
         async for document in bot.loas.db.find({}):
             if document["guild_id"] == ctx.guild.id:
@@ -389,7 +389,7 @@ class ActivityManagement(commands.Cog):
 
         data = []
         for index, value in enumerate(sorted_staff):
-           # #print(value)
+           # ## # print(value)
             member = ctx.guild.get_member(value["id"])
             if value["total_seconds"] > quota:
                 met_quota = "<:ERMCheck:1111089850720976906>"
@@ -452,15 +452,15 @@ class ActivityManagement(commands.Cog):
         for index, value in enumerate(loa_staff):
             if value["member"] in [item["id"] for item in all_staff]:
                 item = None
-               # #print(value["member"])
+               # ## # print(value["member"])
 
                 for i in all_staff:
-                   # #print(i)
+                   # ## # print(i)
                     if value["member"] == i["id"]:
-                       # #print(i)
+                       # ## # print(i)
                         item = i
 
-               # #print(item)
+               # ## # print(item)
 
                 formatted_data = td_format(
                     datetime.timedelta(seconds=item["total_seconds"])
@@ -468,7 +468,7 @@ class ActivityManagement(commands.Cog):
             else:
                 formatted_data = "0 seconds"
 
-           # #print(value)
+           # ## # print(value)
 
             member = discord.utils.get(ctx.guild.members, id=value["member"])
             if member:
@@ -575,7 +575,7 @@ class ActivityManagement(commands.Cog):
 
         for index, em in enumerate(embeds):
             if len(em.fields) == 0:
-                #print("0 em fields")
+                ## # print("0 em fields")
                 if em.title == "<:ERMSchedule:1111091306089939054> Activity Notices":
                     em.add_field(
                         name="<:ERMUser:1111098647485108315> Currently on LoA",
@@ -589,7 +589,7 @@ class ActivityManagement(commands.Cog):
                     )
                     embeds[index] = em
             elif em.fields[0].value == "":
-                #print("empty em field")
+                ## # print("empty em field")
                 if em.title == "<:ERMSchedule:1111091306089939054> Activity Notices":
                     em.set_field_at(
                         name="<:ERMUser:1111098647485108315> Currently on LoA",
@@ -620,7 +620,7 @@ class ActivityManagement(commands.Cog):
             )
 
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
-        #print(bbytes)
+        ## # print(bbytes)
         file = discord.File(fp=BytesIO(bbytes), filename="raw_activity_report.txt")
 
         async def task():
@@ -660,7 +660,7 @@ class ActivityManagement(commands.Cog):
                 if cell.col == 8 or cell.col == 9:
                     cell.value = f"=({new_value}/ 86400 + DATE(1970, 1, 1))"
                 else:
-                    #print(f"{cell.col} {new_value}")
+                    ## # print(f"{cell.col} {new_value}")
                     cell.value = str(new_value)
             LoAs.update_cells(cell_list, "USER_ENTERED")
 

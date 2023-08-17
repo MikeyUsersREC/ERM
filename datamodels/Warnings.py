@@ -245,7 +245,7 @@ class Warnings(Document):
         """
         Removes a warning from the database by a particular specification. Useful for removing many warnings at one time.
         """
-        print("!!!!")
+        # print("!!!!")
         if all(
             [
                 identifier is None,
@@ -279,9 +279,9 @@ class Warnings(Document):
             if v is None:
                 del map[i]
 
-        print(map)
+        # print(map)
         async for i in self.db.aggregate([{"$match": map}]):
-            print("!")
+            # print("!")
             await self.recovery.insert(i)
             await self.db.delete_one({"_id": i["_id"]})
 

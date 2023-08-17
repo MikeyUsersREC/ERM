@@ -270,7 +270,7 @@ class ShiftManagement(commands.Cog):
         shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
         has_started = shift is not None
 
-       # print(shift)
+       # # print(shift)
         view = AdministrativeSelectMenu(ctx.author.id)
 
         embed = discord.Embed(
@@ -342,10 +342,10 @@ class ShiftManagement(commands.Cog):
 
         for index, value in enumerate(sorted_staff):
             m = discord.utils.get(ctx.guild.members, id=value["id"])
-           # print(m)
+           # # print(m)
             if m:
                 if m.id == member.id:
-                   # print("member seconds")
+                   # # print("member seconds")
                     member_seconds = value["total_seconds"]
                     if quota_seconds is not None:
                         if value["total_seconds"] > quota_seconds:
@@ -374,7 +374,7 @@ class ShiftManagement(commands.Cog):
             )
         status = None
 
-       # print(shift)
+       # # print(shift)
         if shift not in [None, []]:
             if shift.get("Breaks") is not None:
                 for i in shift["Breaks"]:
@@ -459,7 +459,7 @@ class ShiftManagement(commands.Cog):
                     if temp_shift_channel:
                         shift_channel = temp_shift_channel
 
-           # print(datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC))
+           # # print(datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC))
             time_delta = datetime.datetime.now(
                 tz=pytz.UTC
             ) - datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC)
@@ -641,7 +641,7 @@ class ShiftManagement(commands.Cog):
                         await member.edit(nick=new_name)
                         changed_nick = True
                     except Exception as e:
-                        #print(e)
+                        ## print(e)
                         pass
 
                 await bot.shift_management.add_shift_by_user(
@@ -770,7 +770,7 @@ class ShiftManagement(commands.Cog):
                     try:
                         await member.edit(nick=member.nick.replace(nickname, ""))
                     except Exception as e:
-                        #print(e)
+                        ## print(e)
                         pass
 
             embed = discord.Embed(
@@ -924,7 +924,7 @@ class ShiftManagement(commands.Cog):
 
             moderation_embeds = []
             moderation_embeds.append(moderation_embed)
-            #print("9867")
+            ## print("9867")
 
             for moderation in all_moderation_items:
                 if moderation is not None:
@@ -956,7 +956,7 @@ class ShiftManagement(commands.Cog):
                 name=f"You were on-shift for {td_format(time_delta)}.",
                 icon_url=ctx.author.display_avatar.url,
             )
-            #print("9919")
+            ## print("9919")
 
             time_embed.add_field(
                 name="<:ERMList:1111099396990435428> Shift Start",
@@ -1009,7 +1009,7 @@ class ShiftManagement(commands.Cog):
             consent_obj = await bot.consent.find_by_id(ctx.author.id)
             should_send = True
             if consent_obj:
-                #print(consent_obj)
+                ## print(consent_obj)
                 if consent_obj.get("shift_reports") is not None:
                     if consent_obj.get("shift_reports") is False:
                         should_send = False
@@ -1019,7 +1019,7 @@ class ShiftManagement(commands.Cog):
                 except:
                     pass
 
-            #print("9960")
+            ## print("9960")
 
             try:
                 await bot.shift_management.end_shift(
@@ -1048,7 +1048,7 @@ class ShiftManagement(commands.Cog):
                     try:
                         await member.edit(nick=member.nick.replace(nickname, ""))
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         pass
             role = None
             if shift_type:
@@ -1134,7 +1134,7 @@ class ShiftManagement(commands.Cog):
                         try:
                             await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
-                            print(e)
+                            # print(e)
                             pass
 
                 await bot.shift_management.shifts.update_by_id(shift)
@@ -1267,24 +1267,24 @@ class ShiftManagement(commands.Cog):
                             full = "seconds"
                             num = int(content[:-1])
                             seconds = num
-                            print("seconds")
+                            # print("seconds")
                         if content.endswith("m"):
                             full = "minutes"
                             num = int(content[:-1])
                             seconds = num * 60
-                            print("minutes")
+                            # print("minutes")
                         if content.endswith("h"):
                             full = "hours"
                             num = int(content[:-1])
                             seconds = num * 60 * 60
 
-                            print("hours")
+                            # print("hours")
                         if content.endswith("d"):
                             full = "days"
                             num = int(content[:-1])
                             seconds = num * 60 * 60 * 24
 
-                            print("days")
+                            # print("days")
                     else:
                         return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
                 except:
@@ -1396,24 +1396,24 @@ class ShiftManagement(commands.Cog):
                             full = "seconds"
                             num = int(content[:-1])
                             seconds = num
-                            print("seconds")
+                            # print("seconds")
                         if content.endswith("m"):
                             full = "minutes"
                             num = int(content[:-1])
                             seconds = num * 60
-                            print("minutes")
+                            # print("minutes")
                         if content.endswith("h"):
                             full = "hours"
                             num = int(content[:-1])
                             seconds = num * 60 * 60
 
-                            print("hours")
+                            # print("hours")
                         if content.endswith("d"):
                             full = "days"
                             num = int(content[:-1])
                             seconds = num * 60 * 60 * 24
 
-                            print("days")
+                            # print("days")
                     else:
                         return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
                 except:
@@ -1477,7 +1477,7 @@ class ShiftManagement(commands.Cog):
                         try:
                             await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
-                            print(e)
+                            # print(e)
                             pass
 
                 embed = discord.Embed(
@@ -1572,9 +1572,9 @@ class ShiftManagement(commands.Cog):
         option_selected = None
 
         if flags.without_command_execution is True:
-            print(1)
+            # print(1)
             if ctx.interaction:
-                print(2)
+                # print(2)
                 await ctx.interaction.response.defer(ephemeral=True, thinking=True)
             else:
                 await ctx.defer()
@@ -1582,19 +1582,20 @@ class ShiftManagement(commands.Cog):
             await ctx.defer()
 
         if flags is not None:
-            print(1556)
+            # print(1556)
             option_selected = {
                 flags.onduty: "on",
                 flags.togglebreak: "break",
                 flags.offduty: "off",
             }.get(True)
 
-            print(flags.onduty)
-            print(flags.togglebreak)
-            print(flags.offduty)
+            # print(flags.onduty)
+            # print(flags.togglebreak)
+            # print(flags.offduty)
         else:
-            print(1563)
-        print(option_selected)
+            pass
+            # print(1563)
+        # print(option_selected)
 
         if self.bot.shift_management_disabled is True:
             return await failure_embed(
@@ -1727,7 +1728,7 @@ class ShiftManagement(commands.Cog):
             )
         status = None
 
-        print(shift)
+        # print(shift)
         if shift:
             for item in shift["Breaks"]:
                 if item["EndEpoch"] == 0:
@@ -1903,7 +1904,7 @@ class ShiftManagement(commands.Cog):
             timeout = await view.wait()
         else:
             timeout = False
-        print(1877)
+        # print(1877)
         if timeout:
             new_view = copy.copy(view)
             new_view.clear_items()
@@ -1923,7 +1924,7 @@ class ShiftManagement(commands.Cog):
         if option_selected:
             view.value = option_selected
 
-        print(1897)
+        # print(1897)
         if view.value == "on":
             if status == "on":
                 if msg is not None:
@@ -2074,7 +2075,7 @@ class ShiftManagement(commands.Cog):
                         await ctx.author.edit(nick=new_name)
                         changed_nick = True
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         pass
 
                 old = shift_type
@@ -2216,7 +2217,7 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         pass
 
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
@@ -2313,7 +2314,7 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         pass
             if shift_channel is None:
                 return
@@ -2400,7 +2401,7 @@ class ShiftManagement(commands.Cog):
 
             moderation_embeds = []
             moderation_embeds.append(moderation_embed)
-            print("9867")
+            # print("9867")
 
             for moderation in all_moderation_items:
                 if moderation is not None:
@@ -2432,7 +2433,7 @@ class ShiftManagement(commands.Cog):
                 name=f"You were on-shift for {td_format(time_delta)}.",
                 icon_url=ctx.author.display_avatar.url,
             )
-            print("9919")
+            # print("9919")
 
             time_embed.add_field(
                 name="<:ERMList:1111099396990435428> Shift Start",
@@ -2485,7 +2486,7 @@ class ShiftManagement(commands.Cog):
             consent_obj = await bot.consent.find_by_id(ctx.author.id)
             should_send = True
             if consent_obj:
-                print(consent_obj)
+                # print(consent_obj)
                 if consent_obj.get("shift_reports") is not None:
                     if consent_obj.get("shift_reports") is False:
                         should_send = False
@@ -2586,7 +2587,7 @@ class ShiftManagement(commands.Cog):
                                 nick=ctx.author.nick.replace(nickname, "")
                             )
                         except Exception as e:
-                            print(e)
+                            # print(e)
                             pass
 
                 role = []
@@ -2667,7 +2668,7 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         pass
 
             try:
@@ -2894,7 +2895,7 @@ class ShiftManagement(commands.Cog):
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
         added_staff = []
         for index, staff in enumerate(sorted_staff):
-            print(staff)
+            # print(staff)
             member = discord.utils.get(ctx.guild.members, id=staff["id"])
             if not member:
                 continue
@@ -3081,7 +3082,7 @@ class ShiftManagement(commands.Cog):
 
                 if "Moderations" in document.keys():
                     moderations += len(document["Moderations"])
-                print(document)
+                # print(document)
                 total_seconds += (
                     int(
                         (
@@ -3095,7 +3096,7 @@ class ShiftManagement(commands.Cog):
                     - document["RemovedTime"]
                     - break_seconds
                 )
-                print(total_seconds)
+                # print(total_seconds)
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(
                         {
@@ -3132,7 +3133,7 @@ class ShiftManagement(commands.Cog):
         embed.set_thumbnail(url=ctx.guild.icon.url)
 
         embeds.append(embed)
-        print(sorted_staff)
+        # print(sorted_staff)
         data = []
         if not sorted_staff:
             if shift_type != 0 and shift_type is not None:
@@ -3151,16 +3152,16 @@ class ShiftManagement(commands.Cog):
                 member = await ctx.guild.fetch_member(i["id"])
             except:
                 member = None
-            print(index)
-            print(i)
-            print(member)
+            # print(index)
+            # print(i)
+            # print(member)
             if member:
                 if member.id == ctx.author.id:
                     i["index"] = index
                     my_data = i
 
                 if buffer is None:
-                    print("buffer none")
+                    # print("buffer none")
                     buffer = "%s - %s" % (
                         f"{member.name}",
                         td_format(datetime.timedelta(seconds=i["total_seconds"])),
@@ -3175,7 +3176,7 @@ class ShiftManagement(commands.Cog):
                         ]
                     )
                 else:
-                    print("buffer not none")
+                    # print("buffer not none")
                     buffer = buffer + "\n%s - %s" % (
                         f"{member.name}",
                         td_format(datetime.timedelta(seconds=i["total_seconds"])),
@@ -3201,7 +3202,7 @@ class ShiftManagement(commands.Cog):
                         ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
 
                 else:
-                    print("fields more than 24")
+                    # print("fields more than 24")
                     new_embed = discord.Embed(
                         color=0xED4348,
                         title="<:ERMMisc:1113215605424795648> Leaderboard",
@@ -3293,7 +3294,7 @@ class ShiftManagement(commands.Cog):
                                     ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index}.** {member.mention} - 0 seconds\n"
 
                             else:
-                                print("fields more than 24")
+                                # print("fields more than 24")
                                 new_embed = discord.Embed(
                                     color=0xED4348,
                                     title="<:ERMMisc:1113215605424795648> Leaderboard",
@@ -3365,7 +3366,7 @@ class ShiftManagement(commands.Cog):
                             ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - 0 seconds\n"
 
                     else:
-                        print("fields more than 24")
+                        # print("fields more than 24")
                         new_embed = discord.Embed(
                             color=0xED4348,
                             title="<:ERMMisc:1113215605424795648> Leaderboard",
@@ -3384,9 +3385,9 @@ class ShiftManagement(commands.Cog):
             for item in list_item:
                 combined.append(item)
 
-        print(all_staff)
-        print(sorted_staff)
-        print(buffer)
+        # print(all_staff)
+        # print(sorted_staff)
+        # print(buffer)
 
         if my_data is not None:
             ordinal_formatted = ordinal(my_data["index"] + 1)
@@ -3404,7 +3405,7 @@ class ShiftManagement(commands.Cog):
         try:
             bbytes = buffer.encode("utf-8")
         except Exception as e:
-            print(e)
+            # print(e)
             if len(embeds) == 0:
                 return await failure_embed(ctx, "no shift data has been found.")
             elif embeds[0].description is None:

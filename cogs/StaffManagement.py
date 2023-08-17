@@ -64,7 +64,7 @@ class StaffManagement(commands.Cog):
             return await ctx.reply(
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there are no active RAs in this server."
             )
-       # #print(active_loas)
+       # ## print(active_loas)
         for item in active_loas.copy():
             if item.get("voided") is True:
                 active_loas.remove(item)
@@ -92,7 +92,7 @@ class StaffManagement(commands.Cog):
             loa_object = l["object"]
             member = loa_object["user_id"]
             member = discord.utils.get(ctx.guild.members, id=member)
-           # #print(loa_object["_id"].split("_")[2])
+           # ## print(loa_object["_id"].split("_")[2])
             if member is not None:
                 if len(embeds[-1].description.splitlines()) < 18:
                     embeds[
@@ -365,7 +365,7 @@ class StaffManagement(commands.Cog):
                 }
             )
         ]
-       # #print(active_ras)
+       # ## print(active_ras)
 
         for al in active_ras.copy():
             if al.get("voided") is True:
@@ -399,8 +399,8 @@ class StaffManagement(commands.Cog):
                 new_str = string[6:]
                 stri = "\n".join(string)
                 new_str = "\n".join(new_str)
-               # #print("stri:" + stri)
-               # #print("new_str: " + new_str)
+               # ## print("stri:" + stri)
+               # ## print("new_str: " + new_str)
 
                 string = stri
                 embeds[-1].add_field(
@@ -927,7 +927,7 @@ class StaffManagement(commands.Cog):
             return await ctx.reply(
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there are no active LOAs in this server."
             )
-       # #print(active_loas)
+       # ## print(active_loas)
         for item in active_loas.copy():
             if item.get("voided") is True:
                 active_loas.remove(item)
@@ -955,7 +955,7 @@ class StaffManagement(commands.Cog):
             loa_object = l["object"]
             member = loa_object["user_id"]
             member = discord.utils.get(ctx.guild.members, id=member)
-           # #print(loa_object["_id"].split("_")[2])
+           # ## print(loa_object["_id"].split("_")[2])
             if member is not None:
                 if len(embeds[-1].description.splitlines()) < 18:
                     embeds[
@@ -1241,7 +1241,7 @@ class StaffManagement(commands.Cog):
                 }
             )
         ]
-       # #print(active_loas)
+       # ## print(active_loas)
 
         for al in active_loas.copy():
             if al.get("voided") is True:
@@ -1275,8 +1275,8 @@ class StaffManagement(commands.Cog):
                 new_str = string[6:]
                 stri = "\n".join(string)
                 new_str = "\n".join(new_str)
-               # #print("stri:" + stri)
-               # #print("new_str: " + new_str)
+               # ## print("stri:" + stri)
+               # ## print("new_str: " + new_str)
 
                 string = stri
                 embeds[-1].add_field(

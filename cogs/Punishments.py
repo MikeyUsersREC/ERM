@@ -139,10 +139,10 @@ class Punishments(commands.Cog):
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
         query, _, flags = reason.rpartition("\n")
-       # #print(123)
+       # ## # print(123)
         if (flags := flags.strip()).startswith("/"):
             # There are actually options here
-           # #print(456)
+           # ## # print(456)
             flags = await PunishOptions.convert(ctx, flags)
         else:
             # This line is actually the last line of the query and no option was given
@@ -152,9 +152,9 @@ class Punishments(commands.Cog):
 
         if isinstance(flags, PunishOptions):
             if flags.without_command_execution is True:
-               # #print(1)
+               # ## print(1)
                 if ctx.interaction:
-                   # #print(2)
+                   # ## print(2)
                     await ctx.interaction.response.defer(ephemeral=True, thinking=True)
                 else:
                     await ctx.defer()
@@ -231,7 +231,7 @@ class Punishments(commands.Cog):
                                 warning_type["channel"]
                             )
 
-       # #print(designated_channel)
+       # ## print(designated_channel)
 
         if len(reason) > 800:
             reason = reason[:797] + "..."
@@ -290,7 +290,7 @@ class Punishments(commands.Cog):
         new_past = []
         warns = []
         past = []
-       # #print(requestJson)
+       # ## print(requestJson)
         # Get all punishments of the user in the server in the last hour
         if requestJson.get("errors"):
             return await ctx.reply(
@@ -299,15 +299,15 @@ class Punishments(commands.Cog):
         async for doc in bot.punishments.find_warnings_by_spec(
             ctx.guild.id, user_id=requestJson["id"]
         ):
-           # #print(doc)
+           # ## print(doc)
             if (
                 datetime.datetime.now(tz=pytz.UTC)
                 - datetime.datetime.fromtimestamp(doc["Epoch"], tz=pytz.UTC)
             ).total_seconds() < 3600:
                 new_past.append(doc)
 
-       # #print(designated_channel)
-       # print(requestJson)
+       # ## print(designated_channel)
+       # # print(requestJson)
         try:
             data = requestJson["data"]
         except KeyError:
@@ -374,7 +374,7 @@ class Punishments(commands.Cog):
 
             Embeds.append(embed)
 
-       # print(new_past)
+       # # print(new_past)
         if new_past:
             new_past = [x["Type"] for x in new_past]
             for index, x in enumerate(new_past):
@@ -385,7 +385,7 @@ class Punishments(commands.Cog):
             for i in new_past:
                 if x not in ["Warning", "Kick", "Ban", "Bolo"]:
                     new_past.remove(i)
-           # print(new_past)
+           # # print(new_past)
             if not stop_exception:
                 try:
                     recommended = await agent.recommended_punishment(reason, new_past)
@@ -419,8 +419,8 @@ class Punishments(commands.Cog):
                     color=0xED4348,
                 )
 
-           # print(type)
-           # print(recommended.prediction)
+           # # print(type)
+           # # print(recommended.prediction)
             show_recommendation = False
             if type.lower() != recommended.prediction.lower():
                 if recommended.prediction.lower() in already_types:
@@ -434,10 +434,10 @@ class Punishments(commands.Cog):
         menu = ViewMenu(
             gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None
         )
-       # print(type)
+       # # print(type)
 
         async def warn_function(ctx, menu, designated_channel=None):
-           # print(type)
+           # # print(type)
             user = menu.message.embeds[0].title.split(" ")[0]
             await menu.stop(disable_items=True)
 
@@ -502,7 +502,7 @@ class Punishments(commands.Cog):
                 type.lower().title(),
                 ctx.message.created_at.replace(tzinfo=pytz.UTC).timestamp(),
             )
-           # print(oid)
+           # # print(oid)
 
             shift = await bot.shift_management.get_current_shift(
                 ctx.author, ctx.guild.id
@@ -597,7 +597,7 @@ class Punishments(commands.Cog):
             nonlocal type
             changed_type = recommended.prediction
             did_change_type = True
-           # print(recommended.prediction)
+           # # print(recommended.prediction)
             type = recommended.prediction
             if settings:
                 warning_type = None
@@ -1055,7 +1055,7 @@ class Punishments(commands.Cog):
             try:
                 id = int(id.replace(" ", ""))
             except:
-               # print(id)
+               # # print(id)
                 return await msg.edit(
                     f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** that punishment does not exist!",
                     view=None,
@@ -1135,7 +1135,7 @@ class Punishments(commands.Cog):
             try:
                 id = int(id)
             except:
-               # print(id)
+               # # print(id)
                 return await msg.edit(
                     content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** that punishment does not exist!",
                     view=None,
@@ -1239,9 +1239,9 @@ class Punishments(commands.Cog):
     async def active(self, ctx, user: str = None, flags: SearchOptions = None):
         if isinstance(flags, SearchOptions) and flags is not None:
             if flags.without_command_execution is True:
-               # print(1)
+               # # print(1)
                 if ctx.interaction:
-                   # print(2)
+                   # # print(2)
                     await ctx.interaction.response.defer(ephemeral=True, thinking=True)
                 else:
                     await ctx.defer()
@@ -1309,17 +1309,17 @@ class Punishments(commands.Cog):
                     )
 
                     embeds.append(new_embed)
-                   # print("new embed")
+                   # # print("new embed")
 
                 if vars().get("rbx") not in [None, [], {}]:
                     if "id" in rbx.keys() and "name" in rbx.keys():
-                       # print(f"Added to {embeds[-1]}")
+                       # # print(f"Added to {embeds[-1]}")
                         embeds[-1].add_field(
                             name=f"<:ERMUser:1111098647485108315> {rbx['name']} ({rbx['id']})",
                             value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Reason:** {bolo['Reason']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Staff:** {ctx.guild.get_member(bolo['ModeratorID']).mention if ctx.guild.get_member(bolo['ModeratorID']) is not None else '<@{}>'.format(bolo['ModeratorID'])}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** <t:{int(bolo['Epoch'])}>\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**ID:** {bolo['Snowflake']}",
                             inline=False,
                         )
-                       # print("new field")
+                       # # print("new field")
 
             if ctx.interaction:
                 gtx = ctx.interaction
@@ -1360,7 +1360,7 @@ class Punishments(commands.Cog):
                 timeout = await view.wait()
                 if timeout:
                     return
-               # print(bolos)
+               # # print(bolos)
                 if view.modal.bolo:
                     id = view.modal.bolo.value
 
@@ -1386,8 +1386,8 @@ class Punishments(commands.Cog):
                         )
 
                     doc = matching_docs[0]
-                   # print(f"{doc=}")
-                   # print(doc)
+                   # # print(f"{doc=}")
+                   # # print(doc)
 
                     await bot.punishments.insert_warning(
                         ctx.author.id,
@@ -1418,7 +1418,7 @@ class Punishments(commands.Cog):
                 details=ViewButton.Followup.set_caller_details(taskWrapper)
             )
 
-           # print(embeds)
+           # # print(embeds)
 
             menu.add_buttons(
                 [
@@ -1517,7 +1517,7 @@ class Punishments(commands.Cog):
 
                     embeds.append(new_embed)
 
-                print(f"Added to {embeds[-1]}")
+                # print(f"Added to {embeds[-1]}")
 
                 embeds[-1].add_field(
                     name=f"<:ERMUser:1111098647485108315> {roblox_user['name']} ({roblox_user['id']})",
@@ -1566,7 +1566,7 @@ class Punishments(commands.Cog):
                 timeout = await view.wait()
                 if timeout:
                     return
-                print(bolos)
+                # print(bolos)
                 if view.modal.bolo:
                     id = view.modal.bolo.value
 
@@ -1648,7 +1648,7 @@ class Punishments(commands.Cog):
     #     decoded = read.decode("utf-8")
     #     jsonData = json.loads(decoded)
     #     # except Exception as e:
-    #     #     print(e)
+    #     #     # print(e)
     #     #     return await failure_embed(ctx,
     #     #                              "You have not provided a correct CRP export file. You can find this by doing `/export` with the CRP bot.")
     #
@@ -1714,7 +1714,7 @@ class Punishments(commands.Cog):
         reason = "".join([str(item) for item in reason])
         requestJson = await get_roblox_by_username(user, bot, ctx)
 
-        print(requestJson)
+        # print(requestJson)
         try:
             data = requestJson["data"]
         except KeyError:

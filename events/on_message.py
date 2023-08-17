@@ -137,7 +137,7 @@ class OnMessage(commands.Cog):
                                     ):
                                         discord_user = document["_id"]
 
-                                    print(f"Discord User: {discord_user}")
+                                    # print(f"Discord User: {discord_user}")
                                     if discord_user == 0:
                                         await message.add_reaction("❌")
                                         return await message.add_reaction("6️⃣")
@@ -232,25 +232,25 @@ class OnMessage(commands.Cog):
 
         if aa_detection == True:
             if webhook_channel != None:
-                print("webhook channel")
+                # print("webhook channel")
                 if message.channel.id == webhook_channel.id:
                     for embed in message.embeds:
-                        print("embed found")
+                        # print("embed found")
                         if embed.description not in ["", None] and embed.title not in [
                             "",
                             None,
                         ]:
-                            print("embed desc")
+                            # print("embed desc")
                             if (
                                 "kicked" in embed.description
                                 or "banned" in embed.description
                             ):
-                                print("used kick/ban command")
+                                # print("used kick/ban command")
                                 if (
                                     "Players Kicked" in embed.title
                                     or "Players Banned" in embed.title
                                 ):
-                                    print("command usage")
+                                    # print("command usage")
                                     raw_content = embed.description
                                     if "kicked" in raw_content:
                                         user, command = raw_content.split(" kicked `")
@@ -400,8 +400,8 @@ class OnMessage(commands.Cog):
 
             if not isStaffPermitted:
                 for role in antiping_roles:
-                    print(antiping_roles)
-                    print(role)
+                    # print(antiping_roles)
+                    # print(role)
                     if dataset["antiping"].get("use_hierarchy") in [True, None]:
                         if role is not None:
                             if mention.top_role > role or mention.top_role == role:

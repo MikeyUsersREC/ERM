@@ -58,7 +58,7 @@ async def callback(request):
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         ) as resp:
             data = await resp.json()
-            print(data)
+            # print(data)
             return json({"access_token": data.get("access_token")})
         # return redirect(f'/users/me?token={data.get("access_token")}')
 

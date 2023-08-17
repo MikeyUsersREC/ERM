@@ -39,9 +39,9 @@ class Search(commands.Cog):
 
         if isinstance(flags, SearchOptions) and flags is not None:
             if flags.without_command_execution is True:
-               # print(1)
+               # # print(1)
                 if ctx.interaction:
-                   # print(2)
+                   # # print(2)
                     await ctx.interaction.response.defer(ephemeral=True, thinking=True)
                 else:
                     await ctx.defer()
@@ -328,7 +328,7 @@ class Search(commands.Cog):
                 value=f" {string}",
                 inline=False,
             )
-           # print(result)
+           # # print(result)
 
             for action in result:
                 if action["Guild"] == ctx.guild.id:
