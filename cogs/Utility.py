@@ -134,13 +134,13 @@ class Utility(commands.Cog):
                 else:
                     cmd.full_name = f"{cmd.name}"
                 temps[cmd] = None
-            print(temps)
+           # print(temps)
             temp_apps = []
 
             for command in await bot.tree.fetch_commands():
-                # print(repr(command))
+                ## print(repr(command))
                 # if command.name == "activity":
-                #     print(dir(command))
+                #    # print(dir(command))
 
                 if command.options:
                     for a in command.options:
@@ -177,8 +177,7 @@ class Utility(commands.Cog):
                             )[0]
                         ] = command
                     else:
-                        print("Skipped " + command.name)
-
+                        pass
                 # if isinstance(command, discord.app_commands.AppCommand):
                 #
                 #     # if command.parent is not None:
@@ -233,7 +232,7 @@ class Utility(commands.Cog):
                     color=0xED4348, title="<:ERMHelp:1111318459305951262> Command Help"
                 )
                 full_category = category_to_emoji[category] + " " + category
-                print(commands)
+               # print(commands)
                 string = "\n".join(
                     [
                         f"<:ERMList:1111099396990435428> {app.mention}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{app.description}"
@@ -243,11 +242,11 @@ class Utility(commands.Cog):
                         if (command.extras.get("category", "Miscellaneous")) == category
                     ]
                 )
-                for command, app in temps.items():
-                    print(f"{command.name} {app.name}")
-                    if command.extras.get("category", "Miscellaneous") == "Search":
-                        print("!!!!!!")
-                    print(command.extras.get("category", "Miscellaneous"))
+                # for command, app in temps.items():
+                #    # print(f"{command.name} {app.name}")
+                #     if command.extras.get("category", "Miscellaneous") == "Search":
+                #        # print("!!!!!!")
+                #    # print(command.extras.get("category", "Miscellaneous"))
                 embed.description = string
 
                 logging.info(len(string))

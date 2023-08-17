@@ -382,7 +382,6 @@ class OnMessage(commands.Cog):
 
         for mention in message.mentions:
             isStaffPermitted = False
-            logging.info(isStaffPermitted)
 
             if mention.bot:
                 return

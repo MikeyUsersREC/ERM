@@ -1596,7 +1596,7 @@ class Configuration(commands.Cog):
                     shift_item = None
 
                     for item in shift_types.get("types"):
-                        print(item)
+                       # print(item)
                         if item.get("id") == int(view.value):
                             shift_type = item
                             break

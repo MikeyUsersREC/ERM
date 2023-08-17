@@ -43,7 +43,7 @@ class APIRoutes:
         self.bot = bot
         self.router = APIRouter()
         for i in dir(self):
-            print(i)
+           # print(i)
             if any(
                 [i.startswith(a) for a in ("GET_", "POST_", "PATCH_", "DELETE_")]
             ) and not i.startswith("_"):
@@ -74,7 +74,7 @@ class APIRoutes:
                     icon = icon.with_format("png")
                     icon = str(icon)
                 except Exception as e:
-                    print(e)
+                   # print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 guilds.append(
@@ -102,7 +102,7 @@ class APIRoutes:
                     icon = icon.with_format("png")
                     icon = str(icon)
                 except Exception as e:
-                    print(e)
+                   # print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 try:
@@ -227,7 +227,7 @@ class APIRoutes:
         if has_token:
             if not int(datetime.datetime.now().timestamp()) > has_token["expires_at"]:
                 return has_token
-        print(request)
+       # print(request)
         generated = tokenGenerator()
         object = {
             "_id": request.client.host,
@@ -330,7 +330,7 @@ class APIRoutes:
         """
 
         token_obj = await self.bot.api_tokens.db.find_one({"_id": request.client.host})
-        print(token_obj)
+        #print(token_obj)
         print(request.client.host)
         if not token_obj:
             raise HTTPException(

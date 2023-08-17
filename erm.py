@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-import pprint
 import time
 from dataclasses import MISSING
 from pkgutil import iter_modules
@@ -349,11 +348,10 @@ async def crp_data_to_mongo(jsonData, guildId: int):
                 try:
                     requestJSON = await r.json()
                 except Exception as e:
-                    print(e)
+                    pass
 
-        print(f"Request JSON: {requestJSON}")
+       # print(f"Request JSON: {requestJSON}")
         for user in requestJSON["data"]:
-            pprint.pprint(user)
             name = user["name"]
             userItem = None
             user = discord.utils.get(bot.users, id=int(value["staffId"]))
@@ -493,7 +491,7 @@ async def check_reminders():
                                 replied_user=True, everyone=True, roles=True, users=True
                         ))
                 except Exception as e:
-                    print("Could not send reminder: {}".format(str(e)))
+                   # print("Could not send reminder: {}".format(str(e)))
                     guildObj['reminders'].remove(item)
                     await bot.reminders.update_by_id(guildObj)
                     pass

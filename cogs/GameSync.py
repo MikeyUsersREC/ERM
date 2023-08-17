@@ -230,7 +230,7 @@ class GameSync(commands.Cog):
                     if view.value:
                         if view.value == "done":
                             new_data = await bot.verification.find_by_id(ctx.author.id)
-                            print(new_data)
+                           # #print(new_data)
                             if "isVerified" in new_data.keys():
                                 if new_data["isVerified"] is True:
                                     return await after_verified(roblox_user)

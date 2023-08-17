@@ -35,7 +35,7 @@ async def command_autocomplete(
                 )
             ]
 
-        print(commands)
+       # print(commands)
         commandList = []
         for command in commands:
             if command not in [""]:
@@ -62,18 +62,18 @@ async def punishment_autocomplete(
     bot = (await Context.from_interaction(interaction)).bot
     Data = await bot.punishment_types.find_by_id(interaction.guild.id)
     if Data is None:
-        print(current)
-        print(Data)
+       # print(current)
+       # print(Data)
         return [
             app_commands.Choice(name=item, value=item)
             for item in ["Warning", "Kick", "Ban", "BOLO"]
         ]
     else:
-        print(Data)
+       # print(Data)
         commands = []
         for command in Data["types"]:
             if current not in ["", " "]:
-                print(current)
+               # print(current)
                 if isinstance(command, str):
                     if (
                         command.lower().startswith(current.lower())
@@ -102,7 +102,7 @@ async def punishment_autocomplete(
                 )
             ]
 
-        print(commands)
+       # print(commands)
         commandList = []
         for command in commands:
             if command not in [""]:

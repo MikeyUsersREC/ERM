@@ -36,11 +36,11 @@ async def login():
 async def callback():
     try:
         await discord_oauth.callback()
-        print("callback success")
+       # print("callback success")
     except:
-        print("callback failed")
+       # print("callback failed")
         return redirect(url_for("login"))
-    print("redirecting")
+   # print("redirecting")
     return redirect(url_for("dashboard"))
 
 
@@ -118,15 +118,15 @@ async def dashboardServerPOST(guild_id):
     guild = await ipcClient.request("get_guild", guild_id=guild_id)
 
     if settingsChange == None:
-        print("Variable was null or undefined.")
+       # print("Variable was null or undefined.")
     else:
-        print(settingsChange)
+       # print(settingsChange)
 
     for configItem in guild["settings"]:
         if configItem in settingsChange.keys():
             guild["settings"][configItem] = settingsChange[configItem]
 
-    print(guild["settings"][configItem])
+   # print(guild["settings"][configItem])
 
     if "name" not in guild:
         return redirect(

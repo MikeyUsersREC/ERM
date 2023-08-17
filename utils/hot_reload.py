@@ -40,7 +40,7 @@ class HotReload(commands.Cog):
             except commands.ExtensionNotLoaded:
                 continue
             except commands.ExtensionError:
-                print(f"Couldn't reload extension: {extension}")
+                pass
             else:
                 guild = self.bot.get_guild(987798554972143728)
                 channel = guild.get_channel(1055558545250193418)

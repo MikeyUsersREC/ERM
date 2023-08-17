@@ -22,7 +22,7 @@ class OnReady(commands.Cog):
                 await channel.send(f'Shard `{sid}` has connected.')
             except Exception as e:
                 print(e)
-        print('Shard connection')
+        # print('Shard connection')
         await callback()
 
     @commands.Cog.listener('on_shard_disconnect')
@@ -33,7 +33,7 @@ class OnReady(commands.Cog):
                 await channel.send(f'Shard `{sid}` has disconnected.')
             except Exception as e:
                 print(e)
-        print('Shard disconnection')
+        # print('Shard disconnection')
         await callback()
 
 async def setup(bot):

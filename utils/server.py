@@ -56,7 +56,7 @@ class Server(commands.Cog):
                     icon = icon.with_format("png")
                     icon = str(icon)
                 except Exception as e:
-                    print(e)
+                   # print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 guilds.append(
@@ -83,7 +83,7 @@ class Server(commands.Cog):
                     icon = icon.with_format("png")
                     icon = str(icon)
                 except Exception as e:
-                    print(e)
+                   # print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 try:
@@ -276,7 +276,7 @@ class Server(commands.Cog):
 
         await self.bot.wait_until_ready()
         await self.api.start()
-        print("Server has been started.")
+       # print("Server has been started.")
 
 
 async def setup(bot):

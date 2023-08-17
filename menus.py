@@ -26,7 +26,7 @@ except:
     pip_args.append("install")
     for req in REQUIREMENTS:
         pip_args.append(req)
-    print("Installing requirements: " + str(REQUIREMENTS))
+    # "Installing requirements: " + str(REQUIREMENTS))
     pip.main(args=pip_args)
 
     # do it again
@@ -405,7 +405,7 @@ class MultiDropdown(discord.ui.Select):
             elif isinstance(option, discord.SelectOption):
                 optionList.append(option)
 
-        print(optionList)
+       # print(optionList)
 
         # The placeholder is what will be shown when no option is chosen
         # The min and max values indicate we can only pick one of the three options
@@ -962,8 +962,8 @@ class LOAMenu(discord.ui.View):
                 self.remove_item(item)
         await interaction.message.edit(view=self)
         s_loa = None
-        print(self)
-        print(self.bot)
+       # print(self)
+       # print(self.bot)
         for loa in await self.bot.loas.get_all():
             if (
                 loa["message_id"] == interaction.message.id
@@ -2537,14 +2537,10 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             cell_list = new_sheet.range("D13:H999")
         elif self.type == "ar":
             cell_list = new_sheet.range("D13:I999")
-        from pprint import pprint
 
-        pprint(cell_list)
-        pprint(self.data)
         for c, n_v in zip(cell_list, self.data):
             c.value = str(n_v)
 
-        pprint(cell_list)
         new_sheet.update_cells(cell_list, "USER_ENTERED")
         if self.type == "ar":
             LoAs = sheet.get_worksheet(1)
