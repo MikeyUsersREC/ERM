@@ -409,13 +409,13 @@ class Punishments(commands.Cog):
             if not recommended.modified:
                 embed = discord.Embed(
                     title="<:SConductTitle:1053359821308567592> Recommended Punishment",
-                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/BGfyfqU5fx). You can disable this feature by using `/consent` at any time.",
+                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/FAC629TzBy). You can disable this feature by using `/consent` at any time.",
                     color=0xED4348,
                 )
             else:
                 embed = discord.Embed(
                     title="<:SConductTitle:1053359821308567592> Recommended Punishment",
-                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. This is because this user has been identified as a repeat offender. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/BGfyfqU5fx). You can disable this feature by using `/consent` at any time.",
+                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> Our AI has determined that the recommended punishment for `{reason}` is a `{recommended.prediction}`. This is because this user has been identified as a repeat offender. Would you like to change the type of this punishment to a {recommended.prediction}?\n\n<:EditIcon:1042550862834323597> **Disclaimer**\nThis system is still in development. If you would like to report an issue, please join our [support server](https://discord.gg/FAC629TzBy). You can disable this feature by using `/consent` at any time.",
                     color=0xED4348,
                 )
 

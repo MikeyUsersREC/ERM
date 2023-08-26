@@ -231,7 +231,7 @@ class Search(commands.Cog):
 
         if len(RESULTS) > 1:
             return await ctx.reply(
-                f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** more than one user matches your query. This is a fatal error. Contact our support team at <https://discord.gg/erm-systems-987798554972143728>",
+                f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** more than one user matches your query. This is a fatal error. Contact our support team at <https://discord.gg/FAC629TzBy>",
             )
 
         if len(RESULTS) == 1:

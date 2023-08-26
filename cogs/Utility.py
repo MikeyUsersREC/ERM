@@ -41,7 +41,7 @@ class Utility(commands.Cog):
         await ctx.reply(
             content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** need some help? **Join the support server by clicking the button below!**",
             embed=embed,
-            view=LinkView(label="Support Server", url="https://discord.gg/5pMmJEYazQ"),
+            view=LinkView(label="Support Server", url="https://discord.gg/FAC629TzBy"),
         )
 
     @commands.hybrid_command(
@@ -415,7 +415,7 @@ class Utility(commands.Cog):
         )
         embed.add_field(
             name=f"<:ERMList:1111099396990435428> Links",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Website**](https://ermbot.xyz)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Support Server**](https://discord.gg/erm-systems-987798554972143728)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Invite**](https://discord.com/oauth2/authorize?client_id=978662093408591912&scope=bot%20applications.commands&permissions=8)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Documentation**](https://docs.ermbot.xyz)",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Website**](https://ermbot.xyz)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Support Server**](https://discord.gg/FAC629TzBy)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Invite**](https://discord.com/oauth2/authorize?client_id=978662093408591912&scope=bot%20applications.commands&permissions=8)\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>[**Documentation**](https://docs.ermbot.xyz)",
             inline=False,
         )
         embed.set_author(

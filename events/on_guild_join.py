@@ -30,7 +30,7 @@ class OnGuildJoin(commands.Cog):
 
         embed.add_field(
             name="<:LinkIcon:1044004006109904966> Important Links",
-            value=f"<:ArrowRight:1035003246445596774> [Our Website](https://ermbot.xyz)\n<:ArrowRight:1035003246445596774> [Support Server](https://discord.gg/BGfyfqU5fx)\n<:ArrowRight:1035003246445596774> [Status Page](https://status.ermbot.xyz)",
+            value=f"<:ArrowRight:1035003246445596774> [Our Website](https://ermbot.xyz)\n<:ArrowRight:1035003246445596774> [Support Server](https://discord.gg/FAC629TzBy)\n<:ArrowRight:1035003246445596774> [Status Page](https://status.ermbot.xyz)",
             inline=False,
         )
 

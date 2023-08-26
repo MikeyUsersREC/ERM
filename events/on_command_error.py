@@ -46,7 +46,7 @@ class OnCommandError(commands.Cog):
 
             embed.add_field(
                 name="Support Server",
-                value="[Click here](https://discord.gg/5pMmJEYazQ)",
+                value="[Click here](https://discord.gg/FAC629TzBy)",
                 inline=False,
             )
             embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
