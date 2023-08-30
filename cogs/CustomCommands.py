@@ -247,6 +247,7 @@ class CustomCommands(commands.Cog):
                     await new_msg.edit(view=view)
                 else:
                     content = message_data.get("content")
+
                 embeds = message_data.get("embeds")
                 if content is None:
                     content = ""
@@ -256,9 +257,8 @@ class CustomCommands(commands.Cog):
                 embed_list = []
                 for embed in embeds:
                     embed_list.append(discord.Embed.from_dict(embed))
-
                 if embed_list:
-                    view = MessageCustomisation(ctx.author.id)
+                    view = EmbedCustomisation(ctx.author.id, MessageCustomisation(ctx.author.id, data=cmd))
                     await new_msg.edit(content=content, embeds=embed_list, view=view)
                 else:
                     view = MessageCustomisation(ctx.author.id)
@@ -275,6 +275,10 @@ class CustomCommands(commands.Cog):
 
                 name = command
 
+                updated_message = await ctx.channel.fetch_message(new_msg.id)
+                embeds = [embed.to_dict() for embed in updated_message.embeds]
+
+
                 custom_command_data = {
                     "_id": ctx.guild.id,
                     "commands": [
@@ -282,7 +286,7 @@ class CustomCommands(commands.Cog):
                             "name": cmd.get("name"),
                             "id": cmd.get("id"),
                             "message": {
-                                "content": new_msg.content,
+                                "content": updated_message.content,
                                 "embeds": embeds,
                             },
                             "channel": cmd.get("channel"),
@@ -296,7 +300,7 @@ class CustomCommands(commands.Cog):
                         "name": cmd["name"],
                         "id": cmd["id"],
                         "message": {
-                            "content": resultingMessage.content,
+                            "content": updated_message.content,
                             "embeds": embeds,
                         },
                         "channel": cmd.get("channel"),

@@ -22,7 +22,7 @@ from menus import (
     CustomModalView,
 )
 from utils.timestamp import td_format
-from utils.utils import failure_embed, request_response, failure_embed, end_break
+from utils.utils import failure_embed, request_response, failure_embed, end_break, get_elapsed_time
 
 
 class ShiftManagement(commands.Cog):
@@ -101,33 +101,13 @@ class ShiftManagement(commands.Cog):
             if s["EndEpoch"] != 0:
                 shifts.append(s)
 
-        get_time = (
-            lambda i: (
-                i["EndEpoch"]
-                if i["EndEpoch"] != 0
-                else datetime.datetime.now(tz=pytz.UTC).timestamp()
-            )
-            - i["StartEpoch"]
-            + i["AddedTime"]
-            - i["RemovedTime"]
-            - sum(
-                (
-                    j["EndEpoch"]
-                    if j["EndEpoch"] != 0
-                    else datetime.datetime.now(tz=pytz.UTC).timestamp
-                )
-                - j["StartEpoch"]
-                for j in i["Breaks"]
-            )
-        )
-
-        total_seconds = sum([get_time(i) for i in shifts])
+        total_seconds = sum([get_elapsed_time(i) for i in shifts])
 
         try:
             if shift:
                 embed.add_field(
                     name="<:ERMActivity:1113209176664064060> Current Shift Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_time(shift)))}",
+                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}",
                     inline=False,
                 )
         except:
@@ -196,7 +176,7 @@ class ShiftManagement(commands.Cog):
 
         total_seconds = sum(
             [
-                i["EndEpoch"] - i["StartEpoch"] + i["AddedTime"] - i["RemovedTime"]
+                get_elapsed_time(i)
                 for i in shifts
             ]
         )
@@ -305,12 +285,7 @@ class ShiftManagement(commands.Cog):
                 "EndEpoch": {"$ne": 0},
             }
         ):
-            total_seconds = int(
-                document["EndEpoch"]
-                - document["StartEpoch"]
-                + document["AddedTime"]
-                - document["RemovedTime"]
-            )
+            total_seconds = get_elapsed_time(document)
 
             if document["EndEpoch"] > starting_period.timestamp():
                 quota_seconds = total_seconds
@@ -460,12 +435,7 @@ class ShiftManagement(commands.Cog):
                         shift_channel = temp_shift_channel
 
            # # print(datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC))
-            time_delta = datetime.datetime.now(
-                tz=pytz.UTC
-            ) - datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC)
-
-            time_delta += datetime.timedelta(seconds=shift.get("AddedTime", 0))
-            time_delta -= datetime.timedelta(seconds=shift.get("RemovedTime", 0))
+            time_delta = datetime.timedelta(seconds=get_elapsed_time(shift))
 
             embed2 = discord.Embed(
                 title=f"<:ERMActivity:1113209176664064060> Current Shift",
@@ -801,7 +771,7 @@ class ShiftManagement(commands.Cog):
                 shift["StartEpoch"], tz=pytz.UTC
             )
 
-            time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
+
 
             added_seconds = 0
             removed_seconds = 0
@@ -809,16 +779,6 @@ class ShiftManagement(commands.Cog):
                 added_seconds = shift["AddedTime"]
             if "RemovedTime" in shift.keys():
                 removed_seconds = shift["RemovedTime"]
-
-            try:
-                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
-                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-            except:
-                await failure_embed(
-                    ctx,
-                    f"the user {member.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
-                    embed=None,
-                )
 
             if break_seconds > 0:
                 embed.add_field(
@@ -1658,18 +1618,7 @@ class ShiftManagement(commands.Cog):
             total_seconds = 0
             quota_seconds = 0
 
-            total_seconds = (
-                int(
-                    (
-                        document["EndEpoch"]
-                        if document["EndEpoch"] != 0
-                        else datetime.datetime.now(tz=pytz.UTC).timestamp()
-                    )
-                )
-                - document["StartEpoch"]
-                + document["AddedTime"]
-                - document["RemovedTime"]
-            )
+            total_seconds = get_elapsed_time(document)
 
             if document["StartEpoch"] > starting_period.timestamp():
                 quota_seconds = total_seconds
@@ -1827,9 +1776,7 @@ class ShiftManagement(commands.Cog):
                     if temp_shift_channel is not None:
                         shift_channel = temp_shift_channel
 
-            time_delta = datetime.datetime.now(
-                tz=pytz.UTC
-            ) - datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC)
+            time_delta = datetime.timedelta(seconds=get_elapsed_time(shift))
 
             embed2 = discord.Embed(
                 title=f"<:ERMActivity:1113209176664064060> Current Shift",
@@ -2850,9 +2797,7 @@ class ShiftManagement(commands.Cog):
         for member in staff_members:
             sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
 
-            time_delta = ctx.message.created_at.replace(
-                tzinfo=pytz.UTC
-            ) - datetime.datetime.fromtimestamp(sh["StartEpoch"], tz=pytz.UTC)
+            time_delta = datetime.timedelta(seconds=get_elapsed_time(sh))
 
             break_seconds = 0
             if "Breaks" in sh.keys():
@@ -2863,26 +2808,6 @@ class ShiftManagement(commands.Cog):
                             - item["StartEpoch"]
                         )
 
-            # time_delta = time_delta - datetime.timedelta(
-            #     seconds=break_seconds
-            # )
-
-            added_seconds = 0
-            removed_seconds = 0
-            if "AddedTime" in sh.keys():
-                added_seconds = sh["AddedTime"]
-
-            if "RemovedTime" in sh.keys():
-                removed_seconds = sh["RemovedTime"]
-
-            try:
-                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
-                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-            except OverflowError:
-                await failure_embed(
-                    ctx,
-                    f" the user **{member.mention}**'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
-                )
 
             all_staff.append(
                 {
@@ -3036,22 +2961,8 @@ class ShiftManagement(commands.Cog):
                     moderations += len(document["Moderations"])
 
                 break_seconds = 0
-                for br in document["Breaks"]:
-                    break_seconds += int(br["EndEpoch"]) - int(br["StartEpoch"])
 
-                total_seconds += (
-                    int(
-                        (
-                            document["EndEpoch"]
-                            if document["EndEpoch"] != 0
-                            else datetime.datetime.now(tz=pytz.UTC).timestamp()
-                        )
-                    )
-                    - int(document["StartEpoch"])
-                    + document["AddedTime"]
-                    - document["RemovedTime"]
-                    - break_seconds
-                )
+                total_seconds += get_elapsed_time(document)
 
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(

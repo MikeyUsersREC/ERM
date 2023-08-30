@@ -13,7 +13,7 @@ from reactionmenu import ViewButton, ViewMenu
 from erm import credentials_dict, is_management, scope
 from menus import CustomSelectMenu, GoogleSpreadsheetModification
 from utils.timestamp import td_format
-from utils.utils import invis_embed, request_response, failure_embed
+from utils.utils import invis_embed, request_response, failure_embed, get_elapsed_time
 
 
 class ActivityManagement(commands.Cog):
@@ -203,23 +203,8 @@ class ActivityManagement(commands.Cog):
                 moderations = 0
                 break_seconds = 0
 
-                for breaks in document["Breaks"]:
-                    break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
+                total_seconds = get_elapsed_time(document)
 
-               # ## # print(document)
-                total_seconds += (
-                    int(
-                        (
-                            document["EndEpoch"]
-                            if document["EndEpoch"] != 0
-                            else document["StartEpoch"]
-                        )
-                    )
-                    - int(document["StartEpoch"])
-                    + document["AddedTime"]
-                    - document["RemovedTime"]
-                    - break_seconds
-                )
                 moderations += len(document["Moderations"])
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(
@@ -253,23 +238,8 @@ class ActivityManagement(commands.Cog):
                 moderations = 0
                 break_seconds = 0
 
-                for breaks in document["Breaks"]:
-                    break_seconds += breaks["EndEpoch"] - breaks["StartEpoch"]
-               # ## # print(document)
+                total_seconds = get_elapsed_time(document)
 
-                total_seconds += (
-                    int(
-                        (
-                            document["EndEpoch"]
-                            if document["EndEpoch"] != 0
-                            else document["StartEpoch"]
-                        )
-                    )
-                    - int(document["StartEpoch"])
-                    + document["AddedTime"]
-                    - document["RemovedTime"]
-                    - break_seconds
-                )
                 moderations += len(document["Moderations"])
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(

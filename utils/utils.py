@@ -3,6 +3,7 @@ import typing
 
 import aiohttp
 import discord
+import pytz
 from discord import Embed
 from discord.ext import commands
 from snowflake import SnowflakeGenerator
@@ -118,6 +119,9 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
     return requestJson
 
 
+
+
+
 async def interpret_embed(bot, ctx, channel, embed: dict):
     embed = discord.Embed.from_dict(embed)
     try:
@@ -159,6 +163,31 @@ async def sub_vars(bot, ctx, channel, string, **kwargs):
     string = string.replace("{channel}", channel.mention)
     string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
     return string
+
+def get_elapsed_time(document):
+    total_seconds = 0
+    break_seconds = 0
+    for br in document["Breaks"]:
+        if br['EndEpoch'] != 0:
+            break_seconds += int(br["EndEpoch"]) - int(br["StartEpoch"])
+        else:
+            break_seconds += int(datetime.datetime.now(tz=pytz.UTC).timestamp() - int(br["StartEpoch"]))
+
+    total_seconds += (
+            (int(
+                    (
+                        document["EndEpoch"]
+                        if document["EndEpoch"] != 0
+                        else datetime.datetime.now(tz=pytz.UTC).timestamp()
+                    )
+                )
+                - int(document["StartEpoch"])
+                + document["AddedTime"]
+                - document["RemovedTime"])
+            - break_seconds
+    )
+
+    return total_seconds
 
 
 async def get_prefix(bot, message):

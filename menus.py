@@ -1341,7 +1341,6 @@ class MessageCustomisation(discord.ui.View):
             embeds = msg.get("embeds")
             if embeds != []:
                 self.has_embeds = True
-
         self.user_id = user_id
 
     @discord.ui.button(
