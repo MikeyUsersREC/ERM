@@ -37,6 +37,7 @@ from datamodels.SyncedUsers import SyncedUsers
 from datamodels.Verification import Verification
 from datamodels.Views import Views
 from datamodels.Warnings import Warnings
+from datamodels.StaffConductConfig import StaffConductConfig
 from menus import CompleteReminder, LOAMenu
 from utils.mongo import Document
 from utils.utils import *
@@ -71,9 +72,10 @@ scope = [
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [
-            459374864067723275,
-            877195103335231558,
-            333991360199917568,
+            459374864067723275, # Noah
+            877195103335231558, # Larry
+            333991360199917568, # Doge
+            315336291581558804, # ae453
         ]:  # Implement your own conditions here
             return True
 
@@ -108,6 +110,7 @@ class Bot(commands.AutoShardedBot):
             bot.loas = ActivityNotices(bot.db, "leave_of_absences")
             bot.reminders = Reminders(bot.db, "reminders")
             bot.custom_commands = CustomCommands(bot.db, "custom_commands")
+            bot.staff_conduct = StaffConductConfig(bot.db, "staff_conduct")
             bot.analytics = Analytics(bot.db, "analytics")
             bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
             bot.privacy = Privacy(bot.db, "privacy")
@@ -492,8 +495,8 @@ async def check_reminders():
                         ))
                 except Exception as e:
                    # # print("Could not send reminder: {}".format(str(e)))
-                    guildObj['reminders'].remove(item)
-                    await bot.reminders.update_by_id(guildObj)
+                   #  guildObj['reminders'].remove(item)
+                   #  await bot.reminders.update_by_id(guildObj)
                     pass
     except:
         pass
