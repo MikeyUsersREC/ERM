@@ -122,7 +122,7 @@ class StaffConduct(commands.Cog):
             choiceValue = "create_infraction_type"
 
         if Data["conduct"]:
-            await ctx.reply(
+            message = await ctx.reply(
                 f"{pendingEmoji} **{ctx.author.name},** what would you like to do?",
                 view=(view := CustomSelectMenu(
                     ctx.author.id,
@@ -427,17 +427,62 @@ class StaffConduct(commands.Cog):
 
                 await bot.staff_conduct.upsert(Data)
             case "list_infraction_types":
+                embed = discord.Embed(
+                    title="<:ERMSecurity:1113209656370802879> Infractions", color=0xED4348
+                )
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                embed.set_thumbnail(url=ctx.guild.icon.url)
+                for item in Data["conduct"]:
+                    embed.add_field(
+                        name=f"<:ERMList:1111099396990435428> {item['name']}",
+                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**DM User:** { {True: '<:ERMCheck:1111089850720976906>', False: '<:ERMClose:1111101633389146223>', None: '<:ERMClose:1111101633389146223>'}[item.get('send_dm_status')]}",
+                        inline=False,
+                    )
+
+                if len(embed.fields) == 0:
+                    embed.add_field(
+                        name="<:ERMList:1111099396990435428> No infractions",
+                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912> No infractions have been added.",
+                        inline=False,
+                    )
+
                 await message.edit(
-                    content=f"{pendingEmoji} **{ctx.author.name},** this feature has not been implemented yet! Please check back another time.",
-                    embed=None,
-                    view=None
+                    embed=embed,
+                    view=None,
+                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** you are **viewing** infractions.",
                 )
             case "edit_infraction_type":
+                infractionList = []
+                for item in Data["conduct"]:
+                    infractionList.append(item["name"])
+                else:
+                    if not infractionList:
+                        return await message.edit(
+                            content=f"{errorEmoji} **{ctx.author.name},** there are no Infraction Types to edit!",
+                            view=None,
+                            embed=None
+                        )
+
+                options = []
+                for item in infractionList:
+                    options.append(discord.SelectOption(
+                            label=f"{item}",
+                            description=f"{item}",
+                            value=f"{item}"
+                        )
+                    )
+
+                view = CustomSelectMenu(ctx.author.id, options)
+
                 await message.edit(
-                    content=f"{pendingEmoji} **{ctx.author.name},** this feature has not been implemented yet! Please check back another time.",
-                    embed=None,
-                    view=None
+                    view=view,
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** please select the Infraction Type you wish to edit.",
                 )
+                await view.wait()
+
             case "delete_infraction_type":
                 infractionList = []
                 for item in Data["conduct"]:
@@ -463,7 +508,7 @@ class StaffConduct(commands.Cog):
 
                 await message.edit(
                     view=view,
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** get the name of your Infraction Type ready and input it in the modal!",
+                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** please select the Infraction Type you wish to delete.",
                 )
                 await view.wait()
                 name = view.value
