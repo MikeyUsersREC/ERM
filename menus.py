@@ -1413,7 +1413,7 @@ class MessageCustomisation(discord.ui.View):
                     ephemeral=True,
                 )
 
-            newView = EmbedCustomisation(interaction.user.id, self)
+            newView = EmbedCustomisation(interaction.user.id, self, external=self.external)
             self.newView = newView
             await interaction.message.edit(
                 view=newView, embed=discord.Embed(colour=0xED4348, description="\u200b")
@@ -1452,7 +1452,8 @@ class MessageCustomisation(discord.ui.View):
             else:
                 await int_invis_embed(
                     interaction,
-                    "your custom message has been saved. You can now continue with your configuration."
+                    "your custom message has been saved. You can now continue with your configuration.",
+                    ephemeral=True
                 )
             if not self.persist:
                 await interaction.message.delete()
@@ -1539,7 +1540,8 @@ class EmbedCustomisation(discord.ui.View):
             else:
                 await int_invis_embed(
                     interaction,
-                    "your custom message has been created. You can now continue with your configuration."
+                    "your custom message has been created. You can now continue with your configuration.",
+                    ephemeral=True
                 )
             await interaction.message.edit(view=None)
             if self.parent_view is not None:
