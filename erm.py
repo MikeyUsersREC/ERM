@@ -71,9 +71,10 @@ scope = [
 class Bot(commands.AutoShardedBot):
     async def is_owner(self, user: discord.User):
         if user.id in [
-            459374864067723275,
-            877195103335231558,
-            333991360199917568,
+            459374864067723275, # Noah
+            877195103335231558, # Larry
+            333991360199917568, # Doge
+            315336291581558804, # ae453
         ]:  # Implement your own conditions here
             return True
 
@@ -124,11 +125,14 @@ class Bot(commands.AutoShardedBot):
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
+            BETA_EXT = ["cogs.StaffConduct"]
+
 
             for extension in Extensions:
                 try:
-                    await bot.load_extension(extension)
-                    logging.info(f"Loaded {extension}")
+                    if extension not in BETA_EXT:
+                        await bot.load_extension(extension)
+                        logging.info(f"Loaded {extension}")
                 except Exception as e:
                     logging.error(f"Failed to load extension {extension}.", exc_info=e)
 
@@ -440,14 +444,19 @@ async def change_status():
     )
 
 
-@tasks.loop(minutes=1, reconnect=True)
+@tasks.loop(minutes=1)
 async def check_reminders():
     try:
         async for guildObj in bot.reminders.db.find({}):
-            for item in guildObj["reminders"].copy():
+            new_go = await bot.reminders.db.find_one(guildObj)
+            g_id = new_go['_id']
+            for item in new_go["reminders"].copy():
                 try:
                     if item.get("paused") is True:
                         continue
+
+                    if not new_go.get('_id'):
+                        new_go['_id'] = g_id
                     dT = datetime.datetime.now()
                     interval = item["interval"]
                     full = None
@@ -458,10 +467,10 @@ async def check_reminders():
                     if tD.timestamp() - item["lastTriggered"] >= interval:
                         guild = bot.get_guild(int(guildObj["_id"]))
                         if not guild:
-                            raise Exception
+                            continue
                         channel = guild.get_channel(int(item["channel"]))
                         if not channel:
-                            raise Exception
+                            continue
 
                         roles = []
                         try:
@@ -484,19 +493,23 @@ async def check_reminders():
                         )
                         lastTriggered = tD.timestamp()
                         item["lastTriggered"] = lastTriggered
-                        await bot.reminders.update_by_id(guildObj)
+                        await bot.reminders.update_by_id(new_go)
 
-                        await channel.send(" ".join(roles), embed=embed, view=view,
-                            allowed_mentions = discord.AllowedMentions(
-                                replied_user=True, everyone=True, roles=True, users=True
-                        ))
+                        if not view:
+                            await channel.send(" ".join(roles), embed=embed,
+                                allowed_mentions = discord.AllowedMentions(
+                                    replied_user=True, everyone=True, roles=True, users=True
+                            ))
+                        else:
+                            await channel.send(" ".join(roles), embed=embed, view=view,
+                                               allowed_mentions=discord.AllowedMentions(
+                                                   replied_user=True, everyone=True, roles=True, users=True
+                                               ))
                 except Exception as e:
-                   # # print("Could not send reminder: {}".format(str(e)))
-                    guildObj['reminders'].remove(item)
-                    await bot.reminders.update_by_id(guildObj)
-                    pass
-    except:
-        pass
+                    print(e)
+    except Exception as e:
+        print(e)
+
 
 
 @tasks.loop(minutes=1, reconnect=True)

@@ -501,6 +501,39 @@ class YesNoMenu(discord.ui.View):
         await interaction.edit_original_response(view=self)
         self.stop()
 
+class AcknowledgeMenu(discord.ui.View):
+    def __init__(self, user_id, note: str):
+        super().__init__(timeout=None)
+        self.value = None
+        self.user_id = user_id
+        if note:
+            for child in self.children:
+                if child.label == "NOTE":
+                    child.label = note
+
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label="I acknowledge and understand", style=discord.ButtonStyle.green)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
+                ephemeral=True,
+            )
+        await interaction.response.defer()
+        for item in self.children:
+            item.disabled = True
+        self.value = True
+        await interaction.edit_original_response(view=self)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label="NOTE", style=discord.ButtonStyle.secondary, row=1, disabled=True)
+    async def note(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
 
 class YesNoExpandedMenu(discord.ui.View):
     def __init__(self, user_id):
@@ -1326,15 +1359,17 @@ class AddCustomCommand(discord.ui.View):
 
 
 class MessageCustomisation(discord.ui.View):
-    def __init__(self, user_id, data=None):
+    def __init__(self, user_id, data=None, persist=False, external=False):
         super().__init__(timeout=None)
         if data is None:
             data = {}
+        self.persist = persist
         self.value: typing.Union[str, None] = None
         self.modal: typing.Union[discord.ui.Modal, None] = None
         self.newView: typing.Union[EmbedCustomisation, None] = None
         self.msg = None
         self.has_embeds = False
+        self.external = external
         if data != {}:
             msg = data["message"]
             content = msg["content"]
@@ -1383,11 +1418,18 @@ class MessageCustomisation(discord.ui.View):
             await interaction.message.edit(
                 view=newView, embed=discord.Embed(colour=0xED4348, description="\u200b")
             )
-            await int_invis_embed(
-                interaction,
-                'you can now customise your embed. Once you are done, click the "Finish" button to save your embed.\n\n`{user}` - Mention of the user running the command\n`{username}` - The name of the user running the command\n`{display_name}` - The nickname of the user running the command\n`{time}` - The current time, represented in the Discord format of timestamps\n`{server}` - The name of the current guild\n`{channel}` - The channel where the command is running.\n`{prefix}` - The prefix of the server\n\nNote that these prefixes will **not show in the preview** however will work when the command is run.',
-                ephemeral=True,
-            )
+            if not self.external:
+                await int_invis_embed(
+                    interaction,
+                    'you can now customise your embed. Once you are done, click the "Finish" button to save your embed.\n\n`{user}` - Mention of the user running the command\n`{username}` - The name of the user running the command\n`{display_name}` - The nickname of the user running the command\n`{time}` - The current time, represented in the Discord format of timestamps\n`{server}` - The name of the current guild\n`{channel}` - The channel where the command is running.\n`{prefix}` - The prefix of the server\n\nNote that these prefixes will **not show in the preview** however will work when the command is run.',
+                    ephemeral=True,
+                )
+            else:
+                await int_invis_embed(
+                    interaction,
+                    'you can now customise your embed. Once you are done, click the "Finish" button to save your embed.',
+                    ephemeral=True
+                )
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await interaction.followup.send(
@@ -1401,12 +1443,19 @@ class MessageCustomisation(discord.ui.View):
             self.msg = interaction.message
             self.newView = self
             self.value = "finish"
-            await int_invis_embed(
-                interaction,
-                "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
-                ephemeral=True,
-            )
-            await interaction.message.delete()
+            if not self.external:
+                await int_invis_embed(
+                    interaction,
+                    "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
+                    ephemeral=True,
+                )
+            else:
+                await int_invis_embed(
+                    interaction,
+                    "your custom message has been saved. You can now continue with your configuration."
+                )
+            if not self.persist:
+                await interaction.message.delete()
             self.stop()
         else:
             await interaction.response.defer(ephemeral=True, thinking=True)
@@ -1415,14 +1464,14 @@ class MessageCustomisation(discord.ui.View):
                 ephemeral=True,
             )
 
-
 class EmbedCustomisation(discord.ui.View):
-    def __init__(self, user_id, view=None):
+    def __init__(self, user_id, view=None, external=False):
         super().__init__(timeout=None)
         self.value: typing.Union[str, None] = None
         self.modal: typing.Union[discord.ui.Modal, None] = None
         self.msg = None
         self.user_id = user_id
+        self.external = external
         if view is not None:
             self.parent_view = view
         else:
@@ -1481,11 +1530,17 @@ class EmbedCustomisation(discord.ui.View):
                 item.disabled = True
             self.msg = interaction.message
             self.value = "finish"
-            await int_invis_embed(
-                interaction,
-                "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
-                ephemeral=True,
-            )
+            if not self.external:
+                await int_invis_embed(
+                    interaction,
+                    "your custom command has been created. You can now use it in your server by using `/custom run <name> [channel]`!",
+                    ephemeral=True,
+                )
+            else:
+                await int_invis_embed(
+                    interaction,
+                    "your custom message has been created. You can now continue with your configuration."
+                )
             await interaction.message.edit(view=None)
             if self.parent_view is not None:
                 self.parent_view.stop()
@@ -2825,12 +2880,12 @@ class Verification(discord.ui.View):
 
 
 class CustomSelectMenu(discord.ui.View):
-    def __init__(self, user_id, options: list):
+    def __init__(self, user_id, options: list, limit: typing.Optional[int] = 1):
         super().__init__(timeout=None)
         self.value = None
         self.user_id = user_id
 
-        self.add_item(CustomDropdown(self.user_id, options))
+        self.add_item(CustomDropdown(self.user_id, options, limit))
 
 
 class MultiPaginatorMenu(discord.ui.View):
@@ -2915,6 +2970,77 @@ class RoleSelect(discord.ui.View):
                 content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
                 ephemeral=True,
             )
+
+class ExpandedRoleSelect(discord.ui.View):
+    def __init__(self, user_id, **kwargs):
+        super().__init__(timeout=None)
+        self.value = None
+        self.user_id = user_id
+        self.limit = 25
+
+        for key, value in kwargs.items():
+            if key == "limit":
+                self.limit = value
+
+        if self.limit > 1:
+            self.placeholder = "Select roles"
+        else:
+            self.placeholder = "Select a role"
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, row=0)
+    async def role_select(
+        self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, row=3)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        selects = []
+        for child in self.children:
+            if isinstance(child, discord.ui.RoleSelect):
+                selects.append(child)
+
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            value_list = [s.values for s in selects]
+            new_list = []
+            for list_of_values in value_list:
+                for value in list_of_values:
+                    if value not in new_list:
+                        new_list.append(value)
+            self.value = new_list
+            self.stop()
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await interaction.followup.send(
+                content=f"<:ERMClose:1111101633389146223>  **{interaction.user.name}**, this is not your menu to edit.",
+                ephemeral=True,
+            )
+
+    @discord.ui.button(label="I have more than 25 roles", style=discord.ButtonStyle.secondary, row=4)
+    async def expand(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for i in self.children:
+            print(i)
+            if isinstance(i, discord.ui.RoleSelect):
+                for value in range(1,3):
+                    print(value)
+                    instance = discord.ui.RoleSelect(row=value, placeholder="Select roles", max_values=25)
+                    print('?')
+                    # async def callback(interaction: discord.Interaction, select: discord.ui.Select):
+                    #     await interaction.response.defer()
+
+                    instance.callback = i.callback
+                    print('*')
+                    self.add_item(instance)
+                    print('!')
+        button.disabled = True
+        await interaction.message.edit(view=self)
+        await interaction.response.defer()
 
 
 class UserSelect(discord.ui.View):

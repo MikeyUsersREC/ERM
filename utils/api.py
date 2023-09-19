@@ -538,23 +538,28 @@ class APIRoutes:
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
+        
+        if not await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        ):
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
 
-        if not token_obj:
-            raise HTTPException(status_code=401, detail="Invalid authorization")
+        if token_obj:
+            link_string_obj = await self.bot.link_strings.db.find_one(
+                {"_id": token_obj["link_string"]}
+            )
 
-        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
-            raise HTTPException(status_code=401, detail="Invalid authorization")
+            if not link_string_obj:
+                raise HTTPException(status_code=401, detail="Invalid link string")
 
-        link_string_obj = await self.bot.link_strings.db.find_one(
-            {"_id": token_obj["link_string"]}
-        )
-
-        if not link_string_obj:
-            raise HTTPException(status_code=401, detail="Invalid link string")
-
-        guild = self.bot.get_guild(link_string_obj["guild"])
+            guild = self.bot.get_guild(link_string_obj["guild"])
+        else:
+            data = await request.json()
+            guild = data['guild']
 
         if not guild:
             raise HTTPException(status_code=404, detail="Guild not found")
@@ -564,18 +569,19 @@ class APIRoutes:
         if not body:
             raise HTTPException(status_code=400, detail="No body provided")
 
-        if not body.get("steam_id"):
-            raise HTTPException(status_code=400, detail="No steam ID provided")
+        if token_obj:
+            if not body.get("steam_id"):
+                raise HTTPException(status_code=400, detail="No steam ID provided")
 
-        fivem_link = await self.bot.fivem_links.db.find_one(
-            {"steam_id": body["steam_id"]}
-        )
+            fivem_link = await self.bot.fivem_links.db.find_one(
+                {"steam_id": body["steam_id"]}
+            )
 
-        if not fivem_link:
-            raise HTTPException(status_code=404, detail="Could not find FiveM link")
+            if not fivem_link:
+                raise HTTPException(status_code=404, detail="Could not find FiveM link")
 
-        if not fivem_link.get("_id"):
-            raise HTTPException(status_code=404, detail="Could not find FiveM link")
+            if not fivem_link.get("_id"):
+                raise HTTPException(status_code=404, detail="Could not find FiveM link")
 
         try:
             member = await guild.fetch_member(fivem_link["_id"])

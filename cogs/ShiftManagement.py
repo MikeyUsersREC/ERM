@@ -336,7 +336,10 @@ class ShiftManagement(commands.Cog):
             n,
             "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4],
         )  # NOQA: E731
-        ms_delta = datetime.timedelta(seconds=member_seconds)
+        try:
+            ms_delta = datetime.timedelta(seconds=member_seconds)
+        except:
+            ms_delta = datetime.timedelta(seconds=0)
 
         if ordinal_place is not None:
             ordinal_formatted = ordinal(ordinal_place)
