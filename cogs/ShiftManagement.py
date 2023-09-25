@@ -872,7 +872,7 @@ class ShiftManagement(commands.Cog):
             new_ctx.guild = None
             new_ctx.channel = dm_channel
 
-            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=900)
+            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
             menu.add_page(embed)
 
             moderation_embed = discord.Embed(
@@ -2336,7 +2336,7 @@ class ShiftManagement(commands.Cog):
             new_ctx.guild = None
             new_ctx.channel = dm_channel
 
-            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=900)
+            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
             menu.add_page(embed)
 
             moderation_embed = discord.Embed(
@@ -2853,7 +2853,7 @@ class ShiftManagement(commands.Cog):
         else:
             gtx = ctx
 
-        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, timeout=900)
+        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, timeout=None)
         for embed in embeds:
             menu.add_page(embed=embed)
         menu._pc = _PageController(menu.pages)
@@ -3330,7 +3330,7 @@ class ShiftManagement(commands.Cog):
                 else:
                     interaction = ctx
 
-                menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=900)
+                menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
                 for embed in embeds:
                     if embed is not None:
                         menu.add_pages([embed])
@@ -3390,7 +3390,7 @@ class ShiftManagement(commands.Cog):
                 interaction,
                 menu_type=ViewMenu.TypeEmbed,
                 show_page_director=True,
-                timeout=900,
+                timeout=None,
             )
             for embed in embeds:
                 if embed is not None:
