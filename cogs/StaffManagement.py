@@ -117,7 +117,7 @@ class StaffManagement(commands.Cog):
         else:
             new_ctx = ctx
 
-        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=900)
         for e in embeds:
             menu.add_page(
                 embed=e,
@@ -980,7 +980,7 @@ class StaffManagement(commands.Cog):
         else:
             new_ctx = ctx
 
-        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
+        menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=900)
         for e in embeds:
             menu.add_page(
                 embed=e,

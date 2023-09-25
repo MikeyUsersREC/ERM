@@ -393,7 +393,7 @@ class Search(commands.Cog):
                 interaction = ctx.interaction
             else:
                 interaction = ctx
-            menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
+            menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=900)
             menu.add_buttons([ViewButton.back(), ViewButton.next()])
             new_embeds = []
             for embed in embeds:
@@ -916,7 +916,7 @@ class Search(commands.Cog):
     #             interaction = ctx.interaction
     #         else:
     #             interaction = ctx
-    #         menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
+    #         menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=900)
     #         menu.add_buttons([ViewButton.back(), ViewButton.next()])
     #         new_embeds = []
     #         for embed in embeds:

@@ -37,7 +37,7 @@ except:
 # noinspection PyUnresolvedReferences
 class Setup(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -434,7 +434,7 @@ class MultiDropdown(discord.ui.Select):
 
 class SettingsSelectMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -463,7 +463,7 @@ class AdministrativeSelectMenu(discord.ui.View):
 
 class YesNoMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -503,7 +503,7 @@ class YesNoMenu(discord.ui.View):
 
 class AcknowledgeMenu(discord.ui.View):
     def __init__(self, user_id, note: str):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         if note:
@@ -537,7 +537,7 @@ class AcknowledgeMenu(discord.ui.View):
 
 class YesNoExpandedMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -580,7 +580,7 @@ class YesNoExpandedMenu(discord.ui.View):
 
 class YesNoColourMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -665,7 +665,7 @@ class CustomExecutionButton(discord.ui.Button):
 
 class ColouredMenu(discord.ui.View):
     def __init__(self, user_id, buttons: list[str]):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         for index, button in enumerate(buttons):
@@ -685,7 +685,7 @@ class ColouredMenu(discord.ui.View):
 
 class EnableDisableMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -726,7 +726,7 @@ class EnableDisableMenu(discord.ui.View):
 
 class LinkPathwayMenu(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -769,7 +769,7 @@ class LinkPathwayMenu(discord.ui.View):
 
 class ShiftModify(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -840,7 +840,7 @@ class ShiftModify(discord.ui.View):
 
 class ActivityNoticeModification(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -911,7 +911,7 @@ class ActivityNoticeModification(discord.ui.View):
 
 class PartialShiftModify(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -952,7 +952,7 @@ class PartialShiftModify(discord.ui.View):
 
 class LOAMenu(discord.ui.View):
     def __init__(self, bot, roles, loa_roles, user_id, code):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.bot = bot
         if isinstance(roles, list):
@@ -1159,7 +1159,7 @@ class LOAMenu(discord.ui.View):
 
 class AddReminder(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -1182,7 +1182,7 @@ class AddReminder(discord.ui.View):
 
 class ManageReminders(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, CustomModal] = None
@@ -1281,7 +1281,7 @@ class ManageReminders(discord.ui.View):
 
 class CustomisePunishmentType(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[
@@ -1329,7 +1329,7 @@ class CustomisePunishmentType(discord.ui.View):
 
 class AddCustomCommand(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.information = {}
         self.user_id = user_id
@@ -1360,7 +1360,7 @@ class AddCustomCommand(discord.ui.View):
 
 class MessageCustomisation(discord.ui.View):
     def __init__(self, user_id, data=None, persist=False, external=False):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         if data is None:
             data = {}
         self.persist = persist
@@ -1466,7 +1466,7 @@ class MessageCustomisation(discord.ui.View):
 
 class EmbedCustomisation(discord.ui.View):
     def __init__(self, user_id, view=None, external=False):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value: typing.Union[str, None] = None
         self.modal: typing.Union[discord.ui.Modal, None] = None
         self.msg = None
@@ -1787,7 +1787,7 @@ class EmbedCustomisation(discord.ui.View):
 
 class RemoveReminder(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -1810,7 +1810,7 @@ class RemoveReminder(discord.ui.View):
 
 class RemoveCustomCommand(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -1835,7 +1835,7 @@ class RemoveCustomCommand(discord.ui.View):
 
 class RemoveWarning(discord.ui.View):
     def __init__(self, bot, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.bot = bot
         self.user_id = user_id
@@ -2319,7 +2319,7 @@ class EditWarningSelect(discord.ui.Select):
 
 class EditWarning(discord.ui.View):
     def __init__(self, bot, user_id, options):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value: typing.Union[None, str] = None
         self.bot: typing.Union[
             discord.ext.commands.Bot, discord.ext.commands.AutoShardedBot
@@ -2333,7 +2333,7 @@ class EditWarning(discord.ui.View):
 
 class RemoveBOLO(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -2378,7 +2378,7 @@ class RemoveBOLO(discord.ui.View):
 
 class EnterRobloxUsername(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, RobloxUsername] = None
@@ -2402,7 +2402,7 @@ class EnterRobloxUsername(discord.ui.View):
 
 class RequestDataView(discord.ui.View):
     def __init__(self, user_id, title: str, label: str):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, RequestData] = None
@@ -2436,7 +2436,7 @@ class CustomModalView(discord.ui.View):
         label: str,
         options: typing.List[typing.Tuple[str, discord.ui.TextInput]],
     ):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, CustomModal] = None
@@ -2469,7 +2469,7 @@ class CustomModalView(discord.ui.View):
 
 class GoogleSpreadsheetModification(discord.ui.View):
     def __init__(self, config: dict, scopes: list, label: str, url: str):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.add_item(discord.ui.Button(label=label, url=url))
         self.config = config
         self.scopes = scopes
@@ -2520,7 +2520,7 @@ class GoogleSpreadsheetModification(discord.ui.View):
 
 class LinkView(discord.ui.View):
     def __init__(self, label: str, url: str):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.add_item(discord.ui.Button(label=label, url=url))
 
 
@@ -2547,7 +2547,7 @@ class RequestGoogleSpreadsheet(discord.ui.View):
         else:
             self.additional_data = []
 
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.user_id = user_id
         self.config = config
         self.scopes = scopes
@@ -2624,7 +2624,7 @@ class RequestGoogleSpreadsheet(discord.ui.View):
 
 class LiveMenu(discord.ui.View):
     def __init__(self, bot, ctx):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.bot = bot
         self.context = ctx
 
@@ -2727,7 +2727,7 @@ class LiveMenu(discord.ui.View):
 
         class PunishModal(discord.ui.Modal):
             def __init__(modal):
-                super().__init__(title="Log Punishment", timeout=None)
+                super().__init__(title="Log Punishment", timeout=900)
                 modal.add_item(
                     discord.ui.TextInput(label="ROBLOX User", placeholder="ROBLOX User")
                 )
@@ -2777,7 +2777,7 @@ class LiveMenu(discord.ui.View):
 
         class SearchModal(discord.ui.Modal):
             def __init__(modal):
-                super().__init__(title="Search User", timeout=None)
+                super().__init__(title="Search User", timeout=900)
                 modal.add_item(
                     discord.ui.TextInput(label="ROBLOX User", placeholder="ROBLOX User")
                 )
@@ -2810,7 +2810,7 @@ class LiveMenu(discord.ui.View):
 
         class SearchModal(discord.ui.Modal):
             def __init__(modal):
-                super().__init__(title="BOLO Search", timeout=None)
+                super().__init__(title="BOLO Search", timeout=900)
                 modal.add_item(
                     discord.ui.TextInput(label="ROBLOX User", placeholder="Optional, leave empty for all", required=False)
                 )
@@ -2836,7 +2836,7 @@ class LiveMenu(discord.ui.View):
 
 class Verification(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.modal: typing.Union[None, RobloxUsername] = None
@@ -2881,7 +2881,7 @@ class Verification(discord.ui.View):
 
 class CustomSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list, limit: typing.Optional[int] = 1):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -2890,7 +2890,7 @@ class CustomSelectMenu(discord.ui.View):
 
 class MultiPaginatorMenu(discord.ui.View):
     def __init__(self, user_id, options: list, pages: dict):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -2899,7 +2899,7 @@ class MultiPaginatorMenu(discord.ui.View):
 
 class WarningDropdownMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         new_options = []
@@ -2920,7 +2920,7 @@ class WarningDropdownMenu(discord.ui.View):
 
 class MultiSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -2929,7 +2929,7 @@ class MultiSelectMenu(discord.ui.View):
 
 class RoleSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.limit = 25
@@ -2973,7 +2973,7 @@ class RoleSelect(discord.ui.View):
 
 class ExpandedRoleSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.limit = 25
@@ -3045,7 +3045,7 @@ class ExpandedRoleSelect(discord.ui.View):
 
 class UserSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.limit = 25
@@ -3090,7 +3090,7 @@ class UserSelect(discord.ui.View):
 
 class ChannelSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
         self.limit = 25
@@ -3137,7 +3137,7 @@ class ChannelSelect(discord.ui.View):
 
 class CheckMark(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
         self.value = None
         self.user_id = user_id
 
@@ -3172,7 +3172,7 @@ class CheckMark(discord.ui.View):
 
 class CompleteReminder(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)
+        super().__init__(timeout=900)
 
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.

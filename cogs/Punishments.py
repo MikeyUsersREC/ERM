@@ -432,7 +432,7 @@ class Punishments(commands.Cog):
             gtx = ctx
 
         menu = ViewMenu(
-            gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=None
+            gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=False, timeout=900
         )
        # # print(type)
 
@@ -1327,7 +1327,7 @@ class Punishments(commands.Cog):
                 gtx = ctx
 
             menu = ViewMenu(
-                gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None
+                gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=900
             )
             menu.add_buttons([ViewButton.back(), ViewButton.next()])
             for e in embeds:
@@ -1534,7 +1534,7 @@ class Punishments(commands.Cog):
                 gtx,
                 menu_type=ViewMenu.TypeEmbed,
                 show_page_director=False,
-                timeout=None,
+                timeout=900,
             )
             menu.add_buttons([ViewButton.back(), ViewButton.next()])
             for e in embeds:
@@ -1904,7 +1904,7 @@ class Punishments(commands.Cog):
             interaction,
             menu_type=ViewMenu.TypeEmbed,
             show_page_director=False,
-            timeout=None,
+            timeout=900,
         )
 
         async def task():

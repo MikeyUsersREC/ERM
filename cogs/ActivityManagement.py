@@ -581,7 +581,7 @@ class ActivityManagement(commands.Cog):
             gtx = ctx
 
         menu = ViewMenu(
-            gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=None
+            gtx, menu_type=ViewMenu.TypeEmbed, show_page_director=True, timeout=900
         )
         for page_embed in embeds:
             menu.add_page(
