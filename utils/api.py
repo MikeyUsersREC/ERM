@@ -6,13 +6,13 @@ import uvicorn
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
-from erm import Bot, management_predicate, is_staff, staff_predicate
+from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check
 from typing import Annotated
 from decouple import config
 
 from pydantic import BaseModel
 
-from helpers import MockContext
+# from helpers import MockContext
 from utils.utils import tokenGenerator
 
 
@@ -109,14 +109,12 @@ class APIRoutes:
                     user = await guild.fetch_member(user_id)
                 except:
                     continue
-                mock_context = MockContext(bot=self.bot, author=user, guild=guild)
 
                 permission_level = 0
-                if await management_predicate(mock_context):
+                if await management_check(self.bot, guild, user):
                     permission_level = 2
-                elif await staff_predicate(mock_context):
+                elif await staff_check(self.bot, guild, user):
                     permission_level = 1
-                del mock_context
                 if permission_level > 0:
                     guilds.append(
                         {
@@ -147,14 +145,13 @@ class APIRoutes:
         except (discord.Forbidden, discord.HTTPException):
             return {"permission_level": 0}
 
-        mock_context = MockContext(bot=self.bot, author=user, guild=guild)
-
         permission_level = 0
-        if await management_predicate(mock_context):
+        if await management_check(self.bot, guild, user):
             permission_level = 2
-        elif await staff_predicate(mock_context):
+        elif await staff_check(self.bot, guild, user):
             permission_level = 1
-        del mock_context
+
+
         return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):

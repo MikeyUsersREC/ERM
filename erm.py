@@ -241,31 +241,27 @@ async def loggingCommandExecution(ctx: commands.Context):
 client = roblox.Client()
 
 
-async def staff_predicate(ctx):
-    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+async def staff_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
     if guild_settings:
         if "role" in guild_settings["staff_management"].keys():
             if guild_settings["staff_management"]["role"] != "":
                 if isinstance(guild_settings["staff_management"]["role"], list):
                     for role in guild_settings["staff_management"]["role"]:
-                        if role in [role.id for role in ctx.author.roles]:
+                        if role in [role.id for role in member.roles]:
                             return True
                 elif isinstance(guild_settings["staff_management"]["role"], int):
                     if guild_settings["staff_management"]["role"] in [
-                        role.id for role in ctx.author.roles
+                        role.id for role in member.roles
                     ]:
                         return True
-    if ctx.author.guild_permissions.manage_messages:
+    if member.guild_permissions.manage_messages:
         return True
     return False
 
 
-def is_staff():
-    return commands.check(staff_predicate)
-
-
-async def management_predicate(ctx):
-    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+async def management_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
     if guild_settings:
         if "management_role" in guild_settings["staff_management"].keys():
             if guild_settings["staff_management"]["management_role"] != "":
@@ -273,18 +269,29 @@ async def management_predicate(ctx):
                     guild_settings["staff_management"]["management_role"], list
                 ):
                     for role in guild_settings["staff_management"]["management_role"]:
-                        if role in [role.id for role in ctx.author.roles]:
+                        if role in [role.id for role in member.roles]:
                             return True
                 elif isinstance(
                     guild_settings["staff_management"]["management_role"], int
                 ):
                     if guild_settings["staff_management"]["management_role"] in [
-                        role.id for role in ctx.author.roles
+                        role.id for role in member.roles
                     ]:
                         return True
-    if ctx.author.guild_permissions.manage_guild:
+    if member.guild_permissions.manage_guild:
         return True
     return False
+
+async def staff_predicate(ctx):
+    return await staff_check(ctx.bot, ctx.guild, ctx.author)
+
+
+def is_staff():
+    return commands.check(staff_predicate)
+
+
+async def management_predicate(ctx):
+    return await management_check(ctx.bot, ctx.guild, ctx.author)
 
 
 def is_management():

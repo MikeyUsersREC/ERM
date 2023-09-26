@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 
-from erm import management_predicate, staff_predicate
-from helpers import MockContext
+from erm import management_predicate, staff_predicate, management_check, staff_check
+# from helpers import MockContext
 import aiohttp
 from decouple import config
 
@@ -14,23 +14,17 @@ class OnMemberUpdate(commands.Cog):
     async def on_member_update(self, before, after):
         if before.roles != after.roles:
             # Role have been changed
-            before_context = MockContext(bot=self.bot, author=after, guild=after.guild)
-
             old_permission = 0
-            if await management_predicate(before_context):
+            if await management_check(self.bot, before.guild, before):
                 old_permission = 2
-            elif await staff_predicate(before_context):
+            elif await staff_check(self.bot, before.guild, before):
                 old_permission = 1
-            del before_context
-
-            after_context = MockContext(bot=self.bot, author=before, guild=before.guild)
 
             after_permission = 0
-            if await management_predicate(after_context):
+            if await management_check(self.bot, after.guild, after):
                 after_permission = 2
-            elif await staff_predicate(after_context):
+            elif await staff_check(self.bot, after.guild, after):
                 after_permission = 1
-            del after_context
 
 
             if after_permission != old_permission:
