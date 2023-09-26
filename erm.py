@@ -444,6 +444,7 @@ except:
 
 @tasks.loop(hours=1)
 async def change_status():
+    await bot.wait_until_ready()
     logging.info("Changing status")
     status = f"/help | ermbot.xyz"
     await bot.change_presence(
