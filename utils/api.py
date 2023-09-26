@@ -116,7 +116,7 @@ class APIRoutes:
                     permission_level = 2
                 elif await staff_predicate(mock_context):
                     permission_level = 1
-
+                del mock_context
                 if permission_level > 0:
                     guilds.append(
                         {
@@ -154,7 +154,7 @@ class APIRoutes:
             permission_level = 2
         elif await staff_predicate(mock_context):
             permission_level = 1
-
+        del mock_context
         return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):

@@ -16,27 +16,32 @@ class OnMemberUpdate(commands.Cog):
             # Role have been changed
             before_context = MockContext(bot=self.bot, author=after, guild=after.guild)
 
-            after_permission = 0
+            old_permission = 0
             if await management_predicate(before_context):
-                after_permission = 2
+                old_permission = 2
             elif await staff_predicate(before_context):
-                after_permission = 1
+                old_permission = 1
+            del before_context
 
             after_context = MockContext(bot=self.bot, author=before, guild=before.guild)
 
-            old_permission = 0
+            after_permission = 0
             if await management_predicate(after_context):
-                old_permission = 2
+                after_permission = 2
             elif await staff_predicate(after_context):
-                old_permission = 1
+                after_permission = 1
+            del after_context
+
 
             if after_permission != old_permission:
-                url_var = config("BASE_API_URL")
-                if url_var in ["", None]:
-                    return
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(f"{url_var}/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
-                        pass
+                    url_var = config("BASE_API_URL")
+                    if url_var in ["", None]:
+                        return
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(f"{url_var}/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
+                            pass
+
+
 
 async def setup(bot):
     await bot.add_cog(OnMemberUpdate(bot))
