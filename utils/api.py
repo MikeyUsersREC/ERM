@@ -190,6 +190,37 @@ class APIRoutes:
 
         return settings
 
+
+    async def POST_get_guild_roles(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+
+
+
+        return [{
+            "name": role.name,
+            "id": role.id,
+            "color": role.color
+        } for role in guild.roles]
+
+    async def POST_get_guild_chnanels(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+
+        return [{
+            "name": channel.name,
+            "id": channel.id,
+            "type": channel.type
+        } for channel in guild.channels]
+
     async def POST_get_last_warnings(self, request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
