@@ -185,6 +185,7 @@ bot = Bot(
         replied_user=False, everyone=False, roles=False
     ),
 )
+bot.debug_servers = [987798554972143728]
 bot.is_synced = False
 bot.shift_management_disabled = False
 bot.punishments_disabled = False
@@ -535,11 +536,7 @@ async def check_loa():
                     await bot.loas.update_by_id(loaObject)
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-                        embed = discord.Embed(
-                            title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
-                            description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
-                            color=0xED4348,
-                        )
+
                         member = guild.get_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
@@ -601,7 +598,7 @@ async def check_loa():
                                                 pass
                         if member:
                             try:
-                                await member.send(embed=embed)
+                                await member.send(f"<:ERMAlert:1113237478892130324> **{member.name}**, your {loaObject['type']} has expired in **{guild.name}**.")
                             except discord.Forbidden:
                                 pass
     except:

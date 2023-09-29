@@ -1160,9 +1160,14 @@ class Configuration(commands.Cog):
                     view=view,
                 )
                 await view.wait()
-                settingContents["shift_management"][
-                    "nickname_prefix"
-                ] = view.modal.nickname.value
+                if view.modal.nickname.value.lower() in ["none", "clear"]:
+                    settingContents["shift_management"][
+                        "nickname_prefix"
+                    ] = None
+                else:
+                    settingContents["shift_management"][
+                        "nickname_prefix"
+                    ] = view.modal.nickname.value
             elif content == "maximum_staff":
                 view = CustomSelectMenu(
                     ctx.author.id,
@@ -1516,7 +1521,10 @@ class Configuration(commands.Cog):
                         if timeout:
                             return
 
-                        nickname = view.modal.nickname.value
+                        if view.modal.nickname.value.lower() in ["none", "clear"]:
+                            nickname = None
+                        else:
+                            nickname = view.modal.nickname.value
                     else:
                         nickname = None
 
@@ -2441,24 +2449,25 @@ class Configuration(commands.Cog):
                     content = content.strip()
                     total_seconds = 0
 
-                    if content.endswith(("s", "m", "h", "d")):
-                        if content.endswith("s"):
-                            total_seconds = int(content.removesuffix("s"))
-                        if content.endswith("m"):
-                            total_seconds = int(content.removesuffix("m")) * 60
-                        if content.endswith("h"):
-                            total_seconds = int(content.removesuffix("h")) * 60 * 60
-                        if content.endswith("d"):
-                            total_seconds = (
-                                int(content.removesuffix("d")) * 60 * 60 * 24
-                            )
-                    else:
-                        return await failure_embed(
-                            ctx,
-                            "we could not translate your time. Remember to end it with s/m/h/d.",
-                        )
+                    try:
+                        if content.endswith(("s", "m", "h", "d")):
+                            if content.endswith("s"):
+                                total_seconds = int(content.removesuffix("s"))
+                            if content.endswith("m"):
+                                total_seconds = int(content.removesuffix("m")) * 60
+                            if content.endswith("h"):
+                                total_seconds = int(content.removesuffix("h")) * 60 * 60
+                            if content.endswith("d"):
+                                total_seconds = (
+                                    int(content.removesuffix("d")) * 60 * 60 * 24
+                                )
+                        else:
+                            await failure_embed(ctx,
+                                                'we could not translate your time. Though, setup will continue and you can set your Shift Management quota later.')
 
-                    settingContents["shift_management"]["quota"] = total_seconds
+                        settingContents["shift_management"]["quota"] = total_seconds
+                    except:
+                        await failure_embed(ctx, 'we could not translate your time. Though, setup will continue and you can set your Shift Management quota later.')
 
             # privacyDefault = {"_id": ctx.guild.id, "global_warnings": True}
 

@@ -970,6 +970,7 @@ class LOAMenu(discord.ui.View):
         label="Accept", style=discord.ButtonStyle.green, custom_id="loamenu:accept"
     )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         if not any(
             role in [r.id for r in interaction.user.roles] for role in self.roles
         ):
