@@ -53,7 +53,7 @@ except:
     sentry_url = ""
     bloxlink_api_key = ""
 
-discord.utils.setup_logging(level=logging.DEBUG)
+discord.utils.setup_logging(level=logging.INFO)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -127,11 +127,14 @@ class Bot(commands.AutoShardedBot):
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
+            BETA_EXT = ["cogs.StaffConduct"]
+
 
             for extension in Extensions:
                 try:
-                    await bot.load_extension(extension)
-                    logging.info(f"Loaded {extension}")
+                    if extension not in BETA_EXT:
+                        await bot.load_extension(extension)
+                        logging.info(f"Loaded {extension}")
                 except Exception as e:
                     logging.error(f"Failed to load extension {extension}.", exc_info=e)
 
@@ -184,6 +187,7 @@ bot = Bot(
         replied_user=False, everyone=False, roles=False
     ),
 )
+bot.debug_servers = [987798554972143728]
 bot.is_synced = False
 bot.shift_management_disabled = False
 bot.punishments_disabled = False
@@ -240,31 +244,27 @@ async def loggingCommandExecution(ctx: commands.Context):
 client = roblox.Client()
 
 
-async def staff_predicate(ctx):
-    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+async def staff_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
     if guild_settings:
         if "role" in guild_settings["staff_management"].keys():
             if guild_settings["staff_management"]["role"] != "":
                 if isinstance(guild_settings["staff_management"]["role"], list):
                     for role in guild_settings["staff_management"]["role"]:
-                        if role in [role.id for role in ctx.author.roles]:
+                        if role in [role.id for role in member.roles]:
                             return True
                 elif isinstance(guild_settings["staff_management"]["role"], int):
                     if guild_settings["staff_management"]["role"] in [
-                        role.id for role in ctx.author.roles
+                        role.id for role in member.roles
                     ]:
                         return True
-    if ctx.author.guild_permissions.manage_messages:
+    if member.guild_permissions.manage_messages:
         return True
     return False
 
 
-def is_staff():
-    return commands.check(staff_predicate)
-
-
-async def management_predicate(ctx):
-    guild_settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+async def management_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
     if guild_settings:
         if "management_role" in guild_settings["staff_management"].keys():
             if guild_settings["staff_management"]["management_role"] != "":
@@ -272,18 +272,29 @@ async def management_predicate(ctx):
                     guild_settings["staff_management"]["management_role"], list
                 ):
                     for role in guild_settings["staff_management"]["management_role"]:
-                        if role in [role.id for role in ctx.author.roles]:
+                        if role in [role.id for role in member.roles]:
                             return True
                 elif isinstance(
                     guild_settings["staff_management"]["management_role"], int
                 ):
                     if guild_settings["staff_management"]["management_role"] in [
-                        role.id for role in ctx.author.roles
+                        role.id for role in member.roles
                     ]:
                         return True
-    if ctx.author.guild_permissions.manage_guild:
+    if member.guild_permissions.manage_guild:
         return True
     return False
+
+async def staff_predicate(ctx):
+    return await staff_check(ctx.bot, ctx.guild, ctx.author)
+
+
+def is_staff():
+    return commands.check(staff_predicate)
+
+
+async def management_predicate(ctx):
+    return await management_check(ctx.bot, ctx.guild, ctx.author)
 
 
 def is_management():
@@ -436,6 +447,7 @@ except:
 
 @tasks.loop(hours=1)
 async def change_status():
+    await bot.wait_until_ready()
     logging.info("Changing status")
     status = f"/help | ermbot.xyz"
     await bot.change_presence(
@@ -443,14 +455,19 @@ async def change_status():
     )
 
 
-@tasks.loop(minutes=1, reconnect=True)
+@tasks.loop(minutes=1)
 async def check_reminders():
     try:
         async for guildObj in bot.reminders.db.find({}):
-            for item in guildObj["reminders"].copy():
+            new_go = await bot.reminders.db.find_one(guildObj)
+            g_id = new_go['_id']
+            for item in new_go["reminders"].copy():
                 try:
                     if item.get("paused") is True:
                         continue
+
+                    if not new_go.get('_id'):
+                        new_go['_id'] = g_id
                     dT = datetime.datetime.now()
                     interval = item["interval"]
                     full = None
@@ -461,10 +478,10 @@ async def check_reminders():
                     if tD.timestamp() - item["lastTriggered"] >= interval:
                         guild = bot.get_guild(int(guildObj["_id"]))
                         if not guild:
-                            raise Exception
+                            continue
                         channel = guild.get_channel(int(item["channel"]))
                         if not channel:
-                            raise Exception
+                            continue
 
                         roles = []
                         try:
@@ -487,20 +504,22 @@ async def check_reminders():
                         )
                         lastTriggered = tD.timestamp()
                         item["lastTriggered"] = lastTriggered
-                        await bot.reminders.update_by_id(guildObj)
+                        await bot.reminders.update_by_id(new_go)
 
-                        await channel.send(" ".join(roles), embed=embed, view=view,
-                            allowed_mentions = discord.AllowedMentions(
-                                replied_user=True, everyone=True, roles=True, users=True
-                        ))
+                        if not view:
+                            await channel.send(" ".join(roles), embed=embed,
+                                allowed_mentions = discord.AllowedMentions(
+                                    replied_user=True, everyone=True, roles=True, users=True
+                            ))
+                        else:
+                            await channel.send(" ".join(roles), embed=embed, view=view,
+                                               allowed_mentions=discord.AllowedMentions(
+                                                   replied_user=True, everyone=True, roles=True, users=True
+                                               ))
                 except Exception as e:
-                   # # print("Could not send reminder: {}".format(str(e)))
-                   #  guildObj['reminders'].remove(item)
-                   #  await bot.reminders.update_by_id(guildObj)
-                    pass
-    except:
-        pass
-
+                    print(e)
+    except Exception as e:
+        print(e)
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
@@ -517,11 +536,7 @@ async def check_loa():
                     await bot.loas.update_by_id(loaObject)
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-                        embed = discord.Embed(
-                            title=f'<:Clock:1035308064305332224> {loaObject["type"]} Expired',
-                            description=f"<:ArrowRight:1035003246445596774> Your {loaObject['type']} in {guild.name} has expired.",
-                            color=0xED4348,
-                        )
+
                         member = guild.get_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
@@ -583,7 +598,7 @@ async def check_loa():
                                                 pass
                         if member:
                             try:
-                                await member.send(embed=embed)
+                                await member.send(f"<:ERMAlert:1113237478892130324> **{member.name}**, your {loaObject['type']} has expired in **{guild.name}**.")
                             except discord.Forbidden:
                                 pass
     except:

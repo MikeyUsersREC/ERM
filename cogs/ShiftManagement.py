@@ -615,7 +615,9 @@ class ShiftManagement(commands.Cog):
                         changed_nick = True
                     except Exception as e:
                         ## print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
+
 
                 await bot.shift_management.add_shift_by_user(
                     member, shift_type, [], ctx.guild.id
@@ -743,8 +745,8 @@ class ShiftManagement(commands.Cog):
                     try:
                         await member.edit(nick=member.nick.replace(nickname, ""))
                     except Exception as e:
-                        ## print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
 
             embed = discord.Embed(
                 title=f"<:ERMRemove:1113207777662345387> Shift Ended", color=0xED4348
@@ -1011,8 +1013,8 @@ class ShiftManagement(commands.Cog):
                     try:
                         await member.edit(nick=member.nick.replace(nickname, ""))
                     except Exception as e:
-                        # print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
             role = None
             if shift_type:
                 if shift_type.get("role"):
@@ -1097,8 +1099,8 @@ class ShiftManagement(commands.Cog):
                         try:
                             await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
-                            # print(e)
-                            pass
+                            if ctx.guild.id in bot.debug_servers:
+                                await ctx.send(f'`DEBUG:` {str(e)}')
 
                 await bot.shift_management.shifts.update_by_id(shift)
 
@@ -1440,8 +1442,8 @@ class ShiftManagement(commands.Cog):
                         try:
                             await member.edit(nick=member.nick.replace(nickname, ""))
                         except Exception as e:
-                            # print(e)
-                            pass
+                            if ctx.guild.id in bot.debug_servers:
+                                await ctx.send(f'`DEBUG:` {str(e)}')
 
                 embed = discord.Embed(
                     title=f"<:ERMTrash:1111100349244264508> {member.name}",
@@ -1533,6 +1535,15 @@ class ShiftManagement(commands.Cog):
     @is_staff()
     async def manage(self, ctx, flags: DutyManageOptions):
         option_selected = None
+
+        settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        if not settings:
+            return await failure_embed(ctx, 'this server is not setup!')
+        if not settings['shift_management']:
+            return await failure_embed(ctx, 'this server is not setup!')
+        if not settings['shift_management']['channel']:
+            return await failure_embed(ctx, "this server does not have a shift management channel!")
+
 
         if flags.without_command_execution is True:
             # print(1)
@@ -2025,8 +2036,8 @@ class ShiftManagement(commands.Cog):
                         await ctx.author.edit(nick=new_name)
                         changed_nick = True
                     except Exception as e:
-                        # print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
 
                 old = shift_type
                 shift_type = shift_type["name"] if shift_type else "Default"
@@ -2167,8 +2178,8 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        # print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
 
             embed.set_thumbnail(url=ctx.author.display_avatar.url)
             embed.set_footer(text="Staff Logging Module")
@@ -2264,8 +2275,8 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        # print(e)
-                        pass
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
             if shift_channel is None:
                 return
 
@@ -2537,8 +2548,8 @@ class ShiftManagement(commands.Cog):
                                 nick=ctx.author.nick.replace(nickname, "")
                             )
                         except Exception as e:
-                            # print(e)
-                            pass
+                            if ctx.guild.id in bot.debug_servers:
+                                await ctx.send(f'`DEBUG:` {str(e)}')
 
                 role = []
                 if shift_type:
@@ -2618,9 +2629,8 @@ class ShiftManagement(commands.Cog):
                             nick=ctx.author.nick.replace(nickname, "")
                         )
                     except Exception as e:
-                        # print(e)
-                        pass
-
+                        if ctx.guild.id in bot.debug_servers:
+                            await ctx.send(f'`DEBUG:` {str(e)}')
             try:
                 embed.set_thumbnail(url=ctx.author.display_avatar.url)
                 embed.set_author(

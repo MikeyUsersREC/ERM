@@ -974,9 +974,14 @@ class Punishments(commands.Cog):
                 await view.wait()
                 value = view.modal.data.value
 
-                await bot.punishments.remove_warnings_by_spec(
-                    guild_id=ctx.guild.id, user_id=int(value)
-                )
+                try:
+                    await bot.punishments.remove_warnings_by_spec(
+                        guild_id=ctx.guild.id, user_id=int(value)
+                    )
+                except:
+                    await msg.edit(
+                        content=f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, you did not put a correct Roblox ID."
+                    )
 
                 await msg.edit(
                     content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** all warnings from ID **{value}** have been removed!",

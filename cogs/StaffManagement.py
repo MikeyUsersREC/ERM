@@ -142,6 +142,16 @@ class StaffManagement(commands.Cog):
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
 
+        if not configItem['staff_management']:
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there is no RA settings. Please ask your server administrator."
+            )
+
+        if not configItem['staff_management'].get('channel'):
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there is no RA channel to request to. Please ask your server administrator."
+            )
+
         try:
             timeObj = reason.split(" ")[-1]
         except:
@@ -149,18 +159,23 @@ class StaffManagement(commands.Cog):
         reason = list(reason)
 
         documents = [
-            document
+            document if document.get('voided', False) is False else None
             async for document in bot.loas.db.find(
                 {
                     "guild_id": ctx.guild.id,
                     "user_id": ctx.author.id,
-                    "type": "RA",
+                    "type": "LOA",
                     "expiry": {"$gt": datetime.datetime.now(tz=pytz.UTC).timestamp()},
                     "denied": False,
                     "expired": False,
                 }
             )
         ]
+
+        for doc in documents.copy():
+            if doc is None:
+                documents.remove(doc)
+
         if len(documents) > 0:
             return await ctx.reply(
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** you already have a pending RA, or an active RA."
@@ -891,8 +906,12 @@ class StaffManagement(commands.Cog):
         extras={"category": "Staff Management"},
         with_app_command=True,
     )
+    @app_commands.describe(time="How long are you going to be on LoA for? (s/m/h/d)")
+    @app_commands.describe(reason="What is your reason for going on LoA?")
     async def loa(self, ctx, time, *, reason):
-        pass
+        await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
+
+
 
     @loa.command(
         name="active",
@@ -989,17 +1008,6 @@ class StaffManagement(commands.Cog):
         menu.add_buttons([ViewButton.back(), ViewButton.next()])
         await menu.start()
 
-    @commands.hybrid_group(
-        name="loa",
-        description="File a Leave of Absence request",
-        extras={"category": "Staff Management"},
-        with_app_command=True,
-    )
-    @app_commands.describe(time="How long are you going to be on LoA for? (s/m/h/d)")
-    @app_commands.describe(reason="What is your reason for going on LoA?")
-    async def loa(self, ctx, time, *, reason):
-        await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
-
     @loa.command(
         name="request",
         description="File a Leave of Absence request",
@@ -1015,6 +1023,15 @@ class StaffManagement(commands.Cog):
             return await ctx.reply(
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this server is not setup! Run `/setup` to setup the bot."
             )
+        if not configItem['staff_management']:
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there is no LOA settings. Please ask your server administrator."
+            )
+
+        if not configItem['staff_management'].get('channel'):
+            return await ctx.reply(
+                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there is no LOA channel to request to. Please ask your server administrator."
+            )
 
         try:
             timeObj = reason.split(" ")[-1]
@@ -1023,7 +1040,7 @@ class StaffManagement(commands.Cog):
         reason = list(reason)
 
         documents = [
-            document
+            document if document.get('voided', False) is False else None
             async for document in bot.loas.db.find(
                 {
                     "guild_id": ctx.guild.id,
@@ -1035,6 +1052,11 @@ class StaffManagement(commands.Cog):
                 }
             )
         ]
+
+        for doc in documents.copy():
+            if doc is None:
+                documents.remove(doc)
+
         if len(documents) > 0:
             return await ctx.reply(
                 f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** you already have a pending LOA, or an active LOA."

@@ -3,8 +3,8 @@ import discord
 from aiohttp import web
 from discord.ext import commands
 
-from erm import management_predicate
-from helpers import MockContext
+from erm import management_predicate, management_check, staff_check
+# from helpers import MockContext
 
 
 async def is_staff(ctx: commands.Context):
@@ -90,12 +90,11 @@ class Server(commands.Cog):
                     user = await guild.fetch_member(user_id)
                 except:
                     continue
-                mock_context = MockContext(bot=self.bot, author=user, guild=guild)
 
                 permission_level = 0
-                if await management_predicate(mock_context):
+                if await management_check(self.bot, guild, user):
                     permission_level = 2
-                elif await is_staff(mock_context):
+                elif await staff_check(self.bot, guild, user):
                     permission_level = 1
 
                 if permission_level > 0:
@@ -128,12 +127,11 @@ class Server(commands.Cog):
         except (discord.Forbidden, discord.HTTPException):
             return web.json_response({"permission_level": 0})
 
-        mock_context = MockContext(bot=self.bot, author=user, guild=guild)
 
         permission_level = 0
-        if await management_predicate(mock_context):
+        if await management_check(self.bot, guild, user):
             permission_level = 2
-        elif await is_staff(mock_context):
+        elif await staff_check(self.bot, guild, user):
             permission_level = 1
 
         return web.json_response({"permission_level": permission_level})

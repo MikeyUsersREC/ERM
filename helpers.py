@@ -595,18 +595,18 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
 
         self.__str__.return_value = str(self.emoji)
 
+#
+# webhook_instance = discord.Webhook(
+#     data=unittest.mock.MagicMock(), session=unittest.mock.MagicMock()
+# )
 
-webhook_instance = discord.Webhook(
-    data=unittest.mock.MagicMock(), session=unittest.mock.MagicMock()
-)
 
-
-class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
-    """
-    A MagicMock subclass to mock Webhook objects using an AsyncWebhookAdapter.
-    Instances of this class will follow the specifications of `discord.Webhook` instances. For
-    more information, see the `MockGuild` docstring.
-    """
-
-    spec_set = webhook_instance
-    additional_spec_asyncs = ("send", "edit", "delete", "execute")
+# class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
+#     """
+#     A MagicMock subclass to mock Webhook objects using an AsyncWebhookAdapter.
+#     Instances of this class will follow the specifications of `discord.Webhook` instances. For
+#     more information, see the `MockGuild` docstring.
+#     """
+#
+#     spec_set = webhook_instance
+#     additional_spec_asyncs = ("send", "edit", "delete", "execute")
