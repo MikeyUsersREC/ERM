@@ -1,9 +1,11 @@
 import datetime
 
+import aiohttp
 from bson import ObjectId
 from discord.ext import commands
 import discord
 from utils.mongo import Document
+from decouple import config
 
 
 class ShiftManagement:
@@ -56,6 +58,17 @@ class ShiftManagement:
             "EndEpoch": 0,
         }
         await self.shifts.db.insert_one(data)
+
+        try:
+            url_var = config("BASE_API_URL")
+            if url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                            f"{url_var}/Internal/SyncStartShift/{data['_id']}"):
+                        pass
+        except:
+            pass
+
         return data["_id"]
 
     async def add_time_to_shift(self, identifier: str, seconds: int):
@@ -93,6 +106,16 @@ class ShiftManagement:
         for breaks in document["Breaks"]:
             if breaks["EndEpoch"] == 0:
                 breaks["EndEpoch"] = int(datetime.datetime.now().timestamp())
+
+        try:
+            url_var = config("BASE_API_URL")
+            if url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                            f"{url_var}/Internal/SyncEndShift/{document['UserID']}/{guild_id}"):
+                        pass
+        except:
+            pass
 
         await self.shifts.update_by_id(document)
         return document

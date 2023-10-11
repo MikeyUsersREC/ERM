@@ -2,7 +2,9 @@ import asyncio
 import copy
 import datetime
 from io import BytesIO
-from utils.flags import DutyManageOptions
+
+import aiohttp
+
 import discord
 import num2words
 import pytz
@@ -1104,6 +1106,16 @@ class ShiftManagement(commands.Cog):
 
                 await bot.shift_management.shifts.update_by_id(shift)
 
+                try:
+                    url_var = config("BASE_API_URL")
+                    if url_var not in ["", None]:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(
+                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}"):
+                                pass
+                except:
+                    pass
+
                 await msg.edit(
                     embed=None,
                     view=None,
@@ -1533,7 +1545,7 @@ class ShiftManagement(commands.Cog):
         extras={"category": "Shift Management", "ignoreDefer": True},
     )
     @is_staff()
-    async def manage(self, ctx, flags: DutyManageOptions):
+    async def manage(self, ctx):
         option_selected = None
 
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
@@ -1543,33 +1555,6 @@ class ShiftManagement(commands.Cog):
             return await failure_embed(ctx, 'this server is not setup!')
         if not settings['shift_management']['channel']:
             return await failure_embed(ctx, "this server does not have a shift management channel!")
-
-
-        if flags.without_command_execution is True:
-            # print(1)
-            if ctx.interaction:
-                # print(2)
-                await ctx.interaction.response.defer(ephemeral=True, thinking=True)
-            else:
-                await ctx.defer()
-        else:
-            await ctx.defer()
-
-        if flags is not None:
-            # print(1556)
-            option_selected = {
-                flags.onduty: "on",
-                flags.togglebreak: "break",
-                flags.offduty: "off",
-            }.get(True)
-
-            # print(flags.onduty)
-            # print(flags.togglebreak)
-            # print(flags.offduty)
-        else:
-            pass
-            # print(1563)
-        # print(option_selected)
 
         if self.bot.shift_management_disabled is True:
             return await failure_embed(
@@ -2517,7 +2502,15 @@ class ShiftManagement(commands.Cog):
                 )
 
                 await bot.shift_management.shifts.update_by_id(shift)
-
+                try:
+                    url_var = config("BASE_API_URL")
+                    if url_var not in ["", None]:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(
+                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}"):
+                                pass
+                except:
+                    pass
                 await msg.edit(
                     embed=None,
                     view=None,

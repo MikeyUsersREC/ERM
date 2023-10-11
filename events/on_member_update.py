@@ -28,12 +28,15 @@ class OnMemberUpdate(commands.Cog):
 
 
             if after_permission != old_permission:
-                    url_var = config("BASE_API_URL")
-                    if url_var in ["", None]:
-                        return
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(f"{url_var}/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
-                            pass
+                    try:
+                        url_var = config("BASE_API_URL")
+                        if url_var in ["", None]:
+                            return
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
+                                pass
+                    except:
+                        pass
 
 
 

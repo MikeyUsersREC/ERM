@@ -4,6 +4,7 @@ import typing
 import aiohttp
 import discord
 import pytz
+from decouple import config
 from discord import Embed
 from discord.ext import commands
 from snowflake import SnowflakeGenerator
@@ -207,6 +208,17 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
     for item in shift["Breaks"]:
         if item["EndEpoch"] == 0:
             item["EndEpoch"] = ctx.message.created_at.timestamp()
+
+    try:
+        url_var = config("BASE_API_URL")
+        if url_var in ["", None]:
+            return
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    f"{url_var}/Internal/SyncEndBreak/{shift['_id']}"):
+                pass
+    except:
+        pass
 
     await bot.shift_management.shifts.update_by_id(shift)
 

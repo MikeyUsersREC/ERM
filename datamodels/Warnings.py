@@ -1,6 +1,8 @@
 from copy import copy
 
+import aiohttp
 from bson import ObjectId
+from decouple import config
 from discord.ext import commands
 import discord
 
@@ -114,6 +116,16 @@ class Warnings(Document):
                 "UntilEpoch": int(until_epoch if until_epoch is not None else 0),
             }
         )
+
+        try:
+            url_var = config("BASE_API_URL")
+            if url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                            f"{url_var}/Internal/SyncCreatePunishment/{identifier}"):
+                        pass
+        except:
+            pass
 
         return identifier
 
@@ -294,6 +306,15 @@ class Warnings(Document):
 
         selected_item = await self.db.find_one({"Snowflake": identifier})
         if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
+            try:
+                url_var = config("BASE_API_URL")
+                if url_var not in ["", None]:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                                f"{url_var}/Internal/SyncDeletePunishment/{selected_item['_id']}"):
+                            pass
+            except:
+                pass
             return await self.db.delete_one({"Snowflake": identifier})
         else:
             return ValueError("Warning does not exist.")
