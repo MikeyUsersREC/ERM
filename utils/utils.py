@@ -215,7 +215,9 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             return
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                    f"{url_var}/Internal/SyncEndBreak/{shift['_id']}"):
+                    f"{url_var}/Internal/SyncEndBreak/{shift['_id']}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                 pass
     except:
         pass

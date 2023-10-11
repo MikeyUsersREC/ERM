@@ -64,7 +64,9 @@ class ShiftManagement:
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
-                            f"{url_var}/Internal/SyncStartShift/{data['_id']}"):
+                            f"{url_var}/Internal/SyncStartShift/{data['_id']}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                         pass
         except:
             pass
@@ -112,7 +114,9 @@ class ShiftManagement:
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
-                            f"{url_var}/Internal/SyncEndShift/{document['UserID']}/{guild_id}"):
+                            f"{url_var}/Internal/SyncEndShift/{document['UserID']}/{guild_id}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                         pass
         except:
             pass

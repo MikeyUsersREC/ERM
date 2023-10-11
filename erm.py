@@ -133,6 +133,9 @@ class Bot(commands.AutoShardedBot):
                     if extension not in BETA_EXT:
                         await bot.load_extension(extension)
                         logging.info(f"Loaded {extension}")
+                    elif environment == "DEVELOPMENT":
+                        await bot.load_extension(extension)
+                        logging.info(f"Loaded {extension}")
                 except Exception as e:
                     logging.error(f"Failed to load extension {extension}.", exc_info=e)
 

@@ -1111,7 +1111,9 @@ class ShiftManagement(commands.Cog):
                     if url_var not in ["", None]:
                         async with aiohttp.ClientSession() as session:
                             async with session.get(
-                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}"):
+                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                                 pass
                 except:
                     pass
@@ -2507,7 +2509,9 @@ class ShiftManagement(commands.Cog):
                     if url_var not in ["", None]:
                         async with aiohttp.ClientSession() as session:
                             async with session.get(
-                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}"):
+                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                                 pass
                 except:
                     pass

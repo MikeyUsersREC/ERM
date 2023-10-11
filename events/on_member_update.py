@@ -33,7 +33,9 @@ class OnMemberUpdate(commands.Cog):
                         if url_var in ["", None]:
                             return
                         async with aiohttp.ClientSession() as session:
-                            async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}"):
+                            async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
                                 pass
                     except:
                         pass
