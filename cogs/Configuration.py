@@ -573,7 +573,7 @@ class Configuration(commands.Cog):
             try:
                 await ctx.reply(embed=embed, view=view)
             except HTTPException:
-                await ctx.reply("<:ERMClose:1111101633389146223> **{ctx.author.name}**, I am unable to send this embed as it is too long.")
+                await ctx.reply(f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, I am unable to send this embed as it is too long.")
 
     @config_group.command(
         name="change",
