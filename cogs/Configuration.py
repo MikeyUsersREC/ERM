@@ -570,8 +570,10 @@ class Configuration(commands.Cog):
                     value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> No shift types have been added.",
                     inline=False,
                 )
-
-            await ctx.reply(embed=embed, view=view)
+            try:
+                await ctx.reply(embed=embed, view=view)
+            except HTTPException:
+                await ctx.reply(f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, I am unable to send this embed as it is too long.")
 
     @config_group.command(
         name="change",
