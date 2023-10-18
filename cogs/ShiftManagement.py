@@ -727,28 +727,32 @@ class ShiftManagement(commands.Cog):
                 )
 
             if shift.get("Nickname"):
-                if shift.get("Nickname") == member.nick:
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else None
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
+                nickname = None
+                if shift.get("Type") is not None:
+                    settings = await bot.settings.get_settings(ctx.guild.id)
+                    shift_types = None
+                    if settings.get("shift_types"):
+                        shift_types = settings["shift_types"].get("types", [])
+                    else:
+                        shift_types = []
+                    for s in shift_types:
+                        if s["name"] == shift.get("Type"):
+                            shift_type = s
+                            nickname = s["nickname"] if s.get("nickname") else ''
+                if nickname is None:
+                    nickname = configItem["shift_management"].get(
+                        "nickname_prefix", ""
+                    )
+
+                if nickname in member.nick:
                     try:
-                        await member.edit(nick=member.nick.replace(nickname, ""))
+                        await member.edit(
+                            nick=member.nick.replace(nickname, "")
+                        )
                     except Exception as e:
                         if ctx.guild.id in bot.debug_servers:
                             await ctx.send(f'`DEBUG:` {str(e)}')
+
 
             embed = discord.Embed(
                 title=f"<:ERMRemove:1113207777662345387> Shift Ended", color=0xED4348
@@ -996,24 +1000,28 @@ class ShiftManagement(commands.Cog):
                 return await failure_embed(ctx, "shift not found. Could not end shift.")
 
             if shift.get("Nickname"):
-                if shift.get("Nickname") == member.nick:
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else None
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
+                nickname = None
+                if shift.get("Type") is not None:
+                    settings = await bot.settings.get_settings(ctx.guild.id)
+                    shift_types = None
+                    if settings.get("shift_types"):
+                        shift_types = settings["shift_types"].get("types", [])
+                    else:
+                        shift_types = []
+                    for s in shift_types:
+                        if s["name"] == shift.get("Type"):
+                            shift_type = s
+                            nickname = s["nickname"] if s.get("nickname") else ''
+                if nickname is None:
+                    nickname = configItem["shift_management"].get(
+                        "nickname_prefix", ""
+                    )
+
+                if nickname in member.nick:
                     try:
-                        await member.edit(nick=member.nick.replace(nickname, ""))
+                        await member.edit(
+                            nick=member.nick.replace(nickname, "")
+                        )
                     except Exception as e:
                         if ctx.guild.id in bot.debug_servers:
                             await ctx.send(f'`DEBUG:` {str(e)}')
@@ -1079,27 +1087,28 @@ class ShiftManagement(commands.Cog):
                     ]
 
                 if shift.get("Nickname"):
-                    if shift.get("Nickname") == member.nick:
-                        nickname = None
-                        if shift.get("Type") is not None:
-                            settings = await bot.settings.get_settings(ctx.guild.id)
-                            shift_types = None
-                            if settings.get("shift_types"):
-                                shift_types = settings["shift_types"].get("types", [])
-                            else:
-                                shift_types = []
-                            for s in shift_types:
-                                if s["name"] == shift.get("Type"):
-                                    shift_type = s
-                                    nickname = (
-                                        s["nickname"] if s.get("nickname") else None
-                                    )
-                        if nickname is None:
-                            nickname = settings["shift_management"].get(
-                                "nickname_prefix", ""
-                            )
+                    nickname = None
+                    if shift.get("Type") is not None:
+                        settings = await bot.settings.get_settings(ctx.guild.id)
+                        shift_types = None
+                        if settings.get("shift_types"):
+                            shift_types = settings["shift_types"].get("types", [])
+                        else:
+                            shift_types = []
+                        for s in shift_types:
+                            if s["name"] == shift.get("Type"):
+                                shift_type = s
+                                nickname = s["nickname"] if s.get("nickname") else ''
+                    if nickname is None:
+                        nickname = configItem["shift_management"].get(
+                            "nickname_prefix", ""
+                        )
+
+                    if nickname in member.nick:
                         try:
-                            await member.edit(nick=member.nick.replace(nickname, ""))
+                            await member.edit(
+                                nick=member.nick.replace(nickname, "")
+                            )
                         except Exception as e:
                             if ctx.guild.id in bot.debug_servers:
                                 await ctx.send(f'`DEBUG:` {str(e)}')
@@ -1434,27 +1443,28 @@ class ShiftManagement(commands.Cog):
                     )
 
                 if shift.get("Nickname"):
-                    if shift.get("Nickname") == member.nick:
-                        nickname = None
-                        if shift.get("Type") is not None:
-                            settings = await bot.settings.get_settings(ctx.guild.id)
-                            shift_types = None
-                            if settings.get("shift_types"):
-                                shift_types = settings["shift_types"].get("types", [])
-                            else:
-                                shift_types = []
-                            for s in shift_types:
-                                if s["name"] == shift.get("Type"):
-                                    shift_type = s
-                                    nickname = (
-                                        s["nickname"] if s.get("nickname") else None
-                                    )
-                        if nickname is None:
-                            nickname = settings["shift_management"].get(
-                                "nickname_prefix", ""
-                            )
+                    nickname = None
+                    if shift.get("Type") is not None:
+                        settings = await bot.settings.get_settings(ctx.guild.id)
+                        shift_types = None
+                        if settings.get("shift_types"):
+                            shift_types = settings["shift_types"].get("types", [])
+                        else:
+                            shift_types = []
+                        for s in shift_types:
+                            if s["name"] == shift.get("Type"):
+                                shift_type = s
+                                nickname = s["nickname"] if s.get("nickname") else ''
+                    if nickname is None:
+                        nickname = configItem["shift_management"].get(
+                            "nickname_prefix", ""
+                        )
+
+                    if nickname in member.nick:
                         try:
-                            await member.edit(nick=member.nick.replace(nickname, ""))
+                            await member.edit(
+                                nick=member.nick.replace(nickname, "")
+                            )
                         except Exception as e:
                             if ctx.guild.id in bot.debug_servers:
                                 await ctx.send(f'`DEBUG:` {str(e)}')
@@ -2143,23 +2153,24 @@ class ShiftManagement(commands.Cog):
             )
 
             if shift.get("Nickname"):
-                if shift.get("Nickname") == ctx.author.nick:
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else None
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
+                nickname = None
+                if shift.get("Type") is not None:
+                    settings = await bot.settings.get_settings(ctx.guild.id)
+                    shift_types = None
+                    if settings.get("shift_types"):
+                        shift_types = settings["shift_types"].get("types", [])
+                    else:
+                        shift_types = []
+                    for s in shift_types:
+                        if s["name"] == shift.get("Type"):
+                            shift_type = s
+                            nickname = s["nickname"] if s.get("nickname") else ''
+                if nickname is None:
+                    nickname = settings["shift_management"].get(
+                        "nickname_prefix", ""
+                    )
+
+                if nickname in ctx.author.nick:
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
@@ -2240,23 +2251,24 @@ class ShiftManagement(commands.Cog):
             )
 
             if shift.get("Nickname"):
-                if shift.get("Nickname") == ctx.author.nick:
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else None
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
+                nickname = None
+                if shift.get("Type") is not None:
+                    settings = await bot.settings.get_settings(ctx.guild.id)
+                    shift_types = None
+                    if settings.get("shift_types"):
+                        shift_types = settings["shift_types"].get("types", [])
+                    else:
+                        shift_types = []
+                    for s in shift_types:
+                        if s["name"] == shift.get("Type"):
+                            shift_type = s
+                            nickname = s["nickname"] if s.get("nickname") else ''
+                if nickname is None:
+                    nickname = settings["shift_management"].get(
+                        "nickname_prefix", ""
+                    )
+
+                if nickname in ctx.author.nick:
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
@@ -2264,6 +2276,7 @@ class ShiftManagement(commands.Cog):
                     except Exception as e:
                         if ctx.guild.id in bot.debug_servers:
                             await ctx.send(f'`DEBUG:` {str(e)}')
+
             if shift_channel is None:
                 return
 
@@ -2521,25 +2534,24 @@ class ShiftManagement(commands.Cog):
                     content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your break has started - see you soon! <:BreakStart:1111093969871446067>",
                 )
                 if shift.get("Nickname"):
-                    if shift.get("Nickname") == ctx.author.nick:
-                        nickname = None
-                        if shift.get("Type") is not None:
-                            settings = await bot.settings.get_settings(ctx.guild.id)
-                            shift_types = None
-                            if settings.get("shift_types"):
-                                shift_types = settings["shift_types"].get("types", [])
-                            else:
-                                shift_types = []
-                            for s in shift_types:
-                                if s["name"] == shift.get("Type"):
-                                    shift_type = s
-                                    nickname = (
-                                        s["nickname"] if s.get("nickname") else None
-                                    )
-                        if nickname is None:
-                            nickname = settings["shift_management"].get(
-                                "nickname_prefix", ""
-                            )
+                    nickname = None
+                    if shift.get("Type") is not None:
+                        settings = await bot.settings.get_settings(ctx.guild.id)
+                        shift_types = None
+                        if settings.get("shift_types"):
+                            shift_types = settings["shift_types"].get("types", [])
+                        else:
+                            shift_types = []
+                        for s in shift_types:
+                            if s["name"] == shift.get("Type"):
+                                shift_type = s
+                                nickname = s["nickname"] if s.get("nickname") else ''
+                    if nickname is None:
+                        nickname = settings["shift_management"].get(
+                            "nickname_prefix", ""
+                        )
+
+                    if nickname in ctx.author.nick:
                         try:
                             await ctx.author.edit(
                                 nick=ctx.author.nick.replace(nickname, "")
@@ -2604,23 +2616,24 @@ class ShiftManagement(commands.Cog):
             )
 
             if shift.get("Nickname"):
-                if shift.get("Nickname") == ctx.author.nick:
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else None
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
+                nickname = None
+                if shift.get("Type") is not None:
+                    settings = await bot.settings.get_settings(ctx.guild.id)
+                    shift_types = None
+                    if settings.get("shift_types"):
+                        shift_types = settings["shift_types"].get("types", [])
+                    else:
+                        shift_types = []
+                    for s in shift_types:
+                        if s["name"] == shift.get("Type"):
+                            shift_type = s
+                            nickname = s["nickname"] if s.get("nickname") else ''
+                if nickname is None:
+                    nickname = settings["shift_management"].get(
+                        "nickname_prefix", ""
+                    )
+
+                if nickname in ctx.author.nick:
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
@@ -2628,6 +2641,7 @@ class ShiftManagement(commands.Cog):
                     except Exception as e:
                         if ctx.guild.id in bot.debug_servers:
                             await ctx.send(f'`DEBUG:` {str(e)}')
+
             try:
                 embed.set_thumbnail(url=ctx.author.display_avatar.url)
                 embed.set_author(

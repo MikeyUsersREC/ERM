@@ -6,6 +6,7 @@ import typing
 import aiohttp
 import pytz
 import uvicorn
+from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
@@ -492,7 +493,7 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
@@ -500,7 +501,7 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
 
-        dataobject = await self.bot.shift_management.shifts.find_by_id(data)
+        dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['UserID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
@@ -633,7 +634,7 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
@@ -641,7 +642,7 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
 
-        dataobject = await self.bot.shift_management.shifts.find_by_id(data)
+        dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['UserID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
@@ -818,7 +819,7 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
@@ -826,7 +827,7 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
 
-        dataobject = await self.bot.shift_management.shifts.find_by_id(data)
+        dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['UserID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
@@ -910,7 +911,7 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
@@ -918,7 +919,7 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
 
-        dataobject = await self.bot.shift_management.shifts.find_by_id(data)
+        dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['UserID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
@@ -997,7 +998,8 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
@@ -1005,7 +1007,7 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
 
-        dataobject = await self.bot.shift_management.shifts.find_by_id(data)
+        dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['UserID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
@@ -1133,14 +1135,15 @@ class APIRoutes:
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        print(base_auth)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
 
-        dataobject = await self.bot.punishments.find_by_id(data)
+        dataobject = await self.bot.punishments.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
         staff_member = await guild.fetch_member(dataobject['ModeratorID'])
         guild_settings = await self.bot.settings.find_by_id(guild.id)
