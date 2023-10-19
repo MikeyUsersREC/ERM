@@ -744,7 +744,7 @@ class ShiftManagement(commands.Cog):
                         "nickname_prefix", ""
                     )
 
-                if nickname in str(member.nick)::
+                if nickname in str(member.nick):
                     try:
                         await member.edit(
                             nick=member.nick.replace(nickname, "")
@@ -1017,7 +1017,7 @@ class ShiftManagement(commands.Cog):
                         "nickname_prefix", ""
                     )
 
-                if nickname in str(member.nick)::
+                if nickname in str(member.nick):
                     try:
                         await member.edit(
                             nick=member.nick.replace(nickname, "")
@@ -1104,7 +1104,7 @@ class ShiftManagement(commands.Cog):
                             "nickname_prefix", ""
                         )
 
-                    if nickname in str(member.nick)::
+                    if nickname in str(member.nick):
                         try:
                             await member.edit(
                                 nick=member.nick.replace(nickname, "")
@@ -1460,7 +1460,7 @@ class ShiftManagement(commands.Cog):
                             "nickname_prefix", ""
                         )
 
-                    if nickname in str(member.nick)::
+                    if nickname in str(member.nick):
                         try:
                             await member.edit(
                                 nick=member.nick.replace(nickname, "")
@@ -2170,7 +2170,7 @@ class ShiftManagement(commands.Cog):
                         "nickname_prefix", ""
                     )
 
-                if nickname in str(ctx.author.nick)::
+                if nickname in str(ctx.author.nick):
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
@@ -2268,7 +2268,7 @@ class ShiftManagement(commands.Cog):
                         "nickname_prefix", ""
                     )
 
-                if nickname in str(ctx.author.nick)::
+                if nickname in str(ctx.author.nick):
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
@@ -2551,7 +2551,7 @@ class ShiftManagement(commands.Cog):
                             "nickname_prefix", ""
                         )
 
-                    if nickname in str(ctx.author.nick)::
+                    if nickname in str(ctx.author.nick):
                         try:
                             await ctx.author.edit(
                                 nick=ctx.author.nick.replace(nickname, "")
@@ -2633,7 +2633,7 @@ class ShiftManagement(commands.Cog):
                         "nickname_prefix", ""
                     )
 
-                if nickname in str(ctx.author.nick)::
+                if nickname in str(ctx.author.nick):
                     try:
                         await ctx.author.edit(
                             nick=ctx.author.nick.replace(nickname, "")
