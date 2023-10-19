@@ -17,4 +17,5 @@ The CC BY-NC-SA license requires the following elements:
 - NC: The material can only be used for non-commercial purposes
 - SA: Adaptations must be licensed under the same terms
 
-- [![Better Stack Badge](https://uptime.betterstack.com/status-badges/v1/monitor/insx.svg)](https://uptime.betterstack.com/?utm_source=status_badge)
+
+[![Better Stack Badge](https://uptime.betterstack.com/status-badges/v1/monitor/insx.svg)](https://uptime.betterstack.com/?utm_source=status_badge)
