@@ -549,7 +549,7 @@ class APIRoutes:
             )
         embed.add_field(
             name="<:ERMList:1111099396990435428> Current Time",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC))}>",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>",
             inline=False,
         )
 
