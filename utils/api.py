@@ -1242,9 +1242,8 @@ class APIRoutes:
         )
 
         if designated_channel is None:
-            designated_channel = discord.utils.get(
-                guild.channels, id=configItem["punishments"]["channel"]
-            )
+            print(configItem['punishments']['channel']
+            designated_channel = bot.get_channel(configItem['punishments']['channel'])
 
 
         shift = await bot.shift_management.get_current_shift(
