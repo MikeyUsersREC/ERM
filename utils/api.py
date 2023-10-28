@@ -556,12 +556,12 @@ class APIRoutes:
         try:
             shift_channel = bot.get_channel(configItem["shift_management"]["channel"])
         except:
-            return 500
-
+            return HTTPException(status_code=500)
+            
         print(563)
         print(shift_channel)
         if shift_channel is None:
-            return 400
+            return HTTPException(status_code=400)
         print('!!!!')
         print(shift_channel)
         await shift_channel.send(embed=embed)
