@@ -1242,7 +1242,7 @@ class APIRoutes:
         )
 
         if designated_channel is None:
-            print(configItem['punishments']['channel']
+            print(configItem['punishments']['channel'])
             designated_channel = bot.get_channel(configItem['punishments']['channel'])
 
 
