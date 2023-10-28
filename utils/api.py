@@ -499,7 +499,7 @@ class APIRoutes:
         data = request.query_params.get("ObjectId")
         if not data:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
-
+        print(502)
 
         dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
@@ -509,7 +509,7 @@ class APIRoutes:
         shift_types = (guild_settings.get('shift_types') or {}).get('types')
         mapped = {}
 
-
+        print(513)
 
         if not shift_types:
             shift_type = None
@@ -521,6 +521,7 @@ class APIRoutes:
             if dataobject['Type'] in mapped.keys():
                 shift_type = mapped[dataobject['Type']]
 
+        print(524)
 
         embed = discord.Embed(
             title=f"<:ERMAdd:1113207792854106173> Shift Started", color=0xED4348
@@ -552,6 +553,8 @@ class APIRoutes:
             value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>",
             inline=False,
         )
+
+        print(557)
 
         try:
             shift_channel = bot.get_channel(configItem["shift_management"]["channel"])
