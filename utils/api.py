@@ -556,10 +556,8 @@ class APIRoutes:
 
         print(557)
 
-        try:
-            shift_channel = bot.get_channel(configItem["shift_management"]["channel"])
-        except:
-            return HTTPException(status_code=500)
+        print(configItem['shift_management']['channel'])
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
             
         print(563)
         print(shift_channel)
