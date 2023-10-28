@@ -1314,10 +1314,9 @@ class APIRoutes:
                     except:
                         pass
 
-        try:
-            await designated_channel.send(embed=embed)
-        except:
-            pass
+    
+        await designated_channel.send(embed=embed)
+    
 
         return 200
 
