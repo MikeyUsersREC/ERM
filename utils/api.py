@@ -752,12 +752,7 @@ class APIRoutes:
                 inline=False,
             )
 
-        try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return 500
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
 
         if shift_channel is None:
             return
@@ -1090,12 +1085,7 @@ class APIRoutes:
         await bot.shift_management.shifts.delete_by_id(sh["_id"])
 
 
-        try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return 500
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
 
         if shift_channel is None:
             return
