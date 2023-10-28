@@ -554,15 +554,16 @@ class APIRoutes:
         )
 
         try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
+            shift_channel = bot.get_channel(configItem["shift_management"]["channel"])
         except:
             return 500
 
+        print(563)
+        print(shift_channel)
         if shift_channel is None:
-            return
-
+            return 400
+        print('!!!!')
+        print(shift_channel)
         await shift_channel.send(embed=embed)
 
         nickname_prefix = None
