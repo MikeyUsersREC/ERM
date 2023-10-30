@@ -679,28 +679,27 @@ class APIRoutes:
                     endTimestamp = item["EndEpoch"]
                     break_seconds += int(endTimestamp - startTimestamp)
 
-        if shift.get("Nickname"):
-            if shift.get("Nickname") == member.nick:
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else None
-                if nickname is None:
-                    nickname = settings["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-                try:
-                    await member.edit(nick=member.nick.replace(nickname, ""))
-                except Exception as e:
-                    pass
+        nickname = None
+        if shift.get("Type") is not None:
+            settings = await bot.settings.get_settings(guild.id)
+            shift_types = None
+            if settings.get("shift_types"):
+                shift_types = settings["shift_types"].get("types", [])
+            else:
+                shift_types = []
+            for s in shift_types:
+                if s["name"] == shift.get("Type"):
+                    shift_type = s
+                    nickname = s["nickname"] if s.get("nickname") else None
+        if nickname is None:
+            nickname = settings["shift_management"].get(
+                "nickname_prefix", ""
+            )
+        if nickname in str(member.nick):
+            try:
+                await member.edit(nick=member.nick.replace(nickname, ""))
+            except Exception as e:
+                pass
 
         embed = discord.Embed(
             title=f"<:ERMRemove:1113207777662345387> Shift Ended", color=0xED4348
@@ -849,32 +848,28 @@ class APIRoutes:
         shift = dataobject
         member = staff_member
 
-        if shift.get("Nickname"):
-            if shift.get("Nickname") == member.nick:
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = (
-                                s["nickname"] if s.get("nickname") else None
-                            )
-                if nickname is None:
-                    nickname = settings["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-                try:
-                    await member.edit(
-                        nick=member.nick.replace(nickname, "")
-                    )
-                except Exception as e:
-                    pass
+        nickname = None
+        if shift.get("Type") is not None:
+            settings = await bot.settings.get_settings(guild.id)
+            shift_types = None
+            if settings.get("shift_types"):
+                shift_types = settings["shift_types"].get("types", [])
+            else:
+                shift_types = []
+            for s in shift_types:
+                if s["name"] == shift.get("Type"):
+                    shift_type = s
+                    nickname = s["nickname"] if s.get("nickname") else None
+        if nickname is None:
+            nickname = settings["shift_management"].get(
+                "nickname_prefix", ""
+            )
+        if nickname in str(member.nick):
+            try:
+                await member.edit(nick=member.nick.replace(nickname, ""))
+            except Exception as e:
+                pass
+
         role = []
         if shift_type:
             if shift_type.get("role"):
