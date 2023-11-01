@@ -499,7 +499,7 @@ class APIRoutes:
         data = request.query_params.get("ObjectId")
         if not data:
             return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
-
+        print(502)
 
         dataobject = await self.bot.shift_management.shifts.db.find_one({'_id': ObjectId(data)})
         guild = await self.bot.fetch_guild(dataobject["Guild"])
@@ -509,7 +509,7 @@ class APIRoutes:
         shift_types = (guild_settings.get('shift_types') or {}).get('types')
         mapped = {}
 
-
+        print(513)
 
         if not shift_types:
             shift_type = None
@@ -521,6 +521,7 @@ class APIRoutes:
             if dataobject['Type'] in mapped.keys():
                 shift_type = mapped[dataobject['Type']]
 
+        print(524)
 
         embed = discord.Embed(
             title=f"<:ERMAdd:1113207792854106173> Shift Started", color=0xED4348
@@ -549,20 +550,21 @@ class APIRoutes:
             )
         embed.add_field(
             name="<:ERMList:1111099396990435428> Current Time",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC))}>",
+            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>",
             inline=False,
         )
 
-        try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return 500
+        print(557)
 
+        print(configItem['shift_management']['channel'])
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
+            
+        print(563)
+        print(shift_channel)
         if shift_channel is None:
-            return
-
+            return HTTPException(status_code=400)
+        print('!!!!')
+        print(shift_channel)
         await shift_channel.send(embed=embed)
 
         nickname_prefix = None
@@ -749,12 +751,7 @@ class APIRoutes:
                 inline=False,
             )
 
-        try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return 500
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
 
         if shift_channel is None:
             return
@@ -1083,12 +1080,7 @@ class APIRoutes:
         await bot.shift_management.shifts.delete_by_id(sh["_id"])
 
 
-        try:
-            shift_channel = discord.utils.get(
-                guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return 500
+        shift_channel = self.bot.get_channel(configItem["shift_management"]["channel"])
 
         if shift_channel is None:
             return
@@ -1237,9 +1229,8 @@ class APIRoutes:
         )
 
         if designated_channel is None:
-            designated_channel = discord.utils.get(
-                guild.channels, id=configItem["punishments"]["channel"]
-            )
+            print(configItem['punishments']['channel'])
+            designated_channel = bot.get_channel(configItem['punishments']['channel'])
 
 
         shift = await bot.shift_management.get_current_shift(
@@ -1309,10 +1300,9 @@ class APIRoutes:
                     except:
                         pass
 
-        try:
-            await designated_channel.send(embed=embed)
-        except:
-            pass
+    
+        await designated_channel.send(embed=embed)
+    
 
         return 200
 
