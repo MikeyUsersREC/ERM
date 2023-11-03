@@ -209,7 +209,7 @@ class APIRoutes:
         return [{
             "name": role.name,
             "id": role.id,
-            "color": role.color
+            "color": str(role.color)
         } for role in guild.roles]
 
     async def POST_get_guild_channels(self, request: Request):
