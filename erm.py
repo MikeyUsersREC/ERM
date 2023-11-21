@@ -126,8 +126,8 @@ class Bot(commands.AutoShardedBot):
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
             BETA_EXT = ["cogs.StaffConduct"]
-            # EXTERNAL_EXT = ["utils.api"]
-            # [Extensions.append(i) for i in EXTERNAL_EXT]
+            EXTERNAL_EXT = ["utils.api"]
+            [Extensions.append(i) for i in EXTERNAL_EXT]
 
 
             for extension in Extensions:
