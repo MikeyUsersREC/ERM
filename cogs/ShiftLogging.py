@@ -29,7 +29,7 @@ from utils.autocompletes import shift_type_autocomplete
 from utils.constants import BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.paginators import SelectPagination, CustomPage
 from utils.timestamp import td_format
-from utils.utils import failure_embed, get_elapsed_time, new_failure_embed, require_settings
+from utils.utils import get_elapsed_time, new_failure_embed, require_settings
 
 
 class ShiftLogging(commands.Cog):
