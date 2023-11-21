@@ -1484,14 +1484,20 @@ class ServerAPI(commands.Cog):
 
     async def stop_server(self):
         await self.server.shutdown()
+    
+    def _run_and_discard(self, task):
+        asyncio.run(asyncio.to_thread(task))
 
     async def cog_load(self) -> None:
         # asyncio.run_coroutine_threadsafe(self.start_server(), self.bot.loop)
+
         try:
-            await self.start_server()
+            task = asyncio.create_task(self.start_server())
+            self._run_and_discard(task)
         except:
             # print('REALLY BAD ERROR.')
             pass
+            
     async def cog_unload(self) -> None:
         await self.stop_server()
 
