@@ -1,26 +1,18 @@
-import asyncio
-import copy
 import datetime
 from io import BytesIO
 
-import aiohttp
 
 import discord
-import num2words
 import pytz
 from decouple import config
 from discord import app_commands
 from discord.ext import commands
-from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
-from reactionmenu.abc import _PageController
 
 from datamodels.ShiftManagement import ShiftItem
 from erm import credentials_dict, is_management, is_staff, management_predicate, scope
 from menus import (
-    AdministrativeSelectMenu,
     CustomExecutionButton,
     CustomSelectMenu,
-    ModificationSelectMenu,
     RequestGoogleSpreadsheet,
     ShiftMenu,
     AdministratedShiftMenu,

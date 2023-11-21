@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import typing
-from copy import copy
 import discord
 import pytz
 import roblox
@@ -5527,7 +5526,7 @@ class ShiftTypeCreator(discord.ui.View):
         disabled=True,
         row=3
     )
-    async def finish(self, interaction: discord.Interaction, button: discord.Button):
+    async def finish(self, interaction: discord.Interaction, _: discord.Button):
         await interaction.response.defer()
         self.cancelled = False
         self.stop()
@@ -5697,7 +5696,7 @@ class CustomCommandOptionSelect(discord.ui.View):
         style=discord.ButtonStyle.green,
         row=0
     )
-    async def create_custom_command(self, interaction: discord.Interaction, button: discord.Button):
+    async def create_custom_command(self, interaction: discord.Interaction, _: discord.Button):
         self.value = "create"
         self.modal = CustomModal(
             "Create a Custom Command",
