@@ -1416,7 +1416,7 @@ class MessageCustomisation(discord.ui.View):
                     ephemeral=True,
                 )
 
-            newView = EmbedCustomisation(interaction.user.id, self)
+            newView = EmbedCustomisation(interaction.user.id, self, external=self.external)
             self.newView = newView
             await interaction.message.edit(
                 view=newView, embed=discord.Embed(colour=0xED4348, description="\u200b")

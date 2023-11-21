@@ -37,6 +37,7 @@ from datamodels.SyncedUsers import SyncedUsers
 from datamodels.Verification import Verification
 from datamodels.Views import Views
 from datamodels.Warnings import Warnings
+from datamodels.StaffConductConfig import StaffConductConfig
 from menus import CompleteReminder, LOAMenu
 from utils.mongo import Document
 from utils.utils import *
@@ -109,6 +110,7 @@ class Bot(commands.AutoShardedBot):
             bot.loas = ActivityNotices(bot.db, "leave_of_absences")
             bot.reminders = Reminders(bot.db, "reminders")
             bot.custom_commands = CustomCommands(bot.db, "custom_commands")
+            bot.staff_conduct = StaffConductConfig(bot.db, "staff_conduct")
             bot.analytics = Analytics(bot.db, "analytics")
             bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
             bot.privacy = Privacy(bot.db, "privacy")
@@ -523,8 +525,6 @@ async def check_reminders():
                     print(e)
     except Exception as e:
         print(e)
-
-
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():

@@ -97,8 +97,6 @@ class StaffConduct(commands.Cog):
             timeout = await view.wait()
             if timeout or not view.value:
                 return
-
-
             await message.edit(
                 content=f"{pendingEmoji} **{ctx.author.name},** let's begin!",
                 embed=None,
@@ -120,7 +118,6 @@ class StaffConduct(commands.Cog):
             timeout = await view.wait()
             if timeout:
                 return
-
             try:
                 infraction_type_name = view.modal.type_name.value
             except:
@@ -177,8 +174,6 @@ class StaffConduct(commands.Cog):
                 value = [view.value]
             elif isinstance(view.value, list):
                 value = view.value
-            # WE NEED TO MAKE THESE MESSAGES MORE NOTICABLE FOR WHICH YOU PICKED
-            # noticeable* 🤓
             for item in value:
                 if item == "add_role":  # Add to Database
                     await message.edit(
