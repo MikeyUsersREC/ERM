@@ -499,52 +499,6 @@ class Punishments(commands.Cog):
 
             roblox_id = dataItem["id"]
 
-            discord_user = None
-            async for document in bot.synced_users.db.find({"roblox": roblox_id}):
-                discord_user = document["_id"]
-
-            if discord_user:
-                try:
-                    member = await ctx.guild.fetch_member(discord_user)
-                except discord.NotFound:
-                    member = None
-
-                if member:
-                    should_dm = True
-
-                    async for doc in bot.consent.db.find({"_id": member.id}):
-                        if doc.get("punishments"):
-                            if document.get("punishments") is False:
-                                should_dm = False
-
-                    if should_dm:
-                        try:
-                            personal_embed = discord.Embed(
-                                title="<:ERMPunish:1111095942075138158> You have been moderated!",
-                                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>***{ctx.guild.name}** has moderated you in-game*",
-                                color=0xED4348,
-                            )
-                            personal_embed.add_field(
-                                name="<:ERMList:1111099396990435428> Moderation Details",
-                                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Username:** {menu.message.embeds[0].title.split(' ')[1]}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reason:** {reason}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Type:** {type.lower().title()}",
-                                inline=False,
-                            )
-
-                            try:
-                                personal_embed.set_author(
-                                    name=ctx.guild.name, icon_url=ctx.guild.icon.url
-                                )
-                            except:
-                                personal_embed.set_author(name=ctx.guild.name)
-
-                            await member.send(
-                                embed=personal_embed,
-                                content=f"<:ERMAlert:1113237478892130324>  **{ctx.author.name}**, you have been moderated inside of **{ctx.guild.name}**.",
-                            )
-
-                        except:
-                            pass
-
             try:
                 await designated_channel.send(embed=embed)
             except:

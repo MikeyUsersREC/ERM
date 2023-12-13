@@ -1,3 +1,4 @@
+import typing
 from copy import copy
 
 import aiohttp
@@ -10,6 +11,39 @@ from utils.utils import generator
 from utils.mongo import Document
 
 
+class WarningItem:
+    id: str
+    username: str
+    user_id: int
+    warning_type: str
+    reason: str
+    moderator_name: str
+    moderator_id: int
+    guild_id: int
+    time_epoch: int
+    until_epoch: typing.Optional[int]
+    snowflake: int
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def __getitem__(self, item):
+        legacy_correspondents = {
+            "_id": "id",
+            "userid": "user_id",
+            "type": "warning_type",
+            "moderator": "moderator_name",
+            "moderatorid": "moderator_id",
+            "guild": "guild_id",
+            "epoch": "time_epoch",
+            "untilepoch": "until_epoch"
+        }
+        if legacy_correspondents.get(item.lower()) is not None:
+            item = legacy_correspondents[item.lower()]
+        return getattr(self, item.lower())
+
+
 class Warnings(Document):
     """
     Also known as the punishment module, this is used for intermediary methods for the Warnings database <-> ERM.
@@ -20,13 +54,46 @@ class Warnings(Document):
         super().__init__(bot.db, "punishments")
         self.recovery = Document(bot.db, "recovery")
 
-    async def get_warnings(self, user: int, guild: int) -> list[dict]:
+    async def get_warnings(self, user: int, guild: int) -> list[WarningItem]:
         """
         Gets the warnings for a user in a guild.
         """
-        return [i async for i in self.db.find({"Guild": guild, "UserID": user})]
+        return [WarningItem(
+            id=i['_id'],
+            snowflake=i['Snowflake'],
+            username=i['Username'],
+            user_id=i['UserID'],
+            warning_type=i['Type'],
+            reason=i['Reason'],
+            moderator_name=i['Moderator'],
+            moderator_id=i['ModeratorID'],
+            guild_id=i['Guild'],
+            time_epoch=i['Epoch'],
+            until_epoch=None if i.get('UntilEpoch') == 0 else i['UntilEpoch']
+        ) async for i in self.db.find({"Guild": guild, "UserID": user})]
 
-    async def get_warning(self, warning_id: int) -> dict:
+    async def fetch_warning(self, warning_id: str) -> WarningItem | None:
+        """
+        Fetches a warning by its ID.
+        """
+        i = await self.db.find_one({"_id": ObjectId(warning_id)})
+        if i is None:
+            return None
+        return WarningItem(
+            id=i['_id'],
+            snowflake=i['Snowflake'],
+            username=i['Username'],
+            user_id=i['UserID'],
+            warning_type=i['Type'],
+            reason=i['Reason'],
+            moderator_name=i['Moderator'],
+            moderator_id=i['ModeratorID'],
+            guild_id=i['Guild'],
+            time_epoch=i['Epoch'],
+            until_epoch=None if i.get('UntilEpoch') == 0 else i['UntilEpoch']
+        )
+
+    async def get_warning(self, warning_id: str) -> dict:
         """
         Gets a warning by its ID.
         """
@@ -56,16 +123,16 @@ class Warnings(Document):
         ]
 
     async def insert_warning(
-        self,
-        staff_id: int,
-        staff_name: str,
-        user_id: int,
-        user_name: str,
-        guild_id: int,
-        reason: str,
-        moderation_type: str,
-        time_epoch: int,
-        until_epoch: int | None = None,
+            self,
+            staff_id: int,
+            staff_name: str,
+            user_id: int,
+            user_name: str,
+            guild_id: int,
+            reason: str,
+            moderation_type: str,
+            time_epoch: int,
+            until_epoch: int | None = None,
     ) -> dict | ValueError:
         """
         Inserts a warning into the database.
@@ -86,16 +153,16 @@ class Warnings(Document):
             return ValueError("Epoch must be provided for temporary bans.")
 
         if any(
-            not i
-            for i in [
-                staff_id,
-                staff_name,
-                user_id,
-                user_name,
-                guild_id,
-                reason,
-                moderation_type,
-            ]
+                not i
+                for i in [
+                    staff_id,
+                    staff_name,
+                    user_id,
+                    user_name,
+                    guild_id,
+                    reason,
+                    moderation_type,
+                ]
         ):
             return ValueError("All arguments must be provided.")
 
@@ -132,44 +199,44 @@ class Warnings(Document):
         return identifier
 
     async def find_warning_by_spec(
-        self,
-        guild_id: int,
-        identifier: str | ObjectId | None = None,
-        snowflake: int | None = None,
-        warning_type: str | None = None,
-        moderator_id: int | None = None,
-        user_id: int | None = None,
+            self,
+            guild_id: int,
+            identifier: str | ObjectId | None = None,
+            snowflake: int | None = None,
+            warning_type: str | None = None,
+            moderator_id: int | None = None,
+            user_id: int | None = None,
     ):
         """
         Removes a warning from the database by a particular specification. Useful for removing many warnings at one time.
         """
         if all(
-            [
-                identifier is None,
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-            ]
+                [
+                    identifier is None,
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                ]
         ):
             return ValueError("At least one argument must be provided.")
 
         if snowflake is not None and all(
-            [
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                identifier is None,
-            ]
+                [
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    identifier is None,
+                ]
         ):
             return await self.db.find_one({"Snowflake": snowflake})
 
         if identifier is not None and all(
-            [
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                snowflake is None,
-            ]
+                [
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    snowflake is None,
+                ]
         ):
             return await self.db.find_one({"_id": ObjectId(identifier)})
 
@@ -188,46 +255,46 @@ class Warnings(Document):
         return await self.db.find_one(map)
 
     def find_warnings_by_spec(
-        self,
-        guild_id: int,
-        identifier: int | None = None,
-        snowflake: int | None = None,
-        warning_type: str | None = None,
-        moderator_id: int | None = None,
-        user_id: int | None = None,
-        bolo: bool = False,
+            self,
+            guild_id: int,
+            identifier: int | None = None,
+            snowflake: int | None = None,
+            warning_type: str | None = None,
+            moderator_id: int | None = None,
+            user_id: int | None = None,
+            bolo: bool = False,
     ):
         """
         Finds a warnings by a specification.
         """
         if all(
-            [
-                identifier is None,
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                bolo is False,
-            ]
+                [
+                    identifier is None,
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    bolo is False,
+                ]
         ):
             return ValueError("At least one argument must be provided.")
 
         if snowflake is not None and all(
-            [
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                identifier is None,
-            ]
+                [
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    identifier is None,
+                ]
         ):
             return self.db.find({"Snowflake": snowflake})
 
         if identifier is not None and all(
-            [
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                snowflake is None,
-            ]
+                [
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    snowflake is None,
+                ]
         ):
             return self.db.find({"_id": identifier})
 
@@ -249,35 +316,35 @@ class Warnings(Document):
         return self.db.find(map)
 
     async def remove_warnings_by_spec(
-        self,
-        guild_id: int,
-        identifier: int | None = None,
-        warning_type: str | None = None,
-        moderator_id: int | None = None,
-        user_id: int | None = None,
+            self,
+            guild_id: int,
+            identifier: int | None = None,
+            warning_type: str | None = None,
+            moderator_id: int | None = None,
+            user_id: int | None = None,
     ):
         """
         Removes a warning from the database by a particular specification. Useful for removing many warnings at one time.
         """
         # print("!!!!")
         if all(
-            [
-                identifier is None,
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                guild_id is None,
-            ]
+                [
+                    identifier is None,
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    guild_id is None,
+                ]
         ):
             return ValueError("At least one argument must be provided.")
 
         if identifier is not None and all(
-            [
-                warning_type is None,
-                moderator_id is None,
-                user_id is None,
-                guild_id is None,
-            ]
+                [
+                    warning_type is None,
+                    moderator_id is None,
+                    user_id is None,
+                    guild_id is None,
+                ]
         ):
             return await self.db.delete_many({"Snowflake": identifier})
 
@@ -300,7 +367,7 @@ class Warnings(Document):
             await self.db.delete_one({"_id": i["_id"]})
 
     async def remove_warning_by_snowflake(
-        self, identifier: int, guild_id: int | None = None
+            self, identifier: int, guild_id: int | None = None
     ):
         """
         Removes a warning from the database by its snowflake.
@@ -314,8 +381,8 @@ class Warnings(Document):
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
                                 f"{url_var}/Internal/SyncDeletePunishment/{selected_item['_id']}", headers={
-                                "Authorization": config('INTERNAL_API_AUTH')
-                            }):
+                                    "Authorization": config('INTERNAL_API_AUTH')
+                                }):
                             pass
             except:
                 pass
@@ -324,12 +391,12 @@ class Warnings(Document):
             return ValueError("Warning does not exist.")
 
     async def count_warnings(
-        self,
-        identifier: int | None = None,
-        warning_type: str | None = None,
-        moderator_id: int | None = None,
-        user_id: int | None = None,
-        guild_id: int | None = None,
+            self,
+            identifier: int | None = None,
+            warning_type: str | None = None,
+            moderator_id: int | None = None,
+            user_id: int | None = None,
+            guild_id: int | None = None,
     ):
         """
         Counts the warnings in the database.

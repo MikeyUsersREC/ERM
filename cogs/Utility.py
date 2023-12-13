@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import discord
@@ -6,6 +7,8 @@ from discord.app_commands import AppCommandGroup
 from discord.ext import commands
 
 from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu
+from utils.constants import BLANK_COLOR
+from utils.timestamp import td_format
 from utils.utils import invis_embed, failure_embed
 
 
@@ -20,9 +23,48 @@ class Utility(commands.Cog):
     )
     async def ping(self, ctx):
         latency = round(self.bot.latency * 1000)
-        await ctx.reply(
-            f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** all is good! My ping is **{latency}ms**!"
+        embed = discord.Embed(
+            title="<:search:1164662425820348536> Bot Status",
+            color=BLANK_COLOR,
         )
+
+        if ctx.guild is not None:
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+            )
+        else:
+            embed.set_author(
+                name=ctx.author.name,
+                icon_url=ctx.author.display_avatar.url,
+            )
+
+        data = await self.bot.db.command("ping")
+
+        status: str | None = None
+
+        if list(data.keys())[0] == "ok":
+            status = "Connected"
+        else:
+            status = "Not Connected"
+
+        embed.add_field(
+            name="Information",
+            value=(
+                f"<:replytop:1138257149705863209> **Latency:** `{latency}ms`\n"
+                f"<:replymiddle:1138257195121791046> **Uptime:** <t:{int(self.bot.start_time)}:R>\n"
+                f"<:replymiddle:1138257195121791046> **Database Connection:** {status}\n"
+                f"<:replybottom:1138257250448855090> **Shards:** `{self.bot.shard_count-1}`\n"
+            ),
+            inline=False,
+        )
+
+        embed.set_footer(
+            text= f"Shard {ctx.guild.shard_id if ctx.guild else 0}/{self.bot.shard_count-1}"
+        )
+        embed.timestamp = datetime.datetime.utcnow()
+        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else '')
+        await ctx.send(embed=embed)
 
     @commands.hybrid_command(
         name="support",
@@ -89,6 +131,7 @@ class Utility(commands.Cog):
                 "Game Sync": "<:ERMSync:1113209904979771494>",
                 "Privacy": "<:ERMSecurity:1113209656370802879>",
                 "Live Messages": "<:ERMUptime:1111317537670565938>",
+                "Staff Conduct": "<:ERMRemove:1120536315860090960>"
             }
 
             temps = {}
@@ -292,6 +335,12 @@ class Utility(commands.Cog):
                             description="Commands related to ROBLOX searching.",
                             emoji="<:ERMSearch:1113208889626865684>",
                             value="Search",
+                        ),
+                        discord.SelectOption(
+                            label="Staff Conduct",
+                            description="Infraction management integrations",
+                            emoji="<:ERMRemove:1120536315860090960>",
+                            value="Staff Conduct"
                         ),
                         discord.SelectOption(
                             label="Utility",

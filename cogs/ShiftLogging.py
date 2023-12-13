@@ -23,11 +23,12 @@ from menus import (
     YesNoMenu,
     CustomModalView,
 )
+from utils.constants import BLANK_COLOR
 from utils.timestamp import td_format
-from utils.utils import failure_embed, request_response, failure_embed, end_break, get_elapsed_time
+from utils.utils import failure_embed, request_response, failure_embed, end_break, get_elapsed_time, new_failure_embed
 
 
-class ShiftManagement(commands.Cog):
+class ShiftLogging(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -44,9 +45,10 @@ class ShiftManagement(commands.Cog):
     @is_staff()
     async def dutytime(self, ctx, member: discord.Member = None):
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
@@ -55,34 +57,38 @@ class ShiftManagement(commands.Cog):
 
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if configItem is None:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "the server has not been set up yet. Please run `/setup` to set up the server.",
+                "Not Configured",
+                "This server has not been configured yet. Please run `/setup` to set up the server.",
             )
 
         if not configItem["shift_management"]["enabled"]:
-            return await failure_embed(
-                ctx, "shift management is not enabled on this server."
+            return await new_failure_embed(
+                ctx,
+                "Not Enabled",
+                "Shift Logging is not enabled on this server."
             )
         try:
             shift_channel = discord.utils.get(
                 ctx.guild.channels, id=configItem["shift_management"]["channel"]
             )
         except:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                f'some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.',
-            )
-
-        if not configItem["shift_management"]["enabled"]:
-            return await failure_embed(
-                ctx, "shift management is not enabled on this server."
+                "Incorrect Configuration",
+                'This server is not configured correctly.',
             )
 
         embed = discord.Embed(
-            title=f"<:ERMSchedule:1111091306089939054> {member.name}",
-            color=0xED4348,
+            title=f"<:shift:1169801400545452033> Total Shifts" if member == ctx.author else f'<:shift:1169801400545452033> {member.name}\'s Total Shifts',
+            color=BLANK_COLOR,
         )
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+        )
+
 
         # Get current shift
         shift = None
@@ -90,6 +96,8 @@ class ShiftManagement(commands.Cog):
         if shift_data:
             if shift_data["Guild"] == ctx.guild.id:
                 shift = shift_data
+
+
         # Get all past shifts
         shifts = []
         storage_item = [
@@ -105,112 +113,41 @@ class ShiftManagement(commands.Cog):
 
         total_seconds = sum([get_elapsed_time(i) for i in shifts])
 
+        quota = configItem.get('shift_management', {}).get('quota', 0)
+        met_quota = None
+        if quota != 0:
+            met_quota = bool(total_seconds > quota)
+
         try:
             if shift:
                 embed.add_field(
-                    name="<:ERMActivity:1113209176664064060> Current Shift Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}",
+                    name="Ongoing Shift",
+                    value=f"{td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}",
                     inline=False,
                 )
         except:
             if shift:
                 embed.add_field(
-                    name="<:ERMActivity:1113209176664064060> Current Shift Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Could not display current shift time.",
+                    name="Ongoing Shift",
+                    value="Could not display current shift time.",
                     inline=False,
                 )
 
+        newline = '\n'
         embed.add_field(
-            name="<:ERMMisc:1113215605424795648> Total Shift Time",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=total_seconds))}",
+            name=f"Shift Time [{len(shifts)}]",
+            value=f"{td_format(datetime.timedelta(seconds=total_seconds))} {'{0}*{1}*'.format(newline, 'Met Quota' if met_quota is True else 'Not Met Quota') if met_quota is not None else ''}",
         )
+
+        # embed.set_footer(
+        #     text="Requested by: {}".format(ctx.author.name),
+        #     icon_url=ctx.author.display_avatar.url
+        # )
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_author(icon_url=ctx.author.display_avatar.url, name=ctx.author.name)
         await ctx.reply(
             embed=embed,
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, the user **{member.name}** has logged a total of **{td_format(datetime.timedelta(seconds=total_seconds))}**.",
         )
 
-    @duty.command(
-        name="quota",
-        description="Checks if you have completed the quota",
-        extras={"category": "Shift Management", "ephemeral": True},
-    )
-    @is_staff()
-    async def duty_quota(self, ctx: commands.Context, member: discord.Member = None):
-        if member is None:
-            member = ctx.author
-
-        if self.bot.shift_management_disabled is True:
-            return await failure_embed(
-                ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
-            )
-
-        bot = self.bot
-        configItem = await bot.settings.find_by_id(ctx.guild.id)
-        if configItem is None:
-            return await failure_embed(
-                ctx,
-                "this server is not setup! Run `/setup` to setup the bot.",
-            )
-
-        if not configItem["shift_management"]["enabled"]:
-            return await failure_embed(
-                ctx, "shift management is not enabled on this server."
-            )
-
-        if not configItem["shift_management"].get("quota"):
-            return await ctx.send(
-                f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, this server **does not** have a quota."
-            )
-
-        shifts = [
-            i
-            async for i in bot.shift_management.shifts.db.find(
-                {"UserID": member.id, "Guild": ctx.guild.id}
-            )
-        ]
-
-        for i in shifts:
-            if i["EndEpoch"] == 0:
-                i["EndEpoch"] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-
-        total_seconds = sum(
-            [
-                get_elapsed_time(i)
-                for i in shifts
-            ]
-        )
-
-        quota_formatted = td_format(
-            datetime.timedelta(seconds=configItem["shift_management"]["quota"])
-        )
-
-        if total_seconds >= configItem["shift_management"]["quota"]:
-            if member != ctx.author:
-                return await ctx.send(
-                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has completed the quota!"
-                )
-            else:
-                return await ctx.send(
-                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have completed the quota!"
-                )
-
-        else:
-            met_quota_formatted = td_format(
-                datetime.timedelta(
-                    seconds=configItem["shift_management"]["quota"] - total_seconds
-                )
-            )
-            if member != ctx.author:
-                return await ctx.send(
-                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, **{member.name}** has **not met** the quota! They need **{met_quota_formatted}** more."
-                )
-            else:
-                return await ctx.send(
-                    f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, you have **not met** the quota. You need **{met_quota_formatted}** more."
-                )
 
     @duty.command(
         name="admin",
@@ -220,9 +157,10 @@ class ShiftManagement(commands.Cog):
     @is_management()
     async def duty_admin(self, ctx, member: discord.Member):
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
@@ -1569,9 +1507,10 @@ class ShiftManagement(commands.Cog):
             return await failure_embed(ctx, "this server does not have a shift management channel!")
 
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
@@ -2710,23 +2649,24 @@ class ShiftManagement(commands.Cog):
     @duty.command(
         name="active",
         description="Get all members of the server currently on shift.",
-        extras={"category": "Shift Management"},
-        aliases=["ac", "ison"],
+        extras={"category": "Shift Management"}
     )
     @is_staff()
     async def duty_active(self, ctx):
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
         if not configItem:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this server has not been set up yet. Please run `/setup` to set up the server.",
+                "Not Configured"
+                "This server has not been configured yet. Please run `/setup` to configure the server.",
             )
 
         shift_type = None
@@ -2756,9 +2696,12 @@ class ShiftManagement(commands.Cog):
                     )
 
                     msg = await ctx.reply(
-                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                        embed=None,
-                        view=view,
+                        embed=discord.Embed(
+                            title="Shift Types",
+                            description=f"You have **{len(shift_types)}** shift types. Which ones would you like to see?",
+                            color=BLANK_COLOR
+                        ),
+                        view=view
                     )
                     timeout = await view.wait()
                     if timeout:
@@ -2775,23 +2718,20 @@ class ShiftManagement(commands.Cog):
                             if shift_list:
                                 shift_type = shift_list[0]
                             else:
-                                return await failure_embed(
+                                return await new_failure_embed(
                                     ctx,
+                                    "Critical Error",
                                     "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
                                 )
 
         embed = discord.Embed(
-            title="<:ERMActivity:1113209176664064060> Active Shifts", color=0xED4348
+            title="<:shift:1169801400545452033> Active Shifts", color=BLANK_COLOR
         )
-        embed.description = "<:ERMMisc:1113215605424795648> **Shifts:**"
+        embed.description = f"**Total Shifts**"
         embed.set_author(
-            name=f"{ctx.author.name}",
-            icon_url=ctx.author.display_avatar.url,
+            name=f"{ctx.guild.name}",
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
         )
-        try:
-            embed.set_thumbnail(url=ctx.guild.icon.url)
-        except:
-            pass
 
         embeds = []
         embeds.append(embed)
@@ -2854,20 +2794,19 @@ class ShiftManagement(commands.Cog):
                 and ctx.author.id not in added_staff
             ):
                 embed = discord.Embed(
-                    title="<:ERMActivity:1113209176664064060> Active Shifts",
-                    color=0xED4348,
+                    title="<:shift:1169801400545452033> Active Shifts", color=BLANK_COLOR
                 )
-                embed.description = "<:ERMMisc:1113215605424795648> **Shifts:**"
+                embed.description = f"**Total Shifts**"
                 embed.set_author(
-                    name=f"{ctx.author.name}",
-                    icon_url=ctx.author.display_avatar.url,
+                    name=f"{ctx.guild.name}",
+                    icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
                 )
                 added_staff.append(member.id)
                 embeds.append(embed)
             if member.id not in added_staff:
                 embeds[
                     -1
-                ].description += f"\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' **(Currently on break: {})**'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
+                ].description += f"\n**{index+1}.** {member.mention} • {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' **(Currently on break: {})**'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
 
         if ctx.interaction:
             gtx = ctx.interaction
@@ -2883,8 +2822,7 @@ class ShiftManagement(commands.Cog):
             try:
                 return await msg.edit(
                     embed=embed,
-                    view=None,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the Active Shifts in **{ctx.guild.name}**.",
+                    view=None
                 )
             except UnboundLocalError:
                 return await ctx.reply(embed=embed)
@@ -2902,9 +2840,10 @@ class ShiftManagement(commands.Cog):
     @is_staff()
     async def shift_leaderboard(self, ctx):
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
@@ -2913,9 +2852,10 @@ class ShiftManagement(commands.Cog):
             if configItem is None:
                 raise ValueError("Settings does not exist.")
         except:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this server has not been set up yet. Please run `/setup` to set up the server.",
+                'Not Configured',
+                "This server has not been configured yet. Please run `/setup` to configure this server.",
             )
 
         shift_type = None
@@ -2945,9 +2885,12 @@ class ShiftManagement(commands.Cog):
                     )
 
                     msg = await ctx.reply(
-                        content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                        embed=None,
-                        view=view,
+                        embed=discord.Embed(
+                            title="Shift Types",
+                            description=f"You have **{len(shift_types)}** shift types. Which ones would you like to see?",
+                            color=BLANK_COLOR
+                        ),
+                        view=view
                     )
                     timeout = await view.wait()
                     if timeout:
@@ -2964,8 +2907,9 @@ class ShiftManagement(commands.Cog):
                             if shift_list:
                                 shift_type = shift_list[0]
                             else:
-                                return await failure_embed(
+                                return await new_failure_embed(
                                     ctx,
+                                    "Critical Error",
                                     "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
                                 )
 
@@ -3058,14 +3002,13 @@ class ShiftManagement(commands.Cog):
         embeds = []
 
         embed = discord.Embed(
-            color=0xED4348, title="<:ERMMisc:1113215605424795648> Leaderboard"
+            color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
         )
         embed.set_author(
-            name=f"{ctx.author.name}",
-            icon_url=ctx.author.display_avatar.url,
+            name=f"{ctx.guild.name}",
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
         )
 
-        embed.set_thumbnail(url=ctx.guild.icon.url)
 
         embeds.append(embed)
         # print(sorted_staff)
@@ -3130,26 +3073,24 @@ class ShiftManagement(commands.Cog):
                     if embeds[-1].description is None:
                         embeds[
                             -1
-                        ].description = f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                        ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
                     else:
                         embeds[
                             -1
-                        ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                        ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
 
                 else:
                     # print("fields more than 24")
                     new_embed = discord.Embed(
-                        color=0xED4348,
-                        title="<:ERMMisc:1113215605424795648> Leaderboard",
+                        color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
                     )
 
                     new_embed.set_author(
-                        name=ctx.author.name, icon_url=ctx.author.display_avatar.url
+                        name=f"{ctx.guild.name}",
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
                     )
-
-                    new_embed.set_thumbnail(url=ctx.guild.icon.url)
                     new_embed.description = ""
-                    new_embed.description += f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                    new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
                     embeds.append(new_embed)
 
         staff_roles = []
@@ -3222,26 +3163,24 @@ class ShiftManagement(commands.Cog):
                                 if embeds[-1].description is None:
                                     embeds[
                                         -1
-                                    ].description = f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index}.** {member.mention} - 0 seconds\n"
+                                    ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
                                 else:
                                     embeds[
                                         -1
-                                    ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index}.** {member.mention} - 0 seconds\n"
+                                    ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                             else:
                                 # print("fields more than 24")
                                 new_embed = discord.Embed(
-                                    color=0xED4348,
-                                    title="<:ERMMisc:1113215605424795648> Leaderboard",
+                                    color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
                                 )
 
                                 new_embed.set_author(
-                                    name=ctx.author.name,
-                                    icon_url=ctx.author.display_avatar.url,
+                                    name=f"{ctx.guild.name}",
+                                    icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
                                 )
-                                new_embed.set_thumbnail(url=ctx.guild.icon.url)
                                 new_embed.description = ""
-                                new_embed.description += f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                                new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=0))}\n"
                                 embeds.append(new_embed)
         perm_staff = list(
             filter(
@@ -3294,25 +3233,24 @@ class ShiftManagement(commands.Cog):
                         if embeds[-1].description is None:
                             embeds[
                                 -1
-                            ].description = f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index}.** {member.mention} - 0 seconds\n"
+                            ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
                         else:
                             embeds[
                                 -1
-                            ].description += f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - 0 seconds\n"
+                            ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                     else:
                         # print("fields more than 24")
                         new_embed = discord.Embed(
-                            color=0xED4348,
-                            title="<:ERMMisc:1113215605424795648> Leaderboard",
+                            color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
                         )
 
                         new_embed.set_author(
-                            name=ctx.author.name, icon_url=ctx.author.display_avatar.url
+                            name=f"{ctx.guild.name}",
+                            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
                         )
-                        new_embed.set_thumbnail(url=ctx.guild.icon.url)
                         new_embed.description = ""
-                        new_embed.description += f"<:ERMList:1111099396990435428> **Total Shifts**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **{index + 1}.** {member.mention} - 0 seconds\n"
+                        new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
                         embeds.append(new_embed)
 
         combined = []
@@ -3324,18 +3262,18 @@ class ShiftManagement(commands.Cog):
         # print(sorted_staff)
         # print(buffer)
 
-        if my_data is not None:
-            ordinal_formatted = ordinal(my_data["index"] + 1)
-            if "quota" in configItem["shift_management"].keys():
-                quota_seconds = configItem["shift_management"]["quota"]
-
-            embeds[
-                0
-            ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(datetime.timedelta(seconds=my_data['total_seconds']))}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Rank:** {ordinal_formatted}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {'<:ERMCheck:1111089850720976906>' if my_data['total_seconds'] >= quota_seconds else '<:ERMClose:1111101633389146223>'}"
-        else:
-            embeds[
-                0
-            ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** 0 seconds\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** <:ERMClose:1111101633389146223>"
+        # if my_data is not None:
+        #     ordinal_formatted = ordinal(my_data["index"] + 1)
+        #     if "quota" in configItem["shift_management"].keys():
+        #         quota_seconds = configItem["shift_management"]["quota"]
+        #
+        #     embeds[
+        #         0
+        #     ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(datetime.timedelta(seconds=my_data['total_seconds']))}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Rank:** {ordinal_formatted}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {'<:ERMCheck:1111089850720976906>' if my_data['total_seconds'] >= quota_seconds else '<:ERMClose:1111101633389146223>'}"
+        # else:
+        #     embeds[
+        #         0
+        #     ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** 0 seconds\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** <:ERMClose:1111101633389146223>"
 
         try:
             bbytes = buffer.encode("utf-8")
@@ -3358,8 +3296,7 @@ class ShiftManagement(commands.Cog):
 
                 if len(menu.pages) == 1:
                     return await ctx.reply(
-                        embed=embed,
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                        embed=embed
                     )
 
                 menu.add_buttons([ViewButton.back(), ViewButton.next()])
@@ -3416,8 +3353,7 @@ class ShiftManagement(commands.Cog):
             for embed in embeds:
                 if embed is not None:
                     menu.add_page(
-                        embed=embed,
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                        embed=embed
                     )
 
             menu._pc = _PageController(menu.pages)
@@ -3436,15 +3372,13 @@ class ShiftManagement(commands.Cog):
                     return await msg.edit(
                         embed=embed,
                         file=file,
-                        view=view,
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                        view=view
                     )
                 except UnboundLocalError:
                     return await ctx.reply(
                         embed=embed,
                         file=file,
-                        view=view,
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                        view=view
                     )
             if view:
                 for child in view.children:
@@ -3453,14 +3387,12 @@ class ShiftManagement(commands.Cog):
             try:
                 await msg.edit(
                     embed=embeds[0],
-                    view=menu._ViewMenu__view,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
+                    view=menu._ViewMenu__view
                 )
             except UnboundLocalError:
                 await ctx.reply(
                     embed=embeds[0],
                     view=menu._ViewMenu__view,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, here's the leaderboard for **{ctx.guild.name}**.",
                 )
 
     @duty.command(
@@ -3472,9 +3404,10 @@ class ShiftManagement(commands.Cog):
     @is_management()
     async def clearall(self, ctx):
         if self.bot.shift_management_disabled is True:
-            return await failure_embed(
+            return await new_failure_embed(
                 ctx,
-                "this command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance. It will be returned shortly.",
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
         bot = self.bot
@@ -3508,4 +3441,4 @@ class ShiftManagement(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(ShiftManagement(bot))
+    await bot.add_cog(ShiftLogging(bot))

@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from erm import is_management
+from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
 from menus import (
     AddCustomCommand,
@@ -12,7 +13,7 @@ from menus import (
     EmbedCustomisation,
     MessageCustomisation,
     RemoveCustomCommand,
-    YesNoColourMenu,
+    YesNoColourMenu, CustomCommandOptionSelect,
 )
 from utils.autocompletes import command_autocomplete
 from utils.utils import (
@@ -45,38 +46,38 @@ class CustomCommands(commands.Cog):
         if Data is None:
             Data = {"_id": ctx.guild.id, "commands": []}
 
-        view = CustomSelectMenu(
-            ctx.author.id,
-            [
-                discord.SelectOption(
-                    label="Create",
-                    value="create",
-                    description="Create a Custom Command",
-                    emoji="<:ERMAdd:1113207792854106173>",
-                ),
-                discord.SelectOption(
-                    label="List",
-                    value="list",
-                    description="List all of the Custom Commands",
-                    emoji="<:ERMList:1111099396990435428>",
-                ),
-                discord.SelectOption(
-                    label="Edit",
-                    value="edit",
-                    description="Edit an existing Custom Command.",
-                    emoji="<:ERMMisc:1113215605424795648>",
-                ),
-                discord.SelectOption(
-                    label="Delete",
-                    value="delete",
-                    description="Delete an existing Custom Command",
-                    emoji="<:ERMTrash:1111100349244264508>",
-                ),
-            ],
+        embed = discord.Embed(
+            title="Custom Commands",
+            color=BLANK_COLOR
+        )
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+        )
+        embed.set_thumbnail(
+            url=ctx.guild.icon.url if ctx.guild.icon else ''
         )
 
+        for item in Data["commands"]:
+            embed.add_field(
+                name=f"{item['name']}",
+                value=f"<:replytop:1138257149705863209> **Name:** {item['name']}\n"
+                      f"<:replymiddle:1138257195121791046> **Command ID:** `{item['id']}`\n"
+                      f"<:replybottom:1138257250448855090> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else 'Unknown')}",
+                inline=False,
+            )
+        if len(embed.fields) == 0:
+            embed.add_field(
+                name="No Custom Commands",
+                value=f"<:replybottom:1138257250448855090> No Custom Commands were found to be associated with this server."
+            )
+
+
+        view = CustomCommandOptionSelect(ctx.author.id)
+
+
         new_msg = await ctx.reply(
-            f"<:ERMPending:1111097561588183121> **{ctx.author.name},** select an option.",
+            embed=embed,
             view=view,
         )
 
@@ -97,39 +98,29 @@ class CustomCommands(commands.Cog):
 
             try:
                 name = view.information["name"]
-
-            except:
+            except KeyError:
                 return await ctx.reply(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this has been cancelled."
+                    embed=discord.Embed(
+                        title="Cancelled",
+                        description="This custom command creation has been cancelled.",
+                        color=BLANK_COLOR
+                    )
                 )
 
             for item in Data["commands"]:
                 if item["name"] == name:
                     return await ctx.reply(
-                        content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this command already exists"
+                        embed=discord.Embed(
+                            title="Command Mismatch",
+                            description="This custom command already exists.",
+                            color=BLANK_COLOR
+                        )
                     )
 
             embeds = []
             resultingMessage = view.view.newView.msg
             for embed in resultingMessage.embeds:
                 embeds.append(embed.to_dict())
-
-            channel_view = YesNoColourMenu(ctx.author.id)
-            new_msg = await ctx.reply(
-                f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** would you like this custom command to have a default channel? If this isn't selected, the custom command will be run in the same channel as the command or the channel argument specified in the command.",
-                view=channel_view,
-            )
-            await channel_view.wait()
-            channel = None
-            if channel_view.value is True:
-                channel_view = ChannelSelect(ctx.author.id, limit=1)
-                await new_msg.edit(
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what would you like your default channel to be?",
-                    view=channel_view,
-                )
-                await channel_view.wait()
-                if channel_view.value:
-                    channel = [ch.id for ch in channel_view.value][0]
 
             custom_command_data = {
                 "_id": ctx.guild.id,
@@ -140,8 +131,8 @@ class CustomCommands(commands.Cog):
                         "message": {
                             "content": resultingMessage.content,
                             "embeds": embeds,
-                            "channel": channel,
                         },
+                        "author": ctx.author.id
                     }
                 ],
             }
@@ -154,8 +145,8 @@ class CustomCommands(commands.Cog):
                         "message": {
                             "content": resultingMessage.content,
                             "embeds": embeds,
-                            "channel": channel,
                         },
+                        "author": ctx.author.id
                     }
                 )
             else:
@@ -163,271 +154,13 @@ class CustomCommands(commands.Cog):
 
             await bot.custom_commands.upsert(Data)
             await new_msg.edit(
-                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've saved **{name}**!",
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Command Created",
+                    description="This custom command has been successfully created",
+                    color=GREEN_COLOR
+                ),
                 view=None,
-            ),
-
-        elif view.value == "edit":
-            view = CustomModalView(
-                ctx.author.id,
-                "Edit a Custom Command",
-                "Edit a Custom Command",
-                [
-                    (
-                        "name",
-                        discord.ui.TextInput(
-                            placeholder="Name of the custom command",
-                            label="Name of the custom command",
-                            style=discord.TextStyle.short,
-                        ),
-                    )
-                ],
             )
-
-            await new_msg.edit(
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what is the name of the custom command you would like to edit?",
-                view=view,
-            ),
-            await view.wait()
-
-            try:
-                command = view.modal.name.value
-            except:
-                return await new_msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this has been cancelled.",
-                    view=None,
-                )
-
-            if command.lower() not in [c["name"].lower() for c in Data["commands"]]:
-                return await new_msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this command does not exist.",
-                    view=None,
-                )
-
-            view = CustomSelectMenu(
-                ctx.author.id,
-                [
-                    discord.SelectOption(
-                        label="Name",
-                        value="name",
-                        description="Edit the name of the custom command.",
-                    ),
-                    discord.SelectOption(
-                        label="Message",
-                        value="message",
-                        description="Edit the message of the custom command.",
-                    ),
-                    discord.SelectOption(
-                        label="Channel",
-                        value="channel",
-                        description="Edit the channel overrides of the custom command.",
-                    ),
-                ],
-            )
-
-            await new_msg.edit(
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** okey-dokey, what do you want to edit?",
-                view=view,
-            )
-
-            await view.wait()
-            if view.value == "message":
-                view = EmbedCustomisation(ctx.author.id)
-                await new_msg.edit(
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** your custom command is being sent."
-                )
-
-                cmd = None
-                for c in Data["commands"]:
-                    if c["name"].lower() == command.lower():
-                        cmd = c
-
-                message_data = cmd.get("message")
-                if message_data is None:
-                    await new_msg.edit(view=view)
-                else:
-                    content = message_data.get("content")
-
-                embeds = message_data.get("embeds")
-                if content is None:
-                    content = ""
-                if embeds is None:
-                    embeds = []
-
-                embed_list = []
-                for embed in embeds:
-                    embed_list.append(discord.Embed.from_dict(embed))
-                if embed_list:
-                    view = EmbedCustomisation(ctx.author.id, MessageCustomisation(ctx.author.id, data=cmd))
-                    await new_msg.edit(content=content, embeds=embed_list, view=view)
-                else:
-                    view = MessageCustomisation(ctx.author.id)
-                    await new_msg.edit(content=content, embeds=[], view=view)
-
-                await view.wait()
-
-                embeds = []
-                resultingMessage = view.msg
-               # ## # print(view.msg)
-                if new_msg.embeds:
-                    for embed in new_msg.embeds:
-                        embeds.append(embed.to_dict())
-
-                name = command
-
-                updated_message = await ctx.channel.fetch_message(new_msg.id)
-                embeds = [embed.to_dict() for embed in updated_message.embeds]
-
-
-                custom_command_data = {
-                    "_id": ctx.guild.id,
-                    "commands": [
-                        {
-                            "name": cmd.get("name"),
-                            "id": cmd.get("id"),
-                            "message": {
-                                "content": updated_message.content,
-                                "embeds": embeds,
-                            },
-                            "channel": cmd.get("channel"),
-                        }
-                    ],
-                }
-
-                if Data:
-                    ind = Data["commands"].index(cmd)
-                    Data["commands"][ind] = {
-                        "name": cmd["name"],
-                        "id": cmd["id"],
-                        "message": {
-                            "content": updated_message.content,
-                            "embeds": embeds,
-                        },
-                        "channel": cmd.get("channel"),
-                    }
-                else:
-                    Data = custom_command_data
-
-                await bot.custom_commands.upsert(Data)
-                await ctx.reply(
-                    f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've edited **{name}**."
-                )
-
-            elif view.value == "channel":
-                channel_view = ChannelSelect(ctx.author.id, limit=1)
-                await new_msg.edit(
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what would you like your default channel to be?",
-                    view=channel_view,
-                )
-                await channel_view.wait()
-                if channel_view.value:
-                    channel = [ch.id for ch in channel_view.value][0]
-
-                    cmd = None
-                    for c in Data["commands"]:
-                        if c["name"].lower() == command.lower():
-                            cmd = c
-
-                    name = command
-
-                    custom_command_data = {
-                        "_id": ctx.guild.id,
-                        "commands": [
-                            {
-                                "name": name,
-                                "id": next(generator),
-                                "message": cmd.get("message"),
-                                "channel": cmd.get("channel"),
-                            }
-                        ],
-                    }
-
-                    if Data:
-                        ind = Data["commands"].index(cmd)
-                        Data["commands"][ind] = {
-                            "name": cmd["name"],
-                            "id": cmd["id"],
-                            "message": cmd["message"],
-                            "channel": channel,
-                        }
-                    else:
-                        Data = custom_command_data
-
-                    await bot.custom_commands.upsert(Data)
-                    await new_msg.edit(
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've edited **{name}**.",
-                        view=None,
-                    )
-
-            elif view.value == "name":
-                view = CustomModalView(
-                    ctx.author.id,
-                    "Edit Custom Command Name",
-                    "Edit Command Name",
-                    [
-                        (
-                            "new_name",
-                            discord.ui.TextInput(
-                                placeholder="New Name",
-                                label="New Name",
-                                min_length=1,
-                                max_length=32,
-                            ),
-                        )
-                    ],
-                )
-
-                await new_msg.edit(
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** what would you like the name of this command to be changed to?",
-                    view=view,
-                )
-                await view.wait()
-
-                new_name = view.modal.new_name.value
-
-                for item in Data["commands"]:
-                    if item["name"] == new_name:
-                        return await new_msg.edit(
-                            content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this command already exists",
-                            view=None,
-                        )
-
-                await new_msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** sounds good, I've changed it to **{new_name}**.",
-                    view=None,
-                )
-
-                cmd = None
-
-                for c in Data["commands"]:
-                    if c["name"].lower() == command.lower():
-                        cmd = c
-
-                custom_command_data = {
-                    "_id": ctx.guild.id,
-                    "commands": [
-                        {
-                            "name": new_name,
-                            "id": cmd.get("id"),
-                            "message": cmd.get("message"),
-                            "channel": cmd.get("channel"),
-                        }
-                    ],
-                }
-
-                if Data:
-                    ind = Data["commands"].index(cmd)
-                    Data["commands"][ind] = {
-                        "name": new_name,
-                        "id": cmd["id"],
-                        "message": cmd["message"],
-                        "channel": cmd.get("channel"),
-                    }
-                else:
-                    Data = custom_command_data
-
-                await bot.custom_commands.upsert(Data)
-
         elif view.value == "delete":
             view = CustomModalView(
                 ctx.author.id,
@@ -445,44 +178,37 @@ class CustomCommands(commands.Cog):
 
             await new_msg.edit(
                 view=view,
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name},** get the name of your custom command ready and input it in the modal!",
+                embed=discord.Embed(
+                    title="Delete Command",
+                    description="Which command ID would you like to delete?"
+                )
             )
             await view.wait()
-            name = view.modal.name.value
+            identifier = view.modal.id.value
 
             for item in Data["commands"]:
-                if item["name"].lower() == name.lower():
+                if str(item["id"]).strip() == identifier.strip():
                     Data["commands"].remove(item)
                     await bot.custom_commands.upsert(Data)
+            else:
+                return await new_msg.edit(
+                    embed=discord.Embed(
+                        title="Command Mismatch",
+                        description="This custom command doesn't exist.",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+                )
 
             return await new_msg.edit(
-                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** I've deleted **{name}**.",
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Deleted Command",
+                    description="This custom command has been successfully deleted",
+                    color=GREEN_COLOR
+                ),
                 view=None,
             )
 
-        elif view.value == "list":
-            content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** you're **viewing** all custom commands."
-            embed = discord.Embed(
-                title="<:ERMCustomCommands:1113210178448396348> Custom Commands",
-                color=0xED4348,
-            )
-            embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
-            )
-            embed.set_thumbnail(url=ctx.guild.icon.url)
-            for item in Data["commands"]:
-                embed.add_field(
-                    name=f"<:ERMList:1111099396990435428> {item['name']}",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **ID:** {item['id']}",
-                    inline=False,
-                )
-            if len(embed.fields) == 0:
-                await ctx.reply(
-                    f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** looks like you haven't created any custom commands!"
-                )
-
-            return await new_msg.edit(embed=embed, content=content, view=None)
 
     @custom.command(
         name="run",
@@ -500,7 +226,10 @@ class CustomCommands(commands.Cog):
         Data = await bot.custom_commands.find_by_id(ctx.guild.id)
         if Data is None:
             return await ctx.reply(
-                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** looks like you haven't created any custom commands!"
+                embed=discord.Embed(
+                    title="No Commands",
+                    description="There are no custom commands in this server."
+                )
             )
 
         is_command = False
@@ -516,7 +245,11 @@ class CustomCommands(commands.Cog):
 
         if not is_command:
             return await ctx.reply(
-                f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** there aren't any custom commands with that name!"
+                embed=discord.Embed(
+                    title="Command Mismatch",
+                    description="This custom command doesn't exist.",
+                    color=BLANK_COLOR
+                )
             )
 
         if not channel:
@@ -539,10 +272,19 @@ class CustomCommands(commands.Cog):
         if ctx.interaction:
             if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
                 return await ctx.interaction.followup.send(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, due to Discord limitations - I am unable to send your reminder. Your message is most likely empty.")
+                    embed=discord.Embed(
+                        title='Empty Command',
+                        description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                        color=BLANK_COLOR
+                    )
+                )
             await ctx.interaction.followup.send(
-                content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've just run the custom command in **{channel}**."
-            ),
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Command Ran",
+                    description=f"I've just ran the custom command in {channel.mention}.",
+                    color=GREEN_COLOR
+                )
+            )
             await channel.send(
                 content=await interpret_content(
                     bot, ctx, channel, selected["message"]["content"]
@@ -554,9 +296,19 @@ class CustomCommands(commands.Cog):
             )
         else:
             if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
-                return await ctx.reply(content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, due to Discord limitations - I am unable to send your reminder. Your message is most likely empty.")
+                return await ctx.reply(
+                    embed=discord.Embed(
+                        title='Empty Command',
+                        description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                        color=BLANK_COLOR
+                    )
+                )
             await ctx.reply(
-                content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name},** I've just run the custom command in **{channel}**."
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Command Ran",
+                    description=f"I've just ran the custom command in {channel.mention}.",
+                    color=GREEN_COLOR
+                )
             )
 
             await channel.send(

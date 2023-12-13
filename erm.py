@@ -18,27 +18,26 @@ from roblox import client as roblox
 from sentry_sdk import push_scope, capture_exception
 from sentry_sdk.integrations.pymongo import PyMongoIntegration
 
+from datamodels.CustomFlags import CustomFlags
+from datamodels.ServerKeys import ServerKeys
 from datamodels.ShiftManagement import ShiftManagement
-from datamodels.APITokens import APITokens
-from datamodels.ActivityNotices import ActivityNotices
+from datamodels.ActivityNotice import ActivityNotices
 from datamodels.Analytics import Analytics
 from datamodels.Consent import Consent
 from datamodels.CustomCommands import CustomCommands
 from datamodels.Errors import Errors
 from datamodels.FiveMLinks import FiveMLinks
-from datamodels.Flags import Flags
 from datamodels.LinkStrings import LinkStrings
-from datamodels.Privacy import Privacy
 from datamodels.PunishmentTypes import PunishmentTypes
 from datamodels.Reminders import Reminders
 from datamodels.Settings import Settings
-from datamodels.OldShiftManagement import OldShiftManagement
-from datamodels.SyncedUsers import SyncedUsers
-from datamodels.Verification import Verification
+from datamodels.APITokens import APITokens
+from datamodels.StaffConnections import StaffConnections
 from datamodels.Views import Views
 from datamodels.Warnings import Warnings
 from menus import CompleteReminder, LOAMenu
-from utils.mongo import Document
+from utils.bloxlink import Bloxlink
+from utils.prc_api import PRCApiClient
 from utils.utils import *
 
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
@@ -69,6 +68,13 @@ scope = [
 
 
 class Bot(commands.AutoShardedBot):
+
+    async def close(self):
+        for session in self.external_http_sessions:
+            if session is not None and session.closed is False:
+                await session.close()
+        await super().close()
+
     async def is_owner(self, user: discord.User):
         if user.id in [
             459374864067723275, # Noah
@@ -82,68 +88,69 @@ class Bot(commands.AutoShardedBot):
         return await super().is_owner(user)
 
     async def setup_hook(self) -> None:
+        self.external_http_sessions: list[aiohttp.ClientSession] = []
+
         global setup
         if not setup:
-            bot = self
             # await bot.load_extension('utils.routes')
             logging.info(
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!".format(
-                    bot.user.name
+                    self.user.name
                 )
             )
-            global startTime
-            startTime = time.time()
-            bot.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
+            self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                bot.db = bot.mongo["beta"]
+                self.db = self.mongo["beta"]
             elif environment == "PRODUCTION":
-                bot.db = bot.mongo["erm"]
+                self.db = self.mongo["erm"]
+            elif environment == "ALPHA":
+                self.db = self.mongo['alpha']
             else:
                 raise Exception("Invalid environment")
 
-            bot.start_time = time.time()
-            # bot.warnings = Warnings(bot.db, "warnings")
-            bot.old_shift_management = OldShiftManagement(bot.db, "shifts", "shift_storage")
-            bot.shift_management = ShiftManagement(bot.db, "shift_management")
-            bot.errors = Errors(bot.db, "errors")
-            bot.loas = ActivityNotices(bot.db, "leave_of_absences")
-            bot.reminders = Reminders(bot.db, "reminders")
-            bot.custom_commands = CustomCommands(bot.db, "custom_commands")
-            bot.analytics = Analytics(bot.db, "analytics")
-            bot.punishment_types = PunishmentTypes(bot.db, "punishment_types")
-            bot.privacy = Privacy(bot.db, "privacy")
-            bot.verification = Verification(bot.db, "verification")
-            bot.flags = Flags(bot.db, "flags")
-            bot.views = Views(bot.db, "views")
-            bot.synced_users = SyncedUsers(bot.db, "synced_users")
-            bot.api_tokens = APITokens(bot.db, "api_tokens")
-            bot.link_strings = LinkStrings(bot.db, "link_strings")
-            bot.fivem_links = FiveMLinks(bot.db, "fivem_links")
-            bot.consent = Consent(bot.db, "consent")
-            bot.punishments = Warnings(bot)
-            bot.settings = Settings(bot.db, "settings")
+            self.start_time = time.time()
+            self.shift_management = ShiftManagement(self.db, "shift_management")
+            self.errors = Errors(self.db, "errors")
+            self.loas = ActivityNotices(self.db, "leave_of_absences")
+            self.reminders = Reminders(self.db, "reminders")
+            self.custom_commands = CustomCommands(self.db, "custom_commands")
+            self.analytics = Analytics(self.db, "analytics")
+            self.punishment_types = PunishmentTypes(self.db, "punishment_types")
+            self.custom_flags = CustomFlags(self.db, "custom_flags")
+            self.views = Views(self.db, "views")
+            self.api_tokens = APITokens(self.db, "api_tokens")
+            self.link_strings = LinkStrings(self.db, "link_strings")
+            self.fivem_links = FiveMLinks(self.db, "fivem_links")
+            self.consent = Consent(self.db, "consent")
+            self.punishments = Warnings(self)
+            self.settings = Settings(self.db, "settings")
+            self.server_keys = ServerKeys(self.db, "server_keys")
+            self.staff_connections = StaffConnections(self.db, "staff_connections")
+
+            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
+            self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
             BETA_EXT = ["cogs.StaffConduct"]
-            # EXTERNAL_EXT = ["utils.api"]
-            # [Extensions.append(i) for i in EXTERNAL_EXT]
+            EXTERNAL_EXT = ["utils.api"]
+            [Extensions.append(i) for i in EXTERNAL_EXT]
 
 
             for extension in Extensions:
                 try:
                     if extension not in BETA_EXT:
-                        await bot.load_extension(extension)
+                        await self.load_extension(extension)
                         logging.info(f"Loaded {extension}")
-                    elif environment == "DEVELOPMENT":
-                        await bot.load_extension(extension)
+                    elif environment == "DEVELOPMENT" or environment == "ALPHA":
+                        await self.load_extension(extension)
                         logging.info(f"Loaded {extension}")
                 except Exception as e:
                     logging.error(f"Failed to load extension {extension}.", exc_info=e)
 
             for extension in Events:
                 try:
-                    await bot.load_extension(extension)
+                    await self.load_extension(extension)
                     logging.info(f"Loaded {extension}")
                 except Exception as e:
                     logging.error(f"Failed to load extension {extension}.", exc_info=e)
@@ -159,7 +166,6 @@ class Bot(commands.AutoShardedBot):
                 bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
             if environment == "DEVELOPMENT":
                 await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-
             else:
                 await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
@@ -437,6 +443,12 @@ elif environment == "DEVELOPMENT":
     except:
         bot_token = ""
     logging.info("Using development token...")
+elif environment == "ALPHA":
+    try:
+        bot_token = config('ALPHA_BOT_TOKEN')
+    except:
+        bot_token = ""
+    logging.info('Using ERM V4 Alpha token...')
 else:
     raise Exception("Invalid environment")
 try:

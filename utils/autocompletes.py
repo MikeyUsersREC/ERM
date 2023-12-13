@@ -2,6 +2,7 @@ import typing
 
 import aiohttp
 import discord
+import roblox
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -111,62 +112,38 @@ async def punishment_autocomplete(
                 )
         return commandList
 
-
 async def user_autocomplete(
     interaction: discord.Interaction, current: str
 ) -> typing.List[app_commands.Choice[str]]:
     bot = (await Context.from_interaction(interaction)).bot
-
-    if current in [None, ""]:
-        searches = bot.warnings.db.find().sort([("$natural", -1)]).limit(10)
+    async def fallback_completion():
         choices = []
-        async for search in searches:
+        async for search in bot.punishments.db.find({}).limit(10):
+            if search['Username'] in [choice.name for choice in choices]:
+                continue
             choices.append(
-                discord.app_commands.Choice(name=search["_id"], value=search["_id"])
+                discord.app_commands.Choice(name=search['Username'], value=search["Username"])
             )
         return choices
-    else:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"https://users.roblox.com/v1/users/search?keyword={current}&limit=25"
-            ) as resp:
-                # print(resp.status)
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "data" in data.keys():
-                        choices = []
-                        for user in data["data"]:
-                            choices.append(
-                                discord.app_commands.Choice(
-                                    name=user["name"], value=user["name"]
-                                )
-                            )
-                        return choices
-                else:
-                    searches = bot.warnings.db.find(
-                        {"_id": {"$regex": f"{current.lower()}"}}
-                    )
 
-                    choices = []
-                    index = 0
-                    async for search in searches:
-                        if index >= 25:
-                            break
-                        else:
-                            index += 1
-                            choices.append(
-                                discord.app_commands.Choice(
-                                    name=search["_id"], value=search["_id"]
-                                )
-                            )
-                    if not choices:
-                        searches = (
-                            bot.warnings.db.find().sort([("$natural", -1)]).limit(25)
-                        )
-                        async for search in searches:
-                            choices.append(
-                                discord.app_commands.Choice(
-                                    name=search["_id"], value=search["_id"]
-                                )
-                            )
-                    return choices
+    if current in [None, ""]:
+        return await fallback_completion()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f'https://www.roblox.com/search/users/results?keyword={current}&maxRows=12&startIndex=0') as resp:
+                data_json = await resp.json()
+                if data_json:
+                    print(data_json)
+                    if isinstance(data_json.get('UserSearchResults'), list):
+                        items = [item for item in data_json['UserSearchResults'][:25]]
+                    else:
+                        items = []
+                else:
+                    items = []
+    choices = []
+    for item in items:
+        choices.append(
+            discord.app_commands.Choice(name=item["Name"], value=item["Name"])
+        )
+    return choices

@@ -7,10 +7,53 @@ import discord
 from utils.mongo import Document
 from decouple import config
 
+from utils.utils import BaseDataClass
+
+
+class BreakItem(BaseDataClass):
+    start_epoch: int
+    end_epoch: int
+
+class ShiftItem:
+    id: str
+    username: str
+    nickname: str
+    user_id: int
+    type: str
+    start_epoch: int
+    breaks: list
+    guild: int
+    moderations: list
+    end_epoch: int
+    added_time: int
+    removed_time: int
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 class ShiftManagement:
     def __init__(self, connection, current_shifts):
         self.shifts = Document(connection, current_shifts)
+
+    async def fetch_shift(self, object_id: ObjectId) -> ShiftItem | None:
+        shift = await self.shifts.find_by_id(object_id)
+        if not shift:
+            return None
+        return ShiftItem(
+            id=shift["_id"],
+            username=shift["Username"],
+            nickname=shift["Nickname"],
+            user_id=shift["UserID"],
+            type=shift["Type"],
+            start_epoch=shift["StartEpoch"],
+            breaks=[BreakItem(start_epoch=item['StartEpoch'], end_epoch=item['EndEpoch']) for item in shift["Breaks"]],
+            guild=shift["Guild"],
+            moderations=shift["Moderations"],
+            end_epoch=shift["EndEpoch"],
+            added_time=shift["AddedTime"],
+            removed_time=shift["RemovedTime"]
+        )
 
     async def add_shift_by_user(
         self, member: discord.Member, shift_type: str, breaks: list, guild: int

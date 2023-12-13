@@ -1,14 +1,19 @@
 import datetime
+import logging
 import typing
 
 import aiohttp
 import discord
 import pytz
+import roblox.users
 from decouple import config
 from discord import Embed
 from discord.ext import commands
+from roblox import BaseGroup
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
+
+from utils.constants import BLANK_COLOR
 
 tokenGenerator = ZUID(
     prefix="",
@@ -21,6 +26,10 @@ generator = SnowflakeGenerator(192)
 error_gen = ZUID(prefix="error_", length=10)
 system_code_gen = ZUID(prefix="erm-systems-", length=7)
 
+class BaseDataClass:
+    def __init__(self, *args, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 def removesuffix(input_string: str, suffix: str):
     if suffix and input_string.endswith(suffix):
@@ -29,7 +38,7 @@ def removesuffix(input_string: str, suffix: str):
 
 
 def get_guild_icon(
-    bot: typing.Union[commands.Bot, commands.AutoShardedBot], guild: discord.Guild
+        bot: typing.Union[commands.Bot, commands.AutoShardedBot], guild: discord.Guild
 ):
     if guild.icon is None:
         return bot.user.display_avatar.url
@@ -38,89 +47,67 @@ def get_guild_icon(
 
 
 async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"https://users.roblox.com/v1/usernames/users",
-            json={"usernames": [user]},
-        ) as r:
-            try:
-                requestJson = await r.json()
-                should_switch = len(requestJson["data"]) == 0
-            except:
-                requestJson = None
-                should_switch = False
+    if '<@' in user:
+        try:
+            member_converted = await (discord.ext.commands.MemberConverter()).convert(
+                ctx, user
+            )
+            if member_converted:
+                bl_user_data = await bot.bloxlink.find_roblox(member_converted.id)
+                roblox_user = await bot.bloxlink.get_roblox_info(bl_user_data)
+                return roblox_user
+        except:
+            return {
+                "errors": ["Member could not be found in Discord."]
+            }
 
-            if r.status == 200 and should_switch is False:
-                requestJson = requestJson["data"][0]
-                Id = requestJson["id"]
-                async with session.get(f"https://users.roblox.com/v1/users/{Id}") as r:
-                    requestJson = await r.json()
-                    return requestJson
-            else:
-                async with session.post(
-                    f"https://users.roblox.com/v1/usernames/users",
-                    json={"usernames": [user]},
-                ) as r:
-                    requestJson = await r.json()
-                    if len(requestJson["data"]) != 0:
-                        requestJson = requestJson["data"][0]
-                        Id = requestJson["id"]
-                        async with session.get(
-                            f"https://users.roblox.com/v1/users/{Id}"
-                        ) as r:
-                            requestJson = await r.json()
-                            return requestJson
-                    else:
-                        try:
-                            userConverted = await (
-                                discord.ext.commands.MemberConverter()
-                            ).convert(ctx, user.replace(" ", ""))
-                            if userConverted:
-                                verified_user = await bot.verification.find_by_id(
-                                    userConverted.id
-                                )
-                                if verified_user:
-                                    Id = verified_user["roblox"]
-                                    async with session.get(
-                                        f"https://users.roblox.com/v1/users/{Id}"
-                                    ) as r:
-                                        requestJson = await r.json()
-                                        return requestJson
-                                else:
-                                    async with aiohttp.ClientSession(
-                                        headers={"api-key": bot.bloxlink_api_key}
-                                    ) as newSession:
-                                        async with newSession.get(
-                                            f"https://v3.blox.link/developer/discord/{userConverted.id}"
-                                        ) as r:
-                                            tempRBXUser = await r.json()
-                                            if tempRBXUser["success"]:
-                                                tempRBXID = tempRBXUser["user"][
-                                                    "robloxId"
-                                                ]
-                                            else:
-                                                requestJson = {
-                                                    "errors": [
-                                                        "No username could be found."
-                                                    ]
-                                                }
-                                                return requestJson
-                                            Id = tempRBXID
-                                            async with session.get(
-                                                f"https://users.roblox.com/v1/users/{Id}"
-                                            ) as r:
-                                                requestJson = await r.json()
-                                                return requestJson
-                        except discord.ext.commands.MemberNotFound:
-                            requestJson = {
-                                "errors": ["Member could not be found in Discord."]
-                            }
-                            return requestJson
+    client = roblox.Client()
+    roblox_user = await client.get_user_by_username(user)
+    if not roblox_user:
+        return {
+            "errors": [
+                "Could not find user"
+            ]
+        }
+    else:
+        return await bot.bloxlink.get_roblox_info(roblox_user.id)
 
-    return requestJson
+def time_converter(parameter: str) -> int:
+
+    conversions = {
+        ("s", "minutes", "seconds", " seconds"): 1,
+        ("m", "minute", "minutes", " minutes"): 60,
+        ("h", "hour", "hours", " hours"): 60 * 60,
+        ("d", "day", "days", " days"): 24 * 60 * 60,
+        ("w", "week", " weeks"): 7 * 24 * 60 * 60
+    }
+
+    for aliases, multiplier in conversions.items():
+        parameter = parameter.strip()
+        for alias in aliases:
+            print(f"{alias} - {(parameter[(len(parameter) - len(alias)):])=}")
+            if parameter[(len(parameter) - len(alias)):].lower() == alias.lower():
+                alias_found = parameter[(len(parameter) - len(alias)):]
+                number = parameter.split(alias_found)[0]
+                if not number.strip()[-1].isdigit():
+                    continue
+                return int(number.strip()) * multiplier
+
+    raise ValueError("Invalid time format")
 
 
+class GuildCheckFailure(commands.CheckFailure):
+    pass
 
+
+def require_settings():
+    async def predicate(ctx: commands.Context):
+        settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
+        if not settings:
+            raise GuildCheckFailure()
+        else:
+            return True
+    return commands.check(predicate)
 
 
 async def interpret_embed(bot, ctx, channel, embed: dict):
@@ -165,6 +152,7 @@ async def sub_vars(bot, ctx, channel, string, **kwargs):
     string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
     return string
 
+
 def get_elapsed_time(document):
     total_seconds = 0
     break_seconds = 0
@@ -176,15 +164,15 @@ def get_elapsed_time(document):
 
     total_seconds += (
             (int(
-                    (
-                        document["EndEpoch"]
-                        if document["EndEpoch"] != 0
-                        else datetime.datetime.now(tz=pytz.UTC).timestamp()
-                    )
+                (
+                    document["EndEpoch"]
+                    if document["EndEpoch"] != 0
+                    else datetime.datetime.now(tz=pytz.UTC).timestamp()
                 )
-                - int(document["StartEpoch"])
-                + document["AddedTime"]
-                - document["RemovedTime"])
+            )
+             - int(document["StartEpoch"])
+             + document["AddedTime"]
+             - document["RemovedTime"])
             - break_seconds
     )
 
@@ -216,8 +204,8 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
         async with aiohttp.ClientSession() as session:
             async with session.get(
                     f"{url_var}/Internal/SyncEndBreak/{shift['_id']}", headers={
-                                "Authorization": config('INTERNAL_API_AUTH')
-                            }):
+                        "Authorization": config('INTERNAL_API_AUTH')
+                    }):
                 pass
     except:
         pass
@@ -256,7 +244,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             await member.edit(nick=new_name)
             changed_nick = True
         except Exception as e:
-           # # print(e)
+            # # print(e)
             pass
 
     if shift_type:
@@ -298,11 +286,24 @@ async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.
 
 
 async def failure_embed(
-    ctx: commands.Context, content: str, **kwargs
+        ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     msg = await ctx.send(
         content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, {content}",
         **kwargs,
+    )
+    return msg
+
+
+async def new_failure_embed(
+        ctx: commands.Context, title: str, description: str, **kwargs
+) -> discord.Message:
+    msg = await ctx.send(
+        embed=discord.Embed(
+            title=title,
+            description=description,
+            color=BLANK_COLOR
+        )
     )
     return msg
 
@@ -334,7 +335,7 @@ async def int_pending_embed(interaction, content, **kwargs):
 
 
 async def pending_embed(
-    ctx: commands.Context, content: str, **kwargs
+        ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     msg = await ctx.send(
         content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {content}",
@@ -357,7 +358,7 @@ async def int_invis_embed(interaction, content, **kwargs):
 
 
 async def coloured_embed(
-    ctx: commands.Context, content: str, **kwargs
+        ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     embed = Embed(color=0xED4348, description=f"{content}")
     msg = await ctx.send(embed=embed, **kwargs)
@@ -381,7 +382,7 @@ async def request_response(bot, ctx, question, **kwargs):
         response = await bot.wait_for(
             "message",
             check=lambda message: message.author == ctx.author
-            and message.guild.id == ctx.guild.id,
+                                  and message.guild.id == ctx.guild.id,
             timeout=300,
         )
     except:

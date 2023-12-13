@@ -1,8 +1,12 @@
+from copy import copy
+from pprint import pformat
+
 import discord
 from discord import HTTPException
 from discord.ext import commands
 
 from erm import check_privacy, generator, is_management
+from utils.constants import blank_color
 from menus import (
     ChannelSelect,
     CustomModalView,
@@ -12,8 +16,10 @@ from menus import (
     RoleSelect,
     SettingsSelectMenu,
     YesNoColourMenu,
-    YesNoMenu,
+    YesNoMenu, NextView, BasicConfiguration, LOAConfiguration, ShiftConfiguration, RAConfiguration,
+    PunishmentsConfiguration, GameSecurityConfiguration, GameLoggingConfiguration,
 )
+from utils.paginators import CustomPage, SelectPagination
 from utils.utils import request_response, failure_embed, pending_embed
 
 
@@ -2259,251 +2265,767 @@ class Configuration(commands.Cog):
         )
 
     @commands.hybrid_command(
-        name="setup",
-        description="Sets up the bot for use.",
-        extras={"category": "Configuration"},
-        aliases=["setupbot"],
-        with_app_command=True,
+        name="newsetup",
+        description="Begin using ERM!",
+        extras={
+            "category": "Configuration"
+        }
     )
     @is_management()
-    async def setup(self, ctx):
+    async def _newsetup(self, ctx: commands.Context):
         bot = self.bot
-        settingContents = {
-            "_id": 0,
-            "verification": {
-                "enabled": False,
-                "role": None,
-            },
-            "antiping": {"enabled": False, "role": None, "bypass_role": "None"},
-            "staff_management": {"enabled": False, "channel": None},
-            "punishments": {"enabled": False, "channel": None},
-            "shift_management": {"enabled": False, "channel": None, "role": None},
-            "customisation": {
-                "color": "",
-                "prefix": ">",
-                "brand_name": "Emergency Response Management",
-                "thumbnail_url": "",
-                "footer_text": "Staff Logging Systems",
-                "ban_channel": None,
-            },
+        from utils.constants import base_configuration
+        current_settings = None
+        modifications = {"_id": ctx.guild.id}
+        msg = None
+
+        current_settings = await bot.settings.find_by_id(ctx.guild.id)
+        if current_settings:
+            msg = await ctx.send(embed=discord.Embed(
+                title="Already Setup",
+                description="You've already setup ERM in this server! Are you sure you would like to go through the setup process again?",
+                color=blank_color
+            ), view=(confirmation_view := YesNoColourMenu(ctx.author.id)))
+            timeout = await confirmation_view.wait()
+            if confirmation_view.value is False:
+                return await msg.edit(embed=discord.Embed(
+                    title="Successfully Cancelled",
+                    description="Cancelled the setup process for this server. All settings have been kept.",
+                    color=blank_color
+                ), view=None)
+
+        if msg is None:
+            msg = await ctx.send(embed=discord.Embed(
+                title="Let's get started!",
+                description="To setup ERM, press the arrow button below!",
+                color=blank_color
+            ), view=(next_view := NextView(ctx.author.id)))
+        else:
+            await msg.edit(embed=discord.Embed(
+                title="Let's get started!",
+                description="To setup ERM, press the arrow button below!",
+                color=blank_color
+            ), view=(next_view := NextView(ctx.author.id)))
+
+        timeout = await next_view.wait()
+        if timeout or not next_view.value:
+            await msg.edit(embed=discord.Embed(
+                title="Cancelled",
+                description="You have took too long to complete this part of the setup.",
+                color=blank_color
+            ), view=None)
+            return
+
+        view_state = None
+
+        def get_active_view_state() -> discord.ui.View | None:
+            return view_state
+
+        def set_active_view_state(view: discord.ui.View):
+            nonlocal view_state
+            view_state = view
+
+        async def discard_unlock_override(interaction: discord.Interaction):
+            await interaction.response.defer()
+
+        async def check_unlock_override(interaction: discord.Interaction):
+            view = get_active_view_state()
+            # if view is None:
+            #     return
+            await interaction.response.defer()
+
+            impurities = []
+            for item in view.children:
+                if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                    if item.callback != discard_unlock_override:
+                        if len(item.values) == 0:
+                            impurities.append(item)
+            print(impurities)
+            if len(impurities) == 0:
+                buttons = list(filter(lambda x: isinstance(x, discord.ui.Button), view.children))
+                print(buttons)
+                if len(buttons) != 0:
+                    buttons[0].disabled = False
+                    for item in view.children:
+                        if isinstance(item, discord.ui.Select):
+                            value = item.values[0]
+                            stored_index = 0
+                            for index, obj in enumerate(item.options):
+                                if obj.value == value:
+                                    stored_index = index
+                            item.options[stored_index].default = True
+                            for select_opt in item.options:
+                                if item.options[stored_index] != select_opt:
+                                    select_opt.default = False
+                            print(f'defaults: {len([i for i in item.options if i.default is True])}')
+                    await interaction.message.edit(view=view)
+            else:
+                buttons = list(filter(lambda x: isinstance(x, discord.ui.Button), view.children))
+                print(buttons)
+                if len(buttons) != 0:
+                    if buttons[0].disabled is False:
+                        buttons[0].disabled = True
+                        await interaction.message.edit(view=view)
+
+        async def callback_override(interaction: discord.Interaction, *args, **kwargs):
+            await interaction.response.defer()
+
+        basic_settings = discord.ui.View()
+        next_button = NextView(ctx.author.id).children[0]
+        next_button.row = 4
+        next_button.disabled = True
+
+        staff_roles = RoleSelect(ctx.author.id).children[0]
+        staff_roles.placeholder = "Staff Roles"
+        staff_roles.callback = check_unlock_override
+        staff_roles.min_values = 0
+
+        management_roles = RoleSelect(ctx.author.id).children[0]
+        management_roles.row = 2
+        management_roles.placeholder = "Management Roles"
+        management_roles.callback = check_unlock_override
+        management_roles.min_values = 0
+
+        prefix_view = CustomSelectMenu(ctx.author.id, [
+                discord.SelectOption(
+                    label="!",
+                    description="Use '!' as your custom prefix."
+                ),
+                discord.SelectOption(
+                    label=">",
+                    description="Use '>' as your custom prefix."
+                ),
+                discord.SelectOption(
+                    label="?",
+                    description="Use '?' as your custom prefix."
+                ),
+                discord.SelectOption(
+                    label=":",
+                    description="Use ':' as your custom prefix."
+                )
+            ])
+        prefix = prefix_view.children[0]
+        prefix.row = 3
+        prefix.placeholder = "Prefix"
+        prefix.callback = check_unlock_override
+
+
+
+        async def stop_override(interaction: discord.Interaction):
+            await interaction.response.defer()
+            get_active_view_state().stop()
+
+
+        # prefix.callback = callback_override
+        next_button.callback = stop_override
+
+        for item in [staff_roles, management_roles, prefix, next_button]:
+            basic_settings.add_item(item)
+
+        set_active_view_state(basic_settings)
+
+        await msg.edit(
+            embed=discord.Embed(
+                title="Basic Settings",
+                description=(
+                    "**Staff Role:** A staff role is the role that is going to be able to use most ERM commands. You'd assign this role to the people you want to be able to use ERM's core functionalities.\n\n"
+                    "**Management Role:** A management role is the roles of your server management members. These people will be able to delete punishments, modify people's shift time, and accept LOA Requests.\n\n"
+                    "**Prefix:** This will be a prefix you are able to use instead of our slash command system. You can use this prefix to execute commands slightly faster and to take advantage of some extra features."
+                ),
+                color=blank_color
+            ),
+            view=basic_settings
+        )
+        await basic_settings.wait()
+
+
+        for item in basic_settings.children:
+            if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect):
+                if len(item.values) > 0:
+                    if item.placeholder == "Staff Roles":
+                        if not modifications.get('staff_management'):
+                            modifications['staff_management'] = {}
+                        modifications['staff_management']['role'] = [i.id for i in item.values]
+                    if item.placeholder == "Prefix":
+                        if not modifications.get('customisation'):
+                            modifications['customisation'] = {}
+                        modifications['customisation']['prefix'] = item.values[0]
+                    elif item.placeholder == "Management Roles":
+                        if not modifications.get('staff_management'):
+                            modifications['staff_management'] = {}
+                        modifications['staff_management']['management_role'] = [i.id for i in item.values]
+
+        loa_requests_settings = discord.ui.View()
+
+        loa_channel_view = ChannelSelect(ctx.author.id, limit=1)
+        loa_channel_select = loa_channel_view.children[0]
+        loa_channel_select.placeholder = "LOA Channel"
+        loa_channel_select.row = 1
+
+        loa_role_view = RoleSelect(ctx.author.id, limit=1)
+        loa_role_select = loa_role_view.children[0]
+        loa_role_select.placeholder = "LOA Role"
+        loa_role_select.row = 2
+
+        loa_enabled_view = CustomSelectMenu(
+            ctx.author.id,
+            [
+                discord.SelectOption(
+                    label='Enabled',
+                    value="enabled",
+                    description="LOA Requests are enabled."
+                ),
+                discord.SelectOption(
+                    label="Disabled",
+                    value="disabled",
+                    description="LOA Requests are disabled."
+                )
+            ]
+        )
+        loa_enabled_select = loa_enabled_view.children[0]
+        loa_enabled_select.callback = callback_override
+        loa_enabled_select.row = 0
+        loa_enabled_select.placeholder = "LOA Requests"
+
+        next_view = NextView(ctx.author.id)
+        next_button = next_view.children[0]
+        next_button.callback = stop_override
+        next_button.row = 4
+
+        for item in [loa_enabled_select, loa_role_select, loa_channel_select, next_button]:
+            loa_requests_settings.add_item(item)
+
+        await msg.edit(
+            embed=discord.Embed(
+                title="<:loa:1169799727143977090> LOA Requests",
+                description=(
+                    "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
+                    "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
+                    "**LOA Channel:** This channel will be where Leave of Absence requests will be logged, and where they will be accepted or denied. Make sure this is a channel that Management members can see, so that they can approve LOA requests."
+                ),
+                color=blank_color
+            ),
+            view=loa_requests_settings
+        )
+
+        set_active_view_state(loa_requests_settings)
+        await loa_requests_settings.wait()
+
+
+        for item in loa_requests_settings.children:
+            if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                if len(item.values) > 0:
+                    if item.placeholder == "LOA Role":
+                        modifications['staff_management']['loa_role'] = item.values[0].id
+                    if item.placeholder == "LOA Channel":
+                        modifications['staff_management']['channel'] = item.values[0].id
+                    elif item.placeholder == "LOA Requests":
+                        modifications['staff_management']['enabled'] = bool(item.values[0] == "enabled")
+
+        ra_requests_settings = discord.ui.View()
+
+
+        ra_role_view = RoleSelect(ctx.author.id, limit=1)
+        ra_role_select = ra_role_view.children[0]
+        ra_role_select.placeholder = "RA Role"
+        ra_role_select.row = 2
+        ra_role_select.min_values = 0
+
+
+        next_view = NextView(ctx.author.id)
+        next_button = next_view.children[0]
+        next_button.callback = stop_override
+        next_button.row = 4
+
+        for item in [ra_role_select, next_button]:
+            ra_requests_settings.add_item(item)
+
+        await msg.edit(
+            embed=discord.Embed(
+                title="<:loa:1169799727143977090> RA Requests",
+                description=(
+                    "**What are RA Requests?** RA Requests, also called Reduced Activity Requests, are a form of Leave of Absence where the staff member isn't required to complete the full quota, but expects that they will be able to complete it partially.\n\n"
+                    "**RA Role:** This role is given to those who are on Reduced Activity, and is removed when they go off Reduced Activity.\n\n"
+                ),
+                color=blank_color
+            ),
+            view=ra_requests_settings
+        )
+        set_active_view_state(ra_requests_settings)
+
+        await ra_requests_settings.wait()
+
+
+        for item in ra_requests_settings.children:
+            if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect):
+                if len(item.values) > 0:
+                    if item.placeholder == "RA Role":
+                        modifications['staff_management']['ra_role'] = item.values[0].id
+
+        punishment_settings = discord.ui.View()
+
+        next_view = NextView(ctx.author.id)
+        next_button = next_view.children[0]
+        next_button.callback = stop_override
+        next_button.row = 4
+
+        punishment_channel_view = ChannelSelect(ctx.author.id, limit=1)
+        punishment_channel_select: discord.ui.ChannelSelect = punishment_channel_view.children[0]
+        punishment_channel_select.min_values = 0
+        punishment_channel_select.placeholder = "Punishments Channel"
+        punishment_channel_select.row = 1
+
+        punishments_enabled_view = CustomSelectMenu(ctx.author.id, [
+            discord.SelectOption(
+                label="Enabled",
+                value="enabled",
+                description="ROBLOX Punishments are enabled."
+            ),
+            discord.SelectOption(
+                label="Disabled",
+                value="disabled",
+                description="ROBLOX Punishments are disabled."
+            )
+        ])
+        punishments_enabled_item = punishments_enabled_view.children[0]
+        punishments_enabled_item.placeholder = "ROBLOX Punishments"
+        punishments_enabled_item.row = 0
+        punishments_enabled_item.callback = callback_override
+
+        for item in [punishments_enabled_item, punishment_channel_select, next_button]:
+            punishment_settings.add_item(item)
+
+        await msg.edit(
+            embed=discord.Embed(
+                title="<:log:1163524830319104171> ROBLOX Punishments",
+                description=(
+                    "**What is the ROBLOX Punishments module?** The ROBLOX Punishments module allows for members of your Staff Team to log punishments against a ROBLOX player using ERM! You can specify custom types of punishments, where they will go, as well as manage and search individual punishments.\n\n"
+                    "**Enabled:** This setting toggles the ROBLOX Punishments module. When enabled, staff members will be able to use `/punish`, and management members will be able to additionally use `/punishment manage`.\n\n"
+                    "**Punishments Channel:** This is where most punishments made with the ROBLOX Punishments go. Any logged actions of a ROBLOX player will go to this channel."
+                ),
+                color=blank_color
+            ),
+            view=punishment_settings
+        )
+        set_active_view_state(punishment_settings)
+        await punishment_settings.wait()
+
+        for item in punishment_settings.children:
+            if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                if len(item.values) > 0:
+                    if item.placeholder == "ROBLOX Punishments":
+                        if not modifications.get('punishments'):
+                            modifications['punishments'] = {}
+                        modifications['punishments']['enabled'] = bool(item.values[0] == "enabled")
+                    elif item.placeholder == "Punishments Channel":
+                        if not modifications.get('punishments'):
+                            modifications['punishments'] = {}
+                        modifications['punishments']['channel'] = item.values[0].id
+
+        shift_management_settings = discord.ui.View()
+
+        shift_enabled_view = CustomSelectMenu(
+            ctx.author.id,
+            [
+                discord.SelectOption(
+                    label="Enabled",
+                    value="enabled",
+                    description="Enable the Shift Management module."
+                ),
+                discord.SelectOption(
+                    label="Disabled",
+                    value="disabled",
+                    description="Disable the Shift Management module."
+                )
+            ]
+        )
+        shift_enabled_select = shift_enabled_view.children[0]
+        shift_enabled_select.placeholder = "Shift Management"
+        shift_enabled_select.row = 0
+        shift_enabled_select.callback = callback_override
+
+
+        shift_channel_view = ChannelSelect(ctx.author.id, limit=1)
+        shift_channel_select = shift_channel_view.children[0]
+        shift_channel_select.row = 1
+        shift_channel_select.placeholder = "Shift Channel"
+        shift_channel_select.min_values = 0
+        
+        shift_role_view = RoleSelect(ctx.author.id, limit=5)
+        shift_role_select = shift_role_view.children[0]
+        shift_role_select.row = 2
+        shift_role_select.placeholder = "On-Duty Role"
+        shift_channel_select.min_values = 0
+
+        next_menu = NextView(ctx.author.id)
+        next_button = next_menu.children[0]
+        next_button.disabled = False
+        next_button.callback = stop_override
+        next_button.row = 4
+
+        for item in [shift_enabled_select, shift_role_select, shift_channel_select, next_button]:
+            shift_management_settings.add_item(item)
+
+        await msg.edit(
+            embed=discord.Embed(
+                title="<:shift:1169801400545452033> Shift Management",
+                description=(
+                    "**What is Shift Management?** The Shift Management module allows for staff members to log how much time they were in-game, or moderating, or on as a staff member. It allows for a comprehensive guide of who is the most active in your staff team.\n\n"
+                    "**Enabled:** When enabled, staff members will be able to run `/duty` commands to manage their shift, see how much time they have, as well as see how much time other people have. Management members will be able to administrate people's shifts, add time, remove time, and clear people's shifts.\n\n"
+                    "**Shift Chanel:** This is where all shift logs will go to. This channel will be used for all modifications to shifts, any person that may be starting or ending their shift.\n\n"
+                    "**On-Duty Role:** When someone is on shift, they will be given this role. When the staff member goes off shift, this role will be removed from them."
+                ),
+                color=blank_color
+            ),
+            view=shift_management_settings
+        )
+        set_active_view_state(shift_management_settings)
+        await shift_management_settings.wait()
+
+        for item in shift_management_settings.children:
+            if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                if len(item.values) > 0:
+                    if item.placeholder == "Shift Management":
+                        if not modifications.get('shift_management'):
+                            modifications['shift_management'] = {}
+                        modifications['shift_management']['enabled'] = bool(item.values[0] == "enabled")
+                    elif item.placeholder == "Shift Channel":
+                        if not modifications.get('shift_management'):
+                            modifications['shift_management'] = {}
+                        modifications['shift_management']['channel'] = item.values[0].id
+                    elif item.placeholder == "On-Duty Role":
+                        if not modifications.get('shift_management'):
+                            modifications['shift_management'] = {}
+                        modifications['shift_management']['role'] = [role.id for role in item.values]
+
+        new_configuration = copy(base_configuration)
+        new_configuration.update(modifications)
+
+        await bot.settings.update_by_id(new_configuration)
+        await msg.edit(
+            embed=discord.Embed(
+                title='<:success:1163149118366040106> Success!',
+                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config change`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config change`!**",
+                color=0x1fd373
+            ),
+            view=None
+        )
+
+    @commands.hybrid_command(
+        name="newconfig",
+        description='View your ERM settings',
+        aliases=['settings'],
+        extras={
+            "category": "Configuration"
         }
+    )
+    @is_management()
+    async def _config(self, ctx: commands.Context):
+        bot = self.bot
+        settings = await bot.settings.find_by_id(ctx.guild.id)
+        if not settings:
+            return await ctx.send(
+                embed=discord.Embed(
+                    # TODO: FIX
+                    title="TODO: DO THIS",
+                    description="TODO: POPULATE"
+                )
+            )
 
-        options = [
-            discord.SelectOption(
-                label="All features",
-                value="all",
-                description="All features of the bot, contains all of the features below",
+        basic_settings_view = BasicConfiguration(bot, ctx.author.id, [
+            (
+                'Staff Roles',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) for role in settings['staff_management'].get('role') or [0]
+                ]
             ),
-            discord.SelectOption(
-                label="Staff Management",
-                value="staff_management",
-                description="Inactivity Notices, and managing staff members",
+            (
+                'Management Roles',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) for role in settings['staff_management'].get('management_role', []) or [0]
+                ]
             ),
-            discord.SelectOption(
-                label="Punishments",
-                value="punishments",
-                description="Punishing community members for rule infractions",
-            ),
-            discord.SelectOption(
-                label="Shift Management",
-                value="shift_management",
-                description="Shifts (duty manage, duty admin), and where logs should go",
-            ),
-        ]
+            (
+                'Prefix',
+                [
+                    ['CUSTOM_CONF', {
+                        '_FIND_BY_LABEL': True
+                    }],
+                    settings['customisation'].get('prefix') if settings['customisation'].get('prefix') in ['!', '>', '?', ':'] else None
+                ]
 
-        welcome = discord.Embed(
-            color=0xED4348,
+            )
+        ])
+
+        loa_configuration_view = LOAConfiguration(bot, ctx.author.id, [
+            (
+                'LOA Requests',
+                [
+                    [
+                        'CUSTOM_CONF', {
+                            '_FIND_BY_LABEL': True
+                        }
+                    ],
+                    'Enabled' if settings['staff_management']['enabled'] is True else 'Disabled'
+                ]
+            ),
+            (
+                'LOA Role',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) if ( role := settings['staff_management'].get('loa_role')) else 0
+                ]
+            ),
+            (
+                'LOA Channel',
+                [
+                    discord.utils.get(ctx.guild.channels, id=channel) if (channel := settings['staff_management'].get('channel')) else 0
+                ]
+            )
+        ])
+
+        shift_management_view = ShiftConfiguration(bot, ctx.author.id, [
+            (
+                'On-Duty Role',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) for role in (settings['shift_management'].get('role') or [0])
+                ]
+            ),
+            (
+                'Shift Channel',
+                [
+                    discord.utils.get(
+                        ctx.guild.channels,
+                        id=channel
+                    ) if (channel := settings['shift_management'].get('channel')) else 0
+                ]
+            ),
+            (
+                'Shift Management',
+                [
+                    ['CUSTOM_CONF',
+                        {
+                            '_FIND_BY_LABEL': True
+                        }
+                     ],
+                    'Enabled' if settings['shift_management'].get('enabled') is True else 'Disabled'
+                ],
+            )
+        ])
+
+        ra_view = RAConfiguration(bot, ctx.author.id, [
+            (
+                'RA Role',
+                [
+                    discord.utils.get(ctx.guild.roles, id=i) for i in settings['staff_management'].get('ra_role', []) or [0]
+                ]
+            )
+        ])
+
+        roblox_punishments = PunishmentsConfiguration(bot, ctx.author.id, [
+            (
+                'Punishments Channel',
+                [
+                    discord.utils.get(
+                        ctx.guild.channels,
+                        id=channel
+                    ) if (channel := settings['punishments'].get('channel')) else 0
+                ]
+            ),
+            (
+                'ROBLOX Punishments',
+                [
+                    ['CUSTOM_CONF',
+                     {
+                         '_FIND_BY_LABEL': True
+                     }
+                     ],
+                    'Enabled' if settings['punishments'].get('enabled') is True else 'Disabled'
+                ],
+            )
+        ])
+
+        security_view = GameSecurityConfiguration(bot, ctx.author.id,
+            [
+                (
+                    'Game Security',
+                    [
+                        ['CUSTOM_CONF',
+                         {
+                             '_FIND_BY_LABEL': True
+                         }
+                         ],
+                        'Enabled' if settings.get('game_security', {}).get('enabled') is True else 'Disabled'
+                    ],
+                ),
+                (
+                    'Alert Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (channel := settings.get('game_security', {}).get('channel')) else 0]
+                ),
+                (
+                    'Webhook Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := settings.get('game_security', {}).get('webhook_channel')) else 0]
+                ),
+                (
+                    'Mentionables',
+                    [discord.utils.get(ctx.guild.roles, id=role) for role in (settings.get('game_security', {}).get('role') or [0])]
+                )
+            ]
         )
-        welcome.description = "<:ERMCheck:1111089850720976906> **All *(default)***\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>All features of the bot\n\n<:ERMAdmin:1111100635736187011> **Staff Management**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Manage your staff members, LoAs, and more!\n\n<:ERMPunish:1111095942075138158> **Punishments**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Roblox moderation, staff logging systems, and more!\n\n<:ERMSchedule:1111091306089939054> **Shift Management**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Manage staff member's shifts, view who's in game!"
 
-        view = MultiSelectMenu(ctx.author.id, options)
-
-        await ctx.reply(
-            embed=welcome,
-            view=view,
-            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, setting up ERM is easy! You're on the interactive setup wizard. Below, select the module(s) you would like to enable.",
+        logging_view = GameLoggingConfiguration(
+            bot,
+            ctx.author.id,
+            [
+                (
+                    'Message Logging',
+                    [
+                        ['CUSTOM_CONF',
+                         {
+                             '_FIND_BY_LABEL': True
+                         }
+                         ],
+                        'Enabled' if settings.get('game_security', {}).get('message', {}).get('enabled', None) is True else 'Disabled'
+                    ],
+                ),
+                (
+                    'STS Logging',
+                    [
+                        ['CUSTOM_CONF',
+                         {
+                             '_FIND_BY_LABEL': True
+                         }
+                         ],
+                        'Enabled' if settings.get('game_security', {}).get('sts', {}).get('enabled',
+                                                                                              None) is True else 'Disabled'
+                    ],
+                ),
+                (
+                    'Priority Logging',
+                    [
+                        ['CUSTOM_CONF',
+                         {
+                             '_FIND_BY_LABEL': True
+                         }
+                         ],
+                        'Enabled' if settings.get('game_security', {}).get('priority', {}).get('enabled',
+                                                                                              None) is True else 'Disabled'
+                    ],
+                ),
+            ]
         )
 
-        await view.wait()
-        if not view.value:
-            return await failure_embed(
-                ctx,
-                "you took too long to respond. Try again.",
-            )
 
-        if "all" in view.value:
-            settingContents["staff_management"]["enabled"] = True
-            settingContents["punishments"]["enabled"] = True
-            settingContents["shift_management"]["enabled"] = True
-        else:
-            if "punishments" in view.value:
-                settingContents["punishments"]["enabled"] = True
-            if "shift_management" in view.value:
-                settingContents["shift_management"]["enabled"] = True
-            if "staff_management" in view.value:
-                settingContents["staff_management"]["enabled"] = True
+        pages = []
 
-        if settingContents["staff_management"]["enabled"]:
-            question = "what channel do you want to use for staff management?"
-            view = ChannelSelect(ctx.author.id, limit=1)
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            convertedContent = view.value
-            settingContents["staff_management"]["channel"] = (
-                convertedContent[0].id if convertedContent else None
-            )
+        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view]):
+            corresponding_embeds = [
+                discord.Embed(
+                    title="<:settings:1166138396217970789> Basic Settings",
+                    description=(
+                        "**Staff Role:** A staff role is the role that is going to be able to use most ERM commands. You'd assign this role to the people you want to be able to use ERM's core functionalities.\n\n"
+                        "**Management Role:** A management role is the roles of your server management members. These people will be able to delete punishments, modify people's shift time, and accept LOA Requests.\n\n"
+                        "**Prefix:** This will be a prefix you are able to use instead of our slash command system. You can use this prefix to execute commands slightly faster and to take advantage of some extra features."
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:loa:1169799727143977090> LOA Requests",
+                    description=(
+                        "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
+                        "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
+                        "**LOA Channel:** This channel will be where Leave of Absence requests will be logged, and where they will be accepted or denied. Make sure this is a channel that Management members can see, so that they can approve LOA requests."
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:shift:1169801400545452033> Shift Management",
+                    description=(
+                        "**What is Shift Management?** The Shift Management module allows for staff members to log how much time they were in-game, or moderating, or on as a staff member. It allows for a comprehensive guide of who is the most active in your staff team.\n\n"
+                        "**Enabled:** When enabled, staff members will be able to run `/duty` commands to manage their shift, see how much time they have, as well as see how much time other people have. Management members will be able to administrate people's shifts, add time, remove time, and clear people's shifts.\n\n"
+                        "**Shift Chanel:** This is where all shift logs will go to. This channel will be used for all modifications to shifts, any person that may be starting or ending their shift.\n\n"
+                        "**On-Duty Role:** When someone is on shift, they will be given this role. When the staff member goes off shift, this role will be removed from them."
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:loa:1169799727143977090> RA Requests",
+                    description=(
+                        "**What are RA Requests?** RA Requests, also called Reduced Activity Requests, are a form of Leave of Absence where the staff member isn't required to complete the full quota, but expects that they will be able to complete it partially.\n\n"
+                        "**RA Role:** This role is given to those who are on Reduced Activity, and is removed when they go off Reduced Activity.\n\n"
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:log:1163524830319104171> ROBLOX Punishments",
+                    description=(
+                        "**What is the ROBLOX Punishments module?** The ROBLOX Punishments module allows for members of your Staff Team to log punishments against a ROBLOX player using ERM! You can specify custom types of punishments, where they will go, as well as manage and search individual punishments.\n\n"
+                        "**Enabled:** This setting toggles the ROBLOX Punishments module. When enabled, staff members will be able to use `/punish`, and management members will be able to additionally use `/punishment manage`.\n\n"
+                        "**Punishments Channel:** This is where most punishments made with the ROBLOX Punishments go. Any logged actions of a ROBLOX player will go to this channel."
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:security:1169804198741823538> Game Security",
+                    description=(
+                        "**What is the Game Security module?** As of right now, this module only applies to private servers of Emergency Response: Liberty County. This module aims to protect and secure private servers by detecting if a staff member runs a potentially abusive command, and notifying management of this incident.\n\n"
+                        "**Enabled:** Game Security is a module that aims to protect private servers from abuse of administrative privileges. This only works for particular games and servers. You should disable this if you aren't a game listed above.\n\n"
+                        "**Webhook Channel:** This channel is where the bot will read the webhooks from the game server. This is not where alerts will be sent. Rather, this is where the bot will detect any admin abuse.\n\n"
+                        "**Alert Channel:** This channel is where the bot will send the corresponding alerts for abuse of administrative privileges in your private server. It is recommended for this not to be the same as your Webhook Channel so that you don't miss any unresolved Security Alerts.\n\n"
+                        "**Mentionables:** These roles will be mentioned when a security alert is sent by ERM. All of these roles will be mentioned in the message, and they should be able to deal with the situation at hand for maximum staff efficiency."
 
-            question = "what role would you like to use for your staff role? (e.g. @Staff)\n*You can select multiple roles.*"
-            view = RoleSelect(ctx.author.id)
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            convertedContent = view.value
-            settingContents["staff_management"]["role"] = (
-                [role.id for role in convertedContent] if convertedContent else []
-            )
-
-            question = "what role would you like to use for your Management role? (e.g. @Management)\n*You can select multiple roles.*"
-            view = RoleSelect(ctx.author.id)
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            convertedContent = view.value
-            settingContents["staff_management"]["management_role"] = (
-                [role.id for role in convertedContent] if convertedContent else []
-            )
-
-            view = YesNoMenu(ctx.author.id)
-            question = "do you want a role to be assigned to staff members when they are on LoA (Leave of Absence)?"
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            if view.value is not None:
-                if view.value:
-                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
-                    view = RoleSelect(ctx.author.id)
-                    await pending_embed(ctx, question, view=view)
-                    await view.wait()
-                    convertedContent = view.value
-                    settingContents["staff_management"]["loa_role"] = (
-                        [role.id for role in convertedContent]
-                        if convertedContent
-                        else []
+                    ),
+                    color=blank_color
+                ),
+                discord.Embed(
+                    title="<:gamelog:1169802877200515203> Game Logging",
+                    color=blank_color,
+                    description=(
+                        "**What is Game Logging?** Game Logging is an ERM module, particularly tailored towards private servers of Emergency Response: Liberty County, but can apply to other roleplay games in a similar genre. Game Logging allows for staff members to log events of interest, such as custom in-game messages, priority timers, as well as STS events. This allows for streamlined management of staff efficiency.\n\n"
+                        "### Message Logging\n\n"
+                        "**Enabled:** This dictates whether the in-game message section of the Game Logging module is enabled. This part of the module automatically and allows for manual logs of in-game messages and 'hints' so that management can effectively see if staff members are sending thd correct amount of notifications.\n\n"
+                        "**Message Logging Channel:** This channel will be where these message and notification logs will be sent to.\n\n"
+                        "### STS Logging\n\n"
+                        "**Enabled:** This dictates whether the Shoulder-to-Shoulder event logging section of the Game Logging module is enabled. When enabled, staff members can log the duration of their events, as well as who hosted them and other important information.\n\n"
+                        "**STS Logging Channel:** This is where the event logs for Shoulder-to-Shoulder events will appear. Management members will be able to see all relevant information of an STS here.\n\n"
+                        "### Priority Logging\n\n"
+                        "**Enabled:** This section of the Game Logging module, correspondingly named the Priority Logging part, allows for staff members to log Priority Timer events, their reason, duration, as well as any notable information which may be necessary for management members.\n\n"
+                        "**Priority Logging Channel:** This channel will be where priority timer events and event notifications will be logged accordingly for management members to view."
                     )
+                )
+            ]
+            embed = corresponding_embeds[index]
+            page = CustomPage()
+            page.embeds = [embed]
+            page.identifier = embed.title.split('> ')[1]
+            page.view = view
 
-            view = YesNoMenu(ctx.author.id)
-            question = "do you want a role to be assigned to staff members when they are on RA (Reduced Activity)?"
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            if view.value is not None:
-                if view.value:
-                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
-                    view = RoleSelect(ctx.author.id)
-                    await pending_embed(ctx, question, view=view)
-                    await view.wait()
-                    convertedContent = view.value
-                    settingContents["staff_management"]["ra_role"] = (
-                        [role.id for role in convertedContent]
-                        if convertedContent
-                        else []
-                    )
-        if settingContents["punishments"]["enabled"]:
-            question = "what channel do you want to use for punishments?"
-            view = ChannelSelect(ctx.author.id, limit=1)
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            convertedContent = view.value
-            settingContents["punishments"]["channel"] = (
-                convertedContent[0].id if convertedContent else None
-            )
-        if settingContents["shift_management"]["enabled"]:
-            question = "what channel do you want to use for shift management? (e.g. shift signups, etc.)"
-            view = ChannelSelect(ctx.author.id, limit=1)
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            convertedContent = view.value
-            settingContents["shift_management"]["channel"] = (
-                convertedContent[0].id if convertedContent else None
+            pages.append(
+                page
             )
 
-            view = YesNoMenu(ctx.author.id)
-            question = "do you want a role to be assigned to staff members when they are in game?"
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            if view.value is not None:
-                if view.value:
-                    question = "what role(s) would you like to be given?\n*You can select multiple roles.*"
-                    view = RoleSelect(ctx.author.id, limit=1)
-                    await pending_embed(ctx, question, view=view)
-                    await view.wait()
-                    convertedContent = view.value
-                    settingContents["shift_management"]["role"] = (
-                        [role.id for role in convertedContent]
-                        if convertedContent
-                        else []
-                    )
 
-            view = YesNoMenu(ctx.author.id)
-            question = "do you have a weekly quota? (e.g. `2h`, `90m`, `7h`)"
-            await pending_embed(ctx, question, view=view)
-            await view.wait()
-            if view.value is not None:
-                if view.value:
-                    content = (
-                        await request_response(
-                            bot, ctx, "what would you like the quota to be? (s/m/h/d)"
-                        )
-                    ).content
-                    content = content.strip()
-                    total_seconds = 0
 
-                    try:
-                        if content.endswith(("s", "m", "h", "d")):
-                            if content.endswith("s"):
-                                total_seconds = int(content.removesuffix("s"))
-                            if content.endswith("m"):
-                                total_seconds = int(content.removesuffix("m")) * 60
-                            if content.endswith("h"):
-                                total_seconds = int(content.removesuffix("h")) * 60 * 60
-                            if content.endswith("d"):
-                                total_seconds = (
-                                    int(content.removesuffix("d")) * 60 * 60 * 24
-                                )
-                        else:
-                            await failure_embed(ctx,
-                                                'we could not translate your time. Though, setup will continue and you can set your Shift Management quota later.')
+        paginator = SelectPagination(ctx.author.id, pages)
+        await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
 
-                        settingContents["shift_management"]["quota"] = total_seconds
-                    except:
-                        await failure_embed(ctx, 'we could not translate your time. Though, setup will continue and you can set your Shift Management quota later.')
+    # @commands.hybrid_group(name="server", description="This is a temporary namespace for commands relating to the Server Management functionality", extras={
+    #     'category': 'Configuration'
+    # })
+    # async def server(self, ctx: commands.Context):
+    #     pass
+    #
+    # @server.command(name="manage", description="Manage your server's ERM data!", extras={
+    #     "category": "Configuration"
+    # })
+    # @is_management()
+    # async def server_management(self, ctx: commands.Context):
+    #
 
-            # privacyDefault = {"_id": ctx.guild.id, "global_warnings": True}
 
-            # view = YesNoMenu(ctx.author.id)
-            # question = "Do you want your server's warnings to be able to be queried across the bot? (e.g. `globalsearch`)"
-            # embed = discord.Embed(
-            #     color=0xED4348, description=f"<:ArrowRight:1035003246445596774> {question}"
-            # )
-            #
-            # await ctx.reply(embed=embed, view=view)
-            # await view.wait()
-            # if view.value is not None:
-            #     if view.value == True:
-            #         privacyDefault["global_warnings"] = True
-            #     else:
-            #         privacyDefault["global_warnings"] = False
-            #
-            # if not await bot.privacy.find_by_id(ctx.guild.id):
-            #     await bot.privacy.insert(privacyDefault)
-            # else:
-            #     await bot.privacy.update_by_id(privacyDefault)
 
-        settingContents["_id"] = ctx.guild.id
-        if not await bot.settings.find_by_id(ctx.guild.id):
-            await bot.settings.insert(settingContents)
-        else:
-            await bot.settings.update_by_id(settingContents)
 
-        await ctx.reply(
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your configuration has been changed."
-        )
+
 
 
 async def setup(bot):

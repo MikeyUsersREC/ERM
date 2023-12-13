@@ -1,7 +1,10 @@
+import datetime
+
 import discord
 from discord.ext import commands
 
 from menus import CustomExecutionButton, CustomSelectMenu
+from utils.constants import BLANK_COLOR
 
 
 class Privacy(commands.Cog):
@@ -11,8 +14,9 @@ class Privacy(commands.Cog):
     @commands.hybrid_command(
         name="consent",
         description="Change your privacy settings.",
-        extras={"category": "Privacy", "ephemeral": True},
+        extras={"category": "Privacy"},
     )
+    @commands.guild_only()
     async def consent(self, ctx):
         bot = self.bot
         punishments_enabled = True
@@ -37,22 +41,40 @@ class Privacy(commands.Cog):
                 else True
             )
             selected = document
-        embed = (
-            discord.Embed(
-                title="<:ERMUser:1111098647485108315> Notification Settings",
-                description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
-                color=0xED4348,
-            )
-            .set_thumbnail(url=ctx.author.display_avatar.url)
-            .set_author(icon_url=ctx.author.display_avatar.url, name=ctx.author.name)
+        embed = discord.Embed(
+            title="User Settings",
+            color=BLANK_COLOR
         )
+        embed.add_field(
+            name="Configurations",
+            value=(
+                f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+            ),
+            inline=False
+        )
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+        )
+        embed.set_thumbnail(
+            url=ctx.author.display_avatar.url
+        )
+        embed.set_footer(
+            text="User Settings"
+        )
+        embed.timestamp = datetime.datetime.now()
 
         custom_view = discord.ui.View()
 
         async def punishment_alerts(
             interaction: discord.Interaction, button: discord.ui.Button
         ):
+            nonlocal selected
+            nonlocal punishments_enabled
             if interaction.user.id == ctx.author.id:
+                await interaction.response.defer()
                 view = CustomSelectMenu(
                     ctx.author.id,
                     [
@@ -68,21 +90,10 @@ class Privacy(commands.Cog):
                         ),
                     ],
                 )
-                embed = (
-                    discord.Embed(
-                        title="<:ERMUser:1111098647485108315> Notification Settings",
-                        description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
-                        color=0xED4348,
-                    )
-                    .set_thumbnail(url=ctx.author.display_avatar.url)
-                    .set_author(
-                        icon_url=ctx.author.display_avatar.url, name=ctx.author.name
-                    )
+
+                await interaction.message.edit(
+                    view=view
                 )
-                await interaction.response.send_message(
-                    embed=embed, view=view, ephemeral=True
-                )
-                button.view.stop()
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
@@ -91,38 +102,97 @@ class Privacy(commands.Cog):
                         )
                     else:
                         selected["punishments"] = True
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-
-                    await interaction.edit_original_response(
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled punishment alerts.",
-                        embed=None,
-                        view=None,
+                    punishments_enabled = True
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.success
+                    await interaction.message.edit(
+                        content='',
+                        embed=embed,
+                        view=button.view,
                     )
                 elif view.value == "disable":
                     if selected is None:
+                        selected = {"_id": ctx.author.id, "punishments": False}
                         await bot.consent.insert(
                             {"_id": ctx.author.id, "punishments": False}
                         )
                     else:
                         selected["punishments"] = False
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-                    await interaction.edit_original_response(
-                        content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled punishment alerts.",
-                        embed=None,
-                        view=None,
+                    punishments_enabled = False
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.danger
+
+                    await interaction.message.edit(
+                        content='',
+                        embed=embed,
+                        view=button.view,
                     )
             else:
-                await interaction.response.send_message(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this isn't your embed to modify.",
-                    embed=None,
-                    view=None,
-                    ephemeral=True,
-                )
+                await interaction.response.send_message(embed=discord.Embed(
+                    title="Not Permitted",
+                    description="You are not permitted to interact with these buttons.",
+                    color=BLANK_COLOR
+                ), ephemeral=True)
 
         async def punishment_predictions(
             interaction: discord.Interaction, button: discord.ui.Button
         ):
             if interaction.user.id == ctx.author.id:
+                nonlocal selected
+                nonlocal ai_enabled
+                await interaction.response.defer()
                 view = CustomSelectMenu(
                     ctx.author.id,
                     [
@@ -138,53 +208,109 @@ class Privacy(commands.Cog):
                         ),
                     ],
                 )
-                embed = discord.Embed(
-                    title="<:ERMUser:1111098647485108315> Notification Settings",
-                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
-                    color=0xED4348,
-                ).set_thumbnail(url=ctx.author.display_avatar.url)
-                await interaction.response.send_message(
-                    embed=embed, view=view, ephemeral=True
+
+                await interaction.message.edit(
+                    view=view
                 )
-                button.view.stop()
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
+                        selected = {"_id": ctx.author.id, "ai_predictions": True}
                         await bot.consent.insert(
-                            {"_id": ctx.author.id, "ai_predictions": True}
+                            selected
                         )
                     else:
                         selected["ai_predictions"] = True
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled AI Predictions."
-                    await interaction.edit_original_response(
-                        content=content, embed=None, view=None
+                    ai_enabled = True
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.success
+                    await interaction.message.edit(
+                        embed=embed,
+                        view=button.view,
                     )
                 elif view.value == "disable":
                     if selected is None:
+                        selected = {"_id": ctx.author.id, "ai_predictions": False}
                         await bot.consent.insert(
-                            {"_id": ctx.author.id, "ai_predictions": False}
+                            selected
                         )
                     else:
                         selected["ai_predictions"] = False
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled AI Predictions."
-                    await interaction.edit_original_response(
-                        content=content, embed=None, view=None
+                    ai_enabled = False
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.danger
+                    await interaction.message.edit(
+                        content='',
+                        embed=embed,
+                        view=button.view,
                     )
 
             else:
-                await interaction.response.send_message(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name},** this isn't your embed to modify.",
-                    embed=None,
-                    view=None,
-                    ephemeral=True,
-                )
+                await interaction.response.send_message(embed=discord.Embed(
+                    title="Not Permitted",
+                    description="You are not permitted to interact with these buttons.",
+                    color=BLANK_COLOR
+                ), ephemeral=True)
 
         async def shift_reports(
             interaction: discord.Interaction, button: discord.ui.Button
         ):
             if interaction.user.id == ctx.author.id:
+                nonlocal selected
+                nonlocal shift_reports_enabled
+                await interaction.response.defer()
                 view = CustomSelectMenu(
                     ctx.author.id,
                     [
@@ -200,59 +326,122 @@ class Privacy(commands.Cog):
                         ),
                     ],
                 )
-                embed = discord.Embed(
-                    title="<:ERMUser:1111098647485108315> Notification Settings",
-                    description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Punishment Alerts:** {'<:ERMCheck:1111089850720976906>' if punishments_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Shift Reports:** {'<:ERMCheck:1111089850720976906>' if shift_reports_enabled is True else '<:ERMClose:1111101633389146223>'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**AI Predictions:** {'<:ERMCheck:1111089850720976906>' if ai_enabled is True else '<:ERMClose:1111101633389146223>'}",
-                    color=0xED4348,
-                ).set_thumbnail(url=ctx.author.display_avatar.url)
-                await interaction.response.send_message(
-                    embed=embed, view=view, ephemeral=True
+
+                await interaction.message.edit(
+                    view=view
                 )
-                button.view.stop()
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
+                        selected = {"_id": ctx.author.id, "shift_reports": True}
                         await bot.consent.insert(
-                            {"_id": ctx.author.id, "shift_reports": True}
+                            selected
                         )
                     else:
                         selected["shift_reports"] = True
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've enabled Shift Reports."
+                    shift_reports_enabled = True
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.success
+
                     await interaction.edit_original_response(
-                        content=content, embed=None, view=None
+                        content='',
+                        embed=embed,
+                        view=button.view,
                     )
 
                 elif view.value == "disable":
                     if selected is None:
+                        selected = {"_id": ctx.author.id, "shift_reports": False}
                         await bot.consent.insert(
-                            {"_id": ctx.author.id, "shift_reports": False}
+                            selected
                         )
                     else:
                         selected["shift_reports"] = False
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
+
                         await bot.consent.update_by_id(selected)
-                    content = f"<:ERMCheck:1111089850720976906>  **{ctx.author.name},** got it, I've disabled Shift Reports."
-                    await interaction.edit_original_response(
-                        content=content, embed=None, view=None
+                    shift_reports_enabled = False
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
                     )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.danger
+                    await interaction.message.edit(
+                        content='',
+                        embed=embed,
+                        view=button.view,
+                    )
+            else:
+                await interaction.response.send_message(embed=discord.Embed(
+                    title="Not Permitted",
+                    description="You are not permitted to interact with these buttons.",
+                    color=BLANK_COLOR
+                ), ephemeral=True)
 
         buttons = [
             CustomExecutionButton(
                 ctx.author.id,
                 label="Punishment Alerts",
-                style=discord.ButtonStyle.secondary,
+                style=discord.ButtonStyle.danger if not punishments_enabled else discord.ButtonStyle.success,
                 func=punishment_alerts,
             ),
             CustomExecutionButton(
                 ctx.author.id,
                 label="Shift Reports",
-                style=discord.ButtonStyle.secondary,
+                style=discord.ButtonStyle.danger if not shift_reports_enabled else discord.ButtonStyle.success,
                 func=shift_reports,
             ),
             CustomExecutionButton(
                 ctx.author.id,
                 label="AI Predictions",
-                style=discord.ButtonStyle.secondary,
+                style=discord.ButtonStyle.danger if not ai_enabled else discord.ButtonStyle.success,
                 func=punishment_predictions,
             ),
         ]

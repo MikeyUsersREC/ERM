@@ -5,7 +5,7 @@ from jishaku.codeblocks import codeblock_converter, Codeblock
 from jishaku.cog import STANDARD_FEATURES, OPTIONAL_FEATURES
 from jishaku.features.baseclass import Feature
 
-OWNER = 635119023918415874
+OWNER = 1165311055728226444
 LOGGING_CHANNEL = 1084950208842039326
 
 

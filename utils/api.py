@@ -1255,52 +1255,7 @@ class APIRoutes:
         roblox_id = dataobject['UserID']
 
         discord_user = None
-        async for document in bot.synced_users.db.find({"roblox": roblox_id}):
-            discord_user = document["_id"]
 
-        if discord_user:
-            try:
-                member = await guild.fetch_member(discord_user)
-            except discord.NotFound:
-                member = None
-
-            if member:
-                should_dm = True
-
-                async for doc in bot.consent.db.find({"_id": member.id}):
-                    if doc.get("punishments"):
-                        if document.get("punishments") is False:
-                            should_dm = False
-
-                if should_dm:
-                    try:
-                        personal_embed = discord.Embed(
-                            title="<:ERMPunish:1111095942075138158> You have been moderated!",
-                            description=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>***{guild.name}** has moderated you in-game*",
-                            color=0xED4348,
-                        )
-                        personal_embed.add_field(
-                            name="<:ERMList:1111099396990435428> Moderation Details",
-                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Username:** {dataobject['Username']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reason:** {dataobject['Reason']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Type:** {type.lower().title()}",
-                            inline=False,
-                        )
-
-                        try:
-                            personal_embed.set_author(
-                                name=guild.name, icon_url=guild.icon.url
-                            )
-                        except:
-                            personal_embed.set_author(name=guild.name)
-
-                        await member.send(
-                            embed=personal_embed,
-                            content=f"<:ERMAlert:1113237478892130324>  **{member.name}**, you have been moderated inside of **{guild.name}**.",
-                        )
-
-                    except:
-                        pass
-
-    
         await designated_channel.send(embed=embed)
     
 
@@ -1473,20 +1428,21 @@ class ServerAPI(commands.Cog):
 
     async def start_server(self):
         api.include_router(APIRoutes(self.bot).router)
-        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
+        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="debug", host="127.0.0.1")
         self.server = uvicorn.Server(self.config)
         await self.server.serve()
 
     async def stop_server(self):
         await self.server.shutdown()
 
+    def _run_and_discard(self, coro):
+        asyncio.ensure_future(coro, loop=self.bot.loop)
+
+
     async def cog_load(self) -> None:
         # asyncio.run_coroutine_threadsafe(self.start_server(), self.bot.loop)
-        try:
-            await self.start_server()
-        except:
-            # print('REALLY BAD ERROR.')
-            pass
+        self._run_and_discard(self.start_server())
+
     async def cog_unload(self) -> None:
         await self.stop_server()
 
