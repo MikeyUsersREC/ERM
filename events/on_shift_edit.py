@@ -49,8 +49,13 @@ class OnShiftEdit(commands.Cog):
                 except discord.HTTPException:
                     channel = None
 
-        staff_member: discord.Member = guild.get_member(shift.user_id)
+        try:
+            staff_member: discord.Member = await guild.fetch_member(shift.user_id)
+        except discord.NotFound:
+            return
 
+        if not staff_member:
+            return
         if channel is not None:
             await channel.send(embed=discord.Embed(
                 title="Shift Edited",

@@ -56,8 +56,13 @@ class OnShiftVoid(commands.Cog):
             nickname_prefix = custom_shift_type.get('nickname', None)
             assigned_roles = custom_shift_type.get('role', [])
 
-        staff_member: discord.Member = guild.get_member(shift.user_id)
+        try:
+            staff_member: discord.Member = await guild.fetch_member(shift.user_id)
+        except discord.NotFound:
+            return
 
+        if not staff_member:
+            return
         for role in (assigned_roles or []):
             discord_role: discord.Role = guild.get_role(role)
             if discord_role is None:
