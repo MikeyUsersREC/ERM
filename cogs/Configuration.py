@@ -461,11 +461,11 @@ class Configuration(commands.Cog):
         new_configuration = copy(base_configuration)
         new_configuration.update(modifications)
 
-        await bot.settings.update_by_id(new_configuration)
+        await bot.settings.upsert(new_configuration)
         await msg.edit(
             embed=discord.Embed(
                 title='<:success:1163149118366040106> Success!',
-                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config change`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config change`!**",
+                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config change`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
                 color=0x1fd373
             ),
             view=None

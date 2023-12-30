@@ -74,6 +74,7 @@ class SelectPagination(discord.ui.View):
     async def _paginate(self, interaction: discord.Interaction, increment_index: int,
                         mode: typing.Literal["set", "increment"]):
         current_page = self.pages[self.current_index]
+
         if mode == "set":
             new_index = increment_index
             new_page = self.pages[new_index]
@@ -81,7 +82,6 @@ class SelectPagination(discord.ui.View):
             new_index = self.current_index + increment_index
             if new_index >= len(self.pages):
                 new_index = 0
-
             new_page = self.pages[new_index]
 
         view = self.view
@@ -92,28 +92,17 @@ class SelectPagination(discord.ui.View):
             if getattr(i, 'label', None):
                 if i.label == current_page.identifier:
                     i.label = new_page.identifier
+
         if page_view:
-            # checks = [i.row in [None, 0] for i in page_view.children]
-            # Remove all non-native components
-            for child in view.children:
-                if child not in self.preset_children:
-                    view.remove_item(child)
+            # Clear the items added by the previous page
+            for item in self.page_children:
+                view.remove_item(item)
+            self.page_children.clear()
 
-            self.page_children = []
-            # if any(checks):
-            #     for index, child in enumerate(page_view.children):
-            #         if child.row is None:
-            #             child.row = 1
-            #         else:
-            #             child.row += 1
-            #         page_view.children[index] = child
-            #         self.page_children.append(child)
-            # else:
-            for index, child in enumerate(page_view.children):
-                self.page_children.append(child)
-
-            for i in self.page_children:
-                view.add_item(i)
+            # Add the items from the new page
+            for item in page_view.children:
+                view.add_item(item)
+                self.page_children.append(item)
 
         await interaction.message.edit(
             embeds=new_page.embeds,

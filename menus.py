@@ -4783,7 +4783,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
         sett['game_security']['channel'] = int(select.values[0].id or None)
         await bot.settings.update_by_id(sett)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Mentionables", row=3, max_values=5, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Mentionables", row=3, max_values=25, min_values=0)
     async def security_mentionables(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -6013,6 +6013,10 @@ class AdministratedShiftMenu(discord.ui.View):
                 inline=False
             )
         elif option not in ["void", "break"]:
+            if not contained_document:
+                print('RAISE ::: - NOAH READ THIS')
+                print(self.shift)
+                print(self.contained_document)
             uis = {
                 "on": discord.Embed(
                     title="<:ShiftStarted:1178033763477889175> **Shift Started**",
