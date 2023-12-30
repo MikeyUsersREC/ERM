@@ -51,7 +51,14 @@ class OnPunishment(commands.Cog):
                 except discord.HTTPException:
                     channel = None
 
-        moderator: discord.Member = guild.get_member(warning.moderator_id)
+        try:
+            moderator: discord.Member = guild.get_member(warning.moderator_id)
+        except discord.NotFound:
+            return
+
+        if not moderator:
+            return
+
         roblox_client: Client = Client()
         roblox_user = await roblox_client.get_user(warning.user_id)
         thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
