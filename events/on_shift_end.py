@@ -36,6 +36,7 @@ class OnShiftEnd(commands.Cog):
                 if item['name'] == shift_type:
                     custom_shift_type = item
 
+        assigned_roles = []
         if custom_shift_type is None:
             try:
                 channel = await guild.fetch_channel(guild_settings.get('shift_management').get('channel', 0))
@@ -56,7 +57,7 @@ class OnShiftEnd(commands.Cog):
 
         staff_member: discord.Member = guild.get_member(shift.user_id)
 
-        for role in assigned_roles:
+        for role in (assigned_roles or []):
             discord_role: discord.Role = guild.get_role(role)
             if discord_role is None:
                 continue
@@ -73,7 +74,7 @@ class OnShiftEnd(commands.Cog):
 
         if channel is not None:
             await channel.send(embed=discord.Embed(
-                title="<:shift:1169801400545452033> Shift Ended",
+                title="Shift Ended",
                 color=BLANK_COLOR
             ).add_field(
                 name="Shift Information",

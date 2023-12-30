@@ -6,14 +6,13 @@ from erm import is_management
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
 from menus import (
-    AddCustomCommand,
     ChannelSelect,
     CustomModalView,
     CustomSelectMenu,
     EmbedCustomisation,
     MessageCustomisation,
     RemoveCustomCommand,
-    YesNoColourMenu, CustomCommandOptionSelect,
+    YesNoColourMenu, CustomCommandOptionSelect, CustomCommandModification,
 )
 from utils.autocompletes import command_autocomplete
 from utils.utils import (
@@ -86,26 +85,31 @@ class CustomCommands(commands.Cog):
             return
 
         if view.value == "create":
-            await new_msg.edit(content=None)
-            view = AddCustomCommand(ctx.author.id)
-            await new_msg.edit(view=view)
-            timeout = await view.wait()
-            if timeout:
-                return
-
-            await view.view.wait()
-            await view.view.newView.wait()
-
-            try:
-                name = view.information["name"]
-            except KeyError:
-                return await ctx.reply(
-                    embed=discord.Embed(
-                        title="Cancelled",
-                        description="This custom command creation has been cancelled.",
-                        color=BLANK_COLOR
-                    )
-                )
+            name = view.modal.name.value
+            data = {
+                "name": name,
+                "id": next(generator),
+                "message": None,
+                "author": ctx.author.id
+            }
+            view = CustomCommandModification(ctx.author.id, data)
+            # timeout = await view.wait()
+            # if timeout:
+            #     return
+            await new_msg.edit(view=view, embed=discord.Embed(
+                title="Custom Commands",
+                description=(
+                    "**Command Information**\n"
+                    f"<:replytop:1138257149705863209> **Command ID:** `{data['id']}`\n"
+                    f"<:replymiddle:1138257195121791046> **Command Name:** {data['name']}\n"
+                    f"<:replybottom:1138257250448855090> **Creator:** <@{data['author']}>\n"
+                    f"\n**Message:**\n"
+                    f"View the message below by clicking 'View Message'."
+                ),
+                color=BLANK_COLOR
+            ))
+            await view.wait()
+            data = view.command_data
 
             for item in Data["commands"]:
                 if item["name"] == name:
@@ -117,37 +121,16 @@ class CustomCommands(commands.Cog):
                         )
                     )
 
-            embeds = []
-            resultingMessage = view.view.newView.msg
-            for embed in resultingMessage.embeds:
-                embeds.append(embed.to_dict())
-
             custom_command_data = {
                 "_id": ctx.guild.id,
                 "commands": [
-                    {
-                        "name": name,
-                        "id": next(generator),
-                        "message": {
-                            "content": resultingMessage.content,
-                            "embeds": embeds,
-                        },
-                        "author": ctx.author.id
-                    }
+                    data
                 ],
             }
 
             if Data:
                 Data["commands"].append(
-                    {
-                        "name": name,
-                        "id": next(generator),
-                        "message": {
-                            "content": resultingMessage.content,
-                            "embeds": embeds,
-                        },
-                        "author": ctx.author.id
-                    }
+                    data
                 )
             else:
                 Data = custom_command_data
@@ -162,34 +145,13 @@ class CustomCommands(commands.Cog):
                 view=None,
             )
         elif view.value == "delete":
-            view = CustomModalView(
-                ctx.author.id,
-                "Delete a custom command",
-                "Delete a custom command",
-                [
-                    (
-                        "name",
-                        discord.ui.TextInput(
-                            placeholder="Command Name", label="Command Name"
-                        ),
-                    )
-                ],
-            )
-
-            await new_msg.edit(
-                view=view,
-                embed=discord.Embed(
-                    title="Delete Command",
-                    description="Which command ID would you like to delete?"
-                )
-            )
-            await view.wait()
-            identifier = view.modal.id.value
+            identifier = view.modal.name.value
 
             for item in Data["commands"]:
-                if str(item["id"]).strip() == identifier.strip():
+                if str(item["name"]).strip() == str(identifier).strip():
                     Data["commands"].remove(item)
                     await bot.custom_commands.upsert(Data)
+                    break
             else:
                 return await new_msg.edit(
                     embed=discord.Embed(
@@ -268,6 +230,15 @@ class CustomCommands(commands.Cog):
         for embed in selected["message"]["embeds"]:
             embeds.append(await interpret_embed(bot, ctx, channel, embed))
 
+        view = discord.ui.View()
+        for item in selected.get('buttons', []):
+            view.add_item(discord.ui.Button(
+                label=item['label'],
+                url=item['url'],
+                row=item['row'],
+                style=discord.ButtonStyle.url
+            ))
+
 
         if ctx.interaction:
             if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
@@ -290,6 +261,7 @@ class CustomCommands(commands.Cog):
                     bot, ctx, channel, selected["message"]["content"]
                 ),
                 embeds=embeds,
+                view=view,
                 allowed_mentions=discord.AllowedMentions(
                     everyone=True, users=True, roles=True, replied_user=True
                 )
@@ -316,6 +288,7 @@ class CustomCommands(commands.Cog):
                     bot, ctx, channel, selected["message"]["content"]
                 ),
                 embeds=embeds,
+                view=view,
                 allowed_mentions=discord.AllowedMentions(
                     everyone=True, users=True, roles=True, replied_user=True
                 ),

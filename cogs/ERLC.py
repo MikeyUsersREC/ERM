@@ -15,7 +15,7 @@ class ERLC(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(
-        name="server"
+        name="erlc"
     )
     async def server(self, ctx: commands.Context):
         pass

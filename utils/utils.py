@@ -1,18 +1,14 @@
 import datetime
-import logging
 import typing
-
 import aiohttp
 import discord
 import pytz
 import roblox.users
 from decouple import config
-from discord import Embed
+from discord import Embed, InteractionResponse, Webhook
 from discord.ext import commands
-from roblox import BaseGroup
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
-
 from utils.constants import BLANK_COLOR
 
 tokenGenerator = ZUID(
@@ -26,10 +22,12 @@ generator = SnowflakeGenerator(192)
 error_gen = ZUID(prefix="error_", length=10)
 system_code_gen = ZUID(prefix="erm-systems-", length=7)
 
+
 class BaseDataClass:
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+
 
 def removesuffix(input_string: str, suffix: str):
     if suffix and input_string.endswith(suffix):
@@ -46,6 +44,28 @@ def get_guild_icon(
         return guild.icon.url
 
 
+async def generalised_interaction_check_failure(responder: InteractionResponse | Webhook | typing.Callable):
+    if isinstance(responder, typing.Callable):
+        responder = responder()
+
+    if isinstance(responder, InteractionResponse):
+        await responder.send_message(
+            embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=BLANK_COLOR
+            ), ephemeral=True
+        )
+    else:
+        await responder.send(
+            embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=BLANK_COLOR
+            )
+        )
+
+
 async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
     if '<@' in user:
         try:
@@ -54,9 +74,10 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
             )
             if member_converted:
                 bl_user_data = await bot.bloxlink.find_roblox(member_converted.id)
-                roblox_user = await bot.bloxlink.get_roblox_info(bl_user_data)
+                print(bl_user_data)
+                roblox_user = await bot.bloxlink.get_roblox_info(bl_user_data['robloxID'])
                 return roblox_user
-        except:
+        except KeyError:
             return {
                 "errors": ["Member could not be found in Discord."]
             }
@@ -72,8 +93,8 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
     else:
         return await bot.bloxlink.get_roblox_info(roblox_user.id)
 
-def time_converter(parameter: str) -> int:
 
+def time_converter(parameter: str) -> int:
     conversions = {
         ("s", "minutes", "seconds", " seconds"): 1,
         ("m", "minute", "minutes", " minutes"): 60,
@@ -107,6 +128,7 @@ def require_settings():
             raise GuildCheckFailure()
         else:
             return True
+
     return commands.check(predicate)
 
 
@@ -154,6 +176,17 @@ async def sub_vars(bot, ctx, channel, string, **kwargs):
 
 
 def get_elapsed_time(document):
+    from datamodels.ShiftManagement import ShiftItem
+
+    if isinstance(document, ShiftItem):
+        new_document = {
+            "Breaks": [{'StartEpoch': item.start_epoch, 'EndEpoch': item.end_epoch} for item in document.breaks],
+            "StartEpoch": document.start_epoch,
+            "EndEpoch": document.end_epoch,
+            "AddedTime": document.added_time,
+            "RemovedTime": document.removed_time
+        }
+        document = new_document
     total_seconds = 0
     break_seconds = 0
     for br in document["Breaks"]:

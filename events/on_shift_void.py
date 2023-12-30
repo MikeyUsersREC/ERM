@@ -7,6 +7,7 @@ from discord.ext import commands
 from datamodels.ShiftManagement import ShiftItem
 from utils.constants import BLANK_COLOR
 from utils.timestamp import td_format
+from utils.utils import get_elapsed_time
 
 
 class OnShiftVoid(commands.Cog):
@@ -57,7 +58,7 @@ class OnShiftVoid(commands.Cog):
 
         staff_member: discord.Member = guild.get_member(shift.user_id)
 
-        for role in assigned_roles:
+        for role in (assigned_roles or []):
             discord_role: discord.Role = guild.get_role(role)
             if discord_role is None:
                 continue
@@ -74,7 +75,7 @@ class OnShiftVoid(commands.Cog):
 
         if channel is not None:
             await channel.send(embed=discord.Embed(
-                title="<:shift:1169801400545452033> Shift Voided",
+                title="Shift Voided",
                 color=BLANK_COLOR
             ).add_field(
                 name="Shift Information",
@@ -88,7 +89,7 @@ class OnShiftVoid(commands.Cog):
                 value=(
                     f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
                     f"<:replymiddle:1138257195121791046> **Shift End:** <t:{int(shift.end_epoch or datetime.datetime.now(pytz.UTC).timestamp())}>\n"
-                    f"<:replymiddle:1138257195121791046> **Shift Length:** {td_format(datetime.datetime.now() - datetime.timedelta(seconds=shift.end_epoch - shift.start_epoch - (sum((br.end_epoch) - (br.start_epoch) for br in shift.breaks)) + (shift.added_time if shift.added_time > (86400 * 7) else 0) - (shift.removed_time if shift.removed_time > (86400 * 7) else 0)))}\n"
+                    f"<:replymiddle:1138257195121791046> **Shift Length:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}\n"
                     f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False

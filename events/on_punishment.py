@@ -31,8 +31,15 @@ class OnPunishment(commands.Cog):
                         custom_warning_type = item
 
         if custom_warning_type is None:
+            associations = {
+                "warning": guild_settings.get('punishments').get('channel'),
+                "kick": guild_settings.get('punishments').get('kick_channel'),
+                "ban": guild_settings.get('punishments').get('ban_channel'),
+                "temporary ban": guild_settings.get('punishments').get('ban_channel'),
+                "bolo": guild_settings.get('punishments').get('bolo_channel')
+            }
             try:
-                channel = await guild.fetch_channel(guild_settings.get('punishments').get('channel', 0))
+                channel = await guild.fetch_channel(associations[warning_type.lower().strip()])
             except discord.HTTPException:
                 channel = None
         else:
@@ -52,7 +59,7 @@ class OnPunishment(commands.Cog):
 
         if channel is not None:
             return await channel.send(embed=discord.Embed(
-                title="<:log:1163524830319104171> Punishment Issued",
+                title="Punishment Issued",
                 color=BLANK_COLOR
             ).add_field(
                 name="Moderator Information",

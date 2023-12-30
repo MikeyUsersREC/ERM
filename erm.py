@@ -127,12 +127,13 @@ class Bot(commands.AutoShardedBot):
             self.server_keys = ServerKeys(self.db, "server_keys")
             self.staff_connections = StaffConnections(self.db, "staff_connections")
 
+            self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
-            BETA_EXT = ["cogs.StaffConduct"]
+            BETA_EXT = ["cogs.StaffConduct", "cogs.ERLC"]
             EXTERNAL_EXT = ["utils.api"]
             [Extensions.append(i) for i in EXTERNAL_EXT]
 
@@ -181,6 +182,12 @@ class Bot(commands.AutoShardedBot):
                     for index, item in enumerate(document["args"]):
                         if item == "SELF":
                             document["args"][index] = self
+                    loa_id = document['args'][3]
+                    if isinstance(loa_id, dict):
+                        loa_expiry = loa_id['expiry']
+                        if loa_expiry < datetime.datetime.now().timestamp():
+                            await self.views.delete_by_id(document['_id'])
+                            continue
                     self.add_view(
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )

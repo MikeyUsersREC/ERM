@@ -7,6 +7,64 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
 
+async def shift_type_autocomplete(
+        interaction: discord.Interaction, _: str
+) -> typing.List[app_commands.Choice[str]]:
+    bot = interaction.client
+
+    data = await bot.settings.find_by_id(interaction.guild.id)
+    if not data:
+        return [
+            app_commands.Choice(
+                name="Default",
+                value="Default"
+            )
+        ]
+    shift_types_settings = data.get('shift_types', {})
+    types = shift_types_settings.get('types', [])
+
+    if types is not None and len(types or []) != 0:
+        return [app_commands.Choice(
+            name=shift_type['name'],
+            value=shift_type['name']
+        ) for shift_type in types]
+    else:
+        return [
+            app_commands.Choice(
+                name="Default",
+                value="Default"
+            )
+        ]
+
+async def all_shift_type_autocomplete(
+        interaction: discord.Interaction, _: str
+) -> typing.List[app_commands.Choice[str]]:
+    bot = (await Context.from_interaction(interaction)).bot
+    data = await bot.settings.find_by_id(interaction.guild.id)
+    if not data:
+        return [
+            app_commands.Choice(
+                name="Default",
+                value="Default"
+            )
+        ]
+    shift_types_settings = data.get('shift_types', {})
+    types = shift_types_settings.get('types', [])
+
+    if types is not None:
+        return [app_commands.Choice(
+            name=shift_type['name'],
+            value=shift_type['name']
+        ) for shift_type in (types+[{"name": "All"}])]
+    else:
+        return [
+            app_commands.Choice(
+                name="Default",
+                value="Default"
+            )
+        ]
+
+
 
 async def command_autocomplete(
     interaction: discord.Interaction, current: str
@@ -60,62 +118,25 @@ async def command_autocomplete(
 async def punishment_autocomplete(
     interaction: discord.Interaction, current: str
 ) -> typing.List[app_commands.Choice[str]]:
-    bot = (await Context.from_interaction(interaction)).bot
+    bot = interaction.client
     Data = await bot.punishment_types.find_by_id(interaction.guild.id)
     if Data is None:
-       # # print(current)
-       # # print(Data)
         return [
             app_commands.Choice(name=item, value=item)
             for item in ["Warning", "Kick", "Ban", "BOLO"]
         ]
     else:
-       # # print(Data)
-        commands = []
-        for command in Data["types"]:
-            if current not in ["", " "]:
-               # # print(current)
-                if isinstance(command, str):
-                    if (
-                        command.lower().startswith(current.lower())
-                        or current.lower() in command.lower()
-                        or command.lower().endswith(current.lower())
-                    ):
-                        commands.append(command)
-                elif isinstance(command, dict):
-                    if (
-                        command["name"].lower().startswith(current)
-                        or current.lower() in command["name"].lower()
-                        or command["name"].lower().endswith(current.lower())
-                        or current in command["name"].lower()
-                    ):
-                        commands.append(command["name"])
-            else:
-                if isinstance(command, str):
-                    commands.append(command)
-                elif isinstance(command, dict):
-                    commands.append(command["name"])
-
-        if len(commands) == 0:
-            return [
-                discord.app_commands.Choice(
-                    name="No punishment types found", value="NULL"
-                )
-            ]
-
-       # # print(commands)
-        commandList = []
-        for command in commands:
-            if command not in [""]:
-                commandList.append(
-                    discord.app_commands.Choice(name=command, value=command)
-                )
-        return commandList
+        return [
+            app_commands.Choice(
+                name=(item_identifier := item if isinstance(item, str) else item['name']),
+                value=item_identifier
+            ) for item in Data['types']
+        ]
 
 async def user_autocomplete(
     interaction: discord.Interaction, current: str
 ) -> typing.List[app_commands.Choice[str]]:
-    bot = (await Context.from_interaction(interaction)).bot
+    bot = interaction.client
     async def fallback_completion():
         choices = []
         async for search in bot.punishments.db.find({}).limit(10):

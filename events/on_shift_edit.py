@@ -53,7 +53,7 @@ class OnShiftEdit(commands.Cog):
 
         if channel is not None:
             await channel.send(embed=discord.Embed(
-                title="<:shift:1169801400545452033> Shift Edited",
+                title="Shift Edited",
                 color=BLANK_COLOR
             ).add_field(
                 name="Shift Information",

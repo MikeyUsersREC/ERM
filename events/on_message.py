@@ -6,9 +6,11 @@ import string
 import aiohttp
 import discord
 import num2words
+import roblox
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
+from utils.constants import BLANK_COLOR
 from utils.utils import generator
 from menus import CustomSelectMenu
 from utils.timestamp import td_format
@@ -68,7 +70,7 @@ class OnMessage(commands.Cog):
         moderation_sync = False
         sync_channel = None
 
-        if "game_security" in dataset.keys() or "moderation_sync" in dataset.keys():
+        if "game_security" in dataset.keys():
             if "game_security" in dataset.keys():
                 if "enabled" in dataset["game_security"].keys():
                     if (
@@ -87,162 +89,85 @@ class OnMessage(commands.Cog):
                             aa_detection_channel = discord.utils.get(
                                 message.guild.channels, id=aa_detection_channel
                             )
-            if "moderation_sync" in dataset.keys():
-                if dataset["moderation_sync"].get("enabled"):
-                    if "webhook_channel" in dataset["moderation_sync"].keys():
-                        sync_channel = dataset["moderation_sync"]["webhook_channel"]
-                        sync_channel = discord.utils.get(
-                            message.guild.channels, id=sync_channel
-                        )
-
-                        kick_ban_sync_channel = dataset["moderation_sync"][
-                            "kick_ban_webhook_channel"
-                        ]
-                        kick_ban_sync_channel = discord.utils.get(
-                            message.guild.channels, id=kick_ban_sync_channel
-                        )
-
-                        sync_channels = []
-                        if sync_channel:
-                            sync_channels.append(sync_channel.id)
-                        if kick_ban_sync_channel:
-                            sync_channels.append(kick_ban_sync_channel.id)
-
-                        moderation_sync = True
 
 
-        if aa_detection == True:
-            if webhook_channel != None:
-                # print("webhook channel")
-                if message.channel.id == webhook_channel.id:
-                    for embed in message.embeds:
-                        # print("embed found")
-                        if embed.description not in ["", None] and embed.title not in [
-                            "",
-                            None,
-                        ]:
-                            # print("embed desc")
-                            if (
-                                "kicked" in embed.description
-                                or "banned" in embed.description
-                            ):
-                                # print("used kick/ban command")
-                                if (
-                                    "Players Kicked" in embed.title
-                                    or "Players Banned" in embed.title
-                                ):
-                                    # print("command usage")
-                                    raw_content = embed.description
-                                    if "kicked" in raw_content:
-                                        user, command = raw_content.split(" kicked `")
-                                    else:
-                                        user, command = raw_content.split(" banned `")
-                                    command = command.replace("`", "")
-                                    code = embed.footer.text.split("Server: ")[1]
-                                    if command.count(",") + 1 >= 5:
-                                        embed = discord.Embed(
-                                            title="<:ERMAlert:1113237478892130324> Excessive Moderations Detected",
-                                            color=0xED4348,
-                                        )
-
-                                        embed.add_field(
-                                            name="<:ERMAdmin:1111100635736187011> Staff Member:",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{user.split(':')[0] + ']' + user.split(']')[1]}",
-                                            inline=False,
-                                        )
-
-                                        embed.add_field(
-                                            name="<:ERMPunish:1111095942075138158> Trigger:",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**{command.count(',') + 1}** kicks/bans in a single command.",
-                                            inline=False,
-                                        )
-
-                                        embed.add_field(
-                                            name="<:ERMMisc:1113215605424795648> Explanation",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>On <t:{int(message.created_at.timestamp())}>, {user.split(':')[0].replace('[', '').replace(']', '')} simultaneously kicked/banned {command.count(',') + 1} people from **{code}**",
-                                            inline=False,
-                                        )
-
-                                        pings = []
-                                        if "role" in dataset["game_security"].keys():
+                            if webhook_channel != None:
+                                if message.channel.id == webhook_channel.id:
+                                    for embed in message.embeds:
+                                        if embed.description not in ["", None] and embed.title not in [
+                                            "",
+                                            None,
+                                        ]:
                                             if (
-                                                dataset["game_security"]["role"]
-                                                is not None
+                                                "kicked" in embed.description
+                                                or "banned" in embed.description
                                             ):
-                                                if isinstance(
-                                                    dataset["game_security"]["role"],
-                                                    list,
+                                                # print("used kick/ban command")
+                                                if (
+                                                    "Players Kicked" in embed.title
+                                                    or "Players Banned" in embed.title
                                                 ):
-                                                    for role in dataset[
-                                                        "game_security"
-                                                    ]["role"]:
-                                                        role = discord.utils.get(
-                                                            message.guild.roles, id=role
+                                                    # print("command usage")
+                                                    raw_content = embed.description
+
+                                                    if "kicked" in raw_content:
+                                                        user, command = raw_content.split(" kicked `")
+                                                    else:
+                                                        user, command = raw_content.split(" banned `")
+
+                                                    command = command.replace("`", "")
+                                                    code = embed.footer.text.split("Server: ")[1]
+                                                    if command.count(",") + 1 >= 5:
+                                                        people_affected = command.count(',') + 1
+                                                        roblox_user = user.split(':')[0].replace('[', '')
+                                                        print(roblox_user)
+
+                                                        roblox_client = roblox.Client()
+                                                        roblox_player = await roblox_client.get_user_by_username(roblox_user)
+                                                        if not roblox_player:
+                                                            return
+                                                        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
+                                                        thumbnail = thumbnails[0].image_url
+
+                                                        embed = discord.Embed(
+                                                            title="<:security:1169804198741823538> Abuse Detected",
+                                                            color=BLANK_COLOR
+                                                        ).add_field(
+                                                            name="Staff Information",
+                                                            value=(
+                                                                f"<:replytop:1138257149705863209> **Username:** {roblox_player.name}\n"
+                                                                f"<:replymiddle:1138257195121791046> **User ID:** {roblox_player.id}\n"
+                                                                f"<:replymiddle:1138257195121791046> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
+                                                                f"<:replybottom:1138257250448855090> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
+                                                            ),
+                                                            inline=False
+                                                        ).add_field(
+                                                            name="Abuse Information",
+                                                            value=(
+                                                                f"<:replytop:1138257149705863209> **Type:** {'Mass-Kick' if 'kicked' in raw_content else 'Mass-Ban'}\n"
+                                                                f"<:replymiddle:1138257195121791046> **Individuals Affected [{command.count(',')+1}]:** {command}\n"
+                                                                f"<:replybottom:1138257250448855090> **At:** <t:{int(message.created_at.timestamp())}>"
+                                                            ),
+                                                            inline=False
+                                                        ).set_thumbnail(
+                                                            url=thumbnail
                                                         )
-                                                        pings.append(role.mention)
 
-                                        await aa_detection_channel.send(
-                                            ",".join(pings) if pings != [] else "",
-                                            embed=embed,
-                                            allowed_mentions=discord.AllowedMentions(
-                                                everyone=True,
-                                                users=True,
-                                                roles=True,
-                                                replied_user=True,
-                                            ),
-                                        )
-                                    if " all" in command:
-                                        embed = discord.Embed(
-                                            title="<:ERMAlert:1113237478892130324> Excessive Moderations Detected",
-                                            color=0xED4348,
-                                        )
 
-                                        embed.add_field(
-                                            name="<:ERMAdmin:1111100635736187011> Staff Member:",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{user}",
-                                            inline=False,
-                                        )
+                                                        pings = []
+                                                        pings = [(message.guild.get_role(role_id)).mention if message.guild.get_role(role_id) else None for role_id in dataset.get('game_security', {}).get('role', [])]
+                                                        pings = list(filter(lambda x: x is not None, pings))
 
-                                        embed.add_field(
-                                            name="<:ERMPunish:1111095942075138158> Trigger:",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Kicking/Banning everyone in the server",
-                                            inline=False,
-                                        )
-
-                                        embed.add_field(
-                                            name="<:ERMMisc:1113215605424795648> Explanation",
-                                            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>On <t:{int(message.created_at.timestamp())}>, {user.split(']')[0].replace('[').replace(']')} kicked/banned everyone from **{code}**",
-                                            inline=False,
-                                        )
-
-                                        pings = []
-                                        if "role" in dataset["game_security"].keys():
-                                            if (
-                                                dataset["game_security"]["role"]
-                                                is not None
-                                            ):
-                                                if isinstance(
-                                                    dataset["game_security"]["role"],
-                                                    list,
-                                                ):
-                                                    for role in dataset[
-                                                        "game_security"
-                                                    ]["role"]:
-                                                        role = discord.utils.get(
-                                                            message.guild.roles, id=role
+                                                        await aa_detection_channel.send(
+                                                            ",".join(pings) if pings != [] else "",
+                                                            embed=embed,
+                                                            allowed_mentions=discord.AllowedMentions(
+                                                                everyone=True,
+                                                                users=True,
+                                                                roles=True,
+                                                                replied_user=True,
+                                                            ),
                                                         )
-                                                        pings.append(role.mention)
-
-                                        await aa_detection_channel.send(
-                                            ",".join(pings) if pings != [] else "",
-                                            embed=embed,
-                                            allowed_mentions=discord.AllowedMentions(
-                                                everyone=True,
-                                                users=True,
-                                                roles=True,
-                                                replied_user=True,
-                                            ),
-                                        )
 
         if message.author.bot:
             return
@@ -303,13 +228,13 @@ class OnMessage(commands.Cog):
                                     pass
 
                                 embed.set_footer(
-                                    text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                    text=f'Thanks, ERM',
                                     icon_url=get_guild_icon(bot, message.guild),
                                 )
 
                                 ctx = await bot.get_context(message)
                                 await ctx.reply(
-                                    f"{message.author.mention}", embed=embed
+                                    f"{message.author.mention}", embed=embed, delete_after=15
                                 )
                                 return
                             return

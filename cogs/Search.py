@@ -72,11 +72,11 @@ class Search(commands.Cog):
         warnings: list[WarningItem] = await bot.punishments.get_warnings(roblox_player.id, ctx.guild.id) or []
 
         player_information_embed = discord.Embed(
-            title=f"<:search:1164662425820348536> {roblox_player.name}",
+            title=f"{roblox_player.name}",
             color=BLANK_COLOR,
         )
         punishments_embed = discord.Embed(
-            title=f"<:search:1164662425820348536> {roblox_player.name}",
+            title=player_information_embed.title,
             color=BLANK_COLOR,
         )
         embed_list = [player_information_embed, punishments_embed]
@@ -169,6 +169,7 @@ class Search(commands.Cog):
 
         # # print(result)
         def add_warning_field(warning):
+            new_line = '\n'
             embed_list[-1].add_field(
                 name=f"{warning['Type']}",
                 inline=False,
@@ -176,7 +177,7 @@ class Search(commands.Cog):
                     f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
                     f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                     f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                    f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>".format(int(warning.until_epoch)) if warning.until_epoch is not None else ""}'
+                    f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
                     f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
                 )
             )
@@ -195,6 +196,8 @@ class Search(commands.Cog):
                                                                         type=rbx_api.thumbnails.AvatarThumbnailType.headshot)
         thumbnail_url = thumbnails[0].image_url
         for embed in embed_list:
+            if len(embed.fields or []) == 0:
+                embed_list.remove(embed)
             embed.set_thumbnail(url=thumbnail_url)
             embed.set_author(
                 name=ctx.author.name,
@@ -204,6 +207,13 @@ class Search(commands.Cog):
         pages = [CustomPage(embeds=[embed], identifier=str(index + 1)) if len(embed.fields) > 0 else None for
                  index, embed in enumerate(embed_list)]
         paginator = SelectPagination(ctx.author.id, list(filter(lambda x: x is not None, pages)))
+
+        # print(embed_list)
+        # [print(obj) for obj in [embed.to_dict() for embed in embed_list]]
+        if len(embed_list) == 1:
+            return await ctx.reply(
+                embeds=pages[0].embeds
+            )
 
         paginator.message = await ctx.reply(
             embeds=pages[0].embeds,

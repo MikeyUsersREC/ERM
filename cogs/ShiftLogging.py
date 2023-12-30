@@ -9,10 +9,12 @@ import discord
 import num2words
 import pytz
 from decouple import config
+from discord import app_commands
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 from reactionmenu.abc import _PageController
 
+from datamodels.ShiftManagement import ShiftItem
 from erm import credentials_dict, is_management, is_staff, management_predicate, scope
 from menus import (
     AdministrativeSelectMenu,
@@ -20,12 +22,14 @@ from menus import (
     CustomSelectMenu,
     ModificationSelectMenu,
     RequestGoogleSpreadsheet,
-    YesNoMenu,
-    CustomModalView,
+    ShiftMenu,
+    AdministratedShiftMenu,
 )
-from utils.constants import BLANK_COLOR
+from utils.autocompletes import shift_type_autocomplete
+from utils.constants import BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
+from utils.paginators import SelectPagination, CustomPage
 from utils.timestamp import td_format
-from utils.utils import failure_embed, request_response, failure_embed, end_break, get_elapsed_time, new_failure_embed
+from utils.utils import failure_embed, get_elapsed_time, new_failure_embed, require_settings
 
 
 class ShiftLogging(commands.Cog):
@@ -43,7 +47,8 @@ class ShiftLogging(commands.Cog):
         with_app_command=True,
     )
     @is_staff()
-    async def dutytime(self, ctx, member: discord.Member = None):
+    @require_settings()
+    async def duty_time(self, ctx, member: discord.Member = None):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -56,12 +61,6 @@ class ShiftLogging(commands.Cog):
             member = ctx.author
 
         configItem = await bot.settings.find_by_id(ctx.guild.id)
-        if configItem is None:
-            return await new_failure_embed(
-                ctx,
-                "Not Configured",
-                "This server has not been configured yet. Please run `/setup` to set up the server.",
-            )
 
         if not configItem["shift_management"]["enabled"]:
             return await new_failure_embed(
@@ -81,7 +80,7 @@ class ShiftLogging(commands.Cog):
             )
 
         embed = discord.Embed(
-            title=f"<:shift:1169801400545452033> Total Shifts" if member == ctx.author else f'<:shift:1169801400545452033> {member.name}\'s Total Shifts',
+            title=f"Total Shifts" if member == ctx.author else f'{member.name}\'s Total Shifts',
             color=BLANK_COLOR,
         )
         embed.set_author(
@@ -139,10 +138,6 @@ class ShiftLogging(commands.Cog):
             value=f"{td_format(datetime.timedelta(seconds=total_seconds))} {'{0}*{1}*'.format(newline, 'Met Quota' if met_quota is True else 'Not Met Quota') if met_quota is not None else ''}",
         )
 
-        # embed.set_footer(
-        #     text="Requested by: {}".format(ctx.author.name),
-        #     icon_url=ctx.author.display_avatar.url
-        # )
         embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.reply(
             embed=embed,
@@ -154,8 +149,12 @@ class ShiftLogging(commands.Cog):
         description="Allows for you to administrate someone else's shift",
         extras={"category": "Shift Management"},
     )
+    @require_settings()
     @is_management()
-    async def duty_admin(self, ctx, member: discord.Member):
+    @app_commands.autocomplete(
+        type=shift_type_autocomplete
+    )
+    async def duty_admin(self, ctx, member: discord.Member, type: str = "Default"):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -163,1348 +162,184 @@ class ShiftLogging(commands.Cog):
                 "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
-        bot = self.bot
-        configItem = await bot.settings.find_by_id(ctx.guild.id)
-        if configItem is None:
-            return await failure_embed(
-                ctx,
-                "this server is not setup! Run `/setup` to setup the bot.",
+        settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        if not settings.get('shift_management', {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server.",
+                    color=BLANK_COLOR
+                )
             )
 
-        try:
-            shift_channel = discord.utils.get(
-                ctx.guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return await failure_embed(
-                ctx,
-                f'some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.',
-            )
-
-        if not configItem["shift_management"]["enabled"]:
-            return await failure_embed(
-                ctx, "shift management is not enabled on this server."
-            )
-
-        shift = None
-        shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-        has_started = shift is not None
-
-       # # print(shift)
-        view = AdministrativeSelectMenu(ctx.author.id)
-
-        embed = discord.Embed(
-            color=0xED4348,
-            title=f"<:ERMAdmin:1111100635736187011> {member.name}",
-        )
-
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_author(
-            icon_url=ctx.author.display_avatar.url, name=ctx.author.name
-        )
-
-        quota_seconds = None
-        met_quota = None
-        member_seconds = 0
-        ordinal_place = None
-        ordinal_formatted = None
-        shift_type = None
-
-        if "quota" in configItem["shift_management"].keys():
-            quota_seconds = configItem["shift_management"]["quota"]
-
-        all_staff = [{"id": None, "total_seconds": 0, "quota_seconds": 0}]
-
-        datetime_obj = datetime.datetime.now(tz=pytz.UTC)
-        ending_period = datetime_obj
-        starting_period = datetime_obj - datetime.timedelta(days=7)
-
-        async for document in bot.shift_management.shifts.db.find(
-            {
-                "Guild": ctx.guild.id,
-                "EndEpoch": {"$ne": 0},
-            }
-        ):
-            total_seconds = get_elapsed_time(document)
-
-            if document["EndEpoch"] > starting_period.timestamp():
-                quota_seconds = total_seconds
-            else:
-                quota_seconds = 0
-
-            if document["EndEpoch"] != 0:
-                if document["UserID"] not in [item["id"] for item in all_staff]:
-                    all_staff.append(
-                        {
-                            "id": document["UserID"],
-                            "total_seconds": total_seconds,
-                            "quota_seconds": quota_seconds,
-                        }
+        shift_types = settings.get('shift_types', {}).get('types', [])
+        if shift_types:
+            if type.lower() not in [t['name'].lower() for t in shift_types]:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Incorrect Shift Type",
+                        description="The shift type provided is not valid.",
+                        color=BLANK_COLOR
                     )
-                else:
-                    for item in all_staff:
-                        if item["id"] == document["_id"]:
-                            item["total_seconds"] += total_seconds
-                            item["quota_seconds"] += quota_seconds
+                )
 
-        if len(all_staff) == 0:
-            return await failure_embed(ctx, "no shifts were made in your server.")
-        for item in all_staff:
-            if item["id"] is None:
-                all_staff.remove(item)
+            shift_type_item = None
+            for item in shift_types:
+                if item['name'].lower() == type.lower():
+                    shift_type_item = item
 
-        sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
+            if shift_type_item:
+                if shift_type_item.get('access_roles') is not None:
+                    item = shift_type_item
+                    access_roles = item.get('access_roles') or []
+                    if len(access_roles) > 0:
+                        access = False
+                        for role in access_roles:
+                            if role in [i.id for i in member.roles]:
+                                access = True
+                                break
+                        if access is False:
+                            return await ctx.send(
+                                embed=discord.Embed(
+                                    title="Access Denied",
+                                    description="This individual does not have access to this shift type.",
+                                    color=BLANK_COLOR
+                                )
+                            )
 
-        for index, value in enumerate(sorted_staff):
-            m = discord.utils.get(ctx.guild.members, id=value["id"])
-           # # print(m)
-            if m:
-                if m.id == member.id:
-                   # # print("member seconds")
-                    member_seconds = value["total_seconds"]
-                    if quota_seconds is not None:
-                        if value["total_seconds"] > quota_seconds:
-                            met_quota = "Met "
-                        else:
-                            met_quota = "Not met"
-                        ordinal_place = index + 1
-                    else:
-                        met_quota = "Not met"
-                        ordinal_place = index + 1
+        shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
 
-        ordinal = lambda n: "%d%s" % (
-            n,
-            "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4],
-        )  # NOQA: E731
-        try:
-            ms_delta = datetime.timedelta(seconds=member_seconds)
-        except:
-            ms_delta = datetime.timedelta(seconds=0)
+        previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
+            "UserID": member.id,
+            "Guild": ctx.guild.id,
+            "EndEpoch": {'$ne': 0}
+        })]
+        embed = discord.Embed(
+            color=BLANK_COLOR
+        )
 
-        if ordinal_place is not None:
-            ordinal_formatted = ordinal(ordinal_place)
+        embed.add_field(
+            name="Current Statistics",
+            value=(
+                f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
+                f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+            ),
+            inline=False
+        )
 
-        if td_format(ms_delta) != "":
-            embed.add_field(
-                name="<:ERMSync:1113209904979771494> Previous Shift Data",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(ms_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {met_quota}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Rank:** {ordinal_formatted}",
-                inline=False,
-            )
-        status = None
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+        )
 
-       # # print(shift)
-        if shift not in [None, []]:
-            if shift.get("Breaks") is not None:
-                for i in shift["Breaks"]:
-                    if i["EndEpoch"] == 0:
-                        status = "break"
-                        break
-            if status != "break":
+        if shift:
+            if (shift.get('Breaks', [{}]) or [{}])[-1].get("EndEpoch", 1) == 0:
+                status = "break"
+            else:
                 status = "on"
         else:
             status = "off"
 
-        embed.add_field(
-            name="<:ERMLog:1113210855891423302> Shift Management",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **On-Duty** {'(Current)' if status == 'on' else ''}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **On-Break** {'(Current)' if status == 'break' else ''}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Off-Duty** {'(Current)' if status == 'off' else ''}",
-        )
-
-        doc = [
-            i
-            async for i in bot.shift_management.shifts.db.find(
-                {"Guild": ctx.guild.id, "EndEpoch": 0}
-            )
-        ]
-        currently_active = len(doc)
-
-        if status == "on" or status == "break":
-            warnings = 0
-            kicks = 0
-            bans = 0
-            ban_bolos = 0
-            custom = 0
-            if "Moderations" in shift.keys():
-                for item in shift["Moderations"]:
-                    warning_item = await bot.punishments.find_warning_by_spec(
-                        ctx.guild.id,
-                        identifier=item,
-                    )
-                    if warning_item:
-                        if warning_item["Type"] == "Warning":
-                            warnings += 1
-                        elif warning_item["Type"] == "Kick":
-                            kicks += 1
-                        elif (
-                            warning_item["Type"] == "Ban"
-                            or warning_item["Type"] == "Temporary Ban"
-                        ):
-                            bans += 1
-                        elif warning_item["Type"].upper() == "BOLO":
-                            ban_bolos += 1
-
-            raw_shift_type: str = shift["Type"]
-            settings = await bot.settings.find_by_id(ctx.guild.id)
-            shift_types = settings.get("shift_types")
-            shift_types = (
-                shift_types.get("types")
-                if (shift_types or {}).get("types") not in [None, []]
-                else []
-            )
-            if shift_types:
-                sh_typelist = [
-                    item for item in shift_types if item["name"] == raw_shift_type
-                ]
-                if len(sh_typelist) > 0:
-                    shift_type = sh_typelist[0]
-                else:
-                    shift_type = {
-                        "name": "Unknown",
-                        "id": 0,
-                        "role": settings["shift_management"].get("role"),
-                    }
-            else:
-                shift_type = {
-                    "name": "Default",
-                    "id": 0,
-                    "role": settings["shift_management"].get("role"),
-                }
-
-            if shift_type:
-                if shift_type.get("channel"):
-                    temp_shift_channel = discord.utils.get(
-                        ctx.guild.channels, id=shift_type.get("channel")
-                    )
-                    if temp_shift_channel:
-                        shift_channel = temp_shift_channel
-
-           # # print(datetime.datetime.fromtimestamp(shift["StartEpoch"], tz=pytz.UTC))
-            time_delta = datetime.timedelta(seconds=get_elapsed_time(shift))
-
-            embed2 = discord.Embed(
-                title=f"<:ERMActivity:1113209176664064060> Current Shift",
-                color=0xED4348,
-            )
-
-            embed2.add_field(
-                name="<:ERMPunish:1111095942075138158> Moderation Details",
-                value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Warnings:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Kicks:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Bans:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**BOLOs:** {}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Custom:** {}".format(
-                    warnings, kicks, bans, ban_bolos, custom
+        contained_document = None
+        if status == "on":
+            contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            embed.colour = GREEN_COLOR
+            embed.add_field(
+                name="Current Shift",
+                value=(
+                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
-                inline=False,
+                inline=False
             )
-
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_author(
-                icon_url=ctx.author.display_avatar.url, name=ctx.author.name
+            embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
+        elif status == "break":
+            contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            embed.colour = ORANGE_COLOR
+            embed.add_field(
+                name="Current Shift",
+                value=(
+                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                ),
+                inline=False
             )
-
-            break_seconds = 0
-            if "Breaks" in shift.keys():
-                for item in shift["Breaks"]:
-                    if item["EndEpoch"] != 0:
-                        break_seconds += item["EndEpoch"] - item["StartEpoch"]
-                    else:
-                        break_seconds += (
-                            datetime.datetime.now(tz=pytz.UTC).timestamp()
-                            - item["StartEpoch"]
-                        )
-
-            break_seconds = int(break_seconds)
-
-            doc = [
-                doc
-                async for doc in bot.shift_management.shifts.db.find(
-                    {"Guild": ctx.guild.id, "EndEpoch": 0}
-                )
-            ]
-            currently_active = len(doc)
-
-            if shift_type:
-                embed2.add_field(
-                    name="<:ERMList:1111099396990435428> Shift Status",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{'**On-Duty**' if status == 'on' else '**On-Break**'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(time_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Breaks:** {len(shift['breaks']) if 'breaks' in shift.keys() else '0'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time on Break:** {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else '0 seconds'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Current Shift Type:** {shift_type['name']}",
-                )
-            else:
-                embed2.add_field(
-                    name="<:ERMList:1111099396990435428> Shift Status",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{'**On-Duty**' if status == 'on' else '**On-Break**'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(time_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Breaks:** {len(shift['breaks']) if 'breaks' in shift.keys() else '0'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time on Break:** {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else '0 seconds'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Current Shift Type:** Default",
-                )
-
-            embed2.set_footer(text=f"Currently online staff: {currently_active}")
-            msg = await ctx.reply(
-                embeds=[embed, embed2],
-                view=view,
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you're viewing **{member.name}'s** Admin Panel",
-            )
+            embed.title = "<:ShiftBreak:1178034531702411375> **On-Break**"
         else:
-            embed.set_footer(text=f"Currently online staff: {currently_active}")
-            msg = await ctx.reply(
-                embed=embed,
-                view=view,
-                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you're viewing **{member.name}'s** Admin Panel",
-            )
-        timeout = await view.wait()
-        if timeout:
-            new_view = copy.copy(view)
-            new_view.clear_items()
-            new_view.add_item(
-                discord.ui.Button(
-                    style=discord.ButtonStyle.secondary,
-                    label="You didn't respond in time!",
-                    disabled=True,
-                )
-            )
-            return await msg.edit(view=new_view)
-
-        if view.value == "on":
-            if status == "on":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, the user **{member.name}** is already on-duty. You can force them off-duty by selecting **Off-Duty**.",
-                    embed=None,
-                )
-            elif status == "break":
-                await end_break(
-                    bot, shift, shift_type, configItem, ctx, msg, member, manage=False
-                )
-            else:
-                settings = await bot.settings.find_by_id(ctx.guild.id)
-                shift_type = None
-                nickname_prefix = None
-
-                maximum_staff = settings["shift_management"].get("maximum_staff")
-                if maximum_staff not in [None, 0]:
-                    if (currently_active + 1) > maximum_staff:
-                        return await failure_embed(
-                            ctx,
-                            f"the maximum amount of staff that can be on-duty at once is **{maximum_staff}**. Ask your server administration for more details.",
-                        )
-
-                if settings.get("shift_types"):
-                    if (
-                        len(settings["shift_types"].get("types") or []) > 1
-                        and settings["shift_types"].get("enabled") is True
-                    ):
-                        shift_types = settings["shift_types"]["types"]
-                        v = CustomSelectMenu(
-                            ctx.author.id,
-                            [
-                                discord.SelectOption(
-                                    label=item["name"],
-                                    value=item["id"],
-                                    description=item["name"],
-                                )
-                                for item in settings["shift_types"]["types"]
-                            ],
-                        )
-                        await msg.edit(
-                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                            embed=None,
-                            view=v,
-                        )
-                        timeout = await v.wait()
-                        if timeout:
-                            return
-                        if v.value:
-                            shift_type = [
-                                item
-                                for item in settings["shift_types"]["types"]
-                                if item["id"] == int(v.value)
-                            ]
-                            if len(shift_type) == 1:
-                                shift_type = shift_type[0]
-                            else:
-                                return await failure_embed(
-                                    ctx,
-                                    "something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).",
-                                )
-                        else:
-                            return
-                    else:
-                        if (
-                            settings["shift_types"].get("enabled") is True
-                            and len(settings["shift_types"].get("types")) > 0
-                        ):
-                            shift_type = settings["shift_types"]["types"][0]
-                        else:
-                            shift_type = None
-                            nickname_prefix = None
-                            changed_nick = False
-
-                if shift_type:
-                    if shift_type.get("nickname"):
-                        nickname_prefix = shift_type.get("nickname")
-                else:
-                    if configItem["shift_management"].get("nickname_prefix"):
-                        nickname_prefix = configItem["shift_management"].get(
-                            "nickname_prefix"
-                        )
-
-                old_shift_type = None
-                shift_type_item = None
-                if shift_type:
-                    old_shift_type = shift_type
-                    shift_type = shift_type["name"]
-                else:
-                    shift_type = "Default"
-                if nickname_prefix:
-                    current_name = member.nick if member.nick else member.name
-                    new_name = "{}{}".format(nickname_prefix, current_name)
-
-                    try:
-                        await member.edit(nick=new_name)
-                        changed_nick = True
-                    except Exception as e:
-                        ## print(e)
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-
-                await bot.shift_management.add_shift_by_user(
-                    member, shift_type, [], ctx.guild.id
-                )
-
-                role = None
-
-                if old_shift_type:
-                    # if old_shift_type:
-                    #     shift_type = old_shift_type
-                    if old_shift_type.get("role"):
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in old_shift_type.get("role")
-                        ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-
-                if role:
-                    for rl in role:
-                        if not rl in member.roles and rl is not None:
-                            try:
-                                await member.add_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx, f"could not add {rl} to {member.mention}"
-                                )
-
-                embed = discord.Embed(
-                    title=f"<:ERMAdd:1113207792854106173> Shift Logged", color=0xED4348
-                )
-                try:
-                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
-                    embed.set_author(
-                        icon_url=ctx.author.display_avatar.url, name=ctx.author.name
-                    )
-                    embed.set_footer(text="Staff Logging Module")
-                except:
-                    pass
-
-                if shift_type != "Default":
-                    embed.add_field(
-                        name="<:ERMList:1111099396990435428> Type",
-                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking in. **({shift_type.get('name')})**",
-                        inline=False,
-                    )
-                else:
-                    embed.add_field(
-                        name="<:ERMList:1111099396990435428> Type",
-                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking in.",
-                        inline=False,
-                    )
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Current Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(ctx.message.created_at.timestamp())}>",
-                    inline=False,
-                )
-
-                if shift_channel is None:
-                    return
-
-                await shift_channel.send(embed=embed)
-                await msg.edit(
-                    embed=None,
-                    view=None,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've started **{member.name}**'s shift.",
-                )
-        elif view.value == "off":
-            break_seconds = 0
-            shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-            if shift:
-                if shift["Guild"] != ctx.guild.id:
-                    shift = None
-
-                if shift:
-                    for index, item in enumerate(shift["Breaks"].copy()):
-                        if item["EndEpoch"] == 0:
-                            item["EndEpoch"] = ctx.message.created_at.timestamp()
-                            shift["Breaks"][index] = item
-
-                        startTimestamp = item["StartEpoch"]
-                        endTimestamp = item["EndEpoch"]
-                        break_seconds += int(endTimestamp - startTimestamp)
-            else:
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, the user **{member.name}** is not on-duty. You can force them on-duty by selecting **On-Duty**.",
-                    embed=None,
-                )
-            if status == "off":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, the user **{member.name}** is not on-duty. You can force them on-duty by selecting **On-Duty**.",
-                    embed=None,
-                )
-
-            if shift.get("Nickname"):
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(ctx.guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else ''
-                if nickname is None:
-                    nickname = configItem["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-
-                if nickname in str(member.nick):
-                    try:
-                        await member.edit(
-                            nick=member.nick.replace(nickname, "")
-                        )
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-
-            embed = discord.Embed(
-                title=f"<:ERMRemove:1113207777662345387> Shift Ended", color=0xED4348
-            )
-
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text="Staff Logging Module")
-            embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            if shift.get("Type") != "Default":
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking out. **({shift_type.get('name')})**",
-                    inline=False,
-                )
-            else:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking out.",
-                    inline=False,
-                )
-
-            time_delta = ctx.message.created_at - datetime.datetime.fromtimestamp(
-                shift["StartEpoch"], tz=pytz.UTC
-            )
-
-
-
-            added_seconds = 0
-            removed_seconds = 0
-            if "AddedTime" in shift.keys():
-                added_seconds = shift["AddedTime"]
-            if "RemovedTime" in shift.keys():
-                removed_seconds = shift["RemovedTime"]
-
-            if break_seconds > 0:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)} **({td_format(datetime.timedelta(seconds=break_seconds))})** on break",
-                    inline=False,
-                )
-            else:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Elapsed Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)}",
-                    inline=False,
-                )
-
-            await msg.edit(
-                embed=None,
-                view=None,
-                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've ended **{member.name}**'s shift.",
-            )
-
-            if shift_channel is None:
-                return
-
-            await shift_channel.send(embed=embed)
-
-            embed = discord.Embed(
-                title="<:ERMActivity:1113209176664064060> Shift Report",
-                color=0xED4348,
-            )
-
-            mods = shift.get("Moderations") if shift.get("Moderations") else []
-            all_moderation_items = [
-                await bot.punishments.find_warning_by_spec(
-                    ctx.guild.id, identifier=moderation
-                )
-                for moderation in mods
-            ]
-            moderations = len(all_moderation_items)
-
-            embed.set_author(
-                name=f"You have made {moderations} moderations during your shift.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            embed.add_field(
-                name="<:ERMMisc:1113215605424795648> Elapsed Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)} **({td_format(datetime.timedelta(seconds=break_seconds))} on break)**",
-                inline=False,
-            )
-
-            warnings = 0
-            kicks = 0
-            bans = 0
-            bolos = 0
-            custom = 0
-
-            for moderation in all_moderation_items:
-                if moderation is None:
-                    continue
-                if moderation["Type"] == "Warning":
-                    warnings += 1
-                elif moderation["Type"] == "Kick":
-                    kicks += 1
-                elif moderation["Type"] == "Ban":
-                    bans += 1
-                elif moderation["Type"] == "BOLO" or moderation["Type"] == "Bolo":
-                    bolos += 1
-                elif moderation["Type"] not in [
-                    "Warning",
-                    "Kick",
-                    "Ban",
-                    "BOLO",
-                    "Bolo",
-                ]:
-                    custom += 1
-
-            embed.add_field(
-                name="<:ERMPunish:1111095942075138158> Total Moderations",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {warnings}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Kicks:** {kicks}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Bans:** {bans}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **BOLO:** {bolos}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Custom:** {custom}",
-                inline=False,
-            )
-            dm_channel = await member.create_dm()
-            # dm_msg = await dm_channel.send(
-            #     embed=create_invis_embed(
-            #         'Your Shift Report is being generated. Please wait up to 5 seconds for complete generation.')
-            # )
-            new_ctx = copy.copy(ctx)
-            new_ctx.guild = None
-            new_ctx.channel = dm_channel
-
-            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
-            menu.add_page(embed)
-
-            moderation_embed = discord.Embed(
-                title="<:ERMActivity:1113209176664064060> Shift Report",
-                color=0xED4348,
-            )
-
-            moderation_embed.set_author(
-                name=f"You have made {moderations} moderations during your shift.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            moderation_embeds = []
-            moderation_embeds.append(moderation_embed)
-            ## print("9867")
-
-            for moderation in all_moderation_items:
-                if moderation is not None:
-                    if len(moderation_embeds[-1].fields) >= 10:
-                        moderation_embeds.append(
-                            discord.Embed(
-                                title="<:ERMActivity:1113209176664064060> Shift Report",
-                                color=0xED4348,
-                            )
-                        )
-
-                        moderation_embeds[-1].set_author(
-                            name=f"You have made {moderations} moderations during your shift.",
-                            icon_url=ctx.author.display_avatar.url,
-                        )
-
-                    moderation_embeds[-1].add_field(
-                        name=f"<:ERMList:1111099396990435428> {moderation['Type'].title()}",
-                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **ID:** {moderation['Snowflake']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Type:** {moderation['Type']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reason:** {moderation['Reason']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time:** <t:{int(moderation['Epoch'])}>",
-                        inline=False,
-                    )
-
-            time_embed = discord.Embed(
-                title="<:ERMActivity:1113209176664064060> Shift Report",
-                color=0xED4348,
-            )
-
-            time_embed.set_author(
-                name=f"You were on-shift for {td_format(time_delta)}.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-            ## print("9919")
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Shift Start",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(shift['StartEpoch'])}>",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Shift End",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Added Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=added_seconds))}",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Removed Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=removed_seconds))}",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Total Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)}",
-                inline=False,
-            )
-
-            menu.add_select(
-                ViewSelect(
-                    title="Shift Report",
-                    options={
-                        discord.SelectOption(
-                            label="Moderations",
-                            description="View all of your moderations during this shift",
-                        ): [Page(embed=embed) for embed in moderation_embeds],
-                        discord.SelectOption(
-                            label="Shift Time",
-                            description="View your shift time",
-                        ): [Page(embed=time_embed)],
-                    },
-                )
-            )
-
-            menu.add_button(ViewButton.back())
-            menu.add_button(ViewButton.next())
-            consent_obj = await bot.consent.find_by_id(ctx.author.id)
-            should_send = True
-            if consent_obj:
-                ## print(consent_obj)
-                if consent_obj.get("shift_reports") is not None:
-                    if consent_obj.get("shift_reports") is False:
-                        should_send = False
-            if should_send:
-                try:
-                    await menu.start()
-                except:
-                    pass
-
-            ## print("9960")
-
-            try:
-                await bot.shift_management.end_shift(
-                    identifier=shift["_id"], guild_id=ctx.guild.id
-                )
-            except ValueError as e:
-                return await failure_embed(ctx, "shift not found. Could not end shift.")
-
-            if shift.get("Nickname"):
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(ctx.guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else ''
-                if nickname is None:
-                    nickname = configItem["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-
-                if nickname in str(member.nick):
-                    try:
-                        await member.edit(
-                            nick=member.nick.replace(nickname, "")
-                        )
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-            role = None
-            if shift_type:
-                if shift_type.get("role"):
-                    role = [
-                        discord.utils.get(ctx.guild.roles, id=role)
-                        for role in shift_type.get("role")
-                    ]
-            else:
-                if configItem["shift_management"]["role"]:
-                    if not isinstance(configItem["shift_management"]["role"], list):
-                        role = [
-                            discord.utils.get(
-                                ctx.guild.roles,
-                                id=configItem["shift_management"]["role"],
-                            )
-                        ]
-                    else:
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in configItem["shift_management"]["role"]
-                        ]
-
-            if role:
-                for rl in role:
-                    if rl in member.roles and rl is not None:
-                        try:
-                            await member.remove_roles(rl)
-                        except:
-                            await failure_embed(
-                                ctx, f"could not remove {rl} from {member.mention}"
-                            )
-        elif view.value == "break":
-            if status == "off":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, the user **{member.name}** cannot be on break if they are not currently on-duty. If you would like them to be on-duty, select **On-Duty**",
-                    embed=None,
-                )
-            toggle = "on"
-            role = None
-
-            if "Breaks" in shift.keys():
-                for item in shift["Breaks"]:
-                    if item["EndEpoch"] == 0:
-                        toggle = "off"
-
-            if toggle == "on":
-                if "Breaks" in shift.keys():
-                    shift["Breaks"].append(
-                        {
-                            "StartEpoch": ctx.message.created_at.timestamp(),
-                            "EndEpoch": 0,
-                        }
-                    )
-                else:
-                    shift["Breaks"] = [
-                        {
-                            "StartEpoch": ctx.message.created_at.timestamp(),
-                            "EndEpoch": 0,
-                        }
-                    ]
-
-                if shift.get("Nickname"):
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else ''
-                    if nickname is None:
-                        nickname = configItem["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
-
-                    if nickname in str(member.nick):
-                        try:
-                            await member.edit(
-                                nick=member.nick.replace(nickname, "")
-                            )
-                        except Exception as e:
-                            if ctx.guild.id in bot.debug_servers:
-                                await ctx.send(f'`DEBUG:` {str(e)}')
-
-                await bot.shift_management.shifts.update_by_id(shift)
-
-                try:
-                    url_var = config("BASE_API_URL")
-                    if url_var not in ["", None]:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(
-                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}", headers={
-                                "Authorization": config('INTERNAL_API_AUTH')
-                            }):
-                                pass
-                except:
-                    pass
-
-                await msg.edit(
-                    embed=None,
-                    view=None,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've started **{member.name}**'s break.",
-                )
-
-                if shift_type:
-                    if shift_type.get("role"):
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in shift_type.get("role")
-                        ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-
-                if role:
-                    for rl in role:
-                        if rl in member.roles and rl is not None:
-                            try:
-                                await member.remove_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx, f"could not remove {rl} from {member.mention}"
-                                )
-
-            else:
-                await end_break(
-                    bot, shift, shift_type, configItem, ctx, msg, member, manage=False
-                )
-        if view.admin_value:
-            if view.admin_value == "add":
-                settings = await bot.settings.get_settings(ctx.guild.id)
-                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-                if not sh:
-                    if settings.get("shift_types"):
-                        if (
-                            len(settings["shift_types"].get("types") or []) > 1
-                            and settings["shift_types"].get("enabled") is True
-                        ):
-                            shift_types = settings["shift_types"]["types"]
-                            v = CustomSelectMenu(
-                                ctx.author.id,
-                                [
-                                    discord.SelectOption(
-                                        label=item["name"],
-                                        value=item["id"],
-                                        description=item["name"],
-                                    )
-                                    for item in settings["shift_types"]["types"]
-                                ],
-                            )
-                            msg = await ctx.reply(
-                                content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                                view=v,
-                                embed=None,
-                            )
-                            timeout = await v.wait()
-                            if timeout:
-                                return
-                            if v.value:
-                                shift_type = [
-                                    item
-                                    for item in settings["shift_types"]["types"]
-                                    if item["id"] == int(v.value)
-                                ]
-                                if len(shift_type) == 1:
-                                    shift_type = shift_type[0]
-                                else:
-                                    return await failure_embed(
-                                        ctx,
-                                        "something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).",
-                                    )
-                            else:
-                                return
-                        else:
-                            if (
-                                settings["shift_types"].get("enabled") is True
-                                and len(settings["shift_types"].get("types")) > 0
-                            ):
-                                shift_type = settings["shift_types"]["types"][0]
-                            else:
-                                shift_type = None
-
-                second_view = CustomModalView(
-                    ctx.author.id,
-                    "Add Time",
-                    "Add Time",
-                    [
-                        (
-                            "time",
-                            discord.ui.TextInput(
-                                label="Time (s/m/h/d)", placeholder="1s, 1m, 1h, 1d"
-                            ),
-                        )
-                    ],
-                )
-                await msg.edit(
-                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** how much time do you want to add?",
-                    view=second_view,
-                    embed=None,
-                )
-                timeout = await second_view.wait()
-                if (not timeout) and second_view.modal.time.value:
-                    content = second_view.modal.time.value
-                else:
-                    return await failure_embed(ctx, "you didn't provide a time!")
-
-                content = content.strip()
-                try:
-                    if content.endswith(("s", "m", "h", "d")):
-                        full = None
-                        seconds = 0
-                        if content.endswith("s"):
-                            full = "seconds"
-                            num = int(content[:-1])
-                            seconds = num
-                            # print("seconds")
-                        if content.endswith("m"):
-                            full = "minutes"
-                            num = int(content[:-1])
-                            seconds = num * 60
-                            # print("minutes")
-                        if content.endswith("h"):
-                            full = "hours"
-                            num = int(content[:-1])
-                            seconds = num * 60 * 60
-
-                            # print("hours")
-                        if content.endswith("d"):
-                            full = "days"
-                            num = int(content[:-1])
-                            seconds = num * 60 * 60 * 24
-
-                            # print("days")
-                    else:
-                        return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-                except:
-                    return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-
-                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-                if sh:
-                    await bot.shift_management.add_time_to_shift(sh["_id"], seconds)
-                else:
-                    shift_type_name = "Default"
-                    if isinstance(shift_type, str):
-                        shift_type_name = shift_type
-                    elif isinstance(shift_type, dict):
-                        shift_type_name = shift_type["name"]
-
-                    try:
-                        oid = await bot.shift_management.add_shift_by_user(
-                            member, shift_type_name, [], ctx.guild.id
-                        )
-                        await bot.shift_management.add_time_to_shift(oid, seconds)
-                        await bot.shift_management.end_shift(oid, ctx.guild.id)
-                    except ValueError as e:
-                        return await failure_embed(
-                            ctx, "shift not found. Could not manipulate shift."
-                        )
-
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've added **{num} {full}** to **{member.display_name}**'s shift.",
-                    view=None,
-                )
-
-            if view.admin_value == "remove":
-                settings = await bot.settings.get_settings(ctx.guild.id)
-                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-                if not sh:
-                    if settings.get("shift_types"):
-                        if (
-                            len(settings["shift_types"].get("types") or []) > 1
-                            and settings["shift_types"].get("enabled") is True
-                        ):
-                            v = CustomSelectMenu(
-                                ctx.author.id,
-                                [
-                                    discord.SelectOption(
-                                        label=item["name"],
-                                        value=item["id"],
-                                        description=item["name"],
-                                    )
-                                    for item in settings["shift_types"]["types"]
-                                ],
-                            )
-                            await msg.edit(embed=embed, view=v)
-                            timeout = await v.wait()
-                            if timeout:
-                                return
-                            if v.value:
-                                shift_type = [
-                                    item
-                                    for item in settings["shift_types"]["types"]
-                                    if item["id"] == int(v.value)
-                                ]
-                                if len(shift_type) == 1:
-                                    shift_type = shift_type[0]
-                                else:
-                                    return await failure_embed(
-                                        ctx,
-                                        "something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).",
-                                    )
-                            else:
-                                return
-                        else:
-                            if (
-                                settings["shift_types"].get("enabled") is True
-                                and len(settings["shift_types"].get("types")) > 0
-                            ):
-                                shift_type = settings["shift_types"]["types"][0]
-                            else:
-                                shift_type = None
-
-                second_view = CustomModalView(
-                    ctx.author.id,
-                    "Remove Time",
-                    "Remove Time",
-                    [
-                        (
-                            "time",
-                            discord.ui.TextInput(
-                                label="Time (s/m/h/d)", placeholder="1s, 1m, 1h, 1d"
-                            ),
-                        )
-                    ],
-                )
-                await msg.edit(
-                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** how much time do you want to remove?",
-                    view=second_view,
-                    embed=None,
-                )
-                timeout = await second_view.wait()
-                if (not timeout) and second_view.modal.time.value:
-                    content = second_view.modal.time.value
-                else:
-                    return await failure_embed(ctx, "you didn't provide a time!")
-                content = content.strip()
-                try:
-                    if content.endswith(("s", "m", "h", "d")):
-                        full = None
-                        seconds = 0
-                        if content.endswith("s"):
-                            full = "seconds"
-                            num = int(content[:-1])
-                            seconds = num
-                            # print("seconds")
-                        if content.endswith("m"):
-                            full = "minutes"
-                            num = int(content[:-1])
-                            seconds = num * 60
-                            # print("minutes")
-                        if content.endswith("h"):
-                            full = "hours"
-                            num = int(content[:-1])
-                            seconds = num * 60 * 60
-
-                            # print("hours")
-                        if content.endswith("d"):
-                            full = "days"
-                            num = int(content[:-1])
-                            seconds = num * 60 * 60 * 24
-
-                            # print("days")
-                    else:
-                        return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-                except:
-                    return await failure_embed(ctx, "invalid time format. (e.g. 120m)")
-                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-                if sh:
-                    await bot.shift_management.remove_time_from_shift(
-                        sh["_id"], seconds
-                    )
-                else:
-                    shift_type_name = "Default"
-                    if isinstance(shift_type, str):
-                        shift_type_name = shift_type
-                    elif isinstance(shift_type, dict):
-                        shift_type_name = shift_type["name"]
-
-                    try:
-                        oid = await bot.shift_management.add_shift_by_user(
-                            member, shift_type_name, [], ctx.guild.id
-                        )
-                        await bot.shift_management.remove_time_from_shift(oid, seconds)
-                        await bot.shift_management.end_shift(oid, ctx.guild.id)
-                    except Exception as e:
-                        return await failure_embed(
-                            ctx, "something went wrong. Please try again later."
-                        )
-
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've removed **{num} {full}** from **{member.display_name}**'s shift.",
-                    view=None,
-                )
-
-            if view.admin_value == "void":
-                if not has_started:
-                    return await msg.edit(
-                        content=f"<:ERMClose:1111101633389146223> **{ctx.author.name}**, the member has not started a shift yet. You cannot void a shift that has not started.",
-                        embed=None,
-                        view=None,
-                    )
-
-                if shift.get("Nickname"):
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else ''
-                    if nickname is None:
-                        nickname = configItem["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
-
-                    if nickname in str(member.nick):
-                        try:
-                            await member.edit(
-                                nick=member.nick.replace(nickname, "")
-                            )
-                        except Exception as e:
-                            if ctx.guild.id in bot.debug_servers:
-                                await ctx.send(f'`DEBUG:` {str(e)}')
-
-                embed = discord.Embed(
-                    title=f"<:ERMTrash:1111100349244264508> {member.name}",
-                    color=0xED4348,
-                )
-
-                try:
-                    embed.set_thumbnail(url=member.display_avatar.url)
-                except:
-                    pass
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Voided time, performed by ({ctx.author.display_name})",
-                    inline=False,
-                )
-
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Elapsed Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(ctx.message.created_at.replace(tzinfo=pytz.UTC) - datetime.datetime.fromtimestamp(shift['StartEpoch'], tz=pytz.UTC))}",
-                    inline=False,
-                )
-
-                embed.set_footer(text="Staff Logging Module")
-
-                sh = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-                await bot.shift_management.shifts.delete_by_id(sh["_id"])
-
-                if shift_channel is None:
-                    return
-
-                await shift_channel.send(embed=embed)
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906> **{ctx.author.name}**, I've voided **{member.name}**'s Shift.",
-                    view=None,
-                )
-                role = None
-                if shift_type:
-                    if shift_type.get("role"):
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in shift_type.get("role")
-                        ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-
-                if role:
-                    for rl in role:
-                        if rl in member.roles and rl is not None:
-                            try:
-                                await member.remove_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx, f"could not remove {rl} from {member.mention}"
-                                )
-
-            if view.admin_value == "clear":
-                all_shifts = [
-                    i
-                    async for i in bot.shift_management.shifts.db.find(
-                        {"UserID": member.id}
-                    )
-                ]
-                for i in all_shifts:
-                    await bot.shift_management.shifts.delete_by_id(i["_id"])
-
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}** I've cleared **{member.display_name}**'s shifts - per your request.",
-                    embed=None,
-                    view=None,
-                )
+            embed.colour = RED_COLOR
+            embed.title = "<:ShiftEnded:1178035088655646880> **Off-Duty**"
+
+        view = AdministratedShiftMenu(
+            self.bot,
+            status,
+            ctx.author.id,
+            member.id,
+            type,
+            shift,
+            contained_document
+        )
+        view.message = await ctx.send(embed=embed, view=view)
 
     @duty.command(
         name="manage",
         description="Manage your own shift in an easy way!",
-        extras={"category": "Shift Management", "ignoreDefer": True},
+        extras={"category": "Shift Management"},
     )
     @is_staff()
-    async def manage(self, ctx):
-        option_selected = None
-
+    @require_settings()
+    @app_commands.autocomplete(
+        type=shift_type_autocomplete
+    )
+    async def duty_manage(self, ctx, *, type: str = "Default"):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
-        if not settings:
-            return await failure_embed(ctx, 'this server is not setup!')
-        if not settings['shift_management']:
-            return await failure_embed(ctx, 'this server is not setup!')
-        if not settings['shift_management']['channel']:
-            return await failure_embed(ctx, "this server does not have a shift management channel!")
+        if not settings.get('shift_management', {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        shift_types = settings.get('shift_types', {}).get('types', [])
+        if shift_types:
+            if type.lower() not in [t['name'].lower() for t in shift_types]:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Incorrect Shift Type",
+                        description="The shift type provided is not valid.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            shift_type_item = None
+            for item in shift_types:
+                if item['name'].lower() == type.lower():
+                    shift_type_item = item
+
+            if shift_type_item:
+                if shift_type_item.get('access_roles') is not None:
+                    item = shift_type_item
+                    access_roles = item.get('access_roles') or []
+                    if len(access_roles) > 0:
+                        access = False
+                        for role in access_roles:
+                            if role in [i.id for i in ctx.author.roles]:
+                                access = True
+                                break
+                        if access is False:
+                            return await ctx.send(
+                                embed=discord.Embed(
+                                    title="Access Denied",
+                                    description="You do not have access to this shift type.",
+                                    color=BLANK_COLOR
+                                )
+                            )
+
 
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
@@ -1513,1144 +348,91 @@ class ShiftLogging(commands.Cog):
                 "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
-        bot = self.bot
-        configItem = await bot.settings.find_by_id(ctx.guild.id)
-        if configItem is None:
-            return await failure_embed(
-                ctx,
-                "the server has not been set up yet. Please run `/setup` to set up the server.",
-            )
-
-        try:
-            shift_channel = discord.utils.get(
-                ctx.guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except:
-            return await failure_embed(
-                ctx,
-                f'some of the required values needed to use this command are missing from your database entry. Try setting up the bot via `{(await bot.settings.find_by_id(ctx.guild.id))["customisation"]["prefix"]}setup`.',
-            )
-
-        if not configItem["shift_management"]["enabled"]:
-            return await failure_embed(
-                ctx, "Shift management is not enabled on this server."
-            )
-
-        shift = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
-        view = ModificationSelectMenu(ctx.author.id)
-
+        shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+        # view = ModificationSelectMenu(ctx.author.id)
+        previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
+            "UserID": ctx.author.id,
+            "Guild": ctx.guild.id,
+            "EndEpoch": {'$ne': 0}
+        })]
         embed = discord.Embed(
-            color=0xED4348,
-            title=f"<:ERMUser:1111098647485108315> {ctx.author.name}",
+            color=BLANK_COLOR
         )
 
-        quota_seconds = None
-        met_quota = None
-        member_seconds = 0
-        ordinal_place = None
-        ordinal_formatted = None
 
-        if "quota" in configItem["shift_management"].keys():
-            quota_seconds = configItem["shift_management"]["quota"]
+        embed.add_field(
+            name="Current Statistics",
+            value=(
+                f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
+                f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+            ),
+            inline=False
+        )
 
-        all_staff = [{"id": None, "total_seconds": 0, "quota_seconds": 0}]
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+        )
 
-        datetime_obj = datetime.datetime.now(tz=pytz.UTC)
-        ending_period = datetime_obj
-        starting_period = datetime_obj - datetime.timedelta(days=7)
-
-        async for document in bot.shift_management.shifts.db.find(
-            {
-                "Guild": ctx.guild.id,
-                "EndEpoch": {"$ne": 0},
-            }
-        ):
-            total_seconds = 0
-            quota_seconds = 0
-
-            total_seconds = get_elapsed_time(document)
-
-            if document["StartEpoch"] > starting_period.timestamp():
-                quota_seconds = total_seconds
-
-            if document["UserID"] not in [item["id"] for item in all_staff]:
-                all_staff.append(
-                    {
-                        "id": document["UserID"],
-                        "total_seconds": total_seconds,
-                        "quota_seconds": quota_seconds,
-                    }
-                )
-            else:
-                for item in all_staff:
-                    if item["id"] == document["UserID"]:
-                        item["total_seconds"] += total_seconds
-                        item["quota_seconds"] += quota_seconds
-
-        if len(all_staff) == 0:
-            return await failure_embed(ctx, "no shifts were made in your server.")
-        for item in all_staff:
-            if item["id"] is None:
-                all_staff.remove(item)
-
-        sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
-
-        for index, value in enumerate(sorted_staff):
-            member = discord.utils.get(ctx.guild.members, id=value["id"])
-            if member:
-                if member.id == ctx.author.id:
-                    member_seconds = value["total_seconds"]
-                    if quota_seconds is not None:
-                        if value["total_seconds"] > quota_seconds:
-                            met_quota = "Met "
-                        else:
-                            met_quota = "Not met"
-                        ordinal_place = index + 1
-                    else:
-                        met_quota = "Not met"
-                        ordinal_place = index + 1
-
-        ordinal = lambda n: "%d%s" % (
-            n,
-            "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4],
-        )  # NOQA: E731
-        ms_delta = datetime.timedelta(seconds=member_seconds)
-
-        if ordinal_place is not None:
-            ordinal_formatted = ordinal(ordinal_place)
-
-        if td_format(ms_delta) != "":
-            embed.add_field(
-                name="<:ERMList:1111099396990435428> Previous Shift Data",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(ms_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {met_quota}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Rank:** {ordinal_formatted}",
-                inline=False,
-            )
-        status = None
-
-        # print(shift)
         if shift:
-            for item in shift["Breaks"]:
-                if item["EndEpoch"] == 0:
-                    status = "break"
-                    break
-
-            if status != "break" and shift["EndEpoch"] == 0:
+            if (shift.get('Breaks', [{}]) or [{}])[-1].get("EndEpoch", 1) == 0:
+                status = "break"
+            else:
                 status = "on"
-            elif shift["EndEpoch"] != 0:
-                status = "off"
         else:
             status = "off"
 
-        embed.add_field(
-            name="<:ERMList:1111099396990435428> Shift Management",
-            value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **On-Duty** {'(Current)' if status == 'on' else ''}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **On-Break** {'(Current)' if status == 'break' else ''}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Off-Duty** {'(Current)' if status == 'off' else ''}",
-        )
-        embed.set_author(
-            name=ctx.author.name,
-            icon_url=ctx.author.display_avatar.url,
-        )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-
-        doc = [
-            i
-            async for i in bot.shift_management.shifts.db.find(
-                {"Guild": ctx.guild.id, "EndEpoch": 0}
-            )
-        ]
-        currently_active = len(doc)
-
-        if status == "on" or status == "break":
-            warnings = 0
-            kicks = 0
-            bans = 0
-            ban_bolos = 0
-            custom = 0
-            if "Moderations" in shift.keys():
-                for mod in shift["Moderations"]:
-                    item = await bot.punishments.find_warning_by_spec(
-                        identifier=mod, guild_id=ctx.guild.id
-                    )
-                    if item is None:
-                        continue
-                    if item["Type"] == "Warning":
-                        warnings += 1
-                    elif item["Type"] == "Kick":
-                        kicks += 1
-                    elif item["Type"] == "Ban" or item["Type"] == "Temporary Ban":
-                        bans += 1
-                    elif item["Type"] == "BOLO":
-                        ban_bolos += 1
-                    else:
-                        custom += 1
-
-            if "Type" in shift.keys():
-                if shift["Type"]:
-                    raw_shift_type: str = shift["Type"]
-                    settings = await bot.settings.find_by_id(ctx.guild.id)
-                    shift_types = settings.get("shift_types")
-                    shift_types = (
-                        shift_types.get("types")
-                        if (shift_types or {}).get("types") is not None
-                        else []
-                    )
-                    if shift_types:
-                        sh_typelist = [
-                            item
-                            for item in shift_types
-                            if item["name"] == raw_shift_type
-                        ]
-                        if len(sh_typelist) > 0:
-                            shift_type = sh_typelist[0]
-                        else:
-                            shift_type = {
-                                "name": "Default",
-                                "id": 0,
-                                "role": settings["shift_management"].get("role"),
-                            }
-                    else:
-                        shift_type = {
-                            "name": "Default",
-                            "id": 0,
-                            "role": settings["shift_management"].get("role"),
-                        }
-                else:
-                    shift_type = None
-            else:
-                shift_type = None
-
-            if shift_type:
-                if shift_type.get("channel"):
-                    temp_shift_channel = discord.utils.get(
-                        ctx.guild.channels, id=shift_type["channel"]
-                    )
-                    if temp_shift_channel is not None:
-                        shift_channel = temp_shift_channel
-
-            time_delta = datetime.timedelta(seconds=get_elapsed_time(shift))
-
-            embed2 = discord.Embed(
-                title=f"<:ERMActivity:1113209176664064060> Current Shift",
-                color=0xED4348,
-            )
-
-            embed2.add_field(
-                name="<:ERMList:1111099396990435428> Moderation Details",
-                value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{} Warnings\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{} Kicks\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{} Bans\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{} Ban BOLOs\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{} Custom".format(
-                    warnings, kicks, bans, ban_bolos, custom
+        contained_document = None
+        if status == "on":
+            contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            embed.colour = GREEN_COLOR
+            embed.add_field(
+                name="Current Shift",
+                value=(
+                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
-                inline=False,
+                inline=False
             )
-
-            break_seconds = 0
-            if "Breaks" in shift.keys():
-                for item in shift["Breaks"]:
-                    if item["EndEpoch"] != 0:
-                        break_seconds += item["EndEpoch"] - item["StartEpoch"]
-                    else:
-                        break_seconds += (
-                            datetime.datetime.now(tz=pytz.UTC).timestamp()
-                            - item["StartEpoch"]
-                        )
-
-            break_seconds = int(break_seconds)
-
-            doc = [
-                i
-                async for i in bot.shift_management.shifts.db.find(
-                    {"Guild": ctx.guild.id, "EndEpoch": 0}
-                )
-            ]
-            currently_active = len(doc)
-
-            if shift_type:
-                embed2.add_field(
-                    name="<:ERMList:1111099396990435428> Shift Status",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{'**On-Duty**' if status == 'on' else '**On-Break**'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time:** {td_format(time_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Breaks:** {len(shift['breaks']) if 'breaks' in shift.keys() else '0'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time on Break:** {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else '0 seconds'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Current Shift Type:** {shift_type['name']}",
-                )
-            else:
-                embed2.add_field(
-                    name="<:ERMList:1111099396990435428> Shift Status",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{'**On-Duty**' if status == 'on' else '**On-Break**'} \n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time:** {td_format(time_delta)}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Breaks:** {len(shift['breaks']) if 'breaks' in shift.keys() else '0'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time on Break:** {td_format(datetime.timedelta(seconds=break_seconds)) if td_format(datetime.timedelta(seconds=break_seconds)) != '' else '0 seconds'}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Current Shift Type:** Default",
-                )
-
-            embed2.set_footer(text=f"Currently online staff: {currently_active}")
-
-            if option_selected is None:
-                msg = await ctx.reply(
-                    embeds=[embed, embed2],
-                    view=view,
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
-                )
-            else:
-                msg = await ctx.reply(
-                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** please wait."
-                )
+            embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
+        elif status == "break":
+            contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            embed.colour = ORANGE_COLOR
+            embed.add_field(
+                name="Current Shift",
+                value=(
+                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                ),
+                inline=False
+            )
+            embed.title = "<:ShiftBreak:1178034531702411375> **On-Break**"
         else:
-            embed.set_footer(text=f"Currently online staff: {currently_active}")
-            if option_selected is None:
-                msg = await ctx.reply(
-                    embed=embed,
-                    view=view,
-                    content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, looks like you want to manage your shift. Select an option.",
-                )
-            else:
-                msg = await ctx.reply(
-                    content=f"<:ERMPending:1111097561588183121> **{ctx.author.name},** please wait."
-                )
-        if msg.components:
-            timeout = await view.wait()
-        else:
-            timeout = False
-        # print(1877)
-        if timeout:
-            new_view = copy.copy(view)
-            new_view.clear_items()
-            new_view.add_item(
-                discord.ui.Button(
-                    style=discord.ButtonStyle.secondary,
-                    label="You didn't respond in time!",
-                    disabled=True,
-                )
-            )
-            try:
-                await msg.edit(view=new_view)
-            except:
-                pass
-            return
+            embed.colour = RED_COLOR
+            embed.title = "<:ShiftEnded:1178035088655646880> **Off-Duty**"
+
+        view = ShiftMenu(
+            self.bot,
+            status,
+            ctx.author.id,
+            type,
+            starting_document=shift,
+            starting_container=contained_document
+        )
+
+        view.message = await ctx.send(embed=embed, view=view)
 
-        if option_selected:
-            view.value = option_selected
-
-        # print(1897)
-        if view.value == "on":
-            if status == "on":
-                if msg is not None:
-                    return await msg.edit(
-                        content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
-                        embed=None,
-                        view=None,
-                    )
-                else:
-                    return await ctx.send(
-                        content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already on-duty. You can go off-duty by selecting **Off-Duty**.",
-                        embed=None,
-                        view=None,
-                    )
-            elif status == "break":
-                for index, item in enumerate(shift["Breaks"].copy()):
-                    if item["EndEpoch"] == 0:
-                        item["EndEpoch"] = ctx.message.created_at.timestamp()
-                        shift["Breaks"][index] = item
-
-                sh = await bot.shift_management.get_current_shift(
-                    ctx.author, ctx.guild.id
-                )
-                if sh:
-                    if sh["Guild"] == ctx.guild.id:
-                        await bot.shift_management.shifts.update_by_id(sh)
-                role = None
-                if shift_type:
-                    if shift_type.get("role"):
-                        if isinstance(shift_type.get("role"), list):
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=rl)
-                                for rl in shift_type.get("role")
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles, id=shift_type.get("role")
-                                )
-                            ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ] or []
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-                if role:
-                    for rl in role:
-                        if rl not in ctx.author.roles and rl is not None:
-                            try:
-                                await ctx.author.add_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx, f"could not add {rl} to {ctx.author.mention}"
-                                )
-
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, you are no longer on break.",
-                    view=None,
-                )
-            else:
-                settings = await bot.settings.find_by_id(ctx.guild.id)
-                shift_type = None
-
-                maximum_staff = settings["shift_management"].get("maximum_staff")
-                if maximum_staff not in [None, 0]:
-                    if (currently_active + 1) > maximum_staff:
-                        return await failure_embed(
-                            ctx,
-                            f"the maximum amount of staff that can be on-duty at once is **{maximum_staff}**. Ask your server administration for more details.",
-                        )
-
-                if settings.get("shift_types"):
-                    if (
-                        len(settings["shift_types"].get("types") or []) > 1
-                        and settings["shift_types"].get("enabled") is True
-                    ):
-                        shift_types = settings["shift_types"]["types"]
-                        view = CustomSelectMenu(
-                            ctx.author.id,
-                            [
-                                discord.SelectOption(
-                                    label=item["name"],
-                                    value=item["id"],
-                                    description=item["name"],
-                                )
-                                for item in settings["shift_types"]["types"]
-                            ],
-                        )
-                        await msg.edit(
-                            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, you have {num2words.num2words(len(shift_types))} shift types - {', '.join([f'`{i}`' for i in [item['name'] for item in shift_types]])}. Select which one you want to use.",
-                            embed=None,
-                            view=view,
-                        )
-                        timeout = await view.wait()
-                        if timeout:
-                            return
-                        if view.value:
-                            shift_type = [
-                                item
-                                for item in settings["shift_types"]["types"]
-                                if item["id"] == int(view.value)
-                            ]
-                            if len(shift_type) == 1:
-                                shift_type = shift_type[0]
-                            else:
-                                return await failure_embed(
-                                    ctx,
-                                    "something went wrong in the shift type selection. If you experience this error, please contact [ERM Support[(https://discord.gg/FAC629TzBy).",
-                                )
-                        else:
-                            return
-                    else:
-                        if (
-                            settings["shift_types"].get("enabled") is True
-                            and len(settings["shift_types"].get("types") or []) == 1
-                        ):
-                            shift_type = settings["shift_types"]["types"][0]
-                        else:
-                            shift_type = None
-
-                nickname_prefix = None
-                changed_nick = False
-                if shift_type:
-                    if shift_type.get("nickname"):
-                        nickname_prefix = shift_type.get("nickname")
-                else:
-                    if configItem["shift_management"].get("nickname_prefix"):
-                        nickname_prefix = configItem["shift_management"].get(
-                            "nickname_prefix"
-                        )
-
-                if nickname_prefix:
-                    current_name = (
-                        ctx.author.nick if ctx.author.nick else ctx.author.name
-                    )
-                    new_name = "{}{}".format(nickname_prefix, current_name)
-
-                    try:
-                        await ctx.author.edit(nick=new_name)
-                        changed_nick = True
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-                old = shift_type
-                shift_type = shift_type["name"] if shift_type else "Default"
-
-                await bot.shift_management.add_shift_by_user(
-                    ctx.author, shift_type, [], ctx.guild.id
-                )
-                shift_type = old
-
-                role = None
-
-                if shift_type:
-                    if shift_type.get("role"):
-                        if isinstance(shift_type.get("role"), list):
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=rl)
-                                for rl in shift_type.get("role")
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles, id=shift_type.get("role")
-                                )
-                            ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-                if role:
-                    for rl in role:
-                        if rl not in ctx.author.roles and rl is not None:
-                            try:
-                                await ctx.author.add_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx, f"could not add {rl} to {ctx.author.mention}"
-                                )
-
-                embed = discord.Embed(
-                    title=f"<:ERMAdd:1113207792854106173> Shift Started", color=0xED4348
-                )
-                try:
-                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
-                    embed.set_footer(text="Staff Logging Module")
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar.url,
-                    )
-                except:
-                    pass
-
-                if shift_type:
-                    embed.add_field(
-                        name="<:ERMList:1111099396990435428> Type",
-                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking in. **({shift_type['name']})**",
-                        inline=False,
-                    )
-                else:
-                    embed.add_field(
-                        name="<:ERMList:1111099396990435428> Type",
-                        value="<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking in.",
-                        inline=False,
-                    )
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Current Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(ctx.message.created_at.timestamp())}>",
-                    inline=False,
-                )
-
-                if shift_channel is None:
-                    return
-
-                await shift_channel.send(embed=embed)
-                await msg.edit(
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your shift is now active.",
-                    embed=None,
-                    view=None,
-                )
-        elif view.value == "off":
-            break_seconds = 0
-            if shift:
-                if "breaks" in shift.keys():
-                    for item in shift["breaks"]:
-                        if item["ended"] == None:
-                            item["ended"] = ctx.message.created_at.replace(
-                                tzinfo=pytz.UTC
-                            ).timestamp()
-                        startTimestamp = item["started"]
-                        endTimestamp = item["ended"]
-                        break_seconds += int(endTimestamp - startTimestamp)
-            else:
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are not on-duty. You can go on-duty by selecting **On-Duty**.",
-                    embed=None,
-                    view=None,
-                )
-            if status == "off":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you are already off-duty. You can go on-duty by selecting **On-Duty**.",
-                    embed=None,
-                    view=None,
-                )
-
-            embed = discord.Embed(
-                title=f"<:ERMRemove:1113207777662345387> Shift Ended", color=0xED4348
-            )
-
-            if shift.get("Nickname"):
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(ctx.guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else ''
-                if nickname is None:
-                    nickname = settings["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-
-                if nickname in str(ctx.author.nick):
-                    try:
-                        await ctx.author.edit(
-                            nick=ctx.author.nick.replace(nickname, "")
-                        )
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-            embed.set_thumbnail(url=ctx.author.display_avatar.url)
-            embed.set_footer(text="Staff Logging Module")
-
-            if shift.get("Type") != "":
-                settings = await bot.settings.find_by_id(ctx.author.id)
-                shift_type = None
-                if settings:
-                    if "shift_types" in settings.keys():
-                        for item in settings["shift_types"].get("types") or []:
-                            if item["name"] == shift["Type"]:
-                                shift_type = item
-            embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            if shift_type:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking out. **({shift_type['name']})**",
-                    inline=False,
-                )
-            else:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Type",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Clocking out.",
-                    inline=False,
-                )
-
-            time_delta = ctx.message.created_at - datetime.datetime.fromtimestamp(
-                shift["StartEpoch"], tz=pytz.UTC
-            )
-
-            time_delta = time_delta - datetime.timedelta(seconds=break_seconds)
-
-            added_seconds = 0
-            removed_seconds = 0
-            if "AddedTime" in shift.keys():
-                added_seconds += shift["AddedTime"]
-
-            if "RemovedTime" in shift.keys():
-                removed_seconds += shift["RemovedTime"]
-
-            try:
-                time_delta = time_delta + datetime.timedelta(seconds=added_seconds)
-                time_delta = time_delta - datetime.timedelta(seconds=removed_seconds)
-            except OverflowError:
-                await failure_embed(
-                    ctx,
-                    f"{ctx.author.mention}'s added or removed time has been voided due to it being an unfeasibly massive numeric value. If you find a vulnerability in ERM, please report it via our Support Server.",
-                )
-
-            if break_seconds > 0:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Elapsed Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
-                    inline=False,
-                )
-            else:
-                embed.add_field(
-                    name="<:ERMList:1111099396990435428> Elapsed Time",
-                    value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)}",
-                    inline=False,
-                )
-
-            await msg.edit(
-                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your shift is now over.",
-                embed=None,
-                view=None,
-            )
-
-            if shift.get("Nickname"):
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(ctx.guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else ''
-                if nickname is None:
-                    nickname = settings["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-
-                if nickname in str(ctx.author.nick):
-                    try:
-                        await ctx.author.edit(
-                            nick=ctx.author.nick.replace(nickname, "")
-                        )
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-            if shift_channel is None:
-                return
-
-            await shift_channel.send(embed=embed)
-
-            embed = discord.Embed(
-                title="<:ERMSchedule:1111091306089939054> Shift Report",
-                color=0xED4348,
-            )
-
-            mods = shift.get("Moderations") if shift.get("Moderations") else []
-            all_moderation_items = [
-                await bot.punishments.find_warning_by_spec(
-                    ctx.guild.id, identifier=moderation
-                )
-                for moderation in mods
-            ]
-            moderations = len(all_moderation_items)
-
-            embed.set_author(
-                name=f"You have made {moderations} moderations during your shift.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            embed.add_field(
-                name="<:ERMList:1111099396990435428> Elapsed Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)} ({td_format(datetime.timedelta(seconds=break_seconds))} on break)",
-                inline=False,
-            )
-
-            warnings = 0
-            kicks = 0
-            bans = 0
-            bolos = 0
-            custom = 0
-
-            for moderation in all_moderation_items:
-                if moderation is None:
-                    continue
-                if moderation["Type"] == "Warning":
-                    warnings += 1
-                elif moderation["Type"] == "Kick":
-                    kicks += 1
-                elif moderation["Type"] == "Ban":
-                    bans += 1
-                elif moderation["Type"] == "BOLO" or moderation["Type"] == "Bolo":
-                    bolos += 1
-                elif moderation["Type"] not in [
-                    "Warning",
-                    "Kick",
-                    "Ban",
-                    "BOLO",
-                    "Bolo",
-                ]:
-                    custom += 1
-
-            embed.add_field(
-                name="<:ERMList:1111099396990435428> Total Moderations",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Warnings:** {warnings}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Kicks:** {kicks}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Bans:** {bans}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **BOLO:** {bolos}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Custom:** {custom}",
-                inline=False,
-            )
-            dm_channel = await ctx.author.create_dm()
-            # dm_msg = await dm_channel.send(
-            #     embed=create_invis_embed(
-            #         'Your Shift Report is being generated. Please wait up to 5 seconds for complete generation.')
-            # )
-            new_ctx = copy.copy(ctx)
-            new_ctx.guild = None
-            new_ctx.channel = dm_channel
-
-            menu = ViewMenu(new_ctx, menu_type=ViewMenu.TypeEmbed, timeout=None)
-            menu.add_page(embed)
-
-            moderation_embed = discord.Embed(
-                title="<:ERMSchedule:1111091306089939054> Shift Report",
-                color=0xED4348,
-            )
-
-            moderation_embed.set_author(
-                name=f"You have made {moderations} moderations during your shift.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-
-            moderation_embeds = []
-            moderation_embeds.append(moderation_embed)
-            # print("9867")
-
-            for moderation in all_moderation_items:
-                if moderation is not None:
-                    if len(moderation_embeds[-1].fields) >= 10:
-                        moderation_embeds.append(
-                            discord.Embed(
-                                title="<:ERMSchedule:1111091306089939054> Shift Report",
-                                color=0xED4348,
-                            )
-                        )
-
-                        moderation_embeds[-1].set_author(
-                            name=f"You have made {moderations} moderations during your shift.",
-                            icon_url=ctx.author.display_avatar.url,
-                        )
-
-                    moderation_embeds[-1].add_field(
-                        name=f"<:ERMList:1111099396990435428> {moderation['Type'].title()}",
-                        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **ID:** {moderation['Snowflake']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Type:** {moderation['Type']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Reason:** {moderation['Reason']}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912> **Time:** <t:{int(moderation['Epoch'])}>",
-                        inline=False,
-                    )
-
-            time_embed = discord.Embed(
-                title="<:ERMSchedule:1111091306089939054> Shift Report",
-                color=0xED4348,
-            )
-
-            time_embed.set_author(
-                name=f"You were on-shift for {td_format(time_delta)}.",
-                icon_url=ctx.author.display_avatar.url,
-            )
-            # print("9919")
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Shift Start",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(shift['StartEpoch'])}>",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Shift End",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912><t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Added Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=added_seconds))}",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Removed Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(datetime.timedelta(seconds=removed_seconds))}",
-                inline=False,
-            )
-
-            time_embed.add_field(
-                name="<:ERMList:1111099396990435428> Total Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(time_delta)}",
-                inline=False,
-            )
-
-            menu.add_select(
-                ViewSelect(
-                    title="Shift Report",
-                    options={
-                        discord.SelectOption(
-                            label="Moderations",
-                            description="View all of your moderations during this shift",
-                        ): [Page(embed=embed) for embed in moderation_embeds],
-                        discord.SelectOption(
-                            label="Shift Time",
-                            description="View your shift time",
-                        ): [Page(embed=time_embed)],
-                    },
-                )
-            )
-
-            menu.add_button(ViewButton.back())
-            menu.add_button(ViewButton.next())
-            consent_obj = await bot.consent.find_by_id(ctx.author.id)
-            should_send = True
-            if consent_obj:
-                # print(consent_obj)
-                if consent_obj.get("shift_reports") is not None:
-                    if consent_obj.get("shift_reports") is False:
-                        should_send = False
-            if should_send:
-                try:
-                    await menu.start()
-                except:
-                    pass
-
-            try:
-                await bot.shift_management.end_shift(
-                    identifier=shift["_id"],
-                    guild_id=ctx.guild.id,
-                )
-            except ValueError as e:
-                return await failure_embed(ctx, "shift not found. Could not end shift.")
-            role = None
-            if shift_type:
-                if shift_type.get("role"):
-                    role = [
-                        discord.utils.get(ctx.guild.roles, id=role)
-                        for role in shift_type.get("role")
-                    ]
-            else:
-                if configItem["shift_management"]["role"]:
-                    if not isinstance(configItem["shift_management"]["role"], list):
-                        role = [
-                            discord.utils.get(
-                                ctx.guild.roles,
-                                id=configItem["shift_management"]["role"],
-                            )
-                        ]
-                    else:
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in configItem["shift_management"]["role"]
-                        ]
-
-            if role:
-                for rl in role:
-                    if rl in ctx.author.roles and rl is not None:
-                        try:
-                            await ctx.author.remove_roles(rl)
-                        except:
-                            await failure_embed(
-                                ctx, f"Could not remove {rl} from {ctx.author.mention}"
-                            )
-        elif view.value == "break":
-            if status == "off":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you cannot be on break if you are not currently on-duty. If you would like to be on-duty, pick **On-Duty**",
-                    embed=None,
-                )
-            toggle = "on"
-
-            if "Breaks" in shift.keys():
-                for item in shift["Breaks"]:
-                    if item["EndEpoch"] == 0:
-                        toggle = "off"
-
-            if toggle == "on":
-                shift["Breaks"].append(
-                    {
-                        "StartEpoch": ctx.message.created_at.timestamp(),
-                        "EndEpoch": 0,
-                    }
-                )
-
-                await bot.shift_management.shifts.update_by_id(shift)
-                try:
-                    url_var = config("BASE_API_URL")
-                    if url_var not in ["", None]:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(
-                                    f"{url_var}/Internal/SyncStartBreak/{shift['_id']}", headers={
-                                "Authorization": config('INTERNAL_API_AUTH')
-                            }):
-                                pass
-                except:
-                    pass
-                await msg.edit(
-                    embed=None,
-                    view=None,
-                    content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your break has started - see you soon! <:BreakStart:1111093969871446067>",
-                )
-                if shift.get("Nickname"):
-                    nickname = None
-                    if shift.get("Type") is not None:
-                        settings = await bot.settings.get_settings(ctx.guild.id)
-                        shift_types = None
-                        if settings.get("shift_types"):
-                            shift_types = settings["shift_types"].get("types", [])
-                        else:
-                            shift_types = []
-                        for s in shift_types:
-                            if s["name"] == shift.get("Type"):
-                                shift_type = s
-                                nickname = s["nickname"] if s.get("nickname") else ''
-                    if nickname is None:
-                        nickname = settings["shift_management"].get(
-                            "nickname_prefix", ""
-                        )
-
-                    if nickname in str(ctx.author.nick):
-                        try:
-                            await ctx.author.edit(
-                                nick=ctx.author.nick.replace(nickname, "")
-                            )
-                        except Exception as e:
-                            if ctx.guild.id in bot.debug_servers:
-                                await ctx.send(f'`DEBUG:` {str(e)}')
-
-                role = []
-                if shift_type:
-                    if shift_type.get("role"):
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in shift_type.get("role")
-                        ]
-                else:
-                    if configItem["shift_management"]["role"]:
-                        if not isinstance(configItem["shift_management"]["role"], list):
-                            role = [
-                                discord.utils.get(
-                                    ctx.guild.roles,
-                                    id=configItem["shift_management"]["role"],
-                                )
-                            ]
-                        else:
-                            role = [
-                                discord.utils.get(ctx.guild.roles, id=role)
-                                for role in configItem["shift_management"]["role"]
-                            ]
-
-                if role is not None:
-                    for rl in role:
-                        if rl in ctx.author.roles and rl is not None:
-                            try:
-                                await ctx.author.remove_roles(rl)
-                            except:
-                                await failure_embed(
-                                    ctx,
-                                    f"could not remove {rl} from {ctx.author.mention}",
-                                )
-
-            else:
-                await end_break(
-                    bot,
-                    shift,
-                    shift_type,
-                    configItem,
-                    ctx,
-                    msg,
-                    ctx.author,
-                    manage=True,
-                )
-        elif view.value == "void":
-            if status == "off":
-                return await msg.edit(
-                    content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, you have not started a shift yet. You cannot void a shift that has not started.",
-                    embed=None,
-                    view=None,
-                )
-            embed = discord.Embed(
-                title=f"<:ERMTrash:1111100349244264508> Voided Time", color=0xED4348
-            )
-
-            if shift.get("Nickname"):
-                nickname = None
-                if shift.get("Type") is not None:
-                    settings = await bot.settings.get_settings(ctx.guild.id)
-                    shift_types = None
-                    if settings.get("shift_types"):
-                        shift_types = settings["shift_types"].get("types", [])
-                    else:
-                        shift_types = []
-                    for s in shift_types:
-                        if s["name"] == shift.get("Type"):
-                            shift_type = s
-                            nickname = s["nickname"] if s.get("nickname") else ''
-                if nickname is None:
-                    nickname = settings["shift_management"].get(
-                        "nickname_prefix", ""
-                    )
-
-                if nickname in str(ctx.author.nick):
-                    try:
-                        await ctx.author.edit(
-                            nick=ctx.author.nick.replace(nickname, "")
-                        )
-                    except Exception as e:
-                        if ctx.guild.id in bot.debug_servers:
-                            await ctx.send(f'`DEBUG:` {str(e)}')
-
-            try:
-                embed.set_thumbnail(url=ctx.author.display_avatar.url)
-                embed.set_author(
-                    name=ctx.author.name,
-                    icon_url=ctx.author.display_avatar.url,
-                )
-            except:
-                pass
-            embed.add_field(
-                name="<:ERMList:1111099396990435428> Type",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>Voided time.",
-                inline=False,
-            )
-
-            embed.add_field(
-                name="<:ERMList:1111099396990435428> Elapsed Time",
-                value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{td_format(ctx.message.created_at.replace(tzinfo=pytz.UTC) - datetime.datetime.fromtimestamp(shift['StartEpoch'], tz=pytz.UTC))}",
-                inline=False,
-            )
-
-            embed.set_footer(text="Staff Logging Module")
-
-            sh = await bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
-            await bot.shift_management.shifts.delete_by_id(sh["_id"])
-
-            if shift_channel is None:
-                return
-
-            await shift_channel.send(embed=embed)
-            await msg.edit(
-                content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, your shift has been voided.",
-                view=None,
-            )
-            role = None
-            if shift_type:
-                if shift_type.get("role"):
-                    role = [
-                        discord.utils.get(ctx.guild.roles, id=role)
-                        for role in shift_type.get("role")
-                    ]
-            else:
-                if configItem["shift_management"]["role"]:
-                    if not isinstance(configItem["shift_management"]["role"], list):
-                        role = [
-                            discord.utils.get(
-                                ctx.guild.roles,
-                                id=configItem["shift_management"]["role"],
-                            )
-                        ]
-                    else:
-                        role = [
-                            discord.utils.get(ctx.guild.roles, id=role)
-                            for role in configItem["shift_management"]["role"]
-                        ]
-
-            if role:
-                for rl in role:
-                    if rl in ctx.author.roles and rl is not None:
-                        try:
-                            await ctx.author.remove_roles(rl)
-                        except:
-                            await failure_embed(
-                                ctx, f"could not remove {rl} from {ctx.author.mention}"
-                            )
 
     @duty.command(
         name="active",
         description="Get all members of the server currently on shift.",
         extras={"category": "Shift Management"}
     )
+    @require_settings()
     @is_staff()
     async def duty_active(self, ctx):
         if self.bot.shift_management_disabled is True:
@@ -2662,11 +444,12 @@ class ShiftLogging(commands.Cog):
 
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
-        if not configItem:
-            return await new_failure_embed(
-                ctx,
-                "Not Configured"
-                "This server has not been configured yet. Please run `/setup` to configure the server.",
+        if not configItem.get('shift_management', {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server."
+                )
             )
 
         shift_type = None
@@ -2725,7 +508,7 @@ class ShiftLogging(commands.Cog):
                                 )
 
         embed = discord.Embed(
-            title="<:shift:1169801400545452033> Active Shifts", color=BLANK_COLOR
+            title="Active Shifts", color=BLANK_COLOR
         )
         embed.description = f"**Total Shifts**"
         embed.set_author(
@@ -2794,7 +577,7 @@ class ShiftLogging(commands.Cog):
                 and ctx.author.id not in added_staff
             ):
                 embed = discord.Embed(
-                    title="<:shift:1169801400545452033> Active Shifts", color=BLANK_COLOR
+                    title="Active Shifts", color=BLANK_COLOR
                 )
                 embed.description = f"**Total Shifts**"
                 embed.set_author(
@@ -2808,17 +591,28 @@ class ShiftLogging(commands.Cog):
                     -1
                 ].description += f"\n**{index+1}.** {member.mention} • {td_format(datetime.timedelta(seconds=staff['total_seconds']))}{(' **(Currently on break: {})**'.format(td_format(datetime.timedelta(seconds=staff['break_seconds'])))) if staff['break_seconds'] > 0 else ''}"
 
-        if ctx.interaction:
-            gtx = ctx.interaction
-        else:
-            gtx = ctx
 
-        menu = ViewMenu(gtx, menu_type=ViewMenu.TypeEmbed, timeout=None)
-        for embed in embeds:
-            menu.add_page(embed=embed)
-        menu._pc = _PageController(menu.pages)
-        menu.add_buttons([ViewButton.back(), ViewButton.next()])
-        if len(menu.pages) == 1:
+        paginator = SelectPagination(ctx.author.id, [CustomPage(embeds=[embed], identifier=str(index+1)) for index, embed in enumerate(embeds)])
+
+
+        if len(embeds) == 1:
+            if embeds[0].description == "**Total Shifts**":
+                try:
+                    return await msg.edit(
+                        embed=discord.Embed(
+                            title="No Active Shifts",
+                            description="No active shifts have been found in this server.",
+                            color=BLANK_COLOR
+                        )
+                    )
+                except UnboundLocalError:
+                    return await ctx.send(
+                        embed=discord.Embed(
+                            title="No Active Shifts",
+                            description="No active shifts have been found in this server.",
+                            color=BLANK_COLOR
+                        )
+                    )
             try:
                 return await msg.edit(
                     embed=embed,
@@ -2827,9 +621,9 @@ class ShiftLogging(commands.Cog):
             except UnboundLocalError:
                 return await ctx.reply(embed=embed)
         try:
-            await msg.edit(embed=embeds[0], view=menu._ViewMenu__view)
+            await msg.edit(embed=embeds[0], view=paginator.get_current_view())
         except UnboundLocalError:
-            await ctx.reply(embed=embeds[0], view=menu._ViewMenu__view)
+            await ctx.reply(embed=embeds[0], view=paginator.get_current_view())
 
     @duty.command(
         name="leaderboard",
@@ -2837,6 +631,7 @@ class ShiftLogging(commands.Cog):
         extras={"category": "Shift Management"},
         aliases=["lb"],
     )
+    @require_settings()
     @is_staff()
     async def shift_leaderboard(self, ctx):
         if self.bot.shift_management_disabled is True:
@@ -2847,16 +642,15 @@ class ShiftLogging(commands.Cog):
             )
 
         bot = self.bot
-        try:
-            configItem = await bot.settings.find_by_id(ctx.guild.id)
-            if configItem is None:
-                raise ValueError("Settings does not exist.")
-        except:
-            return await new_failure_embed(
-                ctx,
-                'Not Configured',
-                "This server has not been configured yet. Please run `/setup` to configure this server.",
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if not configItem.get('shift_management', {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server."
+                )
             )
+
 
         shift_type = None
         if configItem.get("shift_types"):
@@ -2963,17 +757,7 @@ class ShiftLogging(commands.Cog):
                     moderations += len(document["Moderations"])
                 # print(document)
                 total_seconds += (
-                    int(
-                        (
-                            document["EndEpoch"]
-                            if document["EndEpoch"] != 0
-                            else document["StartEpoch"]
-                        )
-                    )
-                    - int(document["StartEpoch"])
-                    + document["AddedTime"]
-                    - document["RemovedTime"]
-                    - break_seconds
+                    get_elapsed_time(document)
                 )
                 # print(total_seconds)
                 if document["UserID"] not in [item["id"] for item in all_staff]:
@@ -2991,7 +775,14 @@ class ShiftLogging(commands.Cog):
                             item["moderations"] += moderations
 
         if len(all_staff) == 0:
-            return await failure_embed(ctx, "no shifts were made in your server.")
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Shifts",
+                    description="No shifts have been found in this server.",
+                    color=BLANK_COLOR
+                )
+            )
+
         for item in all_staff:
             if item["id"] is None:
                 all_staff.remove(item)
@@ -3002,7 +793,7 @@ class ShiftLogging(commands.Cog):
         embeds = []
 
         embed = discord.Embed(
-            color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
+            color=BLANK_COLOR, title="Shift Leaderboard"
         )
         embed.set_author(
             name=f"{ctx.guild.name}",
@@ -3015,13 +806,22 @@ class ShiftLogging(commands.Cog):
         data = []
         if not sorted_staff:
             if shift_type != 0 and shift_type is not None:
-                await failure_embed(
-                    ctx,
-                    f"no shifts were made for the `{shift_type['name']}` shift type.",
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="No Shifts",
+                        description="No shifts have been found in this server for this Shift Type.",
+                        color=BLANK_COLOR
+                    )
                 )
             else:
-                await failure_embed(ctx, "no shifts were made in your server.")
-            return
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="No Shifts",
+                        description="No shifts have been found in this server.",
+                        color=BLANK_COLOR
+                    )
+                )
+
 
         my_data = None
 
@@ -3082,7 +882,7 @@ class ShiftLogging(commands.Cog):
                 else:
                     # print("fields more than 24")
                     new_embed = discord.Embed(
-                        color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
+                        color=BLANK_COLOR, title="Shift Leaderboard"
                     )
 
                     new_embed.set_author(
@@ -3172,7 +972,7 @@ class ShiftLogging(commands.Cog):
                             else:
                                 # print("fields more than 24")
                                 new_embed = discord.Embed(
-                                    color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
+                                    color=BLANK_COLOR, title="Shift Leaderboard"
                                 )
 
                                 new_embed.set_author(
@@ -3242,7 +1042,7 @@ class ShiftLogging(commands.Cog):
                     else:
                         # print("fields more than 24")
                         new_embed = discord.Embed(
-                            color=BLANK_COLOR, title="<:shift:1169801400545452033> Shift Leaderboard"
+                            color=BLANK_COLOR, title="Shift Leaderboard"
                         )
 
                         new_embed.set_author(
@@ -3258,49 +1058,7 @@ class ShiftLogging(commands.Cog):
             for item in list_item:
                 combined.append(item)
 
-        # print(all_staff)
-        # print(sorted_staff)
-        # print(buffer)
-
-        # if my_data is not None:
-        #     ordinal_formatted = ordinal(my_data["index"] + 1)
-        #     if "quota" in configItem["shift_management"].keys():
-        #         quota_seconds = configItem["shift_management"]["quota"]
-        #
-        #     embeds[
-        #         0
-        #     ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** {td_format(datetime.timedelta(seconds=my_data['total_seconds']))}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Rank:** {ordinal_formatted}\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** {'<:ERMCheck:1111089850720976906>' if my_data['total_seconds'] >= quota_seconds else '<:ERMClose:1111101633389146223>'}"
-        # else:
-        #     embeds[
-        #         0
-        #     ].description += f"\n\n<:ERMList:1111099396990435428> **Your Stats**\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Time:** 0 seconds\n<:Space:1100877460289101954><:ERMArrow:1111091707841359912>**Quota:** <:ERMClose:1111101633389146223>"
-
-        try:
-            bbytes = buffer.encode("utf-8")
-        except Exception as e:
-            # print(e)
-            if len(embeds) == 0:
-                return await failure_embed(ctx, "no shift data has been found.")
-            elif embeds[0].description is None:
-                return await failure_embed(ctx, "no shift data has been found.")
-            else:
-                if ctx.interaction:
-                    interaction = ctx.interaction
-                else:
-                    interaction = ctx
-
-                menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed, timeout=None)
-                for embed in embeds:
-                    if embed is not None:
-                        menu.add_pages([embed])
-
-                if len(menu.pages) == 1:
-                    return await ctx.reply(
-                        embed=embed
-                    )
-
-                menu.add_buttons([ViewButton.back(), ViewButton.next()])
-                await menu.start()
+        bbytes = buffer.encode("utf-8", "ignore")
 
         if len(embeds) == 1:
             new_embeds = []
@@ -3319,15 +1077,9 @@ class ShiftLogging(commands.Cog):
             await ctx.reply(
                 embeds=new_embeds,
                 file=discord.File(fp=BytesIO(bbytes), filename="shift_leaderboard.txt"),
-                view=view,
+                view=view
             )
         else:
-            file = discord.File(fp=BytesIO(bbytes), filename="shift_leaderboard.txt")
-            if ctx.interaction:
-                interaction = ctx
-            else:
-                interaction = ctx
-
             if await management_predicate(ctx):
                 view = RequestGoogleSpreadsheet(
                     ctx.author.id,
@@ -3342,102 +1094,46 @@ class ShiftLogging(commands.Cog):
             async def response_func(
                 interaction: discord.Interaction, button: discord.Button
             ):
+                file = discord.File(fp=BytesIO(bbytes), filename="shift_leaderboard.txt")
                 await interaction.response.send_message(file=file, ephemeral=True)
 
-            menu = ViewMenu(
-                interaction,
-                menu_type=ViewMenu.TypeEmbed,
-                show_page_director=True,
-                timeout=None,
-            )
-            for embed in embeds:
-                if embed is not None:
-                    menu.add_page(
-                        embed=embed
-                    )
-
-            menu._pc = _PageController(menu.pages)
-            menu.add_buttons([ViewButton.back(), ViewButton.next()])
-            menu._ViewMenu__view.add_item(
-                CustomExecutionButton(
+            if view:
+                view.add_item(CustomExecutionButton(
                     ctx.author.id,
                     "Download Shift Leaderboard",
                     discord.ButtonStyle.gray,
                     emoji=None,
-                    func=response_func,
-                )
-            )
+                    func=response_func
+                ))
+
+            pages = [CustomPage(embeds=[embed], view=view, identifier=str(index+1)) for index, embed in enumerate(embeds)]
+            menu = SelectPagination(ctx.author.id, pages)
+
+
             if len(menu.pages) == 1:
                 try:
                     return await msg.edit(
                         embed=embed,
-                        file=file,
                         view=view
                     )
                 except UnboundLocalError:
                     return await ctx.reply(
                         embed=embed,
-                        file=file,
                         view=view
                     )
-            if view:
-                for child in view.children:
-                    menu._ViewMenu__view.add_item(child)
 
+            view_page = menu.get_current_view()
             try:
-                await msg.edit(
+                menu.message = await msg.edit(
                     embed=embeds[0],
-                    view=menu._ViewMenu__view
+                    view=view_page
                 )
             except UnboundLocalError:
-                await ctx.reply(
+                menu.message = await ctx.reply(
                     embed=embeds[0],
-                    view=menu._ViewMenu__view,
+                    view=view_page
                 )
 
-    @duty.command(
-        name="clearall",
-        description="Clears all of the shift data.",
-        extras={"category": "Shift Management"},
-        aliases=["shift-cla"],
-    )
-    @is_management()
-    async def clearall(self, ctx):
-        if self.bot.shift_management_disabled is True:
-            return await new_failure_embed(
-                ctx,
-                "Maintenance",
-                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
-            )
-
-        bot = self.bot
-        try:
-            configItem = await bot.settings.find_by_id(ctx.guild.id)
-        except:
-            return await failure_embed(
-                ctx,
-                "the server has not been set up yet. Please run `/setup` to set up the server.",
-            )
-
-        view = YesNoMenu(ctx.author.id)
-
-        msg = await ctx.reply(
-            view=view,
-            content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, are you sure you would like to do this? I can't reverse this action.",
-        )
-        await view.wait()
-        if view.value is False:
-            return await failure_embed(ctx, "Successfully cancelled.")
-
-        async for document in bot.shift_management.shifts.db.find(
-            {"Guild": ctx.guild.id}
-        ):
-            await bot.shift_management.shifts.db.delete_one({"_id": document["_id"]})
-
-        await msg.edit(
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, alright. I've erased all of your servers shift data.",
-            view=None,
-        )
 
 
 async def setup(bot):

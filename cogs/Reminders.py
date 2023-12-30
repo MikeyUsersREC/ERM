@@ -1,26 +1,18 @@
 import datetime
-
 import discord
 from discord.ext import commands
-
 from erm import is_management
 from menus import (
-    ChannelSelect,
     ManageReminders,
-    RoleSelect,
     YesNoColourMenu,
-    YesNoMenu,
-    CustomSelectMenu,
-    CustomModalView, ReminderCreationToolkit,
+    ReminderCreationToolkit,
 )
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.timestamp import td_format
 from utils.utils import (
     generator,
-    invis_embed,
-    removesuffix,
-    request_response,
-    failure_embed, time_converter,
+    time_converter,
+    require_settings,
 )
 
 
@@ -39,6 +31,7 @@ class Reminders(commands.Cog):
         extras={"category": "Reminders"},
     )
     @is_management()
+    @require_settings()
     async def manage_reminders(self, ctx):
         bot = self.bot
         reminder_data = await bot.reminders.find_by_id(ctx.guild.id)
@@ -70,7 +63,7 @@ class Reminders(commands.Cog):
         if len(embed.fields) == 0:
             embed.add_field(
                 name="No Reminders",
-                value="<:replybottom:1138257250448855090> *This server has no reminders.*"
+                value="This server has no reminders."
             )
 
         view = ManageReminders(ctx.author.id)
@@ -136,9 +129,6 @@ class Reminders(commands.Cog):
                     )
 
 
-
-                view = YesNoColourMenu(ctx.author.id)
-
                 dataset = {
                         "id": next(generator),
                         "name": name,
@@ -153,13 +143,13 @@ class Reminders(commands.Cog):
 
                 view = ReminderCreationToolkit(ctx.author.id, dataset)
                 await msg.edit(embed=discord.Embed(
-                    title="<:reminder:1163143497348558848> Reminder Creation",
+                    title="Reminder Creation",
                     description=(
                         f"<:replytop:1138257149705863209> **Name:** {dataset['name']}\n"
                         f"<:replymiddle:1138257195121791046> **ID:** {dataset['id']}\n"
-                        f"<:replymiddle:1138257195121791046>**Channel:** {'<#{}>'.format(dataset.get('channel', None)) or 'Not set'}\n"
+                        f"<:replymiddle:1138257195121791046> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
                         f"<:replymiddle:1138257195121791046> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
-                        f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('roles', [])]) or 'Not set'}\n"
+                        f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
                         f"<:replybottom:1138257250448855090> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),

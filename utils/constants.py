@@ -32,5 +32,5 @@ blank_color = BLANK_COLOR # Redundancy
 
 
 GREEN_COLOR = discord.Colour.brand_green()
-RED_COLOR = 0xFF3C3C
-ORANGE_COLOR = 0xff9a3c
+RED_COLOR = 0xd12f32
+ORANGE_COLOR = discord.Colour.orange()

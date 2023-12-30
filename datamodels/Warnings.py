@@ -133,7 +133,7 @@ class Warnings(Document):
             moderation_type: str,
             time_epoch: int,
             until_epoch: int | None = None,
-    ) -> dict | ValueError:
+    ) -> ObjectId | ValueError:
         """
         Inserts a warning into the database.
         {
@@ -363,7 +363,7 @@ class Warnings(Document):
         # print(map)
         async for i in self.db.aggregate([{"$match": map}]):
             # print("!")
-            await self.recovery.insert(i)
+            await self.recovery.upsert(i)
             await self.db.delete_one({"_id": i["_id"]})
 
     async def remove_warning_by_snowflake(

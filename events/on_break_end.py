@@ -53,7 +53,7 @@ class OnBreakEnd(commands.Cog):
 
         staff_member: discord.Member = guild.get_member(shift.user_id)
 
-        for role in assigned_roles:
+        for role in (assigned_roles or []):
             discord_role: discord.Role = guild.get_role(role)
             if discord_role is None:
                 continue
@@ -70,7 +70,7 @@ class OnBreakEnd(commands.Cog):
 
         if channel is not None:
             await channel.send(embed=discord.Embed(
-                title="<:shift:1169801400545452033> Break Ended",
+                title="Break Ended",
                 color=BLANK_COLOR
             ).add_field(
                 name="Shift Information",
