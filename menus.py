@@ -1351,7 +1351,7 @@ class CustomCommandModification(discord.ui.View):
     async def view_custom_command_message(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
         async def _return_failure():
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 embed=discord.Embed(
                     title="No Message Found",
                     description="There is currently no message associated with this Custom Command.\nYou can add one using 'Edit Message'.",
