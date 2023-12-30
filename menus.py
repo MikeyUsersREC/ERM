@@ -3968,7 +3968,7 @@ class LOAConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="LOA Role", row=1, max_values=1)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="LOA Role", row=1, max_values=25)
     async def loa_role_select(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -3980,7 +3980,7 @@ class LOAConfiguration(AssociationConfigurationView):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        sett['staff_management']['loa_role'] = select.values[0].id
+        sett['staff_management']['loa_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="LOA Channel", row=2, max_values=1,
@@ -4191,7 +4191,7 @@ class ShiftConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Role", row=2, max_values=5)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Role", row=2, max_values=25)
     async def shift_role_select(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -4568,7 +4568,7 @@ class RAConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="RA Role", row=2, max_values=1, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="RA Role", row=2, max_values=25, min_values=0)
     async def ra_role_select(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -4580,7 +4580,7 @@ class RAConfiguration(AssociationConfigurationView):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        sett['staff_management']['ra_role'] = int(select.values[0].id or None)
+        sett['staff_management']['ra_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
 
 class ExtendedPunishmentConfiguration(AssociationConfigurationView):
