@@ -29,6 +29,14 @@ class OnCommandError(commands.Cog):
                 )
             )
 
+        if 'Invalid username' in str(error):
+            return await ctx.reply(embed=discord.Embed(
+                title="Player not found",
+                description="I could not find a ROBLOX player with that corresponding username.",
+                color=BLANK_COLOR
+            ))
+
+
         if isinstance(error, roblox.UserNotFound):
             return await ctx.reply(embed=discord.Embed(
                 title="Player not found",
