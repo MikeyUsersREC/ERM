@@ -3878,7 +3878,7 @@ class BasicConfiguration(AssociationConfigurationView):
         sett['staff_management']['role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Management Roles", row=1, max_values=25)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Management Roles", row=1, max_values=25, min_values=0)
     async def management_role_select(
             self, interaction: discord.Interaction, select: discord.ui.Select
     ):
@@ -4161,22 +4161,22 @@ class ExtendedShiftOptions(discord.ui.View):
                     default=td_format(datetime.timedelta(seconds=quota_hours)),
                     required=False
                 )
-            ), {
-                "ephemeral": True
-            }
-        ])
+            )
+        ], epher_args={"ephemeral": True})
+
         await interaction.response.send_modal(self.modal)
         await self.modal.wait()
 
         try:
             seconds = time_converter(self.modal.quota.value)
         except ValueError:
-            return await self.modal.followup.send(
+            return await interaction.followup.send(
                 embed=discord.Embed(
                     title="Invalid Time",
                     description="You provided an invalid time format.",
                     color=BLANK_COLOR
-                )
+                ),
+                ephemeral=True
             )
 
         bot = self.bot
@@ -6244,6 +6244,12 @@ class AdministratedShiftMenu(discord.ui.View):
             await self.cycle_ui(self.state, interaction.message)
 
         elif value == "void":
+            if not self.contained_document:
+                try:
+                    self.contained_document = await self.bot.shift_management.fetch_shift(self.shift['_id'])
+                except ValueError:
+                    return
+
             self.bot.dispatch('shift_void', interaction.user, self.contained_document.id)
             await asyncio.sleep(2)
             await self.bot.shift_management.shifts.delete_by_id(self.contained_document.id)

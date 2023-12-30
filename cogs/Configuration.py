@@ -520,7 +520,7 @@ class Configuration(commands.Cog):
                             '_FIND_BY_LABEL': True
                         }
                     ],
-                    'Enabled' if settings['staff_management']['enabled'] is True else 'Disabled'
+                    'Enabled' if settings['staff_management'].get('enabled') is True else 'Disabled'
                 ]
             ),
             (

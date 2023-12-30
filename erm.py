@@ -104,7 +104,7 @@ class Bot(commands.AutoShardedBot):
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
-                self.db = self.mongo['alpha']
+                self.db = self.mongo['erm']
             else:
                 raise Exception("Invalid environment")
 
