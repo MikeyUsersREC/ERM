@@ -494,7 +494,7 @@ class ShiftLogging(commands.Cog):
                     [
                         discord.SelectOption(
                             label=i["name"],
-                            value=i["id"],
+                            value=i["name"],
                             description=i["name"],
                         )
                         for i in shift_types
@@ -701,7 +701,7 @@ class ShiftLogging(commands.Cog):
                     [
                         discord.SelectOption(
                             label=i["name"],
-                            value=i["id"],
+                            value=i["name"],
                             description=i["name"],
                         )
                         for i in shift_types
