@@ -1,4 +1,5 @@
-<h1 align="center">ERM | Emergency Response Management</h1> [![CodeFactor](https://www.codefactor.io/repository/github/mikeyusersrec/erm/badge)](https://www.codefactor.io/repository/github/mikeyusersrec/erm)
+<h1 align="center">ERM | Emergency Response Management</h1>
+[![CodeFactor](https://www.codefactor.io/repository/github/mikeyusersrec/erm/badge)](https://www.codefactor.io/repository/github/mikeyusersrec/erm)
 
 <p align="center">Emergency Response Management (ERM for short) is a bot designed for servers within the Roblox roleplay community. This repository contains all necessary information and resources for the bot. </p>
 
