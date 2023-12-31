@@ -163,17 +163,34 @@ class ShiftLogging(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
+        msg = None
         shift_types = settings.get('shift_types', {}).get('types', [])
         if shift_types:
             if type.lower() not in [t['name'].lower() for t in shift_types]:
-                return await ctx.send(
+                msg = await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
                         description="The shift type provided is not valid.",
                         color=BLANK_COLOR
-                    )
+                    ),
+                    view=(view := CustomSelectMenu(
+                        ctx.author.id,
+                        [
+                            discord.SelectOption(
+                                label=i["name"],
+                                value=i["name"],
+                                description=i["name"],
+                            )
+                            for i in shift_types
+                        ]
+                    ))
                 )
+                timeout = await view.wait()
+                if timeout:
+                    return
+
+                if view.value:
+                    type = view.value
 
             shift_type_item = None
             for item in shift_types:
@@ -274,7 +291,11 @@ class ShiftLogging(commands.Cog):
             shift,
             contained_document
         )
-        view.message = await ctx.send(embed=embed, view=view)
+        if not msg:
+            view.message = await ctx.send(embed=embed, view=view)
+        else:
+            await msg.edit(embed=embed, view=view)
+            view.message = msg
 
     @duty.command(
         name="manage",
@@ -300,13 +321,30 @@ class ShiftLogging(commands.Cog):
         shift_types = settings.get('shift_types', {}).get('types', [])
         if shift_types:
             if type.lower() not in [t['name'].lower() for t in shift_types]:
-                return await ctx.send(
+                await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
                         description="The shift type provided is not valid.",
                         color=BLANK_COLOR
-                    )
+                    ),
+                    view=(view := CustomSelectMenu(
+                        ctx.author.id,
+                        [
+                            discord.SelectOption(
+                                label=i["name"],
+                                value=i["name"],
+                                description=i["name"],
+                            )
+                            for i in shift_types
+                        ]
+                    ))
                 )
+                timeout = await view.wait()
+                if timeout:
+                    return
+
+                if view.value:
+                    type = view.value
 
             shift_type_item = None
             for item in shift_types:

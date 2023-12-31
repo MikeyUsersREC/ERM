@@ -3656,11 +3656,17 @@ class AssociationConfigurationView(discord.ui.View):
                         new_opt = item.options[find_index]
                         new_opt.default = True
                         item.options[find_index] = new_opt
+                        break
+
+                    for index, option in enumerate(item.options):
+                        if index != find_index:
+                            option.default = False
 
     async def on_timeout(self) -> None:
         for i in self.children:
             i.disabled = True
-
+        if not self.message:
+            return
         await self.message.edit(view=self)
 
     async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
@@ -7024,7 +7030,7 @@ class PunishmentModifier(discord.ui.View):
 
         punishment = await self.bot.punishments.db.find_one(self.root_dataset)
         if punishment:
-            await self.bot.punishments.remove_warnings_by_snowflake(punishment['Snowflake'])
+            await self.bot.punishments.remove_warning_by_snowflake(punishment['Snowflake'])
             await interaction.message.delete()
             await interaction.response.send_message(
                 embed=discord.Embed(
