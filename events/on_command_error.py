@@ -21,6 +21,7 @@ class OnCommandError(commands.Cog):
         bot = self.bot
         error_id = error_gen()
 
+
         if 'Invalid Webhook Token' in str(error):
             return
 

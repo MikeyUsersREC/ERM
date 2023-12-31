@@ -64,13 +64,13 @@ class OnBreakEnd(commands.Cog):
                 continue
             try:
                 await staff_member.add_roles(discord_role, atomic=True)
-            except discord.Forbidden:
+            except discord.HTTPException:
                 pass
 
         if nickname_prefix is not None:
             try:
                 await staff_member.edit(nick=f"{nickname_prefix}{(staff_member.nick or staff_member.display_name)}")
-            except discord.Forbidden:
+            except discord.HTTPException:
                 pass
 
         if channel is not None:

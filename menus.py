@@ -4303,6 +4303,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                     f"<:replytop:1138257149705863209> **Name:** {item['name']}\n"
                     f"<:replymiddle:1138257195121791046> **ID:** {item['id']}\n"
                     f"<:replymiddle:1138257195121791046> **Channel:** <#{item['channel']}>\n"
+                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {item.get('nickname') or 'None'}\n"
                     f"<:replymiddle:1138257195121791046> **Access Roles:** {','.join(['<@&{}>'.format(role) for role in item.get('access_roles') or []]) or 'None'}\n"
                     f"<:replybottom:1138257250448855090> **On-Duty Role:** {','.join(['<@&{}>'.format(role) for role in item.get('role', [])]) or 'None'}"
                 ),
@@ -4342,6 +4343,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                     f"<:replytop:1138257149705863209> **Name:** {data['name']}\n"
                     f"<:replymiddle:1138257195121791046> **ID:** {data['id']}\n"
                     f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
+                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
                     f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
                     f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
                     f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
@@ -5447,6 +5449,7 @@ class ShiftTypeCreator(discord.ui.View):
                 f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
                 f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"
                 f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
+                f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {self.dataset.get('nickname') or 'Not set'}\n"
                 f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
                 f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('access_roles', [])]) or 'Not set'}\n\n\n"
                 f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
@@ -5503,6 +5506,40 @@ class ShiftTypeCreator(discord.ui.View):
         await interaction.response.defer()
 
         self.dataset['channel'] = [i.id for i in select.values][0]
+        try:
+            await self.refresh_ui(interaction.message)
+        except discord.NotFound:
+            await self.refresh_ui(await self.restored_interaction.original_response())
+
+    @discord.ui.button(
+        label="Edit Nickname Prefix",
+        row=3
+    )
+    async def edit_nickname_prefix(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = CustomModal(
+            "Edit Nickname Prefix",
+            [
+                (
+                    "nickname_prefix",
+                    discord.ui.TextInput(
+                        label="Nickname Prefix",
+                        max_length=20
+                    )
+                )
+            ]
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        try:
+            chosen_identifier = modal.nickname_prefix.value
+        except ValueError:
+            return
+
+        if not chosen_identifier:
+            return
+
+        self.dataset['nickname'] = chosen_identifier
         try:
             await self.refresh_ui(interaction.message)
         except discord.NotFound:

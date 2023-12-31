@@ -69,13 +69,13 @@ class OnShiftVoid(commands.Cog):
                 continue
             try:
                 await staff_member.remove_roles(discord_role, atomic=True)
-            except discord.Forbidden:
+            except discord.HTTPException:
                 pass
 
         if nickname_prefix is not None:
             try:
                 await staff_member.edit(nick=f"{(staff_member.nick or staff_member.display_name).removeprefix(nickname_prefix)}")
-            except discord.Forbidden:
+            except discord.HTTPException:
                 pass
 
         if channel is not None:

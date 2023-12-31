@@ -208,13 +208,22 @@ class ShiftLogging(commands.Cog):
                                 access = True
                                 break
                         if access is False:
-                            return await ctx.send(
-                                embed=discord.Embed(
-                                    title="Access Denied",
-                                    description="This individual does not have access to this shift type.",
-                                    color=BLANK_COLOR
+                            if not msg:
+                                return await ctx.send(
+                                    embed=discord.Embed(
+                                        title="Access Denied",
+                                        description="This individual does not have access to this shift type.",
+                                        color=BLANK_COLOR
+                                    )
                                 )
-                            )
+                            else:
+                                return await msg.edit(
+                                    embed=discord.Embed(
+                                        title="Access Denied",
+                                        description="This individual does not have access to this shift type.",
+                                        color=BLANK_COLOR
+                                    )
+                                )
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
 
@@ -363,13 +372,22 @@ class ShiftLogging(commands.Cog):
                                 access = True
                                 break
                         if access is False:
-                            return await ctx.send(
-                                embed=discord.Embed(
-                                    title="Access Denied",
-                                    description="You do not have access to this shift type.",
-                                    color=BLANK_COLOR
+                            if not msg:
+                                return await ctx.send(
+                                    embed=discord.Embed(
+                                        title="Access Denied",
+                                        description="You do not have access to this shift type.",
+                                        color=BLANK_COLOR
+                                    )
                                 )
-                            )
+                            else:
+                                return await msg.edit(
+                                    embed=discord.Embed(
+                                        title="Access Denied",
+                                        description="You do not have access to this shift type.",
+                                        color=BLANK_COLOR
+                                    )
+                                )
 
 
         if self.bot.shift_management_disabled is True:
@@ -696,6 +714,7 @@ class ShiftLogging(commands.Cog):
 
 
         shift_type = None
+        msg = None
         if configItem.get("shift_types"):
             shift_types = configItem.get("shift_types")
             if len(shift_types.get("types")) > 1:
@@ -855,21 +874,39 @@ class ShiftLogging(commands.Cog):
         data = []
         if not sorted_staff:
             if shift_type != 0 and shift_type is not None:
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="No Shifts",
-                        description="No shifts have been found in this server for this Shift Type.",
-                        color=BLANK_COLOR
+                if not msg:
+                    return await ctx.send(
+                        embed=discord.Embed(
+                            title="No Shifts",
+                            description="No shifts have been found in this server for this Shift Type.",
+                            color=BLANK_COLOR
+                        )
                     )
-                )
+                else:
+                    return await msg.edit(
+                        embed=discord.Embed(
+                            title="No Shifts",
+                            description="No shifts have been found in this server for this Shift Type.",
+                            color=BLANK_COLOR
+                        )
+                    )
             else:
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="No Shifts",
-                        description="No shifts have been found in this server.",
-                        color=BLANK_COLOR
+                if not msg:
+                    return await ctx.send(
+                        embed=discord.Embed(
+                            title="No Shifts",
+                            description="No shifts have been found in this server.",
+                            color=BLANK_COLOR
+                        )
                     )
-                )
+                else:
+                    return await ctx.send(
+                        embed=discord.Embed(
+                            title="No Shifts",
+                            description="No shifts have been found in this server.",
+                            color=BLANK_COLOR
+                        )
+                    )
 
 
         my_data = None
@@ -1165,7 +1202,7 @@ class ShiftLogging(commands.Cog):
                         embed=embed,
                         view=view
                     )
-                except UnboundLocalError:
+                except (UnboundLocalError, AttributeError, ValueError):
                     return await ctx.reply(
                         embed=embed,
                         view=view
@@ -1177,7 +1214,7 @@ class ShiftLogging(commands.Cog):
                     embed=embeds[0],
                     view=view_page
                 )
-            except UnboundLocalError:
+            except (UnboundLocalError, AttributeError, ValueError):
                 menu.message = await ctx.reply(
                     embed=embeds[0],
                     view=view_page
