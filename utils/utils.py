@@ -137,22 +137,22 @@ async def interpret_embed(bot, ctx, channel, embed: dict):
     embed = discord.Embed.from_dict(embed)
     try:
         embed.title = await sub_vars(bot, ctx, channel, embed.title)
-    except ValueError:
+    except AttributeError:
         pass
     try:
         embed.set_author(name=await sub_vars(bot, ctx, channel, embed.author.name))
-    except ValueError:
+    except AttributeError:
         pass
     try:
         embed.description = await sub_vars(bot, ctx, channel, embed.description)
-    except ValueError:
+    except AttributeError:
         pass
     try:
         embed.set_footer(
             text=await sub_vars(bot, ctx, channel, embed.footer.text),
             icon_url=embed.footer.icon_url,
         )
-    except ValueError:
+    except AttributeError:
         pass
     for i in embed.fields:
         i.name = await sub_vars(bot, ctx, channel, i.name)
