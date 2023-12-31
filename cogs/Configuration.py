@@ -817,7 +817,16 @@ class Configuration(commands.Cog):
 
 
         paginator = SelectPagination(ctx.author.id, pages)
-        await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+        try:
+            await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+        except discord.HTTPException:
+            print('NOAH LOOK AT THIS!!!')
+            print(await bot.settings.find_by_id(ctx.guild.id))
+            await ctx.send(embed=discord.Embed(
+                title="Critical Error",
+                description="Configuration error; 827",
+                color=BLANK_COLOR
+            ))
 
     @commands.hybrid_group(name="server", description="This is a namespace for commands relating to the Server Management functionality", extras={
         'category': 'Configuration'
