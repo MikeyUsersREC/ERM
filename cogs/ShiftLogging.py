@@ -17,7 +17,7 @@ from menus import (
     ShiftMenu,
     AdministratedShiftMenu,
 )
-from utils.autocompletes import shift_type_autocomplete
+from utils.autocompletes import shift_type_autocomplete, all_shift_type_autocomplete
 from utils.constants import BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.paginators import SelectPagination, CustomPage
 from utils.timestamp import td_format
@@ -64,7 +64,7 @@ class ShiftLogging(commands.Cog):
             shift_channel = discord.utils.get(
                 ctx.guild.channels, id=configItem["shift_management"]["channel"]
             )
-        except:
+        except KeyError:
             return await new_failure_embed(
                 ctx,
                 "Incorrect Configuration",
@@ -116,7 +116,7 @@ class ShiftLogging(commands.Cog):
                     value=f"{td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}",
                     inline=False,
                 )
-        except:
+        except OverflowError:
             if shift:
                 embed.add_field(
                     name="Ongoing Shift",
@@ -216,7 +216,7 @@ class ShiftLogging(commands.Cog):
                                 )
                             )
 
-        shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+        shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
 
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
@@ -463,8 +463,9 @@ class ShiftLogging(commands.Cog):
         extras={"category": "Shift Management"}
     )
     @require_settings()
+    @app_commands.autocomplete(type=all_shift_type_autocomplete)
     @is_staff()
-    async def duty_active(self, ctx):
+    async def duty_active(self, ctx: commands.Context, type: str):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -485,57 +486,63 @@ class ShiftLogging(commands.Cog):
         shift_type = None
         if configItem.get("shift_types"):
             shift_types = configItem.get("shift_types")
-            if shift_types.get("enabled") is True:
-                if len(shift_types.get("types")) > 1:
-                    shift_types = shift_types.get("types")
+            if len(shift_types.get("types")) > 1:
+                shift_types = shift_types.get("types")
 
-                    view = CustomSelectMenu(
-                        ctx.author.id,
-                        [
-                            discord.SelectOption(
-                                label=i["name"],
-                                value=i["id"],
-                                description=i["name"],
-                            )
-                            for i in shift_types
-                        ]
-                        + [
-                            discord.SelectOption(
-                                label="All",
-                                value="all",
-                                description="Data from all shift types",
-                            )
-                        ],
-                    )
-
+                view = CustomSelectMenu(
+                    ctx.author.id,
+                    [
+                        discord.SelectOption(
+                            label=i["name"],
+                            value=i["id"],
+                            description=i["name"],
+                        )
+                        for i in shift_types
+                    ]
+                    + [
+                        discord.SelectOption(
+                            label="All",
+                            value="all",
+                            description="Data from all shift types",
+                        )
+                    ],
+                )
+                if not type.lower() in [i["name"].lower() for i in shift_types]:
                     msg = await ctx.reply(
                         embed=discord.Embed(
-                            title="Shift Types",
-                            description=f"You have **{len(shift_types)}** shift types. Which ones would you like to see?",
+                            title="Incorrect Shift Type",
+                            description="The shift type provided is not valid.",
                             color=BLANK_COLOR
                         ),
                         view=view
                     )
+
                     timeout = await view.wait()
                     if timeout:
                         return
 
-                    if view.value:
-                        if view.value == "all":
-                            shift_type = 0
+                    type_value = view.value
+                else:
+                    type_value = type
+
+                if type_value:
+                    if type_value.lower() == "all":
+                        shift_type = None
+                    else:
+                        shift_type_str = type_value
+                        shift_list = [
+                            i for i in shift_types if i["name"].lower() == shift_type_str.lower()
+                        ]
+                        if shift_list:
+                            shift_type = shift_list[0]
                         else:
-                            shift_type = view.value
-                            shift_list = [
-                                i for i in shift_types if i["id"] == int(shift_type)
-                            ]
-                            if shift_list:
-                                shift_type = shift_list[0]
-                            else:
-                                return await new_failure_embed(
-                                    ctx,
-                                    "Critical Error",
-                                    "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
-                                )
+                            return await new_failure_embed(
+                                ctx,
+                                "Critical Error",
+                                "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
+                            )
+                else:
+                    return
 
         embed = discord.Embed(
             title="Active Shifts", color=BLANK_COLOR
@@ -662,8 +669,9 @@ class ShiftLogging(commands.Cog):
         aliases=["lb"],
     )
     @require_settings()
+    @app_commands.autocomplete(type=all_shift_type_autocomplete)
     @is_staff()
-    async def shift_leaderboard(self, ctx):
+    async def shift_leaderboard(self, ctx: commands.Context, *, type: str = None):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -685,57 +693,63 @@ class ShiftLogging(commands.Cog):
         shift_type = None
         if configItem.get("shift_types"):
             shift_types = configItem.get("shift_types")
-            if shift_types.get("enabled") is True:
-                if len(shift_types.get("types")) > 1:
-                    shift_types = shift_types.get("types")
+            if len(shift_types.get("types")) > 1:
+                shift_types = shift_types.get("types")
 
-                    view = CustomSelectMenu(
-                        ctx.author.id,
-                        [
-                            discord.SelectOption(
-                                label=i["name"],
-                                value=i["id"],
-                                description=i["name"],
-                            )
-                            for i in shift_types
-                        ]
-                        + [
-                            discord.SelectOption(
-                                label="All",
-                                value="all",
-                                description="Data from all shift types",
-                            )
-                        ],
-                    )
-
+                view = CustomSelectMenu(
+                    ctx.author.id,
+                    [
+                        discord.SelectOption(
+                            label=i["name"],
+                            value=i["id"],
+                            description=i["name"],
+                        )
+                        for i in shift_types
+                    ]
+                    + [
+                        discord.SelectOption(
+                            label="All",
+                            value="all",
+                            description="Data from all shift types",
+                        )
+                    ],
+                )
+                if not type.lower() in [i["name"].lower() for i in shift_types]:
                     msg = await ctx.reply(
                         embed=discord.Embed(
-                            title="Shift Types",
-                            description=f"You have **{len(shift_types)}** shift types. Which ones would you like to see?",
+                            title="Incorrect Shift Type",
+                            description="The shift type provided is not valid.",
                             color=BLANK_COLOR
                         ),
                         view=view
                     )
+
                     timeout = await view.wait()
                     if timeout:
                         return
 
-                    if view.value:
-                        if view.value == "all":
-                            shift_type = 0
+                    type_value = view.value
+                else:
+                    type_value = type
+
+                if type_value:
+                    if type_value.lower() == "all":
+                        shift_type = 0
+                    else:
+                        shift_type_str = type_value
+                        shift_list = [
+                            i for i in shift_types if i["name"].lower() == shift_type_str.lower()
+                        ]
+                        if shift_list:
+                            shift_type = shift_list[0]
                         else:
-                            shift_type = view.value
-                            shift_list = [
-                                i for i in shift_types if i["id"] == int(shift_type)
-                            ]
-                            if shift_list:
-                                shift_type = shift_list[0]
-                            else:
-                                return await new_failure_embed(
-                                    ctx,
-                                    "Critical Error",
-                                    "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
-                                )
+                            return await new_failure_embed(
+                                ctx,
+                                "Critical Error",
+                                "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
+                            )
+                else:
+                    return
 
         all_staff = [{"id": None, "total_seconds": 0}]
 
@@ -858,7 +872,7 @@ class ShiftLogging(commands.Cog):
         for index, i in enumerate(sorted_staff):
             try:
                 member = await ctx.guild.fetch_member(i["id"])
-            except:
+            except discord.NotFound:
                 member = None
             # print(index)
             # print(i)

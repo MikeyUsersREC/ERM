@@ -969,7 +969,7 @@ class LOAMenu(discord.ui.View):
                     await user.add_roles(rl)
 
             self.value = True
-        except:
+        except discord.HTTPException:
             pass
         embed = interaction.message.embeds[0]
         embed.title = (
@@ -2021,10 +2021,10 @@ class EmbedCustomisation(discord.ui.View):
                 chosen_interaction_message = interaction.message
             try:
                 embed.colour = modal.name.value
-            except:
+            except TypeError:
                 try:
                     embed.colour = int(modal.name.value.replace("#", ""), 16)
-                except:
+                except TypeError:
                     return await interaction.response.send_message(
                         embed=discord.Embed(
                             title="Invalid Colour",
@@ -2129,7 +2129,8 @@ class EmbedCustomisation(discord.ui.View):
                 chosen_interaction_message = interaction.message
 
             await interaction.response.send_modal(modal)
-            await modal.wait()
+            timeout = await modal.wait()
+            if timeout: return
             self.modal = modal
             if len(interaction.message.embeds) == 0:
                 return
@@ -2145,7 +2146,7 @@ class EmbedCustomisation(discord.ui.View):
                 embed.add_field(
                     name=modal.name.value, value=modal.value.value, inline=inline
                 )
-            except:
+            except AttributeError:
                 return
             await chosen_interaction_message.edit(embed=embed)
             await self.check_ability(chosen_interaction_message)
@@ -2645,7 +2646,7 @@ class ChangeWarningType(discord.ui.Select):
             await interaction.response.defer()
             try:
                 self.view.value = [self.values[0], seconds]
-            except:
+            except UnboundLocalError:
                 self.view.value = self.values[0]
             self.view.stop()
         else:

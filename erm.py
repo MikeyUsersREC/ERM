@@ -47,7 +47,7 @@ setup = False
 try:
     sentry_url = config("SENTRY_URL")
     bloxlink_api_key = config("BLOXLINK_API_KEY")
-except:
+except ValueError:
     sentry_url = ""
     bloxlink_api_key = ""
 
@@ -447,20 +447,20 @@ if environment == "PRODUCTION":
 elif environment == "DEVELOPMENT":
     try:
         bot_token = config("DEVELOPMENT_BOT_TOKEN")
-    except:
+    except ValueError:
         bot_token = ""
     logging.info("Using development token...")
 elif environment == "ALPHA":
     try:
         bot_token = config('ALPHA_BOT_TOKEN')
-    except:
+    except ValueError:
         bot_token = ""
     logging.info('Using ERM V4 Alpha token...')
 else:
     raise Exception("Invalid environment")
 try:
     mongo_url = config("MONGO_URL", default=None)
-except:
+except ValueError:
     mongo_url = ""
 
 
@@ -509,7 +509,7 @@ async def check_reminders():
                         try:
                             for role in item["role"]:
                                 roles.append(guild.get_role(int(role)).mention)
-                        except:
+                        except ValueError:
                             roles = [""]
 
                         if (
@@ -587,7 +587,7 @@ async def check_loa():
                                                 "loa_role"
                                             ]
                                         ]
-                                except:
+                                except KeyError:
                                     pass
 
                         docs = bot.loas.db.find(
@@ -618,14 +618,18 @@ async def check_loa():
                                                     reason="LOA Expired",
                                                     atomic=True,
                                                 )
-                                            except:
+                                            except discord.HTTPException:
                                                 pass
                         if member:
                             try:
-                                await member.send(f"<:ERMAlert:1113237478892130324> **{member.name}**, your {loaObject['type']} has expired in **{guild.name}**.")
+                                await member.send(embed=discord.Embed(
+                                    title="LOA Expired",
+                                    description=f"Your LOA has expired in **{guild.name}**.",
+                                    color=BLANK_COLOR
+                                ))
                             except discord.Forbidden:
                                 pass
-    except:
+    except ValueError:
         pass
 
 

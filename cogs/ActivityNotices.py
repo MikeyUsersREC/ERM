@@ -62,7 +62,6 @@ class ActivityCoreCommands:
             "user_id": author.id,
             "accepted": True,
             "denied": False,
-            "voided": False,
             "type": request_type.upper()
         })]
 
@@ -156,7 +155,6 @@ class ActivityCoreCommands:
                 "user_id": victim.id,
                 "accepted": True,
                 "expired": True,
-                'started_at': {'$exists': True},
                 "denied": False,
                 "voided": False,
                 "type": request_type_object.upper()
@@ -167,7 +165,6 @@ class ActivityCoreCommands:
             "user_id": victim.id,
             "accepted": True,
             "denied": False,
-            'started_at': {'$exists': True},
             "voided": False,
             "expired": False,
             "type": request_type_object.upper()
@@ -198,7 +195,7 @@ class ActivityCoreCommands:
                 value=(
                     f"<:replytop:1138257149705863209> **Type:** {request_type_object.upper()}\n"
                     f"<:replymiddle:1138257195121791046> **Reason:** {current_notice['reason']}\n"
-                    f"<:replymiddle:1138257195121791046> **Starts At:** <t:{current_notice['started_at']}>\n"
+                    f"<:replymiddle:1138257195121791046> **Starts At:** <t:{current_notice.get('started_at', int(current_notice['_id'].split('_')[2]))}>\n"
                     f"<:replybottom:1138257250448855090> **Ends At:** <t:{current_notice['expiry']}>"
                 ),
                 inline=False

@@ -34,32 +34,22 @@ class OnGuildJoin(commands.Cog):
             inline=False,
         )
 
+
+        channel = bot.get_channel(1033021466381398086)
+        embed = discord.Embed(color=0xED4348)
+        embed.description = f"""
+        <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
+        <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
+        <:ArrowRightW:1035023450592514048> **Bots:** {len([member for member in guild.members if member.bot == True])}
+        <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
+        <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
+        """
         try:
-            # await guild.system_channel.send(
-            #     embed=embed
-            # )
+            embed.set_footer(icon_url=guild.icon.url, text=guild.name)
+        except AttributeError:
             pass
-        except:
-            # await guild.owner.send(
-            #     embed=embed
-            # )
-            pass
-        finally:
-            channel = bot.get_channel(1033021466381398086)
-            embed = discord.Embed(color=0xED4348)
-            embed.description = f"""
-            <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
-            <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
-            <:ArrowRightW:1035023450592514048> **Bots:** {len([member for member in guild.members if member.bot == True])}
-            <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
-            <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
-            """
-            try:
-                embed.set_footer(icon_url=guild.icon.url, text=guild.name)
-            except AttributeError:
-                pass
-            await channel.send(embed=embed)
-            logging.info("Server has been sent welcome sequence.")
+        await channel.send(embed=embed)
+        logging.info("Server has been sent welcome sequence.")
 
 
 async def setup(bot):

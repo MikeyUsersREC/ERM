@@ -106,13 +106,13 @@ class APIRoutes:
                     icon = guild.icon.with_size(512)
                     icon = icon.with_format("png")
                     icon = str(icon)
-                except Exception as e:
-                   # # print(e)
+                except AttributeError:
+
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 try:
                     user = await guild.fetch_member(user_id)
-                except:
+                except discord.NotFound:
                     continue
 
                 permission_level = 0

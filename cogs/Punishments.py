@@ -527,7 +527,7 @@ class Punishments(commands.Cog):
 
                     try:
                         id = int(id)
-                    except:
+                    except ValueError:
                         return await msg.edit(
                             embed=discord.Embed(
                                 title="Invalid Identifier",
@@ -728,7 +728,7 @@ class Punishments(commands.Cog):
 
                     try:
                         id = int(id)
-                    except:
+                    except ValueError:
                         return await msg.edit(
                             embed=discord.Embed(
                                 title="Invalid Identifier",

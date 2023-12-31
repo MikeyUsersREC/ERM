@@ -33,18 +33,15 @@ class OnError(commands.Cog):
         with push_scope() as scope:
             scope.set_tag("error_id", error_id)
             scope.level = "error"
-            try:
-                await bot.errors.insert(
-                    {
-                        "_id": error_id,
-                        "error": str(error),
-                        "time": datetime.datetime.now(tz=pytz.UTC).strftime(
-                            "%m/%d/%Y, %H:%M:%S"
-                        ),
-                    }
-                )
-            except:
-                pass
+            await bot.errors.insert(
+                {
+                    "_id": error_id,
+                    "error": str(error),
+                    "time": datetime.datetime.now(tz=pytz.UTC).strftime(
+                        "%m/%d/%Y, %H:%M:%S"
+                    ),
+                }
+            )
 
             capture_exception(error)
 

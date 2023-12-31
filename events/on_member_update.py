@@ -37,7 +37,7 @@ class OnMemberUpdate(commands.Cog):
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                                 pass
-                    except:
+                    except ValueError:
                         pass
 
 

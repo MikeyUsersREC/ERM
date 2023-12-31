@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import typing
 import aiohttp
@@ -136,22 +137,22 @@ async def interpret_embed(bot, ctx, channel, embed: dict):
     embed = discord.Embed.from_dict(embed)
     try:
         embed.title = await sub_vars(bot, ctx, channel, embed.title)
-    except:
+    except ValueError:
         pass
     try:
         embed.set_author(name=await sub_vars(bot, ctx, channel, embed.author.name))
-    except:
+    except ValueError:
         pass
     try:
         embed.description = await sub_vars(bot, ctx, channel, embed.description)
-    except:
+    except ValueError:
         pass
     try:
         embed.set_footer(
             text=await sub_vars(bot, ctx, channel, embed.footer.text),
             icon_url=embed.footer.icon_url,
         )
-    except:
+    except ValueError:
         pass
     for i in embed.fields:
         i.name = await sub_vars(bot, ctx, channel, i.name)
@@ -218,8 +219,8 @@ async def get_prefix(bot, message):
 
     try:
         prefix = await bot.settings.find_by_id(message.guild.id)
-        prefix = prefix["customisation"]["prefix"]
-    except:
+        prefix = (prefix or {})["customisation"]["prefix"]
+    except KeyError:
         return discord.ext.commands.when_mentioned_or(">")(bot, message)
 
     return commands.when_mentioned_or(prefix)(bot, message)
@@ -240,7 +241,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
                         "Authorization": config('INTERNAL_API_AUTH')
                     }):
                 pass
-    except:
+    except ValueError:
         pass
 
     await bot.shift_management.shifts.update_by_id(shift)
@@ -306,7 +307,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             if not rl in member.roles and rl is not None:
                 try:
                     await member.add_roles(rl)
-                except:
+                except discord.HTTPException:
                     await failure_embed(ctx, f"could not add {rl} to {member.mention}")
 
 
@@ -418,7 +419,7 @@ async def request_response(bot, ctx, question, **kwargs):
                                   and message.guild.id == ctx.guild.id,
             timeout=300,
         )
-    except:
+    except asyncio.TimeoutError:
         raise Exception("No response")
     return response
 

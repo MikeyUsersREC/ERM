@@ -34,7 +34,14 @@ class ActivityMonitoring(commands.Cog):
     @require_settings()
     async def activity_show(self, ctx: commands.Context, duration: str):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
-
+        if not settings.get('shift_management').get('enabled'):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server.",
+                    color=BLANK_COLOR
+                )
+            )
 
         try:
             actual_conversion = time_converter(duration)
@@ -61,7 +68,12 @@ class ActivityMonitoring(commands.Cog):
             if shift_time > 100_000_000:
                 continue
             if shift_document['UserID'] not in all_staff.keys():
-                member = ctx.guild.get_member(shift_document['UserID'])
+                try:
+                    member = await ctx.guild.fetch_member(shift_document['UserID'])
+                except discord.NotFound:
+                    continue
+                if not member:
+                    continue
                 roles = member.roles
                 sorted_roles = sorted(member.roles, key=lambda x: x.position)
                 selected_quota = 0
@@ -89,7 +101,16 @@ class ActivityMonitoring(commands.Cog):
         for index, (user_id, (seconds, quota)) in enumerate(sorted_staff.items()):
             print(seconds, quota)
             leaderboard_string += f"**{index+1}.** <@{user_id}> • {td_format(datetime.timedelta(seconds=seconds))} {'<:check:1163142000271429662>' if seconds > quota else '<:xmark:1166139967920164915>'}\n"
-
+            if index == len(sorted_staff)-1:
+                break
+        else:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Data",
+                    description="There is no data to show for this period.",
+                    color=BLANK_COLOR
+                )
+            )
 
         embed = discord.Embed(
             title=f"Activity Report ({duration})",

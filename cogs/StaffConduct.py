@@ -123,7 +123,7 @@ class StaffConduct(commands.Cog):
 
             try:
                 infraction_type_name = view.modal.type_name.value
-            except:
+            except AttributeError:
                 return
 
             await message.edit(

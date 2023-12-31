@@ -224,7 +224,7 @@ class OnMessage(commands.Cog):
                                         embed.set_image(
                                             url="https://i.imgur.com/pXesTnm.gif"
                                         )
-                                except:
+                                except discord.NotFound:
                                     pass
 
                                 embed.set_footer(
@@ -258,7 +258,7 @@ class OnMessage(commands.Cog):
                                         embed.set_image(
                                             url="https://i.imgur.com/pXesTnm.gif"
                                         )
-                                except:
+                                except discord.NotFound:
                                     pass
 
                                 embed.set_footer(

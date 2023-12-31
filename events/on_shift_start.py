@@ -90,7 +90,7 @@ class OnShiftStart(commands.Cog):
                 name="Other Information",
                 value=(
                     f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
+                    f"<:replybottom:1138257250448855090> **Nickname:** `{staff_member.nick}`\n"
                 ),
                 inline=False
             ).set_author(

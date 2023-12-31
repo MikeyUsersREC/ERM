@@ -193,7 +193,7 @@ class Warnings(Document):
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except:
+        except ValueError:
             pass
 
         return identifier
@@ -384,7 +384,7 @@ class Warnings(Document):
                                     "Authorization": config('INTERNAL_API_AUTH')
                                 }):
                             pass
-            except:
+            except ValueError:
                 pass
             return await self.db.delete_one({"Snowflake": identifier})
         else:
