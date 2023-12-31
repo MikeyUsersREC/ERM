@@ -101,6 +101,14 @@ class SelectPagination(discord.ui.View):
 
             # Add the items from the new page
             for item in page_view.children:
+                if getattr(item, 'default', None) is not None:
+                    if item.default > len(item.options):
+                        item.default = 0
+                elif getattr(item, 'default_values', None) is not None:
+                    if len(item.default_values) > item.max_values:
+                        item.default_values = []
+                else:
+                    print(item)
                 view.add_item(item)
                 self.page_children.append(item)
 
