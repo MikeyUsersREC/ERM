@@ -507,7 +507,7 @@ class ShiftLogging(commands.Cog):
                         )
                     ],
                 )
-                if not type.lower() in [i["name"].lower() for i in shift_types]:
+                if not (type or '').lower() in [i["name"].lower() for i in shift_types]:
                     msg = await ctx.reply(
                         embed=discord.Embed(
                             title="Incorrect Shift Type",
@@ -714,7 +714,7 @@ class ShiftLogging(commands.Cog):
                         )
                     ],
                 )
-                if not type.lower() in [i["name"].lower() for i in shift_types]:
+                if not (type or '').lower() in [i["name"].lower() for i in shift_types]:
                     msg = await ctx.reply(
                         embed=discord.Embed(
                             title="Incorrect Shift Type",
