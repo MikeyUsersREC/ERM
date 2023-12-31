@@ -3491,6 +3491,37 @@ class ShiftTypeManagement(discord.ui.View):
         self.value = 'create'
         self.stop()
 
+    @discord.ui.button(label="Edit Shift Type")
+    async def _edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.user_id]:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ))
+        # await interaction.response.defer(thinking=False)
+        self.modal = CustomModal(
+            "Edit Shift Type",
+            [
+                (
+                    "shift_type_name",
+                    discord.ui.TextInput(
+                        label="Name",
+                        placeholder="Name of Shift Type"
+                    )
+                )
+            ]
+        )
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        if self.modal.shift_type_name.value:
+            self.name_for_creation = self.modal.shift_type_name.value
+        else:
+            return
+        self.value = 'edit'
+        self.stop()
+
+
     @discord.ui.button(label="Delete Shift Type")
     async def _delete(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.user_id]:
@@ -4330,6 +4361,81 @@ class ShiftConfiguration(AssociationConfigurationView):
         )
 
         await view.wait()
+
+        if view.value == "edit":
+            selected_item = None
+            for item in shift_types:
+                if item['name'] == view.name_for_creation:
+                    selected_item = item
+                    break
+
+            if not selected_item:
+                return await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="Incorrect Shift Type",
+                        description="This shift type is incorrect or invalid.",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+                )
+
+            data = selected_item
+
+            embed = discord.Embed(
+                title="Edit a Shift Type",
+                description=(
+                    f"<:replytop:1138257149705863209> **Name:** {data['name']}\n"
+                    f"<:replymiddle:1138257195121791046> **ID:** {data['id']}\n"
+                    f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
+                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
+                    f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
+                    f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
+                    f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
+                ),
+                color=BLANK_COLOR
+            )
+
+            roles = list(filter(lambda x: x is not None, [discord.utils.get(interaction.guild.roles, id=i) for i in data.get('role', [])]))
+            access_roles = list(filter(lambda x: x is not None, [discord.utils.get(interaction.guild.roles, id=i) for i in data.get('access_roles', [])]))
+            shift_channel = list(filter(lambda x: x is not None, [discord.utils.get(interaction.guild.channels, id=data.get('channel', 0))]))
+
+
+
+            view = ShiftTypeCreator(interaction.user.id, data, "edit", {
+                "On-Duty Roles": roles,
+                "Access Roles": access_roles,
+                "Shift Channel": shift_channel
+            })
+            view.restored_interaction = interaction
+            msg = await interaction.original_response()
+            await msg.edit(view=view, embed=embed)
+            await view.wait()
+            if view.cancelled is True:
+                return
+
+            dataset = settings.get('shift_types', {}).get('types', [])
+
+            for index, item in enumerate(dataset):
+                if item['id'] == view.dataset['id']:
+                    dataset[index] = view.dataset
+                    break
+            if not settings.get('shift_types'):
+                settings['shift_types'] = {}
+                settings['shift_types']['types'] = dataset
+            else:
+                settings['shift_types']['types'] = dataset
+
+            await self.bot.settings.update_by_id(settings)
+            await msg.edit(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Shift Type Edited",
+                    description="Your shift type has been edited!",
+                    color=GREEN_COLOR
+                ),
+                view=None
+            )
+            return
+
         if view.value == "create":
             data = {
                 'id': next(generator),
@@ -4351,7 +4457,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                 color=BLANK_COLOR
             )
 
-            view = ShiftTypeCreator(interaction.user.id, data)
+            view = ShiftTypeCreator(interaction.user.id, data, "create")
             view.restored_interaction = interaction
             msg = await interaction.original_response()
             await msg.edit(view=view, embed=embed)
@@ -4379,6 +4485,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                 ),
                 view=None
             )
+            return
         elif view.value == "delete":
             try:
                 type_id = int(view.selected_for_deletion.strip())
@@ -5424,12 +5531,20 @@ class ReloadView(discord.ui.View):
 
 
 class ShiftTypeCreator(discord.ui.View):
-    def __init__(self, user_id: int, dataset: dict):
+    def __init__(self, user_id: int, dataset: dict, option: typing.Literal['create', 'edit'], preset_values: dict | None = None):
         super().__init__(timeout=900.0)
         self.user_id = user_id
         self.restored_interaction = None
         self.dataset = dataset
         self.cancelled = None
+        self.option = option
+
+        for key, value in (preset_values or {}).items():
+            for item in self.children:
+                if isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                    if item.placeholder == key:
+                        item.default_values = value
+
 
     async def interaction_check(self, interaction: Interaction, /) -> bool:
         if interaction.user.id == self.user_id:
@@ -5444,7 +5559,7 @@ class ShiftTypeCreator(discord.ui.View):
 
     async def refresh_ui(self, message: discord.Message):
         embed = discord.Embed(
-            title="Shift Type Creation",
+            title=f"{self.option.title()} a Shift Type",
             description=(
                 f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
                 f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"

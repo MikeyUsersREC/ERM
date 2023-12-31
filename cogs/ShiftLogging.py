@@ -222,7 +222,8 @@ class ShiftLogging(commands.Cog):
                                         title="Access Denied",
                                         description="This individual does not have access to this shift type.",
                                         color=BLANK_COLOR
-                                    )
+                                    ),
+                                    view=None
                                 )
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
@@ -386,7 +387,8 @@ class ShiftLogging(commands.Cog):
                                         title="Access Denied",
                                         description="You do not have access to this shift type.",
                                         color=BLANK_COLOR
-                                    )
+                                    ),
+                                    view=None
                                 )
 
 
