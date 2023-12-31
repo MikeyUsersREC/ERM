@@ -62,6 +62,7 @@ class ActivityCoreCommands:
             "user_id": author.id,
             "accepted": True,
             "denied": False,
+            "expired": True,
             "type": request_type.upper()
         })]
 
@@ -156,7 +157,6 @@ class ActivityCoreCommands:
                 "accepted": True,
                 "expired": True,
                 "denied": False,
-                "voided": False,
                 "type": request_type_object.upper()
         })]
 
@@ -483,7 +483,7 @@ class ActivityCoreCommands:
             "guild_id": ctx.guild.id,
             "accepted": True,
             "denied": False,
-            "voided": False,
+            "expired": False,
             "type": request_upper
         }):
             item['started_at'] = int(item['_id'].split('_')[2])
