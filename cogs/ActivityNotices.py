@@ -95,7 +95,7 @@ class ActivityCoreCommands:
             value=(
                 f"<:replytop:1138257149705863209> **Type:** {request_type}\n"
                 f"<:replymiddle:1138257195121791046> **Reason:** {schema['reason']}\n"
-                f"<:replymiddle:1138257195121791046> **Starts At:** <t:{schema['started_at']}>\n"
+                f"<:replymiddle:1138257195121791046> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
                 f"<:replybottom:1138257250448855090> **Ends At:** <t:{schema['expiry']}>"
             )
         )
@@ -513,7 +513,7 @@ class ActivityCoreCommands:
                 value=(
                     f"<:replytop:1138257149705863209> **Staff:** <@{item['user_id']}>\n"
                     f"<:replymiddle:1138257195121791046> **Reason:** {item['reason']}\n"
-                    f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item['started_at'])}>\n"
+                    f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
                     f"<:replybottom:1138257250448855090> **Ended At:** <t:{int(item['expiry'])}>"
                 ),
                 inline=False

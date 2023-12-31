@@ -116,11 +116,7 @@ class ActivityMonitoring(commands.Cog):
             title=f"Activity Report ({duration})",
             color=BLANK_COLOR
         )
-        embed.add_field(
-            name="Leaderboard",
-            value=leaderboard_string,
-            inline=False
-        )
+        embed.description = f"**Leaderboard**\n{leaderboard_string}"
         embed.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
