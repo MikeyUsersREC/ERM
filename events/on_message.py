@@ -213,7 +213,7 @@ class OnMessage(commands.Cog):
                             if mention.top_role > role or mention.top_role == role:
                                 embed = discord.Embed(
                                     title=f"Do not ping {role.name} or above!",
-                                    color=discord.Color.red(),
+                                    color=BLANK_COLOR,
                                     description=f"Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.",
                                 )
                                 try:
@@ -224,7 +224,7 @@ class OnMessage(commands.Cog):
                                         embed.set_image(
                                             url="https://i.imgur.com/pXesTnm.gif"
                                         )
-                                except discord.NotFound:
+                                except AttributeError:
                                     pass
 
                                 embed.set_footer(

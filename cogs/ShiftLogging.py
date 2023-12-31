@@ -319,9 +319,10 @@ class ShiftLogging(commands.Cog):
             )
 
         shift_types = settings.get('shift_types', {}).get('types', [])
+        msg = None
         if shift_types:
             if type.lower() not in [t['name'].lower() for t in shift_types]:
-                await ctx.send(
+                msg = await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
                         description="The shift type provided is not valid.",
@@ -454,7 +455,11 @@ class ShiftLogging(commands.Cog):
             starting_container=contained_document
         )
 
-        view.message = await ctx.send(embed=embed, view=view)
+        if not msg:
+            view.message = await ctx.send(embed=embed, view=view)
+        else:
+            await msg.edit(embed=embed, view=view)
+            view.message = msg
 
 
     @duty.command(
