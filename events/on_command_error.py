@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import discord
+import httpcore
 import pytz
 import roblox
 from discord.ext import commands
@@ -19,6 +20,16 @@ class OnCommandError(commands.Cog):
     async def on_command_error(self, ctx, error):
         bot = self.bot
         error_id = error_gen()
+
+        if 'Invalid Webhook Token' in str(error):
+            return
+
+        if isinstance(error, httpcore.ConnectTimeout):
+            return await ctx.reply(embed=discord.Embed(
+                title="HTTP Error",
+                description="I could not connect to the ROBLOX API. Please try again later.",
+                color=BLANK_COLOR
+            ))
 
         if isinstance(error, commands.BadArgument):
             return await ctx.reply(

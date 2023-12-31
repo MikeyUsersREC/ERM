@@ -465,7 +465,7 @@ class ShiftLogging(commands.Cog):
     @require_settings()
     @app_commands.autocomplete(type=all_shift_type_autocomplete)
     @is_staff()
-    async def duty_active(self, ctx: commands.Context, type: str):
+    async def duty_active(self, ctx: commands.Context, *, type: str = None):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
