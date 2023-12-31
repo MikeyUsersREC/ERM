@@ -510,7 +510,7 @@ async def check_reminders():
                         try:
                             for role in item["role"]:
                                 roles.append(guild.get_role(int(role)).mention)
-                        except ValueError:
+                        except TypeError:
                             roles = [""]
 
                         if (
