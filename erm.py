@@ -6,6 +6,7 @@ from dataclasses import MISSING
 from pkgutil import iter_modules
 
 import aiohttp
+import decouple
 import discord.mentions
 import dns.resolver
 import motor.motor_asyncio
@@ -47,7 +48,7 @@ setup = False
 try:
     sentry_url = config("SENTRY_URL")
     bloxlink_api_key = config("BLOXLINK_API_KEY")
-except ValueError:
+except decouple.UndefinedValueError:
     sentry_url = ""
     bloxlink_api_key = ""
 
@@ -447,20 +448,20 @@ if environment == "PRODUCTION":
 elif environment == "DEVELOPMENT":
     try:
         bot_token = config("DEVELOPMENT_BOT_TOKEN")
-    except ValueError:
+    except decouple.UndefinedValueError:
         bot_token = ""
     logging.info("Using development token...")
 elif environment == "ALPHA":
     try:
         bot_token = config('ALPHA_BOT_TOKEN')
-    except ValueError:
+    except decouple.UndefinedValueError:
         bot_token = ""
     logging.info('Using ERM V4 Alpha token...')
 else:
     raise Exception("Invalid environment")
 try:
     mongo_url = config("MONGO_URL", default=None)
-except ValueError:
+except decouple.UndefinedValueError:
     mongo_url = ""
 
 
