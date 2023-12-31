@@ -67,8 +67,17 @@ class SelectPagination(discord.ui.View):
             for index, child in enumerate(page_view.children):
                 self.page_children.append(child)
 
-            for i in self.page_children:
-                view.add_item(i)
+            for item in self.page_children:
+                # Sanity check validations
+                if getattr(item, 'default', None) is not None:
+                    if item.default > len(item.options):
+                        item.default = 0
+                elif getattr(item, 'default_values', None) is not None:
+                    if len(item.default_values) > item.max_values:
+                        item.default_values = []
+                else:
+                    print(item)
+                view.add_item(item)
         return view
 
     async def _paginate(self, interaction: discord.Interaction, increment_index: int,
