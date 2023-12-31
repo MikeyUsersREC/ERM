@@ -5809,6 +5809,8 @@ class ShiftMenu(discord.ui.View):
     async def cycle_ui(self, option: typing.Literal['on', 'break', 'off'], message: discord.Message):
         shift = self.shift
         contained_document = self.contained_document
+        if not contained_document and not shift:
+            return
         uis = {
             "on": discord.Embed(
                 title="<:ShiftStarted:1178033763477889175> **Shift Started**",
@@ -6023,6 +6025,7 @@ class AdministratedShiftMenu(discord.ui.View):
                 print('RAISE ::: - NOAH READ THIS')
                 print(self.shift)
                 print(self.contained_document)
+                return
             uis = {
                 "on": discord.Embed(
                     title="<:ShiftStarted:1178033763477889175> **Shift Started**",
