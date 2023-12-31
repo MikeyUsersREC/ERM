@@ -1165,6 +1165,33 @@ class ManageReminders(discord.ui.View):
                 color=blank_color
             ), ephemeral=True)
 
+    @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary)
+    async def edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            self.modal = CustomModal(
+                f"Edit a reminder",
+                [
+                    (
+                        "identifier",
+                        discord.ui.TextInput(
+                            label="ID",
+                            placeholder="ID of your reminder",
+                            required=True,
+                        ),
+                    ),
+                ],
+            )
+            await interaction.response.send_modal(self.modal)
+            await self.modal.wait()
+            self.value = "edit"
+            self.stop()
+        else:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ), ephemeral=True)
+
     @discord.ui.button(label="Pause", style=discord.ButtonStyle.secondary)
     async def pause(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.user_id:
@@ -1181,10 +1208,8 @@ class ManageReminders(discord.ui.View):
                     ),
                 ],
             )
-            print(1261)
             await interaction.response.send_modal(self.modal)
             await self.modal.wait()
-            print(1264)
             self.value = "pause"
             self.stop()
         else:
@@ -3461,7 +3486,7 @@ class ShiftTypeManagement(discord.ui.View):
         self.name_for_creation = None
         self.modal = None
 
-    @discord.ui.button(label="Create Shift Type")
+    @discord.ui.button(label="Create", style=discord.ButtonStyle.green)
     async def _create(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.user_id]:
             return await interaction.response.send_message(embed=discord.Embed(
@@ -3491,7 +3516,7 @@ class ShiftTypeManagement(discord.ui.View):
         self.value = 'create'
         self.stop()
 
-    @discord.ui.button(label="Edit Shift Type")
+    @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary)
     async def _edit(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.user_id]:
             return await interaction.response.send_message(embed=discord.Embed(
@@ -3522,7 +3547,7 @@ class ShiftTypeManagement(discord.ui.View):
         self.stop()
 
 
-    @discord.ui.button(label="Delete Shift Type")
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
     async def _delete(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.user_id]:
             return await interaction.response.send_message(embed=discord.Embed(
@@ -3717,11 +3742,24 @@ class AssociationConfigurationView(discord.ui.View):
 
 
 class ReminderCreationToolkit(discord.ui.View):
-    def __init__(self, user_id: int, dataset: dict):
+    def __init__(self, user_id: int, dataset: dict, option: typing.Literal["create", "edit"], preset_values: dict | None = None):
         super().__init__(timeout=900.0)
         self.user_id = user_id
         self.dataset = dataset
         self.cancelled = None
+        self.option = option
+
+        for key, value in (preset_values or {}).items():
+            for item in self.children:
+                if isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
+                    if item.placeholder == key:
+                        item.default_values = value
+                if isinstance(item, discord.ui.Button):
+                    if item.label == key:
+                        item.label = value['label']
+                        item.style = value['style']
+
+
 
     async def interaction_check(self, interaction: Interaction, /) -> bool:
         if interaction.user.id == self.user_id:
@@ -3736,7 +3774,7 @@ class ReminderCreationToolkit(discord.ui.View):
 
     async def refresh_ui(self, message: discord.Message):
         embed = discord.Embed(
-            title="Reminder Creation",
+            title=f"{self.option.title()} a Reminder",
             description=(
                 f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
                 f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"
@@ -5471,8 +5509,8 @@ class CompleteReminder(discord.ui.View):
             icon_url=interaction.user.avatar.url,
         )
         embed.timestamp = datetime.datetime.now()
-        embed.color = 0xED4348
-        embed.title = "<:ERMCheck:1111089850720976906> Reminder Completed"
+        embed.color = GREEN_COLOR
+        embed.title = "<:success:1163149118366040106> Reminder Completed"
 
         for item in self.children:
             item.disabled = True
@@ -5482,7 +5520,6 @@ class CompleteReminder(discord.ui.View):
         await interaction.message.edit(
             embed=embed,
             view=self,
-            content=f"<:ERMCheck:1111089850720976906>  **{interaction.user.name}** completed this reminder.",
         )
 
         self.stop()
@@ -6187,6 +6224,14 @@ class AdministratedShiftMenu(discord.ui.View):
                     name=message.guild.name,
                     icon_url=message.guild.icon.url if message.guild.icon else ''
                 ).add_field(
+                name="Current Statistics",
+                value=(
+                    f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                    f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
+                    f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                    ),
+                    inline=False
+                ).add_field(
                     name="Current Shift",
                     value=(
                         f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
@@ -6219,6 +6264,14 @@ class AdministratedShiftMenu(discord.ui.View):
                 name=message.guild.name,
                 icon_url=message.guild.icon.url if message.guild.icon else ''
             ).add_field(
+                name="Current Statistics",
+                value=(
+                    f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                    f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
+                    f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                ),
+                inline=False
+            ).add_field(
                 name="Current Shift",
                 value=(
                     f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
@@ -6231,8 +6284,8 @@ class AdministratedShiftMenu(discord.ui.View):
         elif option not in ["void", "break"]:
             selected_ui = uis[option]
 
-        if not selected_ui:
-            return
+        # if not selected_ui:
+        #     return
         self.check_buttons(option)
         await message.edit(embed=selected_ui, view=self)
 
@@ -6259,6 +6312,11 @@ class AdministratedShiftMenu(discord.ui.View):
         if self.contained_document is not None:
             if self.contained_document.end_epoch == 0:
                 await chosen_operation(self.contained_document.id, amount)
+                new_contained_document = await self.bot.shift_management.fetch_shift(self.contained_document.id)
+                self.contained_document = new_contained_document
+                self.shift = await self.bot.shift_management.shifts.find_by_id(self.contained_document.id)
+
+
                 self.bot.dispatch('shift_edit', self.contained_document.id,
                                   'added_time' if op == "add" else 'removed_time',
                                   (await self.message.guild.fetch_member(self.user_id)))
@@ -6373,7 +6431,12 @@ class AdministratedShiftMenu(discord.ui.View):
                 )
 
             await self._manipulate_shift_time(interaction.message, "add", converted)
-            await self.cycle_ui(self.state, interaction.message)
+            await asyncio.sleep(0.02)
+            print(self.state)
+            if self.state not in ["void", "off"]:
+                await self.cycle_ui(self.state, interaction.message)
+            else:
+                await self.cycle_ui('void', interaction.message)
         elif value == "subtract":
             self.modal = CustomModal(
                 title="Subtract Time",
@@ -6402,14 +6465,19 @@ class AdministratedShiftMenu(discord.ui.View):
                     )
                 )
 
-            await self._manipulate_shift_time(interaction.message, "add", converted)
-            await self.cycle_ui(self.state, interaction.message)
+            await self._manipulate_shift_time(interaction.message, "subtract", converted)
+            await asyncio.sleep(0.02)
+            print(self.state)
+            if self.state not in ["void", "off"]:
+                await self.cycle_ui(self.state, interaction.message)
+            else:
+                await self.cycle_ui('void', interaction.message)
 
         elif value == "void":
             if not self.contained_document:
                 try:
                     self.contained_document = await self.bot.shift_management.fetch_shift(self.shift['_id'])
-                except ValueError:
+                except TypeError:
                     return
 
             self.bot.dispatch('shift_void', interaction.user, self.contained_document.id)
@@ -6925,7 +6993,7 @@ class ManageTypesView(discord.ui.View):
             return False
 
     @discord.ui.button(
-        label="Create Punishment Type",
+        label="Create",
         style=discord.ButtonStyle.green
     )
     async def create_punishment_type(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -6954,7 +7022,7 @@ class ManageTypesView(discord.ui.View):
 
 
     @discord.ui.button(
-        label="Delete Punishment Type",
+        label="Delete",
         style=discord.ButtonStyle.danger
     )
     async def delete_punishment_type(self, interaction: discord.Interaction, button: discord.ui.Button):

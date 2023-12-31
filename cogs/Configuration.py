@@ -820,8 +820,6 @@ class Configuration(commands.Cog):
         try:
             await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
         except discord.HTTPException:
-            print('NOAH LOOK AT THIS!!!')
-            print(await bot.settings.find_by_id(ctx.guild.id))
             await ctx.send(embed=discord.Embed(
                 title="Critical Error",
                 description="Configuration error; 827",

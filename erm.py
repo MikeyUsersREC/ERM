@@ -521,9 +521,9 @@ async def check_reminders():
                         else:
                             view = None
                         embed = discord.Embed(
-                            title="<:Clock:1035308064305332224> Notification",
+                            title="Notification",
                             description=f"{item['message']}",
-                            color=0xED4348,
+                            color=BLANK_COLOR,
                         )
                         lastTriggered = tD.timestamp()
                         item["lastTriggered"] = lastTriggered

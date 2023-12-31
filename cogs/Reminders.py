@@ -39,7 +39,7 @@ class Reminders(commands.Cog):
             reminder_data = {"_id": ctx.guild.id, "reminders": []}
 
         embed = discord.Embed(
-            title="<:reminder:1163143497348558848> Reminders",
+            title="Reminders",
             color=BLANK_COLOR
         )
         embed.set_author(
@@ -49,7 +49,7 @@ class Reminders(commands.Cog):
         embed.set_thumbnail(
             url=ctx.guild.icon.url if ctx.guild.icon else ''
         )
-        _ = [embed.add_field(
+        [embed.add_field(
             name=f"{reminder['name']}",
             value=(
                 f"<:replytop:1138257149705863209> **Name:** {reminder['name']}\n"
@@ -112,6 +112,73 @@ class Reminders(commands.Cog):
                 view=None,
             )
 
+        if view.value == "edit":
+                id = view.modal.identifier.value
+                dataset = None
+                for item in reminder_data["reminders"]:
+                    if item["id"] == int(id if all(n for n in id if n.isdigit()) else 0):
+                        dataset = item
+                        break
+                if not dataset:
+                    return await msg.edit(
+                        embed=discord.Embed(
+                            title="Could not find reminder",
+                            description="I could not find the reminder with the ID you specified.",
+                            color=BLANK_COLOR
+                        ),
+                        view=None
+                    )
+
+
+                completion_ability = dataset.get("completion_ability", False)
+                if completion_ability:
+                    completion_styling = {
+                        "label": "Completion Ability: Enabled",
+                        "style": discord.ButtonStyle.green
+                    }
+                else:
+                    completion_styling = {
+                        "label": "Completion Ability: Disabled",
+                        "style": discord.ButtonStyle.danger
+                    }
+
+                view = ReminderCreationToolkit(ctx.author.id, dataset, "edit", {
+                    "Reminder Channel": list(filter(lambda x: x is not None, [discord.utils.get(ctx.guild.channels, id=dataset.get("channel", None))])),
+                    "Mentioned Roles": list(filter(lambda x: x is not None, [discord.utils.get(ctx.guild.roles, id=i) for i in dataset.get('role') or []])),
+                    "Completion Ability: Disabled": completion_styling
+                })
+                await msg.edit(embed=discord.Embed(
+                    title="Edit a Reminder",
+                    description=(
+                        f"<:replytop:1138257149705863209> **Name:** {dataset['name']}\n"
+                        f"<:replymiddle:1138257195121791046> **ID:** {dataset['id']}\n"
+                        f"<:replymiddle:1138257195121791046> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
+                        f"<:replymiddle:1138257195121791046> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
+                        f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
+                        f"<:replybottom:1138257250448855090> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
+                        f"\n\n**Content:**\n{dataset['message']}"
+                    ),
+                    color=BLANK_COLOR
+                ), view=view)
+                await view.wait()
+                if view.cancelled is True:
+                    return
+
+                # Update the reminder
+                for index, item in enumerate(reminder_data['reminders']):
+                    if item['id'] == dataset['id']:
+                        reminder_data['reminders'][index] = dataset
+
+                await bot.reminders.upsert(reminder_data)
+                await msg.edit(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Reminder Edited",
+                        description="Your reminder has been edited!",
+                        color=GREEN_COLOR
+                    ),
+                    view=None
+                )
+                return
         if view.value == "create":
                 time_arg = view.modal.time.value
                 message = view.modal.content.value
@@ -141,7 +208,7 @@ class Reminders(commands.Cog):
                         "paused": False
                     }
 
-                view = ReminderCreationToolkit(ctx.author.id, dataset)
+                view = ReminderCreationToolkit(ctx.author.id, dataset, "create")
                 await msg.edit(embed=discord.Embed(
                     title="Reminder Creation",
                     description=(

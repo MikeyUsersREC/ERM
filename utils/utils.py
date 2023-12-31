@@ -107,7 +107,6 @@ def time_converter(parameter: str) -> int:
     for aliases, multiplier in conversions.items():
         parameter = parameter.strip()
         for alias in aliases:
-            print(f"{alias} - {(parameter[(len(parameter) - len(alias)):])=}")
             if parameter[(len(parameter) - len(alias)):].lower() == alias.lower():
                 alias_found = parameter[(len(parameter) - len(alias)):]
                 number = parameter.split(alias_found)[0]
