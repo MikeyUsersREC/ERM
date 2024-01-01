@@ -53,8 +53,9 @@ class Search(commands.Cog):
             "NoAlerts": "No alerts found for this account!",
             "AccountAge": "The account age of the user is less than 100 days.",
             "NotManyFriends": "This user has less than 30 friends.",
-            "NotManyGroups": "This user has less than 5 groups.",
+            # "NotManyGroups": "This user has less than 5 groups.", - Flag has been removed for rate-limiting purposes
             "HasBOLO": "This user has a BOLO active.",
+            "IsBanned": "This user is banned from Roblox."
         }
 
         user = query
@@ -85,7 +86,7 @@ class Search(commands.Cog):
             "IsBanned": roblox_player.is_banned,
             "AccountAge": (datetime.datetime.now(tz=pytz.UTC) - roblox_player.created).days < 100,
             "NotManyFriends": (await roblox_player.get_friend_count()) < 30,
-            "NotManyGroups": len(await roblox_player.get_group_roles()) < 5,
+            # "NotManyGroups": len(await roblox_player.get_group_roles()) < 5, - This flag has been removed for ratelimiting purposes
             "HasBOLO": "BOLO" in [warning.warning_type.upper() for warning in warnings]
         }
         triggered_alerts = [item[0] for item in list(filter(lambda x: x[1] is True, alert_maps.items()))] or [
