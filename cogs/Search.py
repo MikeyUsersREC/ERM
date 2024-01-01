@@ -179,7 +179,7 @@ class Search(commands.Cog):
                     f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                     f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
+                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
                 )
             )
 
