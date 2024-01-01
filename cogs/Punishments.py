@@ -442,7 +442,7 @@ class Punishments(commands.Cog):
         bot = self.bot
         if user is None:
             bolos = await bot.punishments.get_guild_bolos(ctx.guild.id)
-
+            msg = None
             if len(bolos) == 0:
                 return await ctx.reply(
                     embed=discord.Embed(
@@ -454,7 +454,7 @@ class Punishments(commands.Cog):
             embeds = []
 
             embed = discord.Embed(
-                title="<:log:1163524830319104171> Active Ban BOLOs",
+                title="Active Ban BOLOs",
                 color=BLANK_COLOR,
             )
 
@@ -470,7 +470,7 @@ class Punishments(commands.Cog):
             for entry in bolos:
                 if len(embeds[-1].fields) == 4:
                     new_embed = discord.Embed(
-                        title="<:log:1163524830319104171> Active Ban BOLOs",
+                        title="Active Ban BOLOs",
                         color=BLANK_COLOR,
                     )
 
@@ -606,7 +606,7 @@ class Punishments(commands.Cog):
 
 
 
-            await ctx.reply(
+            msg = await ctx.reply(
                 embed=embeds[0],
                 view=current_page
             )
@@ -656,7 +656,7 @@ class Punishments(commands.Cog):
             embeds = []
 
             embed = discord.Embed(
-                title="<:log:1163524830319104171> Active Ban BOLOs",
+                title="Active Ban BOLOs",
                 color=BLANK_COLOR,
             )
 
@@ -672,7 +672,7 @@ class Punishments(commands.Cog):
             for entry in bolos:
                 if len(embeds[-1].fields) == 4:
                     new_embed = discord.Embed(
-                        title="<:log:1163524830319104171> Active Ban BOLOs",
+                        title="Active Ban BOLOs",
                         color=BLANK_COLOR,
                     )
 
