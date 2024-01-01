@@ -361,10 +361,10 @@ class Warnings(Document):
                 del map[i]
 
         # print(map)
-        async for i in self.db.aggregate([{"$match": map}]):
+        async for i in self.db.aggregate([{"$match": map}, {"$project": {"_id": 1}}]):
             # print("!")
-            await self.recovery.upsert(i)
             await self.db.delete_one({"_id": i["_id"]})
+            await self.recovery.upsert(i)
 
     async def remove_warning_by_snowflake(
             self, identifier: int, guild_id: int | None = None

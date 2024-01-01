@@ -3667,6 +3667,8 @@ class AssociationConfigurationView(discord.ui.View):
             print(label)
             print(defaults)
             use_configuration = None
+            if len(defaults) == 0:
+                continue
             if isinstance(defaults[0], list):
                 if defaults[0][0] == "CUSTOM_CONF":
                     configurator = defaults[0]
