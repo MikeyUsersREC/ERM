@@ -6628,7 +6628,7 @@ class PunishmentManagement(discord.ui.View):
         await interaction.response.send_message(
             embed=discord.Embed(
                 title="<:success:1163149118366040106> Erased All Punishments",
-                description="All punishments have been deleted.",
+                description="All punishments have been deleted.\n*This may take up to 10 minutes to fully delete all of your punishments.*",
                 color=GREEN_COLOR
             ),
             ephemeral=True

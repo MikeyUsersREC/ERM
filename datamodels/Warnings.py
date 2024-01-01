@@ -2,6 +2,7 @@ import typing
 from copy import copy
 
 import aiohttp
+import pymongo.operations
 from bson import ObjectId
 from decouple import config
 from discord.ext import commands
@@ -360,11 +361,19 @@ class Warnings(Document):
             if v is None:
                 del map[i]
 
-        # print(map)
-        async for i in self.db.aggregate([{"$match": map}, {"$project": {"_id": 1}}]):
-            # print("!")
+        storage = []
+        async for i in self.db.aggregate([
+            {"$match": map},
+            {"$project": {"_id": {"$ifNull": ["$_id", None]}}}
+        ]):
+            storage.append(i)
             await self.db.delete_one({"_id": i["_id"]})
-            await self.recovery.upsert(i)
+
+
+        await self.recovery.db.bulk_write([
+            pymongo.operations.UpdateOne({"_id": i["_id"]}, {"$set": i}, upsert=True) for i in storage
+        ])
+        # await self.recovery.db.insert_many(storage)
 
     async def remove_warning_by_snowflake(
             self, identifier: int, guild_id: int | None = None
