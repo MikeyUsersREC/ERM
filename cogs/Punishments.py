@@ -173,7 +173,7 @@ class Punishments(commands.Cog):
                         f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                         f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
                         f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
                     ),
                     inline=False
                 ).set_thumbnail(
@@ -197,7 +197,7 @@ class Punishments(commands.Cog):
                     f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                     f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                    f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
                 ),
                 inline=False
             ).set_thumbnail(
@@ -241,7 +241,7 @@ class Punishments(commands.Cog):
 
         if view.value == "modify":
             try:
-                punishment_id = int(view.modal.punishment_id.value.strip())
+                punishment_id = view.modal.punishment_id.value.strip()
             except ValueError:
                 return await msg.edit(
                     embed=discord.Embed(
@@ -251,7 +251,7 @@ class Punishments(commands.Cog):
                     )
                 )
 
-            punishment = await self.bot.punishments.get_warning_by_snowflake(punishment_id)
+            punishment = await self.bot.punishments.get_warning(punishment_id)
             if not punishment:
                 return await msg.edit(
                     embed=discord.Embed(
@@ -264,12 +264,18 @@ class Punishments(commands.Cog):
             view = PunishmentModifier(self.bot, ctx.author.id, punishment)
             await view.refresh_ui(msg)
             await view.wait()
-            await msg.edit(embed=discord.Embed(
-                title="<:success:1163149118366040106> Successfully modified",
-                description="Successfully modified this punishment!",
-                color=GREEN_COLOR
-            ), view=None)
-
+            try:
+                await msg.edit(embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully modified",
+                    description="Successfully modified this punishment!",
+                    color=GREEN_COLOR
+                ), view=None)
+            except discord.HTTPException:
+                await ctx.send(embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully modified",
+                    description="Successfully modified this punishment!",
+                    color=GREEN_COLOR
+                ))
 
         elif view.value == "types":
             punishment_types = await self.bot.punishment_types.get_punishment_types(ctx.guild.id)
@@ -491,7 +497,7 @@ class Punishments(commands.Cog):
                         f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
                         f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                         f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
                     )
                 )
 
@@ -529,7 +535,7 @@ class Punishments(commands.Cog):
                     id = view.modal.bolo.value
 
                     try:
-                        id = int(id)
+                        id = id.strip()
                     except ValueError:
                         return await msg.edit(
                             embed=discord.Embed(
@@ -541,7 +547,7 @@ class Punishments(commands.Cog):
 
                     matching_docs = []
                     matching_docs.append(
-                        await bot.punishments.get_warning_by_snowflake(id)
+                        await bot.punishments.get_warning(id)
                     )
 
                     if len(matching_docs) == 0:
@@ -574,7 +580,7 @@ class Punishments(commands.Cog):
                         datetime.datetime.now(tz=pytz.UTC).timestamp(),
                     )
 
-                    await bot.punishments.remove_warning_by_snowflake(id)
+                    await bot.punishments.remove_warning(id)
 
                     await (await interaction.original_response()).edit(
                         embed=discord.Embed(
@@ -693,7 +699,7 @@ class Punishments(commands.Cog):
                         f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
                         f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                         f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
                     )
                 )
 
@@ -730,7 +736,7 @@ class Punishments(commands.Cog):
                     id = view.modal.bolo.value
 
                     try:
-                        id = int(id)
+                        id = id.strip()
                     except ValueError:
                         return await msg.edit(
                             embed=discord.Embed(
@@ -742,7 +748,7 @@ class Punishments(commands.Cog):
 
                     matching_docs = []
                     matching_docs.append(
-                        await bot.punishments.get_warning_by_snowflake(id)
+                        await bot.punishments.get_warning(id)
                     )
 
                     if len(matching_docs) == 0:
@@ -775,7 +781,7 @@ class Punishments(commands.Cog):
                         datetime.datetime.now(tz=pytz.UTC).timestamp(),
                     )
 
-                    await bot.punishments.remove_warning_by_snowflake(id)
+                    await bot.punishments.remove_warning(id)
 
                     await (await interaction.original_response()).edit(
                         embed=discord.Embed(
@@ -885,7 +891,7 @@ class Punishments(commands.Cog):
                     f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                     f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                    f"<:replybottom:1138257250448855090> **ID:** `{warning.id}`"
                 ),
                 inline=False
             ).set_thumbnail(

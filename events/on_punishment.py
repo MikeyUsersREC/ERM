@@ -72,7 +72,7 @@ class OnPunishment(commands.Cog):
                 name="Moderator Information",
                 value=(
                     f"<:replytop:1138257149705863209> **Moderator:** {moderator.mention}\n"
-                    f"<:replymiddle:1138257195121791046> **Warning ID:** `{warning.snowflake}`\n"
+                    f"<:replymiddle:1138257195121791046> **Warning ID:** `{warning.id}`\n"
                     f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
                     f"<:replybottom:1138257250448855090> **Moderated At:** <t:{int(warning.time_epoch)}>\n"
                 ),

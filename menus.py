@@ -7256,7 +7256,7 @@ class PunishmentModifier(discord.ui.View):
 
         punishment = await self.bot.punishments.db.find_one(self.root_dataset)
         if punishment:
-            await self.bot.punishments.remove_warning_by_snowflake(punishment['Snowflake'])
+            await self.bot.punishments.remove_warning(punishment['_id'])
             await interaction.message.delete()
             await interaction.response.send_message(
                 embed=discord.Embed(

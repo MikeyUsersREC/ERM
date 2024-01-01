@@ -98,7 +98,13 @@ class Warnings(Document):
         """
         Gets a warning by its ID.
         """
-        return await self.db.find_one({"_id": warning_id})
+        return await self.db.find_one({"_id": ObjectId(warning_id)})
+
+    async def remove_warning(self, warning_id: str):
+        """
+        Removes a warning by its ID.
+        """
+        await self.db.delete_one({"_id": ObjectId(warning_id)})
 
     async def get_warning_by_snowflake(self, snowflake: int) -> dict:
         """
