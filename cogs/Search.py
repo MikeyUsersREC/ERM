@@ -61,7 +61,7 @@ class Search(commands.Cog):
         user = query
         roblox_user = await get_roblox_by_username(user, bot, ctx)
         if roblox_user.get('errors'):
-            return await ctx.reply(embed=discord.Embed(
+            return await ctx.send(embed=discord.Embed(
                 title="Could not find player",
                 description="I could not find a ROBLOX player with that corresponding username.",
                 color=BLANK_COLOR
@@ -212,11 +212,11 @@ class Search(commands.Cog):
         # print(embed_list)
         # [print(obj) for obj in [embed.to_dict() for embed in embed_list]]
         if len(embed_list) == 1:
-            return await ctx.reply(
+            return await ctx.send(
                 embeds=pages[0].embeds
             )
 
-        paginator.message = await ctx.reply(
+        paginator.message = await ctx.send(
             embeds=pages[0].embeds,
             view=paginator
         )
@@ -240,7 +240,7 @@ class Search(commands.Cog):
         user = query
         roblox_user = await get_roblox_by_username(user, bot, ctx)
         if roblox_user.get('errors'):
-            return await ctx.reply(embed=discord.Embed(
+            return await ctx.send(embed=discord.Embed(
                 title="Could not find player",
                 description="I could not find a ROBLOX player with that corresponding username.",
                 color=BLANK_COLOR
@@ -281,7 +281,7 @@ class Search(commands.Cog):
         
         embed.set_thumbnail(url=thumbnail)
         embed.set_footer(text="Search Module")
-        await ctx.reply(
+        await ctx.send(
             embed=embed
         )
 
