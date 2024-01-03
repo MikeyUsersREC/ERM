@@ -14,7 +14,7 @@ from reactionmenu.abc import _PageController
 import pytz
 from datamodels.Settings import Settings
 from datamodels.Warnings import WarningItem
-from erm import crp_data_to_mongo, generator, is_management, is_staff
+from erm import generator, is_management, is_staff
 from menus import (
     ChannelSelect,
     CustomisePunishmentType,
