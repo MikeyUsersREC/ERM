@@ -24,6 +24,7 @@ class Configuration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="setup",
         description="Begin using ERM!",
@@ -471,6 +472,7 @@ class Configuration(commands.Cog):
             view=None
         )
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="config",
         description='View your ERM settings',
@@ -826,6 +828,7 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ))
 
+    @commands.guild_only()
     @commands.hybrid_group(name="server", description="This is a namespace for commands relating to the Server Management functionality", extras={
         'category': 'Configuration'
     })
