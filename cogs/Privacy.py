@@ -11,12 +11,12 @@ class Privacy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="consent",
         description="Change your privacy settings.",
         extras={"category": "Privacy"},
     )
-    @commands.guild_only()
     async def consent(self, ctx):
         bot = self.bot
         punishments_enabled = True
