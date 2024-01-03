@@ -45,6 +45,7 @@ class Punishments(commands.Cog):
         self.bot = bot
 
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="punish",
         description="Punish a user",
@@ -206,6 +207,7 @@ class Punishments(commands.Cog):
         )
 
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="punishment",
         description="Punishment commands",
@@ -412,6 +414,7 @@ class Punishments(commands.Cog):
                     view=None
                 )
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="bolo",
         description="Manage the server's BOLO list.",
@@ -810,7 +813,7 @@ class Punishments(commands.Cog):
                 view=current_page
             )
 
-
+    @commands.guild_only()
     @commands.hybrid_command(
         name="tempban",
         aliases=["tb", "tba"],
