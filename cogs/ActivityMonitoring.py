@@ -17,6 +17,7 @@ class ActivityMonitoring(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="activity",
         description="Monitor activity across an entire Staff Team effectively.",

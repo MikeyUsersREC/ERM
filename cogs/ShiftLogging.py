@@ -28,6 +28,7 @@ class ShiftLogging(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_group(name="duty")
     async def duty(self, ctx):
         pass

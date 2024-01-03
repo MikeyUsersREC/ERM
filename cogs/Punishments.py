@@ -14,7 +14,7 @@ from reactionmenu.abc import _PageController
 import pytz
 from datamodels.Settings import Settings
 from datamodels.Warnings import WarningItem
-from erm import crp_data_to_mongo, generator, is_management, is_staff
+from erm import generator, is_management, is_staff
 from menus import (
     ChannelSelect,
     CustomisePunishmentType,
@@ -45,6 +45,7 @@ class Punishments(commands.Cog):
         self.bot = bot
 
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="punish",
         description="Punish a user",
@@ -206,6 +207,7 @@ class Punishments(commands.Cog):
         )
 
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="punishment",
         description="Punishment commands",
@@ -412,6 +414,7 @@ class Punishments(commands.Cog):
                     view=None
                 )
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="bolo",
         description="Manage the server's BOLO list.",
@@ -810,7 +813,7 @@ class Punishments(commands.Cog):
                 view=current_page
             )
 
-
+    @commands.guild_only()
     @commands.hybrid_command(
         name="tempban",
         aliases=["tb", "tba"],

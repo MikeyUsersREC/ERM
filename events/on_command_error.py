@@ -60,6 +60,17 @@ class OnCommandError(commands.Cog):
             if "Cannot send messages to this user" in str(error):
                 return
 
+        if isinstance(error, commands.NoPrivateMessage):
+            embed = discord.Embed(
+                title="Direct Messages",
+                description=f"I would love to talk to you more personally, "
+                            f"but I can't do that in DMs. Please use me in a server.",
+                color=BLANK_COLOR
+            )
+            await ctx.send(embed=embed)
+            return
+
+
         if isinstance(error, GuildCheckFailure):
             return await ctx.send(
                 embed=discord.Embed(

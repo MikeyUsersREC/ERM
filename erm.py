@@ -358,68 +358,6 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
             await bot.warnings.update(structure)
 
 
-async def crp_data_to_mongo(jsonData, guildId: int):
-    separation = []
-    # Separate the User IDs into bundles of 120
-    for value in jsonData["moderations"]:
-        if len(separation) == 0:
-            separation.append([value["userId"]])
-        else:
-            if len(separation[-1]) == 110:
-                separation.append([value["userId"]])
-            else:
-                separation[-1].append(value["userId"])
-
-    for sep in separation:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://users.roblox.com/v1/users",
-                json={"userIds": sep, "excludeBannedUsers": True},
-            ) as r:
-                try:
-                    requestJSON = await r.json()
-                except Exception as e:
-                    pass
-
-       # # print(f"Request JSON: {requestJSON}")
-        for user in requestJSON["data"]:
-            name = user["name"]
-            userItem = None
-            user = discord.utils.get(bot.users, id=int(value["staffId"]))
-            if user is not None:
-                userItem = [user.name, user.id]
-            else:
-                userItem = ["-", int(value["staffId"])]
-
-            timeObject = datetime.datetime.fromtimestamp(int(value["time"]) / 1000)
-            types = {
-                "other": "Warning",
-                "warn": "Warning",
-                "kick": "Kick",
-                "ban": "Ban",
-            }
-
-            default_warning_item = {
-                "id": next(generator),
-                "Type": types[value["type"]],
-                "Reason": value["reason"],
-                "Moderator": userItem,
-                "Time": timeObject.strftime("%m/%d/%Y, %H:%M:%S"),
-                "Guild": guildId,
-            }
-
-            parent_structure = {"_id": name, "warnings": []}
-
-            if await bot.warnings.find_by_id(name):
-                data = await bot.warnings.find_by_id(name)
-                data["warnings"].append(default_warning_item)
-                await bot.warnings.update_by_id(data)
-            else:
-                data = parent_structure
-                data["warnings"].append(default_warning_item)
-                await bot.warnings.insert(data)
-
-
 bot.erm_team = {
     "i_imikey": "Bot Developer",
     "mbrinkley": "First Community Manager - Removed",

@@ -549,6 +549,7 @@ class StaffManagement(commands.Cog):
         self.bot = bot
         self.core_commands = ActivityCoreCommands(bot)
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="ra",
         description="File a Reduced Activity request",
@@ -593,6 +594,7 @@ class StaffManagement(commands.Cog):
     async def ra_admin(self, ctx, member: discord.Member):
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="loa",
         description="File a Leave of Absence request",

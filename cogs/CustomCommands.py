@@ -27,6 +27,7 @@ class CustomCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_group(name="custom")
     @is_management()
     async def custom(self, ctx):
