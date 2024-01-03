@@ -26,6 +26,7 @@ class Search(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_command(
         name="search",
         aliases=["s"],
