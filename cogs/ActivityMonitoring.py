@@ -112,23 +112,37 @@ class ActivityMonitoring(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
+        embeds = []
         embed = discord.Embed(
             title=f"Activity Report ({duration})",
             color=BLANK_COLOR
         )
-        embed.description = f"**Leaderboard**\n{leaderboard_string}"
+        embed.description = f"**Leaderboard**\n"
         embed.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
         )
+        embeds.append(embed)
+        for item in leaderboard_string.split('\n'):
+            if len(embeds[-1].description.splitlines()) > 9:
+                embed = discord.Embed(
+                    title=f"Activity Report ({duration})",
+                    color=BLANK_COLOR
+                )
+                embed.set_author(
+                    name=ctx.guild.name,
+                    icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                )
+                embeds.append(embed)
+                embeds[-1].description = f"**Leaderboard**\n"
+            embeds[-1].description += f"{item}\n"
 
         actual_loas = []
         async for loa_item in self.bot.loas.db.find({
             "guild_id": ctx.guild.id
         }):
             starting_epoch = loa_item['_id'].split('_')[2]
-            if int(starting_epoch) >= timestamp_pre and loa_item.get('accepted', True) and not loa_item.get('voided', False):
+            if int(starting_epoch) >= timestamp_pre and loa_item.get('accepted', True):
                 loa_item['start_epoch'] = int(starting_epoch)
                 actual_loas.append(loa_item)
 
@@ -205,14 +219,12 @@ class ActivityMonitoring(commands.Cog):
         extra_view = discord.ui.View()
         if len(actual_loas) != 0:
             extra_view.add_item(button)
-        embeds = []
 
-        embeds.append(embed)
         view = SelectPagination(ctx.author.id, [
             CustomPage(embeds=[embed], view=extra_view, identifier=str(index+1)) for index, embed in enumerate(embeds)
         ])
 
-        await ctx.send(embed=embed, view=view if len(embeds) > 1 else extra_view)
+        await ctx.send(embed=embeds[0], view=view.get_current_view() if len(embeds) > 1 else extra_view)
 
 
 
