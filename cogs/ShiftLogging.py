@@ -292,16 +292,27 @@ class ShiftLogging(commands.Cog):
         else:
             embed.colour = RED_COLOR
             embed.title = "<:ShiftEnded:1178035088655646880> **Off-Duty**"
+        try:
+            view = AdministratedShiftMenu(
+                self.bot,
+                status,
+                ctx.author.id,
+                member.id,
+                (shift_type_item or {}).get('name') or type,
+                shift,
+                contained_document
+            )
+        except UnboundLocalError:
+            view = AdministratedShiftMenu(
+                self.bot,
+                status,
+                ctx.author.id,
+                member.id,
+                type,
+                shift,
+                contained_document
+            )
 
-        view = AdministratedShiftMenu(
-            self.bot,
-            status,
-            ctx.author.id,
-            member.id,
-            (shift_type_item or {}).get('name') or type,
-            shift,
-            contained_document
-        )
         if not msg:
             view.message = await ctx.send(embed=embed, view=view)
         else:
@@ -792,8 +803,6 @@ class ShiftLogging(commands.Cog):
             ):
                 total_seconds = 0
                 moderations = 0
-                if "Moderations" in document.keys():
-                    moderations += len(document["Moderations"])
 
                 break_seconds = 0
 
@@ -856,10 +865,17 @@ class ShiftLogging(commands.Cog):
                 )
             )
 
+
         for item in all_staff:
             if item["id"] is None:
                 all_staff.remove(item)
 
+        for index, item in enumerate(all_staff):
+            if item.get('moderations') == 0:
+                item['moderations'] = await self.bot.punishments.db.count_documents({"UserID": item['id']})
+                all_staff[index] = item
+        
+        
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
 
         buffer = None
