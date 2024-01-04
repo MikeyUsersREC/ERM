@@ -311,7 +311,10 @@ def is_staff():
 
 
 async def management_predicate(ctx):
-    return await management_check(ctx.bot, ctx.guild, ctx.author)
+    if ctx.guild is None:
+        return True
+    else:
+        return await management_check(ctx.bot, ctx.guild, ctx.author)
 
 
 def is_management():
