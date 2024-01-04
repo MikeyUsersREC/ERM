@@ -17,6 +17,7 @@ class ActivityMonitoring(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="activity",
         description="Monitor activity across an entire Staff Team effectively.",
@@ -25,7 +26,6 @@ class ActivityMonitoring(commands.Cog):
     async def activity(self, ctx: commands.Context):
         pass
 
-    @commands.guild_only()
     @activity.command(
         name="show",
         description="Show newest activity monitoring report across a time period.",
