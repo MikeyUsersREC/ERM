@@ -303,7 +303,10 @@ async def management_check(bot_obj, guild, member):
     return False
 
 async def staff_predicate(ctx):
-    return await staff_check(ctx.bot, ctx.guild, ctx.author)
+    if ctx.guild is None:
+        return True
+    else:
+        return await staff_check(ctx.bot, ctx.guild, ctx.author)
 
 
 def is_staff():
