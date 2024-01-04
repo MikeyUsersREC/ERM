@@ -814,11 +814,15 @@ class ShiftLogging(commands.Cog):
                             "id": document["UserID"],
                             "total_seconds": total_seconds,
                             "moderations": moderations,
+                            "lowest_time": document['StartEpoch']
                         }
                     )
                 else:
                     for item in all_staff:
                         if item["id"] == document["UserID"]:
+                            if item['lowest_time'] > document['StartEpoch']:
+                                item['lowest_time'] = document['StartEpoch']
+
                             item["total_seconds"] += total_seconds
                             item["moderations"] += moderations
         else:
