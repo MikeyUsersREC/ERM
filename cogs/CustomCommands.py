@@ -27,12 +27,12 @@ class CustomCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.guild_only()
     @commands.hybrid_group(name="custom")
     @is_management()
     async def custom(self, ctx):
         pass
 
+    @commands.guild_only()
     @custom.command(
         name="manage",
         description="Manage your custom commands.",
@@ -171,6 +171,7 @@ class CustomCommands(commands.Cog):
                 ),
                 view=None,
             )
+
 
     @custom.command(
         name="run",

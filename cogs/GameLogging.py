@@ -42,6 +42,7 @@ class GameLogging(commands.Cog):
     async def game(self, ctx):
         pass
 
+    @commands.guild_only()
     @game.command(
         name="message",
         description="Log all announcements and messages in your game",
@@ -106,6 +107,7 @@ class GameLogging(commands.Cog):
             )
         )
 
+    @commands.guild_only()
     @game.command(
         name="sts",
         description="Log a Shoulder-to-Shoulder in your game",
@@ -211,6 +213,7 @@ class GameLogging(commands.Cog):
             view=None,
         )
 
+    @commands.guild_only()
     @game.command(
         name="priority",
         description="Log Roleplay Permissions and Priorities in your game",
