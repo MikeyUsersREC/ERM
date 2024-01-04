@@ -28,11 +28,11 @@ class ShiftLogging(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @commands.hybrid_group(name="duty")
     async def duty(self, ctx):
         pass
 
-    @commands.guild_only()
     @duty.command(
         name="time",
         description="Allows for you to check your shift time, as well as your past data.",
@@ -136,7 +136,6 @@ class ShiftLogging(commands.Cog):
             embed=embed,
         )
     
-    @commands.guild_only()
     @duty.command(
         name="admin",
         description="Allows for you to administrate someone else's shift",
@@ -308,7 +307,6 @@ class ShiftLogging(commands.Cog):
             await msg.edit(embed=embed, view=view)
             view.message = msg
 
-    @commands.guild_only()
     @duty.command(
         name="manage",
         description="Manage your own shift in an easy way!",
@@ -483,7 +481,6 @@ class ShiftLogging(commands.Cog):
             await msg.edit(embed=embed, view=view)
             view.message = msg
 
-    @commands.guild_only()
     @duty.command(
         name="active",
         description="Get all members of the server currently on shift.",
@@ -689,7 +686,6 @@ class ShiftLogging(commands.Cog):
         except UnboundLocalError:
             await ctx.reply(embed=embeds[0], view=paginator.get_current_view())
 
-    @commands.guild_only()
     @duty.command(
         name="leaderboard",
         description="Get the total time worked for the whole of the staff team.",
