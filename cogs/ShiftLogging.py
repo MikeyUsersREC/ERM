@@ -848,11 +848,15 @@ class ShiftLogging(commands.Cog):
                             "id": document["UserID"],
                             "total_seconds": total_seconds,
                             "moderations": moderations,
+                            "lowest_time": document['StartEpoch']
                         }
                     )
                 else:
                     for item in all_staff:
                         if item["id"] == document["UserID"]:
+                            if item['lowest_time'] > document['StartEpoch']:
+                                item['lowest_time'] = document['StartEpoch']
+
                             item["total_seconds"] += total_seconds
                             item["moderations"] += moderations
 
@@ -872,7 +876,7 @@ class ShiftLogging(commands.Cog):
 
         for index, item in enumerate(all_staff):
             if item.get('moderations') == 0:
-                item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['id']})
+                item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['id'], "Guild": ctx.guild.id, "Epoch": {"$gt": item['lowest_time']}})
                 all_staff[index] = item
         
         
