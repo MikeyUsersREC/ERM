@@ -172,7 +172,7 @@ class CustomCommands(commands.Cog):
                 view=None,
             )
 
-    @commands.guild_only()
+
     @custom.command(
         name="run",
         description="Run a custom command.",

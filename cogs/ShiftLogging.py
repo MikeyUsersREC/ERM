@@ -135,8 +135,8 @@ class ShiftLogging(commands.Cog):
         await ctx.reply(
             embed=embed,
         )
-    
-    @commands.guild_only()
+
+        
     @duty.command(
         name="admin",
         description="Allows for you to administrate someone else's shift",
@@ -483,7 +483,7 @@ class ShiftLogging(commands.Cog):
             await msg.edit(embed=embed, view=view)
             view.message = msg
 
-    @commands.guild_only()
+            
     @duty.command(
         name="active",
         description="Get all members of the server currently on shift.",

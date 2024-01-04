@@ -608,7 +608,6 @@ class StaffManagement(commands.Cog):
         await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
 
 
-    @commands.guild_only()
     @loa.command(
         name="active",
         description="View all active LOAs",

@@ -33,6 +33,7 @@ class GameLogging(commands.Cog):
 
         return True
 
+    @commands.guild_only()
     @commands.hybrid_group(
         name="game",
         description="Manage your game with logging such as messages, and events",
