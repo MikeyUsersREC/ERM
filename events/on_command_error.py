@@ -32,7 +32,7 @@ class OnCommandError(commands.Cog):
                 color=BLANK_COLOR
             ))
 
-        if isinstance(error, discord.errors.NotFound) and 'Unknown Message' in str(error):
+        if 'Unknown Message' in str(error):
             return
 
         if isinstance(error, commands.BadArgument):
