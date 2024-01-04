@@ -549,7 +549,6 @@ class StaffManagement(commands.Cog):
         self.bot = bot
         self.core_commands = ActivityCoreCommands(bot)
 
-    @commands.guild_only()
     @commands.hybrid_group(
         name="ra",
         description="File a Reduced Activity request",
@@ -559,6 +558,7 @@ class StaffManagement(commands.Cog):
     async def ra(self, ctx, time, *, reason):
         pass
 
+    @commands.guild_only()
     @ra.command(
         name="active",
         description="View all active RAs",
@@ -569,6 +569,7 @@ class StaffManagement(commands.Cog):
     async def ra_active(self, ctx):
         await self.core_commands.core_command_active(ctx, 'ra')
 
+    @commands.guild_only()
     @ra.command(
         name="request",
         description="File a Reduced Activity request",
@@ -581,6 +582,7 @@ class StaffManagement(commands.Cog):
     async def ra_request(self, ctx, time, *, reason):
         await self.core_commands.core_command_request(ctx, 'ra', time, reason)
 
+    @commands.guild_only()
     @ra.command(
         name="admin",
         description="Administrate a Reduced Activity request",
@@ -594,7 +596,6 @@ class StaffManagement(commands.Cog):
     async def ra_admin(self, ctx, member: discord.Member):
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
-    @commands.guild_only()
     @commands.hybrid_group(
         name="loa",
         description="File a Leave of Absence request",
@@ -607,7 +608,7 @@ class StaffManagement(commands.Cog):
         await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
 
 
-
+    @commands.guild_only()
     @loa.command(
         name="active",
         description="View all active LOAs",
@@ -617,6 +618,7 @@ class StaffManagement(commands.Cog):
     async def loa_active(self, ctx):
         await self.core_commands.core_command_active(ctx, 'loa')
 
+    @commands.guild_only()
     @loa.command(
         name="request",
         description="File a Leave of Absence request",
@@ -629,6 +631,7 @@ class StaffManagement(commands.Cog):
     async def loa_request(self, ctx, time, *, reason):
         await self.core_commands.core_command_request(ctx, 'loa', time, reason)
 
+    @commands.guild_only()
     @loa.command(
         name="admin",
         description="Administrate a Leave of Absence request",

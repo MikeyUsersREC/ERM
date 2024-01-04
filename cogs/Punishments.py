@@ -207,7 +207,6 @@ class Punishments(commands.Cog):
         )
 
 
-    @commands.guild_only()
     @commands.hybrid_group(
         name="punishment",
         description="Punishment commands",
@@ -217,6 +216,7 @@ class Punishments(commands.Cog):
         pass
 
     # Punishment Manage command, containing `types`, `void` and `modify`
+    @commands.guild_only()
     @punishments.command(
         name="manage",
         description="Manage punishments",
@@ -414,7 +414,6 @@ class Punishments(commands.Cog):
                     view=None
                 )
 
-    @commands.guild_only()
     @commands.hybrid_group(
         name="bolo",
         description="Manage the server's BOLO list.",
@@ -423,6 +422,7 @@ class Punishments(commands.Cog):
     async def bolo(self, ctx):
         pass
 
+    @commands.guild_only()
     @bolo.command(
         name="active",
         description="View the server's active BOLOs.",

@@ -20,12 +20,12 @@ class Reminders(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.guild_only()
     @commands.hybrid_group(name="reminders")
     @is_management()
     async def reminders(self, ctx):
         pass
 
+    @commands.guild_only()
     @reminders.command(
         name="manage",
         description="Manage your reminders",
