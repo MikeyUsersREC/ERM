@@ -123,6 +123,8 @@ class GuildCheckFailure(commands.CheckFailure):
 
 def require_settings():
     async def predicate(ctx: commands.Context):
+        if ctx.guild is None:
+            return True
         settings = await ctx.bot.settings.find_by_id(ctx.guild.id)
         if not settings:
             raise GuildCheckFailure()
