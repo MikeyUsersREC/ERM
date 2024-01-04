@@ -828,13 +828,13 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ))
 
+    @commands.guild_only()
     @commands.hybrid_group(name="server", description="This is a namespace for commands relating to the Server Management functionality", extras={
         'category': 'Configuration'
     })
     async def server(self, ctx: commands.Context):
         pass
 
-    @commands.guild_only()
     @server.command(
         name="manage",
         description="Manage your server's ERM data!",
