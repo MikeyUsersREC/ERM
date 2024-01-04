@@ -298,7 +298,7 @@ class ShiftLogging(commands.Cog):
             status,
             ctx.author.id,
             member.id,
-            type,
+            (shift_type_item or {}).get('name') or type,
             shift,
             contained_document
         )
