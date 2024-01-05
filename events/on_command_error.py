@@ -11,7 +11,6 @@ from sentry_sdk import capture_exception, push_scope
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
 
-
 class OnCommandError(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -21,94 +20,65 @@ class OnCommandError(commands.Cog):
         bot = self.bot
         error_id = error_gen()
 
-
-        if 'Invalid Webhook Token' in str(error):
+        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error):
             return
 
         if isinstance(error, httpcore.ConnectTimeout):
-            return await ctx.reply(embed=discord.Embed(
+            await ctx.reply(embed=discord.Embed(
                 title="HTTP Error",
-                description="I could not connect to the ROBLOX API. Please try again later.",
+                description="Could not connect to the ROBLOX API. Please try again later.",
                 color=BLANK_COLOR
             ))
-
-        if 'Unknown Message' in str(error):
-            return
 
         if isinstance(error, commands.BadArgument):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Invalid Argument",
-                    description="You provided an invalid argument to this command.",
-                    color=BLANK_COLOR
-                )
-            )
-
-        if 'Invalid username' in str(error):
-            return await ctx.reply(embed=discord.Embed(
-                title="Player not found",
-                description="I could not find a ROBLOX player with that corresponding username.",
+            await ctx.reply(embed=discord.Embed(
+                title="Invalid Argument",
+                description="You provided an invalid argument to this command.",
                 color=BLANK_COLOR
             ))
 
-
-        if isinstance(error, roblox.UserNotFound):
-            return await ctx.reply(embed=discord.Embed(
+        if 'Invalid username' in str(error) or isinstance(error, roblox.UserNotFound):
+            await ctx.reply(embed=discord.Embed(
                 title="Player not found",
-                description="I could not find a ROBLOX player with that corresponding username.",
+                description="Could not find a ROBLOX player with that username.",
                 color=BLANK_COLOR
             ))
 
-        if isinstance(error, discord.Forbidden):
-            if "Cannot send messages to this user" in str(error):
-                return
+        if isinstance(error, discord.Forbidden) and "Cannot send messages to this user" in str(error):
+            return
 
         if isinstance(error, commands.NoPrivateMessage):
-            embed = discord.Embed(
+            await ctx.send(embed=discord.Embed(
                 title="Direct Messages",
-                description=f"I would love to talk to you more personally, "
-                            f"but I can't do that in DMs. Please use me in a server.",
+                description="I can't talk to you in DMs. Please use me in a server.",
                 color=BLANK_COLOR
-            )
-            await ctx.send(embed=embed)
-            return
-
+            ))
 
         if isinstance(error, GuildCheckFailure):
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Not Setup",
-                    description="This command requires for the bot to be configured before this command is ran. Please use `/setup` first.",
-                    color=BLANK_COLOR
-                )
-            )
+            await ctx.send(embed=discord.Embed(
+                title="Not Setup",
+                description="This command requires the bot to be configured. Please use `/setup` first.",
+                color=BLANK_COLOR
+            ))
 
-        if isinstance(error, commands.CommandNotFound):
+        if isinstance(error, (commands.CommandNotFound, commands.CheckFailure)):
             return
-        if isinstance(error, commands.CheckFailure):
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Not Permitted",
-                    description="You are not permitted to run this command.",
-                    color=BLANK_COLOR
-                )
-            )
+
         if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(embed=discord.Embed(
+            await ctx.send(embed=discord.Embed(
                 title="Missing Argument",
                 description="You are missing a required argument to run this command.",
                 color=BLANK_COLOR
             ))
-        embed = discord.Embed(
-            color=0xED4348,
-        )
 
-        embed.add_field(
-            name="Support Server",
+        embed = discord.Embed(
+            title="Support Server",
             value="[Click here](https://discord.gg/FAC629TzBy)",
             inline=False,
+            color=0xED4348,
         )
         embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
+
         if not isinstance(
             error,
             (
