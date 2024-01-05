@@ -22,7 +22,7 @@ class OnCommandError(commands.Cog):
         error_id = error_gen()
 
 
-        if 'Invalid Webhook Token' or 'Unknown Message' in str(error):
+        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error)::
             return
 
         if isinstance(error, httpcore.ConnectTimeout):
@@ -31,6 +31,7 @@ class OnCommandError(commands.Cog):
                 description="I could not connect to the ROBLOX API. Please try again later.",
                 color=BLANK_COLOR
             ))
+
 
         if isinstance(error, commands.BadArgument):
             return await ctx.reply(
