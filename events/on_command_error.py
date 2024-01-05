@@ -22,7 +22,7 @@ class OnCommandError(commands.Cog):
         error_id = error_gen()
 
 
-        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error)::
+        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error):
             return
 
         if isinstance(error, httpcore.ConnectTimeout):
