@@ -513,6 +513,15 @@ class Configuration(commands.Cog):
             )
         ])
 
+        
+        loa_config = settings['staff_management'].get('loa_role')
+        if isinstance(ra_config, list):
+            loa_roles = [discord.utils.get(ctx.guild.roles, id=i) for i in loa_config]
+        elif isinstance(ra_config, int):
+            loa_roles = [discord.utils.get(ctx.guild.roles, id=loa_config)]
+        else:
+            loa_roles = [0]
+
         loa_configuration_view = LOAConfiguration(bot, ctx.author.id, [
             (
                 'LOA Requests',
@@ -527,9 +536,7 @@ class Configuration(commands.Cog):
             ),
             (
                 'LOA Role',
-                [
-                    discord.utils.get(ctx.guild.roles, id=role) if ( role := settings['staff_management'].get('loa_role')) else 0
-                ]
+                loa_roles
             ),
             (
                 'LOA Channel',
