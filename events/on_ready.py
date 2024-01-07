@@ -18,8 +18,13 @@ class OnReady(commands.Cog):
     async def on_shard_connect(self, sid: int):
         async def callback():
             try:
-                channel = await self.bot.fetch_channel(1057960689639116860)
-                await channel.send(f'Shard `{sid}` has connected.')
+                channel = await self.bot.fetch_channel(1193390631192641687)
+                await channel.send(
+                    embed=discord.Embed(
+                        title='Shard Connection',
+                        description=f'Shard `{sid}` has connected.',
+                    )
+                )
             except Exception as e:
                 # print(e)
                 pass
@@ -30,8 +35,13 @@ class OnReady(commands.Cog):
     async def on_shard_disconnect(self, sid: int):
         async def callback():
             try:
-                channel = await self.bot.fetch_channel(1057960689639116860)
-                await channel.send(f'Shard `{sid}` has disconnected.')
+                channel = await self.bot.fetch_channel(1193390631192641687)
+                await channel.send(
+                    embed=discord.Embed(
+                        title='Shard Disconnection',
+                        description=f'Shard `{sid}` has gracefully disconnected.',
+                    )
+                )
             except Exception as e:
                 # print(e)
                 pass
