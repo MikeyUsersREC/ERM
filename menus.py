@@ -1327,9 +1327,9 @@ class CustomCommandModification(discord.ui.View):
             title="Custom Commands",
             description=(
                 "**Command Information**\n"
-                f"<:replytop:1138257149705863209> **Command ID:** `{self.command_data['id']}`\n"
-                f"<:replymiddle:1138257195121791046> **Command Name:** {self.command_data['name']}\n"
-                f"<:replybottom:1138257250448855090> **Creator:** <@{self.command_data['author']}>\n"
+                f"> **Command ID:** `{self.command_data['id']}`\n"
+                f"> **Command Name:** {self.command_data['name']}\n"
+                f"> **Creator:** <@{self.command_data['author']}>\n"
                 f"\n**Message:**\n"
                 f"View the message below by clicking 'View Message'."
             ),
@@ -3778,12 +3778,12 @@ class ReminderCreationToolkit(discord.ui.View):
         embed = discord.Embed(
             title=f"{self.option.title()} a Reminder",
             description=(
-                f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
-                f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"
-                f"<:replymiddle:1138257195121791046> **Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
-                f"<:replymiddle:1138257195121791046> **Completion Ability:** {self.dataset.get('completion_ability') or 'Not set'}\n"
-                f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
-                f"<:replybottom:1138257250448855090> **Interval:** {td_format(datetime.timedelta(seconds=self.dataset.get('interval', 0))) or 'Not set'}"
+                f"> **Name:** {self.dataset['name']}\n"
+                f"> **ID:** {self.dataset['id']}\n"
+                f"> **Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
+                f"> **Completion Ability:** {self.dataset.get('completion_ability') or 'Not set'}\n"
+                f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
+                f"> **Interval:** {td_format(datetime.timedelta(seconds=self.dataset.get('interval', 0))) or 'Not set'}"
                 f"\n\n**Content:**\n{self.dataset['message']}"
             ),
             color=BLANK_COLOR
@@ -4371,12 +4371,12 @@ class ShiftConfiguration(AssociationConfigurationView):
             embed.add_field(
                 name=f"{item['name']}",
                 value=(
-                    f"<:replytop:1138257149705863209> **Name:** {item['name']}\n"
-                    f"<:replymiddle:1138257195121791046> **ID:** {item['id']}\n"
-                    f"<:replymiddle:1138257195121791046> **Channel:** <#{item['channel']}>\n"
-                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {item.get('nickname') or 'None'}\n"
-                    f"<:replymiddle:1138257195121791046> **Access Roles:** {','.join(['<@&{}>'.format(role) for role in item.get('access_roles') or []]) or 'None'}\n"
-                    f"<:replybottom:1138257250448855090> **On-Duty Role:** {','.join(['<@&{}>'.format(role) for role in item.get('role', [])]) or 'None'}"
+                    f"> **Name:** {item['name']}\n"
+                    f"> **ID:** {item['id']}\n"
+                    f"> **Channel:** <#{item['channel']}>\n"
+                    f"> **Nickname Prefix:** {item.get('nickname') or 'None'}\n"
+                    f"> **Access Roles:** {','.join(['<@&{}>'.format(role) for role in item.get('access_roles') or []]) or 'None'}\n"
+                    f"> **On-Duty Role:** {','.join(['<@&{}>'.format(role) for role in item.get('role', [])]) or 'None'}"
                 ),
                 inline=False
             )
@@ -4424,12 +4424,12 @@ class ShiftConfiguration(AssociationConfigurationView):
             embed = discord.Embed(
                 title="Edit a Shift Type",
                 description=(
-                    f"<:replytop:1138257149705863209> **Name:** {data['name']}\n"
-                    f"<:replymiddle:1138257195121791046> **ID:** {data['id']}\n"
-                    f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
-                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
-                    f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
-                    f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
+                    f"> **Name:** {data['name']}\n"
+                    f"> **ID:** {data['id']}\n"
+                    f"> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
+                    f"> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
+                    f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
+                    f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
                     f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
                 ),
                 color=BLANK_COLOR
@@ -4486,12 +4486,12 @@ class ShiftConfiguration(AssociationConfigurationView):
             embed = discord.Embed(
                 title="Shift Type Creation",
                 description=(
-                    f"<:replytop:1138257149705863209> **Name:** {data['name']}\n"
-                    f"<:replymiddle:1138257195121791046> **ID:** {data['id']}\n"
-                    f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
-                    f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
-                    f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
-                    f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
+                    f"> **Name:** {data['name']}\n"
+                    f"> **ID:** {data['id']}\n"
+                    f"> **Shift Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
+                    f"> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
+                    f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
+                    f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
                     f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
                 ),
                 color=BLANK_COLOR
@@ -4638,8 +4638,8 @@ class ShiftConfiguration(AssociationConfigurationView):
             embed = discord.Embed(
                 title="Role Quota Creation",
                 description=(
-                    f"<:replytop:1138257149705863209> **Role:** {'<@&{}>'.format(data['role']) if data['role'] != 0 else 'Not set'}\n"
-                    f"<:replybottom:1138257250448855090> **Quota:** {td_format(datetime.timedelta(seconds=data['quota']))}\n"
+                    f"> **Role:** {'<@&{}>'.format(data['role']) if data['role'] != 0 else 'Not set'}\n"
+                    f"> **Quota:** {td_format(datetime.timedelta(seconds=data['quota']))}\n"
                 ),
                 color=BLANK_COLOR
             )
@@ -5600,12 +5600,12 @@ class ShiftTypeCreator(discord.ui.View):
         embed = discord.Embed(
             title=f"{self.option.title()} a Shift Type",
             description=(
-                f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
-                f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"
-                f"<:replymiddle:1138257195121791046> **Shift Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
-                f"<:replymiddle:1138257195121791046> **Nickname Prefix:** {self.dataset.get('nickname') or 'Not set'}\n"
-                f"<:replymiddle:1138257195121791046> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
-                f"<:replybottom:1138257250448855090> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('access_roles', [])]) or 'Not set'}\n\n\n"
+                f"> **Name:** {self.dataset['name']}\n"
+                f"> **ID:** {self.dataset['id']}\n"
+                f"> **Shift Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
+                f"> **Nickname Prefix:** {self.dataset.get('nickname') or 'Not set'}\n"
+                f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
+                f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('access_roles', [])]) or 'Not set'}\n\n\n"
                 f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
             ),
             color=BLANK_COLOR
@@ -5754,8 +5754,8 @@ class RoleQuotaCreator(discord.ui.View):
         embed = discord.Embed(
             title="Role Quota Creation",
             description=(
-                f"<:replytop:1138257149705863209> **Role:** {'<@&{}>'.format(self.dataset['role']) if self.dataset['role'] != 0 else 'Not set'}\n"
-                f"<:replybottom:1138257250448855090> **Quota:** {td_format(datetime.timedelta(seconds=self.dataset['quota']))}\n"
+                f"> **Role:** {'<@&{}>'.format(self.dataset['role']) if self.dataset['role'] != 0 else 'Not set'}\n"
+                f"> **Quota:** {td_format(datetime.timedelta(seconds=self.dataset['quota']))}\n"
             ),
             color=BLANK_COLOR
         )
@@ -6013,9 +6013,9 @@ class ShiftMenu(discord.ui.View):
             ).add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(self.shift['Breaks'])}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(self.shift['Breaks'])}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             ),
@@ -6028,9 +6028,9 @@ class ShiftMenu(discord.ui.View):
             ).add_field(
                 name="Shift Overview",
                 value=(
-                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(self.shift['Breaks'])}\n"
-                    f"<:replybottom:1138257250448855090> **Ended:** <t:{int(contained_document.end_epoch or datetime.datetime.now(tz=pytz.UTC).timestamp())}:R>"
+                    f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(self.shift['Breaks'])}\n"
+                    f"> **Ended:** <t:{int(contained_document.end_epoch or datetime.datetime.now(tz=pytz.UTC).timestamp())}:R>"
                 ),
                 inline=False
             )
@@ -6045,10 +6045,10 @@ class ShiftMenu(discord.ui.View):
             ).add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(self.shift['Breaks'])}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(self.shift['Breaks'])}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )
@@ -6206,9 +6206,9 @@ class AdministratedShiftMenu(discord.ui.View):
             ).add_field(
                 name="Current Statistics",
                 value=(
-                    f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
-                    f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
-                    f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                    f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                    f"> **Total Shifts:** {len(previous_shifts)}\n"
+                    f"> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
                 ),
                 inline=False
             )
@@ -6228,17 +6228,17 @@ class AdministratedShiftMenu(discord.ui.View):
                 ).add_field(
                 name="Current Statistics",
                 value=(
-                    f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
-                    f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
-                    f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                    f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                    f"> **Total Shifts:** {len(previous_shifts)}\n"
+                    f"> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
                     ),
                     inline=False
                 ).add_field(
                     name="Current Shift",
                     value=(
-                        f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                        f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                        f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                        f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                        f"> **Breaks:** {len(contained_document.breaks)}\n"
+                        f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                     ),
                     inline=False
                 ),
@@ -6251,9 +6251,9 @@ class AdministratedShiftMenu(discord.ui.View):
                 ).add_field(
                     name="Shift Overview",
                     value=(
-                        f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                        f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                        f"<:replybottom:1138257250448855090> **Ended:** <t:{int(contained_document.end_epoch or datetime.datetime.now(tz=pytz.UTC).timestamp())}:R>"
+                        f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                        f"> **Breaks:** {len(contained_document.breaks)}\n"
+                        f"> **Ended:** <t:{int(contained_document.end_epoch or datetime.datetime.now(tz=pytz.UTC).timestamp())}:R>"
                     ),
                     inline=False
                 ),
@@ -6268,18 +6268,18 @@ class AdministratedShiftMenu(discord.ui.View):
             ).add_field(
                 name="Current Statistics",
                 value=(
-                    f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
-                    f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
-                    f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                    f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                    f"> **Total Shifts:** {len(previous_shifts)}\n"
+                    f"> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )
@@ -7077,9 +7077,9 @@ class PunishmentTypeCreator(discord.ui.View):
         embed = discord.Embed(
             title="Punishment Type Creation",
             description=(
-                f"<:replytop:1138257149705863209> **Name:** {self.dataset['name']}\n"
-                f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['id']}\n"
-                f"<:replybottom:1138257250448855090> **Punishment Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
+                f"> **Name:** {self.dataset['name']}\n"
+                f"> **ID:** {self.dataset['id']}\n"
+                f"> **Punishment Channel:** {'<#{}>'.format(self.dataset.get('channel', None)) if self.dataset.get('channel', None) is not None else 'Not set'}\n"
             ),
             color=BLANK_COLOR
         )
@@ -7169,10 +7169,10 @@ class PunishmentModifier(discord.ui.View):
         embed = discord.Embed(
             title="Punishment Modification",
             description=(
-                f"<:replytop:1138257149705863209> **Username:** {self.dataset['Username']}\n"
-                f"<:replymiddle:1138257195121791046> **Type:** {self.dataset['Type']}\n"
-                f"<:replymiddle:1138257195121791046> **ID:** {self.dataset['Snowflake']}\n"
-                f"<:replybottom:1138257250448855090> **Reason:** {self.dataset['Reason']}"
+                f"> **Username:** {self.dataset['Username']}\n"
+                f"> **Type:** {self.dataset['Type']}\n"
+                f"> **ID:** {self.dataset['Snowflake']}\n"
+                f"> **Reason:** {self.dataset['Reason']}"
             ),
             color=BLANK_COLOR
         )
