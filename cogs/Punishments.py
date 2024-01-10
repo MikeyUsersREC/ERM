@@ -168,13 +168,13 @@ class Punishments(commands.Cog):
                 ).add_field(
                     name="Punishment",
                     value=(
-                        f"<:replytop:1138257149705863209> **Player:** {warning.username}\n"
-                        f"<:replymiddle:1138257195121791046> **Type:** {warning.warning_type}\n"
-                        f"<:replymiddle:1138257195121791046> **Moderator:** <@{warning.moderator_id}>\n"
-                        f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                        f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                        f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"> **Player:** {warning.username}\n"
+                        f"> **Type:** {warning.warning_type}\n"
+                        f"> **Moderator:** <@{warning.moderator_id}>\n"
+                        f"> **Reason:** {warning.reason}\n"
+                        f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                        f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
+                        f"> **ID:** `{warning.snowflake}`"
                     ),
                     inline=False
                 ).set_thumbnail(
@@ -192,13 +192,13 @@ class Punishments(commands.Cog):
             ).add_field(
                 name="Punishment",
                 value=(
-                    f"<:replytop:1138257149705863209> **Player:** {warning.username}\n"
-                    f"<:replymiddle:1138257195121791046> **Type:** {warning.warning_type}\n"
-                    f"<:replymiddle:1138257195121791046> **Moderator:** <@{warning.moderator_id}>\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                    f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                    f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                    f"> **Player:** {warning.username}\n"
+                    f"> **Type:** {warning.warning_type}\n"
+                    f"> **Moderator:** <@{warning.moderator_id}>\n"
+                    f"> **Reason:** {warning.reason}\n"
+                    f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                    f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
+                    f"> **ID:** `{warning.snowflake}`"
                 ),
                 inline=False
             ).set_thumbnail(
@@ -310,9 +310,9 @@ class Punishments(commands.Cog):
                 embeds[-1].add_field(
                     name=item['name'],
                     value=(
-                        f"<:replytop:1138257149705863209> **Name:** {item['name']}\n"
-                        f"<:replymiddle:1138257195121791046> **ID:** {item.get('id', (temporary_id := next(generator)))}\n"
-                        f"<:replybottom:1138257250448855090> **Channel:** <#{item['channel']}>"
+                        f"> **Name:** {item['name']}\n"
+                        f"> **ID:** {item.get('id', (temporary_id := next(generator)))}\n"
+                        f"> **Channel:** <#{item['channel']}>"
                     ),
                     inline=False
                 )
@@ -335,9 +335,9 @@ class Punishments(commands.Cog):
                 embed = discord.Embed(
                     title="Punishment Type Creation",
                     description=(
-                        f"<:replytop:1138257149705863209> **Name:** {data['name']}\n"
-                        f"<:replymiddle:1138257195121791046> **ID:** {data['id']}\n"
-                        f"<:replymiddle:1138257195121791046> **Punishment Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
+                        f"> **Name:** {data['name']}\n"
+                        f"> **ID:** {data['id']}\n"
+                        f"> **Punishment Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
                     ),
                     color=BLANK_COLOR
                 )
@@ -491,10 +491,10 @@ class Punishments(commands.Cog):
                     name=f"{warning.username} ({warning.user_id})",
                     inline=False,
                     value=(
-                        f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
-                        f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                        f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"> **Moderator:** <@{warning.moderator_id}>\n"
+                        f"> **Reason:** {warning.reason}\n"
+                        f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                        f"> **ID:** `{warning.snowflake}`"
                     )
                 )
 
@@ -693,10 +693,10 @@ class Punishments(commands.Cog):
                     name=f"{warning.username} ({warning.user_id})",
                     inline=False,
                     value=(
-                        f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
-                        f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                        f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                        f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                        f"> **Moderator:** <@{warning.moderator_id}>\n"
+                        f"> **Reason:** {warning.reason}\n"
+                        f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                        f"> **ID:** `{warning.snowflake}`"
                     )
                 )
 
@@ -883,12 +883,12 @@ class Punishments(commands.Cog):
             ).add_field(
                 name="Punishment",
                 value=(
-                    f"<:replytop:1138257149705863209> **Player:** {warning.username}\n"
-                    f"<:replymiddle:1138257195121791046> **Moderator:** <@{warning.moderator_id}>\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                    f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                    f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                    f"> **Player:** {warning.username}\n"
+                    f"> **Moderator:** <@{warning.moderator_id}>\n"
+                    f"> **Reason:** {warning.reason}\n"
+                    f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                    f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
+                    f"> **ID:** `{warning.snowflake}`"
                 ),
                 inline=False
             ).set_thumbnail(

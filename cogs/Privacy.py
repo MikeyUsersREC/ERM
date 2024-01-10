@@ -48,9 +48,9 @@ class Privacy(commands.Cog):
         embed.add_field(
             name="Configurations",
             value=(
-                f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
             ),
             inline=False
         )
@@ -113,9 +113,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )
@@ -155,9 +155,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )
@@ -232,9 +232,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )
@@ -273,9 +273,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )
@@ -350,9 +350,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )
@@ -395,9 +395,9 @@ class Privacy(commands.Cog):
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"<:replytop:1138257149705863209> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replybottom:1138257250448855090> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
                         ),
                         inline=False
                     )

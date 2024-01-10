@@ -241,9 +241,9 @@ class ShiftLogging(commands.Cog):
         embed.add_field(
             name="Current Statistics",
             value=(
-                f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
-                f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
-                f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                f"> **Total Shifts:** {len(previous_shifts)}\n"
+                f"> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
             ),
             inline=False
         )
@@ -268,9 +268,9 @@ class ShiftLogging(commands.Cog):
             embed.add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )
@@ -281,10 +281,10 @@ class ShiftLogging(commands.Cog):
             embed.add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )
@@ -427,9 +427,9 @@ class ShiftLogging(commands.Cog):
         embed.add_field(
             name="Current Statistics",
             value=(
-                f"<:replytop:1138257149705863209> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
-                f"<:replymiddle:1138257195121791046> **Total Shifts:** {len(previous_shifts)}\n"
-                f"<:replybottom:1138257250448855090> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
+                f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n"
+                f"> **Total Shifts:** {len(previous_shifts)}\n"
+                f"> **Average Shift Duration:** {td_format(datetime.timedelta(seconds=(sum([get_elapsed_time(item) for item in previous_shifts]).__truediv__(len(previous_shifts) or 1))))}\n"
             ),
             inline=False
         )
@@ -454,9 +454,9 @@ class ShiftLogging(commands.Cog):
             embed.add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )
@@ -467,10 +467,10 @@ class ShiftLogging(commands.Cog):
             embed.add_field(
                 name="Current Shift",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
-                    f"<:replymiddle:1138257195121791046> **Breaks:** {len(contained_document.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
+                    f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
+                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"> **Breaks:** {len(contained_document.breaks)}\n"
+                    f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
                 inline=False
             )

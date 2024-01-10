@@ -139,11 +139,11 @@ class Search(commands.Cog):
         embed_list[0].add_field(
             name="Player Information",
             value=(
-                f"<:replytop:1138257149705863209> **Username:** {roblox_player.name}\n"
-                f"<:replymiddle:1138257195121791046> **Display Name:** {roblox_player.display_name}\n"
-                f"<:replymiddle:1138257195121791046> **User ID:** `{roblox_player.id}`\n"
-                f"<:replymiddle:1138257195121791046> **Friend Count:** {await roblox_player.get_friend_count()}\n"
-                f"<:replybottom:1138257250448855090> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
+                f"> **Username:** {roblox_player.name}\n"
+                f"> **Display Name:** {roblox_player.display_name}\n"
+                f"> **User ID:** `{roblox_player.id}`\n"
+                f"> **Friend Count:** {await roblox_player.get_friend_count()}\n"
+                f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
             inline=False
         )
@@ -151,12 +151,12 @@ class Search(commands.Cog):
         embed_list[0].add_field(
             name="Punishments",
             value=(
-                f"<:replytop:1138257149705863209> **Total Punishments:** {len(warnings)}\n"
-                f"<:replymiddle:1138257195121791046> **Warnings:** {len(list(filter(lambda x: x.warning_type == 'Warning', warnings)))}\n"
-                f"<:replymiddle:1138257195121791046> **Kicks:** {len(list(filter(lambda x: x.warning_type == 'Kick', warnings)))}\n"
-                f"<:replymiddle:1138257195121791046> **Bans:** {len(list(filter(lambda x: x.warning_type == 'Ban', warnings)))}\n"
-                f"<:replymiddle:1138257195121791046> **BOLOs:** {len(list(filter(lambda x: x.warning_type.upper() == 'BOLO', warnings)))}\n"
-                f"<:replybottom:1138257250448855090> **Other:** {len(list(filter(lambda x: x.warning_type.upper() not in ['WARNING', 'KICK', 'BAN', 'BOLO'], warnings)))}"
+                f"> **Total Punishments:** {len(warnings)}\n"
+                f"> **Warnings:** {len(list(filter(lambda x: x.warning_type == 'Warning', warnings)))}\n"
+                f"> **Kicks:** {len(list(filter(lambda x: x.warning_type == 'Kick', warnings)))}\n"
+                f"> **Bans:** {len(list(filter(lambda x: x.warning_type == 'Ban', warnings)))}\n"
+                f"> **BOLOs:** {len(list(filter(lambda x: x.warning_type.upper() == 'BOLO', warnings)))}\n"
+                f"> **Other:** {len(list(filter(lambda x: x.warning_type.upper() not in ['WARNING', 'KICK', 'BAN', 'BOLO'], warnings)))}"
             ),
             inline=False,
         )
@@ -176,11 +176,11 @@ class Search(commands.Cog):
                 name=f"{warning['Type']}",
                 inline=False,
                 value=(
-                    f"<:replytop:1138257149705863209> **Moderator:** <@{warning.moderator_id}>\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                    f"<:replymiddle:1138257195121791046> **At:** <t:{int(warning.time_epoch)}>\n"
-                    f'{"<:replymiddle:1138257195121791046> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
-                    f"<:replybottom:1138257250448855090> **ID:** `{warning.snowflake}`"
+                    f"> **Moderator:** <@{warning.moderator_id}>\n"
+                    f"> **Reason:** {warning.reason}\n"
+                    f"> **At:** <t:{int(warning.time_epoch)}>\n"
+                    f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
+                    f"> **ID:** `{warning.snowflake}`"
                 )
             )
 
@@ -261,11 +261,11 @@ class Search(commands.Cog):
         embed.add_field(
             name="Player Information",
             value=(
-                f"<:replytop:1138257149705863209> **Username:** {roblox_player.name}\n"
-                f"<:replymiddle:1138257195121791046> **Display Name:** {roblox_player.display_name}\n"
-                f"<:replymiddle:1138257195121791046> **User ID:** `{roblox_player.id}`\n"
-                f"<:replymiddle:1138257195121791046> **Presence:** { {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if (presence := await roblox_player.get_presence()) is not None else 'Offline'}\n"
-                f"<:replybottom:1138257250448855090> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
+                f"> **Username:** {roblox_player.name}\n"
+                f"> **Display Name:** {roblox_player.display_name}\n"
+                f"> **User ID:** `{roblox_player.id}`\n"
+                f"> **Presence:** { {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if (presence := await roblox_player.get_presence()) is not None else 'Offline'}\n"
+                f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
             inline=False
         )
@@ -273,10 +273,10 @@ class Search(commands.Cog):
         embed.add_field(
             name="Player Counts",
             value=(
-                f"<:replytop:1138257149705863209> **Friends:** {await roblox_player.get_friend_count()}\n"
-                f"<:replymiddle:1138257195121791046> **Followers:** {await roblox_player.get_follower_count()}\n"
-                f"<:replymiddle:1138257195121791046> **Following:** {await roblox_player.get_following_count()}\n"
-                f"<:replybottom:1138257250448855090> **Groups:** {len(await roblox_player.get_group_roles())}\n"
+                f"> **Friends:** {await roblox_player.get_friend_count()}\n"
+                f"> **Followers:** {await roblox_player.get_follower_count()}\n"
+                f"> **Following:** {await roblox_player.get_following_count()}\n"
+                f"> **Groups:** {len(await roblox_player.get_group_roles())}\n"
             )
         )
         

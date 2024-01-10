@@ -53,10 +53,10 @@ class Reminders(commands.Cog):
         [embed.add_field(
             name=f"{reminder['name']}",
             value=(
-                f"<:replytop:1138257149705863209> **Name:** {reminder['name']}\n"
-                f"<:replymiddle:1138257195121791046> **ID:** {reminder['id']}\n"
-                f"<:replymiddle:1138257195121791046> **Interval:** {td_format(datetime.timedelta(seconds=reminder['interval']))}\n"
-                f"<:replybottom:1138257250448855090> **Paused:** {'<:check:1163142000271429662>' if reminder.get('paused') is True else '<:xmark:1166139967920164915>'}"
+                f"> **Name:** {reminder['name']}\n"
+                f"> **ID:** {reminder['id']}\n"
+                f"> **Interval:** {td_format(datetime.timedelta(seconds=reminder['interval']))}\n"
+                f"> **Paused:** {'<:check:1163142000271429662>' if reminder.get('paused') is True else '<:xmark:1166139967920164915>'}"
             ),
             inline=False
         ) for reminder in reminder_data["reminders"]]
@@ -151,12 +151,12 @@ class Reminders(commands.Cog):
                 await msg.edit(embed=discord.Embed(
                     title="Edit a Reminder",
                     description=(
-                        f"<:replytop:1138257149705863209> **Name:** {dataset['name']}\n"
-                        f"<:replymiddle:1138257195121791046> **ID:** {dataset['id']}\n"
-                        f"<:replymiddle:1138257195121791046> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
-                        f"<:replymiddle:1138257195121791046> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
-                        f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
-                        f"<:replybottom:1138257250448855090> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
+                        f"> **Name:** {dataset['name']}\n"
+                        f"> **ID:** {dataset['id']}\n"
+                        f"> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
+                        f"> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
+                        f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
+                        f"> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),
                     color=BLANK_COLOR
@@ -213,12 +213,12 @@ class Reminders(commands.Cog):
                 await msg.edit(embed=discord.Embed(
                     title="Reminder Creation",
                     description=(
-                        f"<:replytop:1138257149705863209> **Name:** {dataset['name']}\n"
-                        f"<:replymiddle:1138257195121791046> **ID:** {dataset['id']}\n"
-                        f"<:replymiddle:1138257195121791046> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
-                        f"<:replymiddle:1138257195121791046> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
-                        f"<:replymiddle:1138257195121791046> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
-                        f"<:replybottom:1138257250448855090> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
+                        f"> **Name:** {dataset['name']}\n"
+                        f"> **ID:** {dataset['id']}\n"
+                        f"> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
+                        f"> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
+                        f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
+                        f"> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}"
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),
                     color=BLANK_COLOR
