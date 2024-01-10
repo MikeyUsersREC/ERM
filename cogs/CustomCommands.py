@@ -61,15 +61,15 @@ class CustomCommands(commands.Cog):
         for item in Data["commands"]:
             embed.add_field(
                 name=f"{item['name']}",
-                value=f"<:replytop:1138257149705863209> **Name:** {item['name']}\n"
-                      f"<:replymiddle:1138257195121791046> **Command ID:** `{item['id']}`\n"
-                      f"<:replybottom:1138257250448855090> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else 'Unknown')}",
+                value=f"> **Name:** {item['name']}\n"
+                      f"> **Command ID:** `{item['id']}`\n"
+                      f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else 'Unknown')}",
                 inline=False,
             )
         if len(embed.fields) == 0:
             embed.add_field(
                 name="No Custom Commands",
-                value=f"<:replybottom:1138257250448855090> No Custom Commands were found to be associated with this server."
+                value=f"> No Custom Commands were found to be associated with this server."
             )
 
 
@@ -101,9 +101,9 @@ class CustomCommands(commands.Cog):
                 title="Custom Commands",
                 description=(
                     "**Command Information**\n"
-                    f"<:replytop:1138257149705863209> **Command ID:** `{data['id']}`\n"
-                    f"<:replymiddle:1138257195121791046> **Command Name:** {data['name']}\n"
-                    f"<:replybottom:1138257250448855090> **Creator:** <@{data['author']}>\n"
+                    f"> **Command ID:** `{data['id']}`\n"
+                    f"> **Command Name:** {data['name']}\n"
+                    f"> **Creator:** <@{data['author']}>\n"
                     f"\n**Message:**\n"
                     f"View the message below by clicking 'View Message'."
                 ),
