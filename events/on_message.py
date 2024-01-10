@@ -135,18 +135,18 @@ class OnMessage(commands.Cog):
                                                         ).add_field(
                                                             name="Staff Information",
                                                             value=(
-                                                                f"<:replytop:1138257149705863209> **Username:** {roblox_player.name}\n"
-                                                                f"<:replymiddle:1138257195121791046> **User ID:** {roblox_player.id}\n"
-                                                                f"<:replymiddle:1138257195121791046> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
-                                                                f"<:replybottom:1138257250448855090> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
+                                                                f"> **Username:** {roblox_player.name}\n"
+                                                                f"> **User ID:** {roblox_player.id}\n"
+                                                                f"> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
+                                                                f"> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
                                                             ),
                                                             inline=False
                                                         ).add_field(
                                                             name="Abuse Information",
                                                             value=(
-                                                                f"<:replytop:1138257149705863209> **Type:** {'Mass-Kick' if 'kicked' in raw_content else 'Mass-Ban'}\n"
-                                                                f"<:replymiddle:1138257195121791046> **Individuals Affected [{command.count(',')+1}]:** {command}\n"
-                                                                f"<:replybottom:1138257250448855090> **At:** <t:{int(message.created_at.timestamp())}>"
+                                                                f"> **Type:** {'Mass-Kick' if 'kicked' in raw_content else 'Mass-Ban'}\n"
+                                                                f"> **Individuals Affected [{command.count(',')+1}]:** {command}\n"
+                                                                f"> **At:** <t:{int(message.created_at.timestamp())}>"
                                                             ),
                                                             inline=False
                                                         ).set_thumbnail(
