@@ -82,15 +82,15 @@ class OnShiftStart(commands.Cog):
             ).add_field(
                 name="Shift Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff Member:** {staff_member.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Shift Type:** {shift_type}\n"
+                    f"> **Staff Member:** {staff_member.mention}\n"
+                    f"> **Shift Type:** {shift_type}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Other Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{staff_member.nick}`\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Nickname:** `{staff_member.nick}`\n"
                 ),
                 inline=False
             ).set_author(

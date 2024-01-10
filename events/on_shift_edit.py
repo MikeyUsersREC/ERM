@@ -63,22 +63,22 @@ class OnShiftEdit(commands.Cog):
             ).add_field(
                 name="Shift Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff Member:** {staff_member.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Shift Type:** {shift_type}\n"
+                    f"> **Staff Member:** {staff_member.mention}\n"
+                    f"> **Shift Type:** {shift_type}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Other Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False
             ).add_field(
                 name="Manager Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Edited By:** {editor.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Added Time:** `{shift.added_time}`\n" if edited_attribute == "added_time" else f"<:replybottom:1138257250448855090> **Removed Time:** `{shift.removed_time}`\n"
+                    f"> **Edited By:** {editor.mention}\n"
+                    f"> **Added Time:** `{shift.added_time}`\n" if edited_attribute == "added_time" else f"> **Removed Time:** `{shift.removed_time}`\n"
                 ),
                 inline=False
             ).set_author(

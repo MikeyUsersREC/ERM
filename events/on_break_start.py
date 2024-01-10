@@ -83,17 +83,17 @@ class OnBreakStart(commands.Cog):
             ).add_field(
                 name="Shift Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff Member:** {staff_member.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Shift Type:** {shift_type}\n"
+                    f"> **Staff Member:** {staff_member.mention}\n"
+                    f"> **Shift Type:** {shift_type}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Other Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replymiddle:1138257195121791046> **Started Break At:** <t:{int(shift.breaks[0].start_epoch)}>\n"
-                    f"<:replymiddle:1138257195121791046> **Total Breaks:** {len(shift.breaks)}\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Started Break At:** <t:{int(shift.breaks[0].start_epoch)}>\n"
+                    f"> **Total Breaks:** {len(shift.breaks)}\n"
+                    f"> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False
             ).set_author(
