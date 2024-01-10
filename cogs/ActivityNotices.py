@@ -83,10 +83,10 @@ class ActivityCoreCommands:
         embed.add_field(
             name="Staff Information",
             value=(
-                f"<:replytop:1138257149705863209> **Staff Member:** {author.mention}\n"
-                f"<:replymiddle:1138257195121791046> **Top Role:** {author.top_role.name}\n"
-                f"<:replymiddle:1138257195121791046> **Past {request_type}s:** {len(past_author_notices)}\n"
-                f"<:replybottom:1138257250448855090> **Shift Time:** {td_format(datetime.timedelta(seconds=total_seconds))}"
+                f"> **Staff Member:** {author.mention}\n"
+                f"> **Top Role:** {author.top_role.name}\n"
+                f"> **Past {request_type}s:** {len(past_author_notices)}\n"
+                f"> **Shift Time:** {td_format(datetime.timedelta(seconds=total_seconds))}"
             ),
             inline=False
         )
@@ -94,10 +94,10 @@ class ActivityCoreCommands:
         embed.add_field(
             name="Request Information",
             value=(
-                f"<:replytop:1138257149705863209> **Type:** {request_type}\n"
-                f"<:replymiddle:1138257195121791046> **Reason:** {schema['reason']}\n"
-                f"<:replymiddle:1138257195121791046> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
-                f"<:replybottom:1138257250448855090> **Ends At:** <t:{schema['expiry']}>"
+                f"> **Type:** {request_type}\n"
+                f"> **Reason:** {schema['reason']}\n"
+                f"> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
+                f"> **Ends At:** <t:{schema['expiry']}>"
             )
         )
 
@@ -182,9 +182,9 @@ class ActivityCoreCommands:
         embed.add_field(
             name="Staff Information",
             value=(
-                f"<:replytop:1138257149705863209> **Staff Member:** {victim.mention}\n"
-                f"<:replymiddle:1138257195121791046> **Top Role:** {victim.top_role.name}\n"
-                f"<:replybottom:1138257250448855090> **Past {request_type_object.upper()}s:** {len(past_victim_notices)}\n"
+                f"> **Staff Member:** {victim.mention}\n"
+                f"> **Top Role:** {victim.top_role.name}\n"
+                f"> **Past {request_type_object.upper()}s:** {len(past_victim_notices)}\n"
             ),
             inline=False
         )
@@ -193,10 +193,10 @@ class ActivityCoreCommands:
             embed.add_field(
                 name=f"Current {request_type_object.upper()} Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Type:** {request_type_object.upper()}\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {current_notice['reason']}\n"
-                    f"<:replymiddle:1138257195121791046> **Starts At:** <t:{current_notice.get('started_at', int(current_notice['_id'].split('_')[2]))}>\n"
-                    f"<:replybottom:1138257250448855090> **Ends At:** <t:{current_notice['expiry']}>"
+                    f"> **Type:** {request_type_object.upper()}\n"
+                    f"> **Reason:** {current_notice['reason']}\n"
+                    f"> **Starts At:** <t:{current_notice.get('started_at', int(current_notice['_id'].split('_')[2]))}>\n"
+                    f"> **Ends At:** <t:{current_notice['expiry']}>"
                 ),
                 inline=False
             )
@@ -297,10 +297,10 @@ class ActivityCoreCommands:
                 embeds[-1].add_field(
                     name=f"{item['type']}",
                     value=(
-                        f"<:replytop:1138257149705863209> **Staff:** <@{item['user_id']}>\n"
-                        f"<:replymiddle:1138257195121791046> **Reason:** {item['reason']}\n"
-                        f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
-                        f"<:replybottom:1138257250448855090> **Ended At:** <t:{int(item['expiry'])}>"
+                        f"> **Staff:** <@{item['user_id']}>\n"
+                        f"> **Reason:** {item['reason']}\n"
+                        f"> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
+                        f"> **Ended At:** <t:{int(item['expiry'])}>"
                     ),
                     inline=False
                 )
@@ -511,10 +511,10 @@ class ActivityCoreCommands:
             embeds[-1].add_field(
                 name=f"{item['type']}",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff:** <@{item['user_id']}>\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {item['reason']}\n"
-                    f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
-                    f"<:replybottom:1138257250448855090> **Ended At:** <t:{int(item['expiry'])}>"
+                    f"> **Staff:** <@{item['user_id']}>\n"
+                    f"> **Reason:** {item['reason']}\n"
+                    f"> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
+                    f"> **Ended At:** <t:{int(item['expiry'])}>"
                 ),
                 inline=False
             )
