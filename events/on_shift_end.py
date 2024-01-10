@@ -84,17 +84,17 @@ class OnShiftEnd(commands.Cog):
             ).add_field(
                 name="Shift Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff Member:** {staff_member.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Shift Type:** {shift_type}\n"
+                    f"> **Staff Member:** {staff_member.mention}\n"
+                    f"> **Shift Type:** {shift_type}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Other Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replymiddle:1138257195121791046> **Shift End:** <t:{int(shift.end_epoch)}>\n"
-                    f"<:replymiddle:1138257195121791046> **Shift Length:** {td_format(datetime.timedelta(seconds=shift.end_epoch - shift.start_epoch - (sum((br.end_epoch) - (br.start_epoch) for br in shift.breaks)) + (shift.added_time if shift.added_time > (86400 * 7) else 0) - (shift.removed_time if shift.removed_time > (86400 * 7) else 0)))}\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Shift End:** <t:{int(shift.end_epoch)}>\n"
+                    f"> **Shift Length:** {td_format(datetime.timedelta(seconds=shift.end_epoch - shift.start_epoch - (sum((br.end_epoch) - (br.start_epoch) for br in shift.breaks)) + (shift.added_time if shift.added_time > (86400 * 7) else 0) - (shift.removed_time if shift.removed_time > (86400 * 7) else 0)))}\n"
+                    f"> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False
             ).set_author(
