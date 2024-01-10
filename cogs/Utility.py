@@ -123,7 +123,7 @@ class Utility(commands.Cog):
         # using an embed
         # [**Support Server**](https://discord.gg/5pMmJEYazQ)
         embed = discord.Embed(
-            title="<:ERMWhite:1044004989997166682> About ERM",
+            title="About ERM",
             color=BLANK_COLOR,
             description="ERM is the all-in-one approach to game moderation logging, shift logging and more."
         )
