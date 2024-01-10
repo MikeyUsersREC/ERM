@@ -26,7 +26,7 @@ class OnReady(commands.Cog):
                     )
                 )
             except Exception as e:
-                # print(e)
+                print(e)
                 pass
         # # print('Shard connection')
         await callback()
