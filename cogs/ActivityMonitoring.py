@@ -176,11 +176,11 @@ class ActivityMonitoring(commands.Cog):
                     embeds[-1].add_field(
                         name=f"{item['type']}",
                         value=(
-                            f"<:replytop:1138257149705863209> **Staff:** <@{item['user_id']}>\n"
-                            f"<:replymiddle:1138257195121791046> **Reason:** {item['reason']}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Time:** {td_format(datetime.timedelta(seconds=find_shift_staff[0]))} {'<:check:1163142000271429662>' if seconds > find_shift_staff[1] else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item['start_epoch'])}>\n"
-                            f"<:replybottom:1138257250448855090> **Ended At:** <t:{int(item['expiry'])}>"
+                            f"> **Staff:** <@{item['user_id']}>\n"
+                            f"> **Reason:** {item['reason']}\n"
+                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=find_shift_staff[0]))} {'<:check:1163142000271429662>' if seconds > find_shift_staff[1] else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Started At:** <t:{int(item['start_epoch'])}>\n"
+                            f"> **Ended At:** <t:{int(item['expiry'])}>"
                         ),
                         inline=False
                     )
@@ -188,11 +188,11 @@ class ActivityMonitoring(commands.Cog):
                     embeds[-1].add_field(
                         name=f"{item['type']}",
                         value=(
-                            f"<:replytop:1138257149705863209> **Staff:** <@{item['user_id']}>\n"
-                            f"<:replymiddle:1138257195121791046> **Reason:** {item['reason']}\n"
-                            f"<:replymiddle:1138257195121791046> **Shift Time:** {td_format(datetime.timedelta(seconds=0))} {'<:check:1163142000271429662>' if seconds > 0 else '<:xmark:1166139967920164915>'}\n"
-                            f"<:replymiddle:1138257195121791046> **Started At:** <t:{int(item['start_epoch'])}>\n"
-                            f"<:replybottom:1138257250448855090> **Ended At:** <t:{int(item['expiry'])}>"
+                            f"> **Staff:** <@{item['user_id']}>\n"
+                            f"> **Reason:** {item['reason']}\n"
+                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=0))} {'<:check:1163142000271429662>' if seconds > 0 else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Started At:** <t:{int(item['start_epoch'])}>\n"
+                            f"> **Ended At:** <t:{int(item['expiry'])}>"
                         ),
                         inline=False
                     )
