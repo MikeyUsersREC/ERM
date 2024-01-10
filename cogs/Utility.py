@@ -52,7 +52,7 @@ class Utility(commands.Cog):
     async def ping(self, ctx):
         latency = round(self.bot.latency * 1000)
         embed = discord.Embed(
-            title="<:search:1164662425820348536> Bot Status",
+            title="Bot Status",
             color=BLANK_COLOR,
         )
 
@@ -79,10 +79,10 @@ class Utility(commands.Cog):
         embed.add_field(
             name="Information",
             value=(
-                f"<:replytop:1138257149705863209> **Latency:** `{latency}ms`\n"
-                f"<:replymiddle:1138257195121791046> **Uptime:** <t:{int(self.bot.start_time)}:R>\n"
-                f"<:replymiddle:1138257195121791046> **Database Connection:** {status}\n"
-                f"<:replybottom:1138257250448855090> **Shards:** `{self.bot.shard_count-1}`\n"
+                f"> **Latency:** `{latency}ms`\n"
+                f"> **Uptime:** <t:{int(self.bot.start_time)}:R>\n"
+                f"> **Database Connection:** {status}\n"
+                f"> **Shards:** `{self.bot.shard_count-1}`\n"
             ),
             inline=False,
         )
@@ -131,10 +131,10 @@ class Utility(commands.Cog):
         embed.add_field(
             name=f"Bot Information",
             value=(
-                "<:replytop:1138257149705863209> **Website:** [View Website](https://ermbot.xyz)\n"
-                "<:replymiddle:1138257195121791046> **Support:** [Join Server](https://discord.gg/FAC629TzBy)\n"
-                f"<:replymiddle:1138257195121791046> **Invite:** [Invite Bot](https://discord.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot%20applications.commands)\n"
-                "<:replybottom:1138257250448855090> **Documentation:** [View Documentation](https://docs.ermbot.xyz)"
+                "> **Website:** [View Website](https://ermbot.xyz)\n"
+                "> **Support:** [Join Server](https://discord.gg/FAC629TzBy)\n"
+                f"> **Invite:** [Invite Bot](https://discord.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot%20applications.commands)\n"
+                "> **Documentation:** [View Documentation](https://docs.ermbot.xyz)"
             ),
             inline=False,
         )
