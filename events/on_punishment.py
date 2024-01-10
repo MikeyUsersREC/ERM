@@ -71,19 +71,19 @@ class OnPunishment(commands.Cog):
             ).add_field(
                 name="Moderator Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Moderator:** {moderator.mention}\n"
-                    f"<:replymiddle:1138257195121791046> **Warning ID:** `{warning.snowflake}`\n"
-                    f"<:replymiddle:1138257195121791046> **Reason:** {warning.reason}\n"
-                    f"<:replybottom:1138257250448855090> **Moderated At:** <t:{int(warning.time_epoch)}>\n"
+                    f"> **Moderator:** {moderator.mention}\n"
+                    f"> **Warning ID:** `{warning.snowflake}`\n"
+                    f"> **Reason:** {warning.reason}\n"
+                    f"> **Moderated At:** <t:{int(warning.time_epoch)}>\n"
                 ),
                 inline=False
             ).add_field(
                 name="Violator Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Username:** {warning.username}\n"
-                    f"<:replymiddle:1138257195121791046> **User ID:** `{warning.user_id}`\n"
-                    f"{'<:replymiddle:1138257195121791046>' if warning.until_epoch not in [None, 0] else '<:replybottom:1138257250448855090>'} **Punishment Type:** {warning.warning_type}\n"
-                    f"{'<:replybottom:1138257250448855090> **Until:** <t:{}>'.format(int(warning.until_epoch)) if warning.until_epoch not in [None, 0] else ''}"
+                    f"> **Username:** {warning.username}\n"
+                    f"> **User ID:** `{warning.user_id}`\n"
+                    f"{'>' if warning.until_epoch not in [None, 0] else '>'} **Punishment Type:** {warning.warning_type}\n"
+                    f"{'> **Until:** <t:{}>'.format(int(warning.until_epoch)) if warning.until_epoch not in [None, 0] else ''}"
                 ),
                 inline=False
             ).set_author(
