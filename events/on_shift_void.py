@@ -85,24 +85,24 @@ class OnShiftVoid(commands.Cog):
             ).add_field(
                 name="Shift Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Staff Member:** {staff_member.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Shift Type:** {shift_type}\n"
+                    f"> **Staff Member:** {staff_member.mention}\n"
+                    f"> **Shift Type:** {shift_type}\n"
                 ),
                 inline=False
             ).add_field(
                 name="Other Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
-                    f"<:replymiddle:1138257195121791046> **Shift End:** <t:{int(shift.end_epoch or datetime.datetime.now(pytz.UTC).timestamp())}>\n"
-                    f"<:replymiddle:1138257195121791046> **Shift Length:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}\n"
-                    f"<:replybottom:1138257250448855090> **Nickname:** `{shift.nickname}`\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Shift End:** <t:{int(shift.end_epoch or datetime.datetime.now(pytz.UTC).timestamp())}>\n"
+                    f"> **Shift Length:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}\n"
+                    f"> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False
             ).add_field(
                 name="Manager Information",
                 value=(
-                    f"<:replytop:1138257149705863209> **Voided by:** {voider.mention}\n"
-                    f"<:replybottom:1138257250448855090> **Voided at:** <t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>"
+                    f"> **Voided by:** {voider.mention}\n"
+                    f"> **Voided at:** <t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>"
                 ),
                 inline=False
             ).set_author(
