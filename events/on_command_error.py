@@ -91,6 +91,12 @@ class OnCommandError(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
+        if isinstance(error, OverflowError):
+            return await ctx.reply(embed=discord.Embed(
+                title="Overflow Error",
+                description="A user has inputted an arbitrary time amount of time into ERM and we were unable to display the requested data because of this. Please find the source of this, and remove the excess amount of time.",
+                color=BLANK_COLOR
+            ))
         if isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send(embed=discord.Embed(
                 title="Missing Argument",
