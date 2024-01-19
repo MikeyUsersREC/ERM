@@ -812,7 +812,7 @@ class ShiftLogging(commands.Cog):
                 {"$sort": {"total_seconds": -1}}
             ]
 
-            cursor = _bot.shift_management.shifts.db.aggregate(pipeline, allowDiskUse=True, batchSize=batch_size)
+            cursor = bot.shift_management.shifts.db.aggregate(pipeline, allowDiskUse=True, batchSize=batch_size)
 
             leaderboard = []
 
