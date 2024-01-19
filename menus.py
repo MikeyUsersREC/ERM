@@ -6312,6 +6312,12 @@ class AdministratedShiftMenu(discord.ui.View):
 
         chosen_operation = operations[op]
         if self.contained_document is not None:
+            check_for_update = await bot.shift_management.shifts.find_by_id(ObjectId(self.shift['_id']))
+            if check_for_update != self.shift:
+                self.shift = check_for_update
+                self.contained_document = await bot.shift_management.fetch_shift(self.shift['_id'])
+
+        if self.contained_document is not None:
             if self.contained_document.end_epoch == 0:
                 await chosen_operation(self.contained_document.id, amount)
                 new_contained_document = await self.bot.shift_management.fetch_shift(self.contained_document.id)
@@ -6329,6 +6335,8 @@ class AdministratedShiftMenu(discord.ui.View):
         )
         await chosen_operation(oid, amount)
         await self.bot.shift_management.end_shift(oid, guild.id)
+        self.contained_document = None
+        self.shift = None
 
     @discord.ui.button(label="On-Duty", style=discord.ButtonStyle.green)
     async def on_duty_button(self, interaction: discord.Interaction, _: discord.Button):

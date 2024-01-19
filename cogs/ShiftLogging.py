@@ -791,7 +791,7 @@ class ShiftLogging(commands.Cog):
                 else:
                     return
 
-        all_staff = [{"id": None, "total_seconds": 0}]
+        all_staff = []
 
         async def load_leaderboard(shift_type=None, batch_size=25):
             pipeline = [
@@ -874,7 +874,7 @@ class ShiftLogging(commands.Cog):
 
         for index, i in enumerate(sorted_staff):
             try:
-                member = await ctx.guild.fetch_member(i["id"])
+                member = await ctx.guild.fetch_member(i["user_id"])
             except discord.NotFound:
                 member = None
             # print(index)
