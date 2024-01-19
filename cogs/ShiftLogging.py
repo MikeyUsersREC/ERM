@@ -823,11 +823,18 @@ class ShiftLogging(commands.Cog):
                     traceback.print_exc()
 
             if not leaderboard:
-                await _ctx.send(embed=discord.Embed(
-                    title="No Data",
-                    description="There is no data in this leaderboard.",
-                    color=BLANK_COLOR
-                ))
+                if msg is not None:
+                    await msg.edit(embed=discord.Embed(
+                        title="No Data",
+                        description="There is no data in this leaderboard.",
+                        color=BLANK_COLOR
+                    ), view=None)
+                else:
+                    await ctx.send(embed=discord.Embed(
+                        title="No Data",
+                        description="There is no data in this leaderboard.",
+                        color=BLANK_COLOR
+                    ))
                 return None
             else:
                 return leaderboard
@@ -847,8 +854,8 @@ class ShiftLogging(commands.Cog):
 
 
         for index, item in enumerate(all_staff):
-            if item.get('moderations') == 0:
-                item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['id'], "Guild": ctx.guild.id, "Epoch": {"$gt": item['lowest_time']}})
+            if item.get('moderations') in [None, 0]:
+                item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['user_id'], "Guild": ctx.guild.id, "Epoch": {"$gt": item['lowest_time']}})
                 all_staff[index] = item
         
         
