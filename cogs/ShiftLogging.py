@@ -927,11 +927,11 @@ class ShiftLogging(commands.Cog):
                     if embeds[-1].description is None:
                         embeds[
                             -1
-                        ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                        ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds'] if i['total_seconds'] > 0 else 0))}\n"
                     else:
                         embeds[
                             -1
-                        ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                        ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds'] if i['total_seconds'] > 0 else 0))}\n"
 
                 else:
                     # print("fields more than 24")
@@ -944,7 +944,7 @@ class ShiftLogging(commands.Cog):
                         icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
                     )
                     new_embed.description = ""
-                    new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                    new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds'] if i['total_seconds'] > 0 else 0))}\n"
                     embeds.append(new_embed)
 
         staff_roles = []
