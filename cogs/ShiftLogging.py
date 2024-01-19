@@ -794,7 +794,7 @@ class ShiftLogging(commands.Cog):
         all_staff = []
 
         async def load_leaderboard(shift_type=None, batch_size=25):
-            pipeline = list(filter(lambda x: x is not None, [
+            pipeline = list(filter(lambda x: x not in [{}, None], [
                 {"$match": {"Guild": 987798554972143728}},
                 {"$match": {"Type": shift_type}} if shift_type is not None else None,
                 {"$group": {
