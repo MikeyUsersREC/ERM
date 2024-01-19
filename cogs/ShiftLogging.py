@@ -839,7 +839,7 @@ class ShiftLogging(commands.Cog):
             else:
                 return leaderboard
 
-        all_staff = await load_leaderboard(shift_type=shift_type['name'] if shift_type is not None else None)
+        all_staff = await load_leaderboard(shift_type=shift_type['name'] if shift_type not in [0, None] else None)
         if all_staff is None:
             return
 
