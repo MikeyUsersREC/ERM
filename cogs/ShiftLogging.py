@@ -978,7 +978,7 @@ class ShiftLogging(commands.Cog):
         for role in staff_roles:
             if role.members:
                 for member in role.members:
-                    if member.id not in [item["id"] for item in sorted_staff]:
+                    if member.id not in [item["user_id"] for item in sorted_staff]:
                         if member not in added_staff:
                             index = index + 1
 
@@ -1047,7 +1047,7 @@ class ShiftLogging(commands.Cog):
             )
         )
         for member in perm_staff:
-            if member.id not in [item["id"] for item in sorted_staff]:
+            if member.id not in [item["user_id"] for item in sorted_staff]:
                 if member not in added_staff:
                     index = index + 1
 
