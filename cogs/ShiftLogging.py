@@ -794,9 +794,9 @@ class ShiftLogging(commands.Cog):
         all_staff = []
 
         async def load_leaderboard(shift_type=None, batch_size=25):
-            pipeline = [
+            pipeline = list(filter(lambda x: x is not None, [
                 {"$match": {"Guild": 987798554972143728}},
-                {"$match": {"Type": shift_type}} if shift_type is not None else {},
+                {"$match": {"Type": shift_type}} if shift_type is not None else None,
                 {"$group": {
                     "_id": "$UserID",
                     "total_seconds": {"$sum": {"$subtract": ["$EndEpoch", "$StartEpoch"]}},
@@ -810,7 +810,7 @@ class ShiftLogging(commands.Cog):
                     "user_id": 1
                 }},
                 {"$sort": {"total_seconds": -1}}
-            ]
+            ]))
 
             cursor = bot.shift_management.shifts.db.aggregate(pipeline, allowDiskUse=True, batchSize=batch_size)
 
