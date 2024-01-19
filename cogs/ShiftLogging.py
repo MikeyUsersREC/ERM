@@ -854,7 +854,7 @@ class ShiftLogging(commands.Cog):
 
 
         for index, item in enumerate(all_staff):
-            if item.get('moderations') in [None, 0]:
+            if item.get('moderations') in set([None, 0]):
                 item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['user_id'], "Guild": ctx.guild.id, "Epoch": {"$gt": item['lowest_time']}})
                 all_staff[index] = item
         
