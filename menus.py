@@ -5988,7 +5988,25 @@ class ShiftMenu(discord.ui.View):
                 item.disabled = False
 
     async def interaction_check(self, interaction: Interaction, /) -> bool:
+
         if interaction.user.id == self.user_id:
+            # Refresh current data to ensure state has not changed
+            current_shift = await self.bot.shift_management.get_current_shift(interaction.user, interaction.guild.id)
+            self.shift = current_shift
+            if self.shift:
+                self.contained_document = await self.bot.shift_management.fetch_shift(self.shift['_id'])
+            else:
+                self.contained_document = None
+            if self.contained_document:
+                if self.contained_document.breaks:
+                    if self.contained_document.breaks[-1].end_epoch == 0:
+                        self.state = 'break'
+                    else:
+                        self.state = 'on'
+                else:
+                    self.state = 'on'
+            else:
+                self.state = 'off'
             return True
         else:
             await interaction.response.send_message(embed=discord.Embed(
@@ -6076,6 +6094,7 @@ class ShiftMenu(discord.ui.View):
             self.shift["Breaks"][-1]['EndEpoch'] = datetime.datetime.now(tz=pytz.UTC).timestamp()
             self.shift['_id'] = self.contained_document.id
             await self.bot.shift_management.shifts.update_by_id(self.shift)
+            await asyncio.sleep(1)
             self.contained_document = await self.bot.shift_management.fetch_shift(self.contained_document.id)
             await self.cycle_ui('on', interaction.message)
             self.bot.dispatch('break_end', self.contained_document.id)
