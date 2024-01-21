@@ -6119,6 +6119,9 @@ class ShiftMenu(discord.ui.View):
                 color=blank_color
             ), ephemeral=True)
 
+        if self.state == 'on' or self.state == 'break':
+            return await self.cycle_ui(self.state, interaction.message)
+
 
         object_id = await self.bot.shift_management.add_shift_by_user(
             interaction.user,
