@@ -157,19 +157,29 @@ class SelectPagination(discord.ui.View):
             ), ephemeral=True)
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        msg = await interaction.followup.send(
-            embed=discord.Embed(
-                title='<:log:1163524830319104171> Change Pages',
-                description="What page would you like to change to?",
-                color=blank_color
-            ),
-            view=(view := CustomSelectMenu(self.user_id, [
-                discord.SelectOption(
-                    label=page.identifier,
-                    value=str(index)
-                ) for index, page in enumerate(self.pages)
-            ]))
-        )
+        try:
+            msg = await ctx.send(
+                embed=discord.Embed(
+                    title='<:log:1163524830319104171> Change Pages',
+                    description="What page would you like to change to?",
+                    color=blank_color
+                ),
+                view=(view := CustomSelectMenu(ctx.author.id, [
+                    discord.SelectOption(
+                        label=page.identifier,
+                        value=str(index)
+                    ) for index, page in enumerate(self.pages)
+                ]))
+            )
+        except discord.HTTPException:
+            await ctx.send(
+                embed=discord.Embed(
+                    title='Unable to apply paginator',
+                    description="We were unable to apply the paginator to this message; this is most likely because your leaderboard is too big.",
+                    color=blank_color
+                )
+            )
+                
 
         await view.wait()
         index = int(view.value or '1000')
