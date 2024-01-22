@@ -155,8 +155,7 @@ class SelectPagination(discord.ui.View):
                 description="You are not permitted to interact with these buttons.",
                 color=blank_color
             ), ephemeral=True)
-        await interaction.response.defer(ephemeral=True, thinking=True)
-
+    
         try:
             msg = await interaction.response.send_message(
                 embed=discord.Embed(
