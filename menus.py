@@ -6334,7 +6334,7 @@ class AdministratedShiftMenu(discord.ui.View):
 
         chosen_operation = operations[op]
         if self.contained_document is not None:
-            check_for_update = await bot.shift_management.shifts.find_by_id(ObjectId(self.shift['_id']))
+            check_for_update = await self.bot.shift_management.shifts.find_by_id(ObjectId(self.shift['_id']))
             if check_for_update != self.shift:
                 self.shift = check_for_update
                 self.contained_document = await bot.shift_management.fetch_shift(self.shift['_id'])
