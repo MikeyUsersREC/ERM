@@ -102,25 +102,25 @@ class Punishments(commands.Cog):
             ))
 
 
-        agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
-        punishment = await agent.recommended_punishment(reason, None)
-        msg = None
-        consent_item = await self.bot.consent.find(ctx.author.id) or {}
-        ai_predictions = consent_item.get('ai_predictions', True)
-        if type.lower() in ["warning", "kick", "ban", "bolo"]:
-            if punishment.prediction.lower() !=  type.lower():
-                if ai_predictions:
-                    msg = await ctx.send(
-                        embed=discord.Embed(
-                            title="Recommended Punishment",
-                            description="ERM AI thinks that the punishment associated with this reason is not preferable. It suggests that you should **{}** for this punishment, rather than {}. Do you want to change the punishment type?".format(punishment.prediction, type),
-                            color=BLANK_COLOR
-                        ),
-                        view=(view := YesNoMenu(ctx.author.id))
-                    )
-                    await view.wait()
-                    if view.value is True:
-                        type = punishment.prediction
+        # agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
+        # punishment = await agent.recommended_punishment(reason, None)
+        # msg = None
+        # consent_item = await self.bot.consent.find(ctx.author.id) or {}
+        # ai_predictions = consent_item.get('ai_predictions', True)
+        # if type.lower() in ["warning", "kick", "ban", "bolo"]:
+            # if punishment.prediction.lower() !=  type.lower():
+                # if ai_predictions:
+                   # msg = await ctx.send(
+                       # embed=discord.Embed(
+                           # title="Recommended Punishment",
+                           # description="ERM AI thinks that the punishment associated with this reason is not preferable. It suggests that you should **{}** for this punishment, rather than {}. Do you want to change the punishment type?".format(punishment.prediction, type),
+                           # color=BLANK_COLOR
+                        # ),
+                        # view=(view := YesNoMenu(ctx.author.id))
+                    # )
+                    # await view.wait()
+                    # if view.value is True:
+                        # type = punishment.prediction
 
         for item in actual_types:
             safe_item = item.lower().split()
