@@ -104,7 +104,7 @@ class Punishments(commands.Cog):
 
         # agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
         # punishment = await agent.recommended_punishment(reason, None)
-        # msg = None
+        msg = None
         # consent_item = await self.bot.consent.find(ctx.author.id) or {}
         # ai_predictions = consent_item.get('ai_predictions', True)
         # if type.lower() in ["warning", "kick", "ban", "bolo"]:
