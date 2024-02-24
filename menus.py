@@ -1338,6 +1338,37 @@ class CustomCommandModification(discord.ui.View):
         await message.edit(embed=embed)
 
     @discord.ui.button(
+        label="View Variables",
+        row=0
+    )
+    async def view_variables(self, interaction: discord.Interaction, button: discord.ui.Button):
+        return await interaction.response.send_message(
+            embed=discord.Embed(
+                description=(
+                    "With **ERM Custom Commands**, you can use custom variables to adapt to the current circumstances when the command is ran.\n"
+                    "`{user}` - Mention of the person using the command.\n"
+                    "`{username}` - Name of the person using the command.\n"
+                    "`{display_name}` - Display name of the person using the command.\n"
+                    "`{time}` - Timestamp format of the time of the command execution.\n"
+                    "`{server}` - Name of the server this is being ran in.\n"
+                    "`{channel}` - Mention of the channel the command is being ran in.\n"
+                    "`{prefix}` - The custom prefix of the bot.\n"
+                    "\n**PRC Specific Variables**\n"
+                    "`{join_code}` - Join Code of the ERLC server\n"
+                    "`{players}` - Current players in the ERLC server\n"
+                    "`{max_players}` - Maximum players of the ERLC server\n"
+                    "`{queue}` - Number of players in the queue\n"
+                    "`{staff}` - Number of staff members in-game\n"
+                    "`{mods}` - Number of mods in-game\n"
+                    "`{admins}` - Number of admins in-game\n"
+                ),
+                color=BLANK_COLOR
+            ),
+            ephemeral=True
+        )
+
+
+    @discord.ui.button(
         label="Edit Name",
         row=0
     )
@@ -3742,6 +3773,91 @@ class AssociationConfigurationView(discord.ui.View):
             ), ephemeral=True)
             return False
 
+class ERLCIntegrationToolkit(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=900)
+        self.selected_option = None
+        self.user_id = user_id
+        self.content = None
+        self.message = None
+
+    @discord.ui.button(
+        label="Message",
+        style=discord.ButtonStyle.secondary
+    )
+    async def message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(
+            modal := CustomModal(
+                "Edit Message Content",
+                [
+                    (
+                        "msg_content",
+                        discord.ui.TextInput(
+                            label="Message Content",
+                            max_length=250,
+                            required=True
+                        )
+                    )
+                ], {
+                    'ephemeral': True
+                }
+            )
+        )
+        timeout = await modal.wait()
+        if timeout: 
+            return
+        
+        self.content = modal.msg_content.value
+        self.selected_option = 'Message'
+        await self.message.edit(
+            embed=discord.Embed(
+                title="<:success:1163149118366040106> Success!",
+                description="Message integration has successfully been setup.",
+                color=GREEN_COLOR
+            ),
+            view=None
+        )
+        self.stop()
+
+    @discord.ui.button(
+        label="Hint",
+        style=discord.ButtonStyle.secondary
+    )
+    async def hint(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(
+            modal := CustomModal(
+                "Edit Hint Content",
+                [
+                    (
+                        "hint_content",
+                        discord.ui.TextInput(
+                            label="Hint Content",
+                            max_length=250,
+                            required=True
+                        )
+                    )
+                ], {
+                    'thinking': False
+                }
+            )
+        )
+        timeout = await modal.wait()
+        if timeout: 
+            return
+        
+        self.content = modal.hint_content.value
+        self.selected_option = 'Hint'
+
+        await self.message.edit(
+            embed=discord.Embed(
+                title="<:success:1163149118366040106> Success!",
+                description="Hint integration has successfully been setup.",
+                color=GREEN_COLOR
+            ),
+            view=None
+        )
+        self.stop()
+
 
 class ReminderCreationToolkit(discord.ui.View):
     def __init__(self, user_id: int, dataset: dict, option: typing.Literal["create", "edit"], preset_values: dict | None = None):
@@ -3860,6 +3976,34 @@ class ReminderCreationToolkit(discord.ui.View):
             )
 
         self.dataset['interval'] = new_time
+        await self.refresh_ui(interaction.message)
+
+    @discord.ui.button(
+        label="Edit ER:LC Integration",
+        style=discord.ButtonStyle.secondary,
+        row=2
+    )
+    async def edit_integration(self, interaction: discord.Interaction, button: discord.Button):
+        msg = await interaction.response.send_message(
+            embed=discord.Embed(
+                title="Edit ER:LC Integration",
+                description="Here you can edit your reminder's integrations with Emergency Response: Liberty County, such as sending an automatic message or hint on a reminder activation. **As of right now, you can only have one integration type per reminder.**",
+                color=BLANK_COLOR
+            ),
+            ephemeral=True,
+            view=(view := ERLCIntegrationToolkit(interaction.user.id))
+        )
+        view.message = await interaction.original_response()
+        timeout = await view.wait()
+        if timeout:
+            return
+        selected_integration = view.selected_option
+        content = view.content
+        
+        self.dataset['integration'] = {
+            'type': selected_integration,
+            'content': view.content
+        }
         await self.refresh_ui(interaction.message)
 
     @discord.ui.button(
@@ -5529,7 +5673,7 @@ class CompleteReminder(discord.ui.View):
 
 class ReloadView(discord.ui.View):
     def __init__(self, user_id: int, custom_callback: typing.Callable, args: list):
-        super().__init__(timeout=2100)
+        super().__init__(timeout=900)
         self.user_id = user_id
         self.custom_callback = custom_callback
         self.callback_args = args

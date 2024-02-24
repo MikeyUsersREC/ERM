@@ -15,6 +15,8 @@ class ServerKey(BaseDataClass):
 class ServerKeys(Document):
     async def get_server_key(self, guild_id: int):
         doc = await self.find_by_id(guild_id)
+        if not doc:
+            return None
         return ServerKey(
             guild_id=doc['_id'],
             key=doc['key']

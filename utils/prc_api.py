@@ -7,7 +7,7 @@ import roblox
 from discord.ext import commands
 import aiohttp
 from decouple import config
-from utils.utils import BaseDataClass
+from utils.basedataclass import BaseDataClass
 from datamodels.ServerKeys import ServerKey
 
 class ResponseFailure(Exception):
@@ -37,7 +37,16 @@ class KillLog(BaseDataClass):
 class Player(BaseDataClass):
     username: str
     id: int
-    permission: str
+    permission: typing.Optional[
+        typing.Literal[
+            'Server Administrator', 
+            'Server Moderator', 
+            'Normal', 
+            'Server Owner', 
+            'Server Co-Owner'
+        ]
+    ] = None # This doesn't return when we query for queue, so we type for optional.
+
 
 
 class ServerStatus(BaseDataClass):
@@ -50,6 +59,8 @@ class ServerStatus(BaseDataClass):
     account_verified_request: bool
     team_balance: bool
 
+class ServerLinkNotFound(commands.CheckFailure):
+    pass
 
 class PRCApiClient:
     def __init__(self, bot, base_url: str, api_key: str):
@@ -63,12 +74,20 @@ class PRCApiClient:
 
     async def get_server_key(self, guild_id: int) -> ServerKey:
         # TODO: code server key retrieval
-        return await self.bot.server_keys.get_server_key(guild_id)
+        return await self.bot.server_keys.get_server_key(guild_id) # uses a temporary database for now - uhhh might change, probably not
         pass
 
-    async def _send_api_request(self, method: typing.Literal['GET', 'POST'], endpoint: str, guild_id: int, data: dict | None = None):
-        internal_server_object = await self.get_server_key(guild_id)
-        internal_server_key = internal_server_object.key
+    async def _send_api_request(self, method: typing.Literal['GET', 'POST'], endpoint: str, guild_id: int, data: dict | None = None, key: str | None = None):
+        if not key:
+            internal_server_object = await self.get_server_key(guild_id)
+            internal_server_key = internal_server_object if internal_server_object is not None else None
+            if internal_server_key is None:
+                return 401, {}
+            else:
+                internal_server_key = internal_server_key.key
+        else:
+            internal_server_key = key
+
         async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers={
             "Authorization": self.api_key,
             "Server-Key": internal_server_key
@@ -94,6 +113,19 @@ class PRCApiClient:
                 status_code=status_code,
                 json_data=response_json
             )
+        
+    async def send_test_request(self, server_key: str) -> int | ServerStatus:
+        code, response_json = await self._send_api_request('GET', '/server', 0, None, server_key)
+        return code if code != 200 else ServerStatus(
+                name=response_json['Name'],
+                owner_id=response_json['OwnerId'],
+                co_owner_ids=response_json['CoOwnerIds'],
+                current_players=response_json['CurrentPlayers'],
+                max_players=response_json['MaxPlayers'],
+                join_key=response_json['JoinKey'],
+                account_verified_request=response_json['AccVerifiedReq'] == 'Enabled',
+                team_balance=response_json['TeamBalance']
+        )
 
     async def get_server_players(self, guild_id: int) -> list:
         status_code, response_json = await self._send_api_request('GET', '/server/players', guild_id)
@@ -113,16 +145,17 @@ class PRCApiClient:
                 json_data=response_json
             )
 
-    async def get_server_queue(self, guild_id: int) -> list:
+    async def get_server_queue(self, guild_id: int, minimal: bool = False) -> list:
         status_code, response_json = await self._send_api_request('GET', '/server/queue', guild_id)
         if status_code == 200:
+            if minimal:
+                return len(response_json)
             new_list = []
             print(response_json)
-            for item in response_json:
+            for user in (await self.bot.roblox.get_users(response_json, expand=False)):
                 new_list.append(Player(
-                    username=(await (roblox.Client()).get_user_by_username(item['Player'])).name,
-                    id=item['Player'],
-                    permission=item['Permission']
+                    username=user.name,
+                    id=user.id
                 ))
             return new_list
         else:

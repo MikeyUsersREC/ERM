@@ -11,6 +11,8 @@ from discord.ext import commands
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
 from utils.constants import BLANK_COLOR
+from utils.prc_api import ServerStatus, Player
+import utils.prc_api as prc_api
 
 tokenGenerator = ZUID(
     prefix="",
@@ -22,12 +24,6 @@ tokenGenerator = ZUID(
 generator = SnowflakeGenerator(192)
 error_gen = ZUID(prefix="error_", length=10)
 system_code_gen = ZUID(prefix="erm-systems-", length=7)
-
-
-class BaseDataClass:
-    def __init__(self, *args, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
 
 def removesuffix(input_string: str, suffix: str):
@@ -133,8 +129,55 @@ def require_settings():
 
     return commands.check(predicate)
 
+async def update_ics(bot, ctx, channel, return_val: dict, ics_id: int):
+    try:
+        status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
+    except prc_api.ResponseFailure:
+        status = None
+    if not isinstance(status, ServerStatus):
+        return return_val # Invalid key
+    
+    queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
+    players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
+    mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
+    admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+    total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
 
-async def interpret_embed(bot, ctx, channel, embed: dict):
+    if await bot.ics.db.count_documents({'_id': ics_id}):
+        await bot.ics.db.update_one({
+            '_id': ics_id,
+            "guild": ctx.guild.id
+        }, {'$set': {
+            'data': {
+                'join_code': status.join_key,
+                'players': status.current_players,
+                'max_players': status.max_players,
+                'queue': queue,
+                'staff': total_staff,
+                'admins': admins,
+                'mods': mods
+            }
+        }})
+    else:
+        await bot.ics.insert({
+            '_id': ics_id,
+            "guild": ctx.guild.id,
+            'data': {
+                'join_code': status.join_key,
+                'players': status.current_players,
+                'max_players': status.max_players,
+                'queue': queue,
+                'staff': total_staff,
+                'admins': admins,
+                'mods': mods
+            },
+            'associated_messages': []
+        })
+
+    return return_val
+
+
+async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
     embed = discord.Embed.from_dict(embed)
     try:
         embed.title = await sub_vars(bot, ctx, channel, embed.title)
@@ -159,21 +202,51 @@ async def interpret_embed(bot, ctx, channel, embed: dict):
         i.name = await sub_vars(bot, ctx, channel, i.name)
         i.value = await sub_vars(bot, ctx, channel, i.value)
 
-    return embed
+    if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
+        return embed # end here no point
+    
+    return await update_ics(bot, ctx, channel, embed, ics_id)
 
-
-async def interpret_content(bot, ctx, channel, content: str):
+async def interpret_content(bot, ctx, channel, content: str, ics_id):
+    await update_ics(bot, ctx, channel, content, ics_id)
     return await sub_vars(bot, ctx, channel, content)
 
 
-async def sub_vars(bot, ctx, channel, string, **kwargs):
+async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
     string = string.replace("{user}", ctx.author.mention)
     string = string.replace("{username}", ctx.author.name)
-    string = string.replace("{display_name}", ctx.author.name)
+    string = string.replace("{display_name}", ctx.author.display_name)
     string = string.replace("{time}", f"<t:{int(datetime.datetime.now().timestamp())}>")
-    string = string.replace("{server}", ctx.guild.name)
+    string = string.replace("{server}",  ctx.guild.name)
     string = string.replace("{channel}", channel.mention)
     string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
+    
+    #### CUSTOM ERLC VARS
+    # Fetch whether they should even be allowed to use ERLC vars
+    if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
+        return string # end here no point
+    
+    status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
+    if not isinstance(status, ServerStatus):
+        return string # Invalid key
+    queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
+    players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
+    mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
+    admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+    total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
+    
+    
+    string = string.replace("{join_code}", status.join_key)
+    string = string.replace("{players}", str(status.current_players))
+    string = string.replace("{max_players}", str(status.max_players))
+    string = string.replace("{queue}", str(queue))
+    string = string.replace("{staff}", str(total_staff))
+    string = string.replace("{admins}", str(admins))
+    string = string.replace("{mods}", str(mods))
+
+    
+
+
     return string
 
 

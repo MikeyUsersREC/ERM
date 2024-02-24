@@ -7,7 +7,7 @@ import discord
 from utils.mongo import Document
 from decouple import config
 
-from utils.utils import BaseDataClass
+from utils.basedataclass import BaseDataClass
 
 
 class BreakItem(BaseDataClass):

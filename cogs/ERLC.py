@@ -4,21 +4,164 @@ import discord
 import roblox
 from discord.ext import commands
 
-from erm import is_staff
+from erm import is_staff, is_management
 from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog
+import utils.prc_api as prc_api
+from discord import app_commands
+import typing
 
 
 class ERLC(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+
+    def is_server_linked():
+        async def predicate(ctx: commands.Context):
+            guild_id = ctx.guild.id
+            # We're intentionally not handling this error here so that it raises if the server is not linked. actually how about we do
+            try:
+                await ctx.bot.prc_api.get_server_status(guild_id)
+            except prc_api.ResponseFailure as exc:
+                raise prc_api.ServerLinkNotFound(str(exc))
+            return True
+        return commands.check(predicate)
+
+    async def secure_logging(self, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str):
+        settings = await self.bot.settings.find_by_id(guild_id)
+        channel = settings.get('game_security', {}).get('webhook_channel')
+        try:
+            channel = await (await self.bot.fetch_guild(guild_id)).fetch_channel(channel)
+        except discord.HTTPException:
+            channel = None
+        bloxlink_user = await self.bot.bloxlink.find_roblox(author_id)
+        print(bloxlink_user)
+        server_status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+        if channel is not None:
+            await channel.send(embed=discord.Embed(
+                title="Remote Server Logs",
+                description=f"[{(await self.bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                color=RED_COLOR
+            ).set_footer(text=f"Private Server: {server_status.join_key}")
+        )   
+
     @commands.hybrid_group(
         name="erlc"
     )
     async def server(self, ctx: commands.Context):
         pass
+
+    @server.command(
+        name="message",
+        description="Send a Message to your ERLC server with ERM!"
+    )
+    @is_staff()
+    async def erlc_message(self, ctx: commands.Context, message: str, guild_id: typing.Optional[str]):
+        if not guild_id:
+            guild_id = ctx.guild.id
+        else:
+            guild_id = int(guild_id)
+        
+        await self.secure_logging(guild_id, ctx.author.id, 'Message', message)
+
+        command_response = await self.bot.prc_api.run_command(guild_id, f":m {message}")
+        if command_response[0] == 200:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully Sent",
+                    description="This message has been sent to the server!",
+                    color=GREEN_COLOR
+                )
+            )
+        else:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Executed",
+                    description="This message has not been sent to the server successfully.",
+                    color=BLANK_COLOR
+                )
+            )
+        
+    @server.command(
+        name="hint",
+        description="Send a Hint to your ERLC server with ERM!"
+    )
+    @is_staff()
+    async def erlc_hint(self, ctx: commands.Context, hint: str, guild_id: typing.Optional[str]):
+        if not guild_id:
+            guild_id = ctx.guild.id
+        else:
+            guild_id = int(guild_id)
+
+        await self.secure_logging(guild_id, ctx.author.id, 'Hint', hint)
+
+        command_response = await self.bot.prc_api.run_command(guild_id, f":h {hint}")
+        if command_response[0] == 200:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully Sent",
+                    description="This Hint has been sent to the server!",
+                    color=GREEN_COLOR
+                )
+            )
+        else:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Executed",
+                    description="This Hint has not been sent to the server successfully.",
+                    color=BLANK_COLOR
+                )
+            )
+
+
+    @server.command(
+        name="link",
+        description="Link your ERLC server with ERM!"
+    )
+    @is_management()
+    @app_commands.describe(
+        key='Your PRC Server Key - check your server settings for details'
+    )
+    @is_server_linked()
+    async def server_link(self, ctx: commands.Context, key: str):
+        status: int = await self.bot.prc_api.send_test_request(key)
+        
+
+    @server.command(
+        name="command",
+        description="Send a direct command to your ERLC server, under \"Remote Server Management\""
+    )
+    @app_commands.describe(
+        command="The command to send to your ERLC server"
+    )
+    @is_management()
+    # @is_server_linked() - TODO: REMOVE THIS COMMENT IN PRODUCTION!!!!
+    async def server_send_command(self, ctx: commands.Context, command: str, guild_id: str):
+        if command[0] != ':':
+            command = ':' + command
+
+        await self.secure_logging(int(guild_id), ctx.author.id, 'Command', command)
+
+        guild_id = int(guild_id)
+        command_response = await self.bot.prc_api.run_command(guild_id, command)
+        if command_response[0] == 200:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully Ran",
+                    description="This command should have now been executed in your server.",
+                    color=GREEN_COLOR
+                )
+            )
+        else:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description="This command has not been sent to the server successfully.",
+                    color=BLANK_COLOR
+                )
+            )
 
     @server.command(
         name="info",
@@ -28,30 +171,46 @@ class ERLC(commands.Cog):
     async def server_info(self, ctx: commands.Context, guild_id: str):
         guild_id = int(guild_id)
         status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
-        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
-        queue: list[Player] = await self.bot.prc_api.get_server_queue(guild_id)
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id) 
+        queue: int = await self.bot.prc_api.get_server_queue(guild_id, minimal=True) # this only returns the count
         client = roblox.Client()
 
         embeds = []
         embed1 = discord.Embed(
             title=f"{status.name}",
-            color=GREEN_COLOR
+            color=BLANK_COLOR
+        )
+        embed1.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
         )
         embed1.add_field(
             name="Basic Info",
             value=(
-                f"<:replytop:1138257149705863209> **Join Code:** {status.join_key}\n"
-                f"<:replymiddle:1138257195121791046> **Current Players:** `{status.current_players}/{status.max_players}`\n"
-                f"<:replybottom:1138257250448855090> **Queue:** `{len(queue)}`\n"
+                f"> **Join Code:** {status.join_key}\n"
+                f"> **Current Players:** `{status.current_players}/{status.max_players}`\n"
+                f"> **Queue:** `{queue}`\n"
             ),
             inline=False
         )
         embed1.add_field(
             name="Server Ownership",
             value=(
-                f"<:replytop:1138257149705863209> **Owner:** [{(await client.get_user(status.owner_id)).name}](https://roblox.com/users/{status.owner_id}/profile)\n"
-                f"<:replybottom:1138257250448855090> **Co-Owners:** {f', '.join([f'[{(await client.get_user(plr_id)).name}](https://roblox.com/users/{plr_id}/profile)' for plr_id in status.co_owner_ids[:3]])}"
-            )
+                f"> **Owner:** [{(await client.get_user(status.owner_id)).name}](https://roblox.com/users/{status.owner_id}/profile)\n"
+                f"> **Co-Owners:** {f', '.join([f'[{user.name}](https://roblox.com/users/{user.id}/profile)' for user in await client.get_users(status.co_owner_ids, expand=False)])}"
+            ),
+            inline=False
+        )
+
+        embed1.add_field(
+            name="Staff Statistics",
+            value=(
+                f"> **Moderators:** `{len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}`\n"
+                f"> **Administrators:** `{len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}`\n"
+                f"> **Staff In-Game:** `{len(list(filter(lambda x: x.permission != 'Normal', players)))}`\n"
+                f"> **Staff Clocked In:** `{await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}`"
+            ),
+            inline=False
         )
 
         await ctx.send(embed=embed1)
@@ -67,8 +226,12 @@ class ERLC(commands.Cog):
         status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         embed2 = discord.Embed(
-            title="Current Staff Members",
+            title="Online Staff Members",
             color=BLANK_COLOR
+        )
+        embed2.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
         )
         actual_players = []
         key_maps = {}
@@ -96,11 +259,12 @@ class ERLC(commands.Cog):
         new_keymap = dict(zip(new_maps, new_vals))
 
         for key, value in new_keymap.items():
-            embed2.add_field(
-                name=key,
-                value='\n'.join([f'- [{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value]),
-                inline=False
-            )
+            if (value := '\n'.join([f'> [{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value])) not in ['', '\n']:
+                embed2.add_field(
+                    name=f'{key}',
+                    value=value,
+                    inline=False
+                )
         await ctx.send(embed=embed2)
 
     @server.command(
@@ -111,30 +275,24 @@ class ERLC(commands.Cog):
     async def kills(self, ctx: commands.Context, guild_id: str):
         async def operate_and_reload_kills(msg, guild_id: str):
             guild_id = int(guild_id)
-            status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+            # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
             kill_logs: list[KillLog] = await self.bot.prc_api.fetch_kill_logs(guild_id)
             embed = discord.Embed(
                 color=BLANK_COLOR,
-                title="<:serverplayers:1176997968478470206> Server Kill Logs",
+                title="Server Kill Logs",
                 description=""
             )
-            for item in kill_logs:
-                if item.timestamp < (datetime.datetime.now() - datetime.timedelta(minutes=15)).timestamp():
-                    kill_logs.remove(item)
 
-            embed.description += f"Past 15 Minutes [{len(kill_logs)}]\n"
             sorted_kill_logs = sorted(kill_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_kill_logs:
                 if len(embed.description) >= 4000:
-                   new = '\n'.join(embed.description.splitlines()[:-1])
+                   new = '\n'.join(embed.description.splitlines())
                    embed.description = new
                    break
-                embed.description += f"- [{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:R>\n"
+                embed.description += f"> [{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:R>\n"
 
-            line0 = embed.description.splitlines()[0]
-            line0 = f"**Past 15 Minutes [{len(embed.description.splitlines())-1}]**"
-            print(embed.description)
-            lines = [line0, *[line for index, line in enumerate(embed.description.split('\n')) if index != 0]]
+                
+            lines = [*[line for index, line in enumerate(embed.description.split('\n')) if index != len(embed.description.splitlines()) -1]]
             embed.description = '\n'.join(lines)
 
 
@@ -156,6 +314,7 @@ class ERLC(commands.Cog):
                 await msg.edit(embed=embed)
 
         await operate_and_reload_kills(None, guild_id)
+
     @server.command(
         name="players",
         description="See all players in the server."
@@ -163,10 +322,11 @@ class ERLC(commands.Cog):
     @is_staff()
     async def server_players(self, ctx: commands.Context, guild_id: str):
         guild_id = int(guild_id)
-        status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+        # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        queue: list[Player] = await self.bot.prc_api.get_server_queue(guild_id)
         embed2 = discord.Embed(
-            title="<:serverplayers:1176997968478470206> Server Players",
+            title="Server Players",
             color=BLANK_COLOR,
             description=""
         )
@@ -180,13 +340,19 @@ class ERLC(commands.Cog):
                 staff.append(item)
 
         embed2.description += (
-            f"Server Staff [{len(staff)}]\n"
-            '\n'.join([f'- [{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
+            f"**Server Staff [{len(staff)}]**\n" + 
+            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
         )
 
         embed2.description += (
-            f"\n\nOnline Players [{len(actual_players)}]"
-            '\n'.join([f'- [{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+            f"\n\n**Online Players [{len(actual_players)}]**\n" +
+            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+
+        )
+
+        embed2.description += (
+            f"\n\n**Queue [{len(queue)}]**\n" +
+            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
 
         )
 
@@ -195,8 +361,6 @@ class ERLC(commands.Cog):
             icon_url=ctx.guild.icon.url
         )
 
-        embed2.set_footer(icon_url="https://cdn.discordapp.com/emojis/1176999148084535326.webp?size=128&quality=lossless",
-                          text="Last updated 5 seconds ago")
         await ctx.send(embed=embed2)
 
 

@@ -229,7 +229,7 @@ class CustomCommands(commands.Cog):
                 )
         embeds = []
         for embed in selected["message"]["embeds"]:
-            embeds.append(await interpret_embed(bot, ctx, channel, embed))
+            embeds.append(await interpret_embed(bot, ctx, channel, embed, selected['id']))
 
         view = discord.ui.View()
         for item in selected.get('buttons', []):
@@ -257,16 +257,23 @@ class CustomCommands(commands.Cog):
                     color=GREEN_COLOR
                 )
             )
-            await channel.send(
+            msg = await channel.send(
                 content=await interpret_content(
-                    bot, ctx, channel, selected["message"]["content"]
+                    bot, ctx, channel, selected["message"]["content"], selected['id']
                 ),
                 embeds=embeds,
                 view=view,
                 allowed_mentions=discord.AllowedMentions(
                     everyone=True, users=True, roles=True, replied_user=True
-                )
+                ),
             )
+
+            # Fetch ICS entry
+            doc = await bot.ics.find_by_id(selected['id']) or {}
+            if doc is None:
+                return
+            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
+            await bot.ics.update_by_id(doc)
         else:
             if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
                 return await ctx.reply(
@@ -284,9 +291,9 @@ class CustomCommands(commands.Cog):
                 )
             )
 
-            await channel.send(
+            msg = await channel.send(
                 content=await interpret_content(
-                    bot, ctx, channel, selected["message"]["content"]
+                    bot, ctx, channel, selected["message"]["content"], selected['id']
                 ),
                 embeds=embeds,
                 view=view,
@@ -294,6 +301,13 @@ class CustomCommands(commands.Cog):
                     everyone=True, users=True, roles=True, replied_user=True
                 ),
             )
+
+            # Fetch ICS entry
+            doc = await bot.ics.find_by_id(selected['id']) or {}
+            if doc is None:
+                return
+            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
+            await bot.ics.update_by_id(doc)
 
 
 async def setup(bot):

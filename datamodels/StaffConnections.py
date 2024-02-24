@@ -2,7 +2,7 @@ import typing
 
 from bson import ObjectId
 from utils.mongo import Document
-from utils.utils import BaseDataClass
+from utils.basedataclass import BaseDataClass
 
 
 class StaffConnection(BaseDataClass):

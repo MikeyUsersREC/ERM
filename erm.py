@@ -36,10 +36,12 @@ from datamodels.APITokens import APITokens
 from datamodels.StaffConnections import StaffConnections
 from datamodels.Views import Views
 from datamodels.Warnings import Warnings
+from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
 from menus import CompleteReminder, LOAMenu
 from utils.bloxlink import Bloxlink
 from utils.prc_api import PRCApiClient
 from utils.utils import *
+import utils.prc_api
 
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ["8.8.8.8"]
@@ -127,6 +129,7 @@ class Bot(commands.AutoShardedBot):
             self.settings = Settings(self.db, "settings")
             self.server_keys = ServerKeys(self.db, "server_keys")
             self.staff_connections = StaffConnections(self.db, "staff_connections")
+            self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
@@ -174,6 +177,7 @@ class Bot(commands.AutoShardedBot):
             bot.is_synced = True
             check_reminders.start()
             check_loa.start()
+            iterate_ics.start()
             # GDPR.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
@@ -473,6 +477,19 @@ async def check_reminders():
                         item["lastTriggered"] = lastTriggered
                         await bot.reminders.update_by_id(new_go)
 
+                        if isinstance(item.get('integration'), dict):
+                            # This has the ERLC integration enabled
+                            command = 'h' if item['integration']['type'] == 'Hint' else ('m' if item['integration']['type'] == 'Message' else None)
+                            content = item['integration']['content']
+                            total = ':' + command + ' ' + content
+                            if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
+                                resp = await bot.prc_api.run_command(channel.guild.id, total)
+                                if resp != 200:
+                                    print('Failed reaching PRC due to {} status code'.format(resp))
+                                else:
+                                    print('Integration success with 200 status code')
+
+
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
                                 allowed_mentions = discord.AllowedMentions(
@@ -487,6 +504,68 @@ async def check_reminders():
                     print(e)
     except Exception as e:
         print(e)
+
+
+@tasks.loop(minutes=5, reconnect=True)
+async def iterate_ics():
+    # This will aim to constantly update the Integration Command Storage
+    # and the relevant storage data.
+    print('ICS')
+    async for item in bot.ics.db.find({}):
+        try:
+            guild = await bot.fetch_guild(item['guild'])
+        except discord.HTTPException:
+            continue
+
+        selected = None
+        custom_command_data = await bot.custom_commands.find_by_id(item['guild']) or {}
+        for command in custom_command_data.get('commands', []):
+            if command['id'] == item['_id']:
+                selected = command
+
+        if not selected:
+            continue
+            
+        try:
+            status: ServerStatus = await bot.prc_api.get_server_status(guild.id)
+        except prc_api.ResponseFailure:
+            status = None
+        if not isinstance(status, ServerStatus):
+            continue # Invalid key
+        
+        queue: int = await bot.prc_api.get_server_queue(guild.id, minimal=True)
+        players: list[Player] = await bot.prc_api.get_server_players(guild.id)
+        mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
+        admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+        total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        
+        new_data = {
+                'join_code': status.join_key,
+                'players': status.current_players,
+                'max_players': status.max_players,
+                'queue': queue,
+                'staff': total_staff,
+                'admins': admins,
+                'mods': mods
+            }
+        print(json.dumps(new_data, indent=4))
+        
+        if new_data != item['data']:
+            # Updated data
+            for arr in item['associated_messages']:
+                channel, message_id = arr[0], arr[1]
+                try:
+                    channel = await guild.fetch_channel(channel)
+                    message = await channel.fetch_message(message_id)
+                except discord.HTTPException:
+                    continue
+
+                if not message or not channel:
+                    continue
+
+                await message.edit(content=await interpret_content(bot, await bot.get_context(message), channel, selected['message']['content'], item['_id']), embeds=[
+                    (await interpret_embed(bot, await bot.get_context(message), channel, embed, item['_id'])) for embed in selected['message']['embeds']
+                ] if selected['message']['embeds'] is not None else [])
 
 
 
