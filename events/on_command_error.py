@@ -10,7 +10,7 @@ from sentry_sdk import capture_exception, push_scope
 
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
-
+from utils.prc_api import ServerLinkNotFound
 
 class OnCommandError(commands.Cog):
     def __init__(self, bot):
@@ -83,6 +83,16 @@ class OnCommandError(commands.Cog):
 
         if isinstance(error, commands.CommandNotFound):
             return
+
+        if isinstance(error, ServerLinkNotFound):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Linked",
+                    description="This server does not have an ER:LC server connected. \nTo link your ER:LC server, run **/erlc link**.",
+                    color=BLANK_COLOR
+                )
+            )
+
         if isinstance(error, commands.CheckFailure):
             return await ctx.send(
                 embed=discord.Embed(

@@ -27,6 +27,12 @@ class CommandLog(BaseDataClass):
     is_automated: bool
     command: str
 
+class JoinLeaveLog(BaseDataClass):
+    type: typing.Literal['join', 'leave']
+    timestamp: int
+    username: str
+    user_id: int
+
 class KillLog(BaseDataClass):
     killer_username: str
     killer_user_id: int
@@ -169,7 +175,7 @@ class PRCApiClient:
         if status_code == 200:
             return [CommandLog(
                 username=log_item['Player'].split(':')[0] if ':' in log_item['Player'] else log_item['Player'],
-                id=log_item['Player'].split(':')[1] if ':' in log_item['Player'] else 0,
+                user_id=log_item['Player'].split(':')[1] if ':' in log_item['Player'] else 0,
                 timestamp=log_item['Timestamp'],
                 is_automated=log_item['Player'] == "Remote Server",
                 command=log_item['Command']
@@ -195,6 +201,22 @@ class PRCApiClient:
                 status_code=status_code,
                 json_data=response_json
             )
+        
+    async def fetch_player_logs(self, guild_id: int):
+        status_code, response_json = await self._send_api_request('GET', '/server/joinlogs', guild_id)
+        if status_code == 200:
+            return [JoinLeaveLog(
+                username=log_item['Player'].split(':')[0],
+                user_id=log_item['Player'].split(':')[1],
+                timestamp=log_item['Timestamp'],
+                type='join' if log_item['Join'] is True else 'leave'
+            ) for log_item in response_json]
+        else:
+            raise ResponseFailure(
+                status_code=status_code,
+                json_data=response_json
+            )
+
 
 
     async def run_command(self, guild_id: int, command: str):

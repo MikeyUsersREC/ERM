@@ -65,6 +65,42 @@ async def all_shift_type_autocomplete(
         ]
 
 
+async def action_autocomplete(
+    interaction: discord.Interaction, current: str
+) -> typing.List[app_commands.Choice[str]]:
+    bot = (await Context.from_interaction(interaction)).bot
+    actions = [i async for i in bot.actions.db.find({'Guild': interaction.guild.id})]
+    if actions in [None, []]:
+        return [
+            discord.app_commands.Choice(name="No actions found", value="NULL")
+        ]
+    
+    action_list = []
+    for action in actions:
+        if current not in ["", " "]:
+            if (
+                action["ActionName"].startswith(current)
+                or current in action["ActionName"]
+                or action["ActionName"].endswith(current)
+            ):
+                action_list.append(action["ActionName"])
+        else:
+            action_list.append(action["ActionName"])
+
+    if len(action_list) == 0:
+        return [
+            discord.app_commands.Choice(
+                name="No actions found", value="NULL"
+            )
+        ]
+
+    commandList = []
+    for command in action_list:
+        commandList.append(
+            discord.app_commands.Choice(name=command, value=command)
+        )
+    return commandList
+
 
 async def command_autocomplete(
     interaction: discord.Interaction, current: str

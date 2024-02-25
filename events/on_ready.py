@@ -1,6 +1,7 @@
 import logging
-
+import discord
 from discord.ext import commands
+from utils.constants import BLANK_COLOR
 on_ready = False
 
 class OnReady(commands.Cog):
@@ -23,6 +24,7 @@ class OnReady(commands.Cog):
                     embed=discord.Embed(
                         title='Shard Connection',
                         description=f'Shard `{sid}` has connected.',
+                        color=BLANK_COLOR
                     )
                 )
             except Exception as e:
@@ -40,6 +42,7 @@ class OnReady(commands.Cog):
                     embed=discord.Embed(
                         title='Shard Disconnection',
                         description=f'Shard `{sid}` has gracefully disconnected.',
+                        color=BLANK_COLOR
                     )
                 )
             except Exception as e:

@@ -35,6 +35,7 @@ from datamodels.Settings import Settings
 from datamodels.APITokens import APITokens
 from datamodels.StaffConnections import StaffConnections
 from datamodels.Views import Views
+from datamodels.Actions import Actions
 from datamodels.Warnings import Warnings
 from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
 from menus import CompleteReminder, LOAMenu
@@ -130,6 +131,7 @@ class Bot(commands.AutoShardedBot):
             self.server_keys = ServerKeys(self.db, "server_keys")
             self.staff_connections = StaffConnections(self.db, "staff_connections")
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
+            self.actions = Actions(self.db, "actions")
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
@@ -484,7 +486,7 @@ async def check_reminders():
                             total = ':' + command + ' ' + content
                             if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
                                 resp = await bot.prc_api.run_command(channel.guild.id, total)
-                                if resp != 200:
+                                if resp[0] != 200:
                                     print('Failed reaching PRC due to {} status code'.format(resp))
                                 else:
                                     print('Integration success with 200 status code')
