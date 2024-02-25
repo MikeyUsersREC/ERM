@@ -71,6 +71,8 @@ class Actions(commands.Cog):
         if '--verbose' in action:
             action = action.replace(' --verbose', '')
             verbose = True
+        ctx.verbose = verbose
+
         actions = [i async for i in self.bot.actions.db.find({'Guild': ctx.guild.id})] or []
         action_obj = None
         for item in actions:
@@ -243,7 +245,7 @@ class Actions(commands.Cog):
             command = ':' + command
 
         command_response = await bot.prc_api.run_command(guild_id, command)
-        return 0 if command_response[0] == 200 else 1
+        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
 
 
     @staticmethod
@@ -254,7 +256,7 @@ class Actions(commands.Cog):
             message = message[2:]
 
         command_response = await bot.prc_api.run_command(guild_id, f':m {message}')
-        return 0 if command_response[0] == 200 else 1
+        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
 
     @staticmethod
     async def send_erlc_hint(bot, guild_id: int, context, hint: str):
@@ -262,7 +264,7 @@ class Actions(commands.Cog):
             hint = hint[3:]
 
         command_response = await bot.prc_api.run_command(guild_id, f':h {hint}')
-        return 0 if command_response[0] == 200 else 1
+        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
 
     @staticmethod
     async def delay(bot, guild_id, context, timer: int):
