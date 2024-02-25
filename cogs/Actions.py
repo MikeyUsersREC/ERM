@@ -130,7 +130,7 @@ class Actions(commands.Cog):
             await msg.edit(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Running Action",
-                    description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{'\n`{}`'.format(returns) if verbose else ''}",
+                    description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{' `{}`'.format(returns) if verbose else ''}",
                     color=GREEN_COLOR
                 )
             )
