@@ -172,7 +172,7 @@ class ERLC(commands.Cog):
         elevated_privileges = None
         status: ServerStatus = await self.bot.prc_api.get_server_status(ctx.guild.id)
         for item in (status.co_owner_ids + [status.owner_id]):
-            if int(item) == int((await self.bot.bloxlink.find_roblox(ctx.author.id) or {}).get('robloxID')):
+            if int(item) == int((await self.bot.bloxlink.find_roblox(ctx.author.id) or {}).get('robloxID') or 0):
                 elevated_privileges = True
                 break
         else:
