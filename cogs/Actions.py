@@ -69,7 +69,7 @@ class Actions(commands.Cog):
     async def action_execute(self, ctx: commands.Context, action: str):
         verbose = False
         if '--verbose' in action:
-            action = action.removesuffix(' --verbose')
+            action = action.replace(' --verbose', '')
             verbose = True
         actions = [i async for i in self.bot.actions.db.find({'Guild': ctx.guild.id})] or []
         action_obj = None
