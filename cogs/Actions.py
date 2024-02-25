@@ -67,6 +67,10 @@ class Actions(commands.Cog):
     @is_management()
     @app_commands.autocomplete(action=action_autocomplete)
     async def action_execute(self, ctx: commands.Context, action: str):
+        verbose = False
+        if '--verbose' in action:
+            action = action.removesuffix(' --verbose')
+            verbose = True
         actions = [i async for i in self.bot.actions.db.find({'Guild': ctx.guild.id})] or []
         action_obj = None
         for item in actions:
@@ -126,7 +130,7 @@ class Actions(commands.Cog):
             await msg.edit(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Running Action",
-                    description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!",
+                    description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{'\n`{}`'.format(returns) if verbose else ''}",
                     color=GREEN_COLOR
                 )
             )
@@ -246,6 +250,8 @@ class Actions(commands.Cog):
     async def send_erlc_message(bot, guild_id: int, context, message: str):
         if message[:3] == ':m ':
             message = message[3:]
+        elif message[:2] == 'm ':
+            message = message[2:]
 
         command_response = await bot.prc_api.run_command(guild_id, f':m {message}')
         return 0 if command_response[0] == 200 else 1
