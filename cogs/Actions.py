@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 import datetime
 import pytz
-from erm import is_management
+from erm import is_management, is_staff
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from menus import ManageActions
 from discord import app_commands
@@ -64,9 +64,10 @@ class Actions(commands.Cog):
         name="execute",
         description="Execute an ERM Action in your server"
     )
-    @is_management()
+    @is_staff()
     @app_commands.autocomplete(action=action_autocomplete)
-    async def action_execute(self, ctx: commands.Context, action: str):
+    async def action_execute(self, ctx: commands.Context, *, action: str):
+
         verbose = False
         if '--verbose' in action:
             action = action.replace(' --verbose', '')
@@ -87,7 +88,16 @@ class Actions(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
+        
+        if action_obj.get('AccessRoles'):
+            if not any([discord.utils.get(ctx.guild.roles, id=i) in ctx.author.roles] for i in action_obj.get('AccessRoles')):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Access Denied",
+                        description="You do not hold the roles required to use this action. Contact your Server Administrator for details.",
+                        color=BLANK_COLOR
+                    )
+                )
         #   actions = [
         #     'Execute Custom Command',
         #     'Pause Reminder',
@@ -105,7 +115,9 @@ class Actions(commands.Cog):
             self.send_erlc_command,
             self.send_erlc_message,
             self.send_erlc_hint,
-            self.delay
+            self.delay,
+            self.add_role,
+            self.remove_role
         ]
 
         msg = await ctx.send(
@@ -137,6 +149,37 @@ class Actions(commands.Cog):
                 )
             )
 
+    @staticmethod
+    async def add_role(bot: commands.Bot, guild_id: int, context, role_id: int):
+        try:
+            guild = await bot.fetch_guild(guild_id)
+            role = guild.get_role(role_id)
+        except discord.HTTPException:
+            return 1
+        
+        if not role:
+            return 1
+        
+        try:
+            await context.author.add_role(role)
+        except discord.HTTPException:
+            return 1
+        
+    @staticmethod
+    async def remove_role(bot: commands.Bot, guild_id: int, context, role_id: int):
+        try:
+            guild = await bot.fetch_guild(guild_id)
+            role = guild.get_role(role_id)
+        except discord.HTTPException:
+            return 1
+        
+        if not role:
+            return 1
+        
+        try:
+            await context.author.remove_role(role)
+        except discord.HTTPException:
+            return 1
 
 
     @staticmethod
@@ -236,6 +279,7 @@ class Actions(commands.Cog):
         docs = [i async for i in bot.shift_management.shifts.db.find({"Guild": guild_id, "EndEpoch": 0})]
         for item in docs:
             item['EndEpoch'] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            await bot.dispatch('shift_end', item['_id'])
             await bot.shift_management.shifts.update_by_id(item)
         return 0
 
@@ -244,8 +288,21 @@ class Actions(commands.Cog):
         if command[0] != ':':
             command = ':' + command
 
-        command_response = await bot.prc_api.run_command(guild_id, command)
-        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
+        command_response = await bot.prc_api.run_command(guild_id, f'{command}')
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
+        
+        wait_time = command_response[1]['retry_after']
+        await asyncio.sleep(wait_time+1)
+        command_response = await bot.prc_api.run_command(guild_id, f'{command}')
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
 
 
     @staticmethod
@@ -256,7 +313,20 @@ class Actions(commands.Cog):
             message = message[2:]
 
         command_response = await bot.prc_api.run_command(guild_id, f':m {message}')
-        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
+        
+        wait_time = command_response[1]['retry_after']
+        await asyncio.sleep(wait_time+1)
+        command_response = await bot.prc_api.run_command(guild_id, f':m {message}')
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
 
     @staticmethod
     async def send_erlc_hint(bot, guild_id: int, context, hint: str):
@@ -264,7 +334,20 @@ class Actions(commands.Cog):
             hint = hint[3:]
 
         command_response = await bot.prc_api.run_command(guild_id, f':h {hint}')
-        return 0 if command_response[0] == 200 else (1 and (await context.send(command_response[1]) if context.verbose else 'A'))
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
+        
+        wait_time = command_response[1]['retry_after']
+        await asyncio.sleep(wait_time+1)
+        command_response = await bot.prc_api.run_command(guild_id, f':h {hint}')
+        if command_response[0] == 200:
+            return 0
+        
+        if command_response[0] != 429:
+            return 1
 
     @staticmethod
     async def delay(bot, guild_id, context, timer: int):

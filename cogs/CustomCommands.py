@@ -148,10 +148,10 @@ class CustomCommands(commands.Cog):
         elif view.value == "delete":
             identifier = view.modal.name.value
 
-            for item in Data["commands"]:
+            for index, item in enumerate(Data["commands"]):
                 if str(item["name"]).strip() == str(identifier).strip():
-                    Data["commands"].remove(item)
-                    await bot.custom_commands.upsert(Data)
+                    Data["commands"].pop(index)
+                    await bot.custom_commands.update_by_id(Data)
                     break
             else:
                 return await new_msg.edit(

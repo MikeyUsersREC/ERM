@@ -10,6 +10,7 @@ from utils.constants import blank_color, BLANK_COLOR
 from menus import (
     ChannelSelect,
     CustomSelectMenu,
+    ERLCIntegrationConfiguration,
     RoleSelect,
     YesNoColourMenu,
     NextView, BasicConfiguration, LOAConfiguration, ShiftConfiguration, RAConfiguration,
@@ -723,10 +724,38 @@ class Configuration(commands.Cog):
             ]
         )
 
+        erlc_view = ERLCIntegrationConfiguration(
+            bot,
+            ctx.author.id,
+            [
+                (
+                    'Elevation Required',
+                    [
+                        ['CUSTOM_CONF',
+                         {
+                             '_FIND_BY_LABEL': True
+                         }
+                         ],
+                        'Enabled' if (settings.get('ERLC', {}) or {}).get('elevation_required', True) is True else 'Disabled'
+                    ],
+                ),
+                (
+                    'Player Logs Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := (settings.get('ERLC', {}) or {}).get('player_logs')) else 0]
+                ),
+                (
+                    'Kill Logs Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := (settings.get('ERLC', {}) or {}).get('kill_logs')) else 0]
+                ),
+            ]
+        )
+
 
         pages = []
 
-        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view]):
+        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view]):
             corresponding_embeds = [
                 discord.Embed(
                     title="Basic Settings",
@@ -810,6 +839,16 @@ class Configuration(commands.Cog):
                         "**Affected Roles:** These roles clarify the individuals who are affected by Anti-Ping, and are classed as important individuals to ERM. An individual who pings someone with these affected roles, will activate Anti-Ping.\n\n"
                         "**Bypass Roles:** An individual who holds one of these roles will not be able to trigger Anti-Ping filters, and will be able to ping any individual within the Affected Roles list without ERM intervening.\n\n"
                         "**Use Hierarchy:** This setting dictates whether Anti-Ping will take into account role hierarchy for each of the affected roles. For example, if you set Moderation as an affected role, it would also apply for all roles above Moderation, such as Administration or Management."
+                    )
+                ),
+                discord.Embed(
+                    title="ER:LC Integration",
+                    color=blank_color,
+                    description=(
+                        "**What is the ER:LC Integration?** ER:LC Integration allows for ERM to communicate with the Police Roleplay Community APIs, and your Emergency Response: Liberty County server. In particular, these configurations allow for Join Logs, Leave Logs, and Kill Logs to be logged.\n\n"
+                        "**Elevation Required:** This setting dictates whether elevated permissions are required to run commands such as `:admin` and `:unadmin`. In such case where this is enabled, Co-Owner permissions are required to run these commands to prevent secuerity risk. If disabled, those with the Management Roles in your server can run these commands. **It is advised you keep this enabled unless you have a valid reason to turn it off.** Contact ERM Support if you are unsure what this setting does.\n\n"
+                        "**Player Logs Channel:** This channel is where Player Join and Leave logs will be sent by ERM. ERM will check your server every 45 seconds to see if new members have joined or left, and report of their time accordingly.\n\n"
+                        "**Kill Logs Channel:** This setting is where Kill Logs will be sent by ERM. ERM will check your server every 45 servers and constantly contact your ER:LC private server to know if there are any new kill logs. If there are, to log them in the corresponding channel."
                     )
                 )
             ]

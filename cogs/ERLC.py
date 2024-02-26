@@ -180,25 +180,26 @@ class ERLC(commands.Cog):
 
         if any([i in command for i in [':admin', ':unadmin']]) and not elevated_privileges:
             # REQUIRES ELEVATION
-            await self.secure_logging(ctx.guild.id, ctx.author.id, 'Command', command, True)
-            if ctx.interaction:
-                await ctx.interaction.followup.send(
-                    embed=discord.Embed(
-                        title="Not Authorized",
-                        description="This command is privileged and requires special elevation.",
-                        color=BLANK_COLOR
-                    ),
-                    ephemeral=True
-                )
-            else:
-                await ctx.send(
-                    embed=discord.Embed(
-                        title="Not Authorized",
-                        description="This command is privileged and requires special elevation.",
-                        color=BLANK_COLOR
+            if ((await self.bot.settings.find_by_id(ctx.guild.id) or {}).get('ERLC', {}) or {}).get('elevation_required', True):
+                await self.secure_logging(ctx.guild.id, ctx.author.id, 'Command', command, True)
+                if ctx.interaction:
+                    await ctx.interaction.followup.send(
+                        embed=discord.Embed(
+                            title="Not Authorized",
+                            description="This command is privileged and requires special elevation.",
+                            color=BLANK_COLOR
+                        ),
+                        ephemeral=True
                     )
-                )
-            return
+                else:
+                    await ctx.send(
+                        embed=discord.Embed(
+                            title="Not Authorized",
+                            description="This command is privileged and requires special elevation.",
+                            color=BLANK_COLOR
+                        )
+                    )
+                return
 
         await self.secure_logging(int(ctx.guild.id), ctx.author.id, 'Command', command)
 

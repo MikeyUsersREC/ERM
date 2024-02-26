@@ -3183,7 +3183,9 @@ class ActionCreationToolkit(discord.ui.View):
             'Send ER:LC Command',
             'Send ER:LC Message',
             'Send ER:LC Hint',
-            'Delay'            
+            'Delay',
+            'Add Role',
+            'Remove Role'            
         ]
 
         extras = [
@@ -3197,6 +3199,17 @@ class ActionCreationToolkit(discord.ui.View):
             )
             button.callback = return_correspondent_callback(item)
             self.add_item(button)
+
+
+        button = discord.ui.Button(
+            style=discord.ButtonStyle.primary,
+            label="Access Roles"
+        )
+        button.callback = self.set_access_roles
+
+        self.add_item(
+            button
+        )
 
         for item in extras:
             button = discord.ui.Button(
@@ -3245,7 +3258,7 @@ class ActionCreationToolkit(discord.ui.View):
             )
         self.action_data['Integrations'].pop(-1)
         message = interaction.message
-        embed = message.embeds[0]
+        embed = message.embeds[-1]
         lines = embed.description.splitlines()
         lines.pop(-2)
         content = '\n'.join(lines)
@@ -3253,6 +3266,24 @@ class ActionCreationToolkit(discord.ui.View):
         await interaction.message.edit(embed=embed)
         await interaction.response.defer(thinking=False)
         
+    async def set_access_roles(self, interaction: discord.Interaction):
+        view = RoleSelect(interaction.user.id, limit=10)
+        view.children[0].default_values = [discord.utils.get(interaction.guild.roles, id=item) for item in (self.action_data.get('AccessRoles', []) or [])]
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                title="Access Roles",
+                description="These roles will be able to execute this action. **Usually this would be your staff role.**",
+                color=BLANK_COLOR
+            ),
+            view=view,
+            ephemeral=True
+        )
+        timeout = await view.wait()
+        if timeout:
+            return
+        self.action_data['AccessRoles'] = [i.id for i in view.value] 
+        await (await interaction.original_response()).delete()
+
 
 
     async def native_callback(self, interaction: discord.Interaction, button_name):
@@ -3273,17 +3304,32 @@ class ActionCreationToolkit(discord.ui.View):
             'Send ER:LC Command': 1,
             'Send ER:LC Message': 1,
             'Send ER:LC Hint': 1,
-            'Delay': 1
+            'Delay': 1,
+            'Add Role': 1,
+            'Remove Role': 1
         }
         if not correspondents[button_name]:
             msg = interaction.message
-            embed = msg.embeds[0]
+            embed = msg.embeds[-1]
+
             if len(self.action_data['Integrations']) == 0:
-                embed.description = embed.description[:-(len('No Integrations'))]
+                msg.embeds[-1].description = embed.description[:-(len('No Integrations'))]
             else:
-                embed.description = embed.description[:-(len('*New Integration*'))]
-            embed.description += f" **{button_name}**\n> *New Integration*"
-            await interaction.message.edit(embeds=[embed])
+                msg.embeds[-1].description = embed.description[:-(len('*New Integration*'))]
+            
+            if (len(f" **{button_name}**\n> *New Integration*") + len(msg.embeds[-1].description)) > 4000:
+                embed = discord.Embed(
+                    title="\u200b",
+                    color=BLANK_COLOR,
+                    description="> "
+                )
+                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                msg.embeds.append(embed)
+            else:
+                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                msg.embeds[len(msg.embeds)-1] = embed
+                    
+            await interaction.message.edit(embeds=msg.embeds)
 
             self.action_data['Integrations'].append(
                     {
@@ -3295,7 +3341,9 @@ class ActionCreationToolkit(discord.ui.View):
                                             'Send ER:LC Command': 3,
                                             'Send ER:LC Message': 4,
                                             'Send ER:LC Hint': 5,
-                                            'Delay': 6
+                                            'Delay': 6,
+                                            'Add Role': 7,
+                                            'Remove Role': 8
                                         }[button_name],
                         "ExtraInformation": None
                     }
@@ -3317,7 +3365,9 @@ class ActionCreationToolkit(discord.ui.View):
                 "Send ER:LC Command": ["Command", 1],
                 "Send ER:LC Message": ["Message", 1],
                 "Send ER:LC Hint": ["Hint", 1],
-                "Delay": ["Time (Seconds)", 1]
+                "Delay": ["Time (Seconds)", 1],
+                "Add Role": ["Role ID", 0],
+                "Remove Role": ["Role ID", 0]
             }
 
             view = CustomModalView(
@@ -3360,6 +3410,12 @@ class ActionCreationToolkit(discord.ui.View):
                 )
 
             if not dynamic:
+                if "Role" in button_name:
+                    role = interaction.guild.get_role(int(provided_information))
+                    if not role:
+                        await static_validation_failure()
+                    provided_information = int(provided_information)
+
                 if "Reminder" in button_name:
                     # Fetch reminders
 
@@ -3402,19 +3458,34 @@ class ActionCreationToolkit(discord.ui.View):
                                             'Send ER:LC Command': 3,
                                             'Send ER:LC Message': 4,
                                             'Send ER:LC Hint': 5,
-                                            "Delay": 6
+                                            "Delay": 6,
+                                            "Add Role": 7,
+                                            "Remove Role": 8
                                         }[button_name],
                         "ExtraInformation": provided_information
                     }
                 )
                 msg = interaction.message
-                embed = msg.embeds[0]
-                if len(self.action_data['Integrations']) == 1:
-                    embed.description = embed.description[:-(len('No Integrations'))]
+                embed = msg.embeds[-1]
+                if len(self.action_data['Integrations']) == 0:
+                    msg.embeds[-1].description = embed.description[:-(len('No Integrations'))]
                 else:
-                    embed.description = embed.description[:-(len('*New Integration*'))]
-                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                await interaction.message.edit(embeds=[embed])
+                    msg.embeds[-1].description = embed.description[:-(len('*New Integration*'))]
+                
+                if (len(f" **{button_name}:** {provided_information}\n> *New Integration*") + len(msg.embeds[-1].description)) > 4000:
+                    embed = discord.Embed(
+                        title="\u200b",
+                        color=BLANK_COLOR,
+                        description="> "
+                    )
+                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                    msg.embeds.append(embed)
+                else:
+                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                    # msg.embeds.append(embed)
+                    msg.embeds[len(msg.embeds)-1] = embed
+                        
+                await interaction.message.edit(embeds=msg.embeds)
 
             else:
                 
@@ -3428,20 +3499,35 @@ class ActionCreationToolkit(discord.ui.View):
                                             'Send ER:LC Command': 3,
                                             'Send ER:LC Message': 4,
                                             'Send ER:LC Hint': 5,
-                                            'Delay': 6
+                                            'Delay': 6,
+                                            "Add Role": 7,
+                                            "Remove Role": 8
                                         }[button_name],
                         "ExtraInformation": provided_information
                     }
                 )
 
                 msg = interaction.message
-                embed = msg.embeds[0]
+                embed = msg.embeds[-1]
                 if len(self.action_data['Integrations']) == 0:
                     embed.description = embed.description[:-(len('No Integrations'))]
                 else:
                     embed.description = embed.description[:-(len('*New Integration*'))]
-                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                await interaction.message.edit(embeds=[embed])
+                
+                if (len(f" **{button_name}:** {provided_information}\n> *New Integration*") + len(msg.embeds[-1].description)) > 4000:
+                    embed = discord.Embed(
+                        title="\u200b",
+                        color=BLANK_COLOR,
+                        description="> "
+                    )
+                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                    msg.embeds.append(embed)
+                else:
+                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                    # msg.embeds.append(embed)
+                    msg.embeds[len(msg.embeds)-1] = embed
+                        
+                await interaction.message.edit(embeds=msg.embeds)
 
         
     
@@ -5872,6 +5958,88 @@ class GameLoggingConfiguration(AssociationConfigurationView):
             ),
         ])
         await interaction.response.send_message(view=new_view, ephemeral=True)
+
+
+class ERLCIntegrationConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        
+    @discord.ui.select(placeholder="Elevation Required", row=0, options=[
+        discord.SelectOption(
+            label='Enabled',
+            value="enabled",
+            description="Elevated Permissions are required."
+        ),
+        discord.SelectOption(
+            label="Disabled",
+            value="disabled",
+            description="Elevated Permissions are not required."
+        )
+    ], max_values=1)
+    async def priority_logging_enabled(self, interaction: discord.Interaction, select: discord.ui.Select):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'player_logs': 0,
+                'kill_logs': 0,
+                'elevation_required': True
+            }
+
+        sett['ERLC']['elevation_required'] = bool(select.values[0] == "enabled")
+        await bot.settings.update_by_id(sett)
+        for i in select.options:
+            i.default = False
+
+    @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Player Logs Channel", row=1, max_values=1, min_values=0)
+    async def player_logs_channel(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'player_logs': 0,
+                'kill_logs': 0,
+                'elevation_required': True
+            }
+        sett['ERLC']['player_logs'] = select.values[0].id
+        await bot.settings.update_by_id(sett)
+
+    @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Kill Logs Channel", row=2, max_values=1, min_values=0)
+    async def kill_logs_channel(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'player_logs': 0,
+                'kill_logs': 0,
+                'elevation_required': True
+            }
+        sett['ERLC']['kill_logs'] = select.values[0].id
+        await bot.settings.update_by_id(sett)
+
 
 
 class RoleSelect(discord.ui.View):

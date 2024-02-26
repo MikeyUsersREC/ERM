@@ -42,6 +42,7 @@ from menus import CompleteReminder, LOAMenu
 from utils.bloxlink import Bloxlink
 from utils.prc_api import PRCApiClient
 from utils.utils import *
+from utils.constants import *
 import utils.prc_api
 
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
@@ -181,6 +182,7 @@ class Bot(commands.AutoShardedBot):
             check_loa.start()
             iterate_ics.start()
             # GDPR.start()
+            iterate_prc_logs.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -506,6 +508,69 @@ async def check_reminders():
                     print(e)
     except Exception as e:
         print(e)
+
+@tasks.loop(seconds=45, reconnect=True)
+async def iterate_prc_logs():
+    # This will check every 60 seconds for kill logs and player logs
+    # enabled, as well as send all players joined during that time period.
+    async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
+        try:
+            guild = await bot.fetch_guild(item['_id'])
+        except discord.HTTPException:
+            continue
+        
+        try:
+            kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
+            player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
+        except discord.HTTPException:
+            continue
+        
+        if not kill_logs_channel and not player_logs_channel:
+            continue
+            
+        try:
+            status: ServerStatus = await bot.prc_api.get_server_status(guild.id)
+            kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
+            player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
+        except prc_api.ResponseFailure:
+            continue
+
+        sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=True)
+        sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=True)
+
+        current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+        for item in sorted_kill_logs:
+            if (current_timestamp - item.timestamp) > 45:
+                break
+            if not kill_logs_channel:
+                break
+            
+            await kill_logs_channel.send(
+                embed=discord.Embed(
+                    title="Kill Log",
+                    description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>",
+                    color=BLANK_COLOR
+                )
+            )
+        
+        for item in sorted_player_logs:
+            if (current_timestamp - item.timestamp) > 45:
+                break
+                
+            if not player_logs_channel:
+                break
+
+            await player_logs_channel.send(
+                embed=discord.Embed(
+                    title="Player Join/Leave Log",
+                    description=f"[{item.username}](https://roblox.com/users/{item.user_id}/profile) {'joined the server' if item.type == 'join' else 'left the server'} • <t:{int(item.timestamp)}:T>",
+                    color=GREEN_COLOR if item.type == 'join' else RED_COLOR
+                )
+            )
+
+                
+
+
 
 
 @tasks.loop(minutes=5, reconnect=True)
