@@ -12,7 +12,7 @@ from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
 from utils.constants import BLANK_COLOR
 from utils.utils import generator
-from menus import CustomSelectMenu
+from menus import CustomSelectMenu, GameSecurityActions
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
 
@@ -152,6 +152,7 @@ class OnMessage(commands.Cog):
                                                         ).set_thumbnail(
                                                             url=thumbnail
                                                         )
+                                                        view = GameSecurityActions(bot)
 
 
                                                         pings = []
@@ -167,6 +168,7 @@ class OnMessage(commands.Cog):
                                                                 roles=True,
                                                                 replied_user=True,
                                                             ),
+                                                            view=view
                                                         )
 
         if message.author.bot:

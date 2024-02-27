@@ -535,16 +535,27 @@ async def iterate_prc_logs():
         except prc_api.ResponseFailure:
             continue
 
+
         sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=True)
         sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=True)
 
         current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+
+        players = {}
+
+
         for item in sorted_kill_logs:
             if (current_timestamp - item.timestamp) > 45:
                 break
             if not kill_logs_channel:
                 break
-            
+
+            if not players.get(item.killer_username):
+                players[item.killer_username] = [1, [item]]
+            else:
+                players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
+
+
             await kill_logs_channel.send(
                 embed=discord.Embed(
                     title="Kill Log",
@@ -552,7 +563,53 @@ async def iterate_prc_logs():
                     color=BLANK_COLOR
                 )
             )
-        
+
+        # Check for kill logs amount
+        for username, value in players.items():
+            count = value[0]
+            items = value[1]
+            print(players)
+            if count > 3:
+                settings = await bot.settings.find_by_id(guild.id)
+                channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
+                try:
+                    channel = await (await bot.fetch_guild(guild.id)).fetch_channel(channel)
+                except discord.HTTPException:
+                    channel = None
+                print(579)
+                if not channel:
+                    break
+                print(582)
+                roblox_player = await bot.roblox.get_user_by_username(username)
+                thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
+                thumbnail = thumbnails[0].image_url
+
+                await channel.send(
+                    embed=discord.Embed(
+                        title="<:security:1169804198741823538> RDM Detected",
+                        color=BLANK_COLOR
+                    ).add_field(
+                        name="User Information",
+                        value=(
+                            f"> **Username:** {roblox_player.name}\n"
+                            f"> **User ID:** {roblox_player.id}\n"
+                            f"> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
+                            f"> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
+                        ),
+                        inline=False
+                    ).add_field(
+                        name="Abuse Information",
+                        value=(
+                            f"> **Type:** Mass RDM\n"
+                            f"> **Individuals Affected [{count}]:** {', '.join([f'[{i.killed_username}](https://roblox.com/users/{i.killed_user_id}/profile)' for i in items])}\n"
+                            f"> **At:** <t:{int(items[0].timestamp)}>"
+                        ),
+                        inline=False
+                    ).set_thumbnail(
+                        url=thumbnail
+                    )
+                )
+
         for item in sorted_player_logs:
             if (current_timestamp - item.timestamp) > 45:
                 break

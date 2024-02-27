@@ -3323,10 +3323,10 @@ class ActionCreationToolkit(discord.ui.View):
                     color=BLANK_COLOR,
                     description="> "
                 )
-                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                embed.description += f" **{button_name}**\n> *New Integration*"
                 msg.embeds.append(embed)
             else:
-                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                embed.description += f" **{button_name}**\n> *New Integration*"
                 msg.embeds[len(msg.embeds)-1] = embed
                     
             await interaction.message.edit(embeds=msg.embeds)
@@ -5653,6 +5653,158 @@ class GameSecurityConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
 
 
+class GameSecurityActions(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(
+        label="Mark as Justified",
+        style=discord.ButtonStyle.success
+    )
+    async def mark_as_justified(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(
+            (modal := CustomModal(
+                "Reason",
+                [
+                    (
+                        "reason",
+                        discord.ui.TextInput(
+                            label="Reason",
+                            placeholder="e.g. SSD, permitted by owners, etc.",
+                            style=discord.TextStyle.long
+                        )
+                    )
+                ], {
+                    'thinking': False
+                }
+            ))
+        )
+        timeout = await modal.wait()
+        if timeout:
+            return
+        
+
+        await interaction.message.edit(
+            embed=interaction.message.embeds[0].add_field(
+                name="Justification",
+                value=f"> {modal.reason.value}\n- {interaction.user.mention}"
+            ),
+            view=self.clear_items()
+        )
+
+
+    @discord.ui.button(
+        label='Unadmin Staff Member',
+        style=discord.ButtonStyle.secondary
+    )
+    async def unadmin_staff_member(self, interaction: discord.Interaction, button: discord.ui.View):
+        bot = self.bot
+        guild = interaction.guild
+        field1 = interaction.message.embeds[0].fields[0]
+        user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        await interaction.response.defer(ephemeral=True, thinking=False)
+
+        command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
+        await asyncio.sleep(5)
+        _ = await bot.prc_api.run_command(interaction.guild.id, f":unmod {user_id}")
+
+        for item in self.children:
+            item.disabled = False
+        await interaction.message.edit(view=self)
+
+        if command_response[0] == 200:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Revoked Permissions",
+                    description="This command has been sent to the server. Their permissions should now be removed.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+        else:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description="These commands have not been executed successfully. Try again.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+
+
+    @discord.ui.button(
+        label="Kick Abuser",
+        style=discord.ButtonStyle.secondary,
+        disabled=True
+    )
+    async def kick_abuser(self, interaction: discord.Interaction, button: discord.ui.View):
+        bot = self.bot
+        guild = interaction.guild
+        field1 = interaction.message.embeds[0].fields[0]
+        user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        await interaction.response.defer(ephemeral=True, thinking=False)
+
+        command_response = await bot.prc_api.run_command(interaction.guild.id, f":kick {user_id}")
+
+        if command_response[0] == 200:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Kicked Abuser",
+                    description="This command has been sent to the server. They should now be removed from the server.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+        else:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description="These commands have not been executed successfully. Try again.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+
+
+    @discord.ui.button(
+        label="Ban Abuser",
+        style=discord.ButtonStyle.secondary,
+        disabled=True
+    )
+    async def ban_abuser(self, interaction: discord.Interaction, button: discord.ui.View):
+        bot = self.bot
+        guild = interaction.guild
+        field1 = interaction.message.embeds[0].fields[0]
+        user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        await interaction.response.defer(ephemeral=True, thinking=False)
+        command_response = await bot.prc_api.run_command(interaction.guild.id, f":ban {user_id}")
+
+        if command_response[0] == 200:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Banned Abuser",
+                    description="This command has been sent to the server. They should now be removed from the server.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+        else:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description="These commands have not been executed successfully. Try again.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+
+    
+
+
+
+
+
 class ExtendedGameLogging(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -6016,7 +6168,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 'kill_logs': 0,
                 'elevation_required': True
             }
-        sett['ERLC']['player_logs'] = select.values[0].id
+        sett['ERLC']['player_logs'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Kill Logs Channel", row=2, max_values=1, min_values=0)
@@ -6037,7 +6189,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 'kill_logs': 0,
                 'elevation_required': True
             }
-        sett['ERLC']['kill_logs'] = select.values[0].id
+        sett['ERLC']['kill_logs'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
 
 
