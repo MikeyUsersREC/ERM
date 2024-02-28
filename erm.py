@@ -521,23 +521,27 @@ async def iterate_prc_logs():
         
         try:
             kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
+        except discord.HTTPException:
+            pass
+
+        try:
             player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
         except discord.HTTPException:
-            continue
-        
+            pass
+
+
         if not kill_logs_channel and not player_logs_channel:
             continue
             
         try:
-            status: ServerStatus = await bot.prc_api.get_server_status(guild.id)
             kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
             player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
         except prc_api.ResponseFailure:
             continue
 
 
-        sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=True)
-        sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=True)
+        sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=False)
+        sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=False)
 
         current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 
@@ -545,7 +549,7 @@ async def iterate_prc_logs():
 
 
         for item in sorted_kill_logs:
-            if (current_timestamp - item.timestamp) > 45:
+            if (current_timestamp - item.timestamp) > 60:
                 break
             if not kill_logs_channel:
                 break
