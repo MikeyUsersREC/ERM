@@ -522,16 +522,16 @@ async def iterate_prc_logs():
         try:
             kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
         except discord.HTTPException:
-            pass
+            kill_logs_channel = None
 
         try:
             player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
         except discord.HTTPException:
-            pass
+            player_logs_channel = None
 
 
-        if not kill_logs_channel and not player_logs_channel:
-            continue
+        # if not kill_logs_channel and not player_logs_channel:
+        #     continue
             
         try:
             kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
@@ -549,9 +549,7 @@ async def iterate_prc_logs():
 
 
         for item in sorted_kill_logs:
-            if (current_timestamp - item.timestamp) > 60:
-                break
-            if not kill_logs_channel:
+            if (current_timestamp - item.timestamp) > 45:
                 break
 
             if not players.get(item.killer_username):
@@ -559,14 +557,14 @@ async def iterate_prc_logs():
             else:
                 players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
 
-
-            await kill_logs_channel.send(
-                embed=discord.Embed(
-                    title="Kill Log",
-                    description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>",
-                    color=BLANK_COLOR
+            if not kill_logs_channel is not None:    
+                await kill_logs_channel.send(
+                    embed=discord.Embed(
+                        title="Kill Log",
+                        description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>",
+                        color=BLANK_COLOR
+                    )
                 )
-            )
 
         # Check for kill logs amount
         for username, value in players.items():
