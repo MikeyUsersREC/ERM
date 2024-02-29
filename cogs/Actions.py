@@ -280,6 +280,8 @@ class Actions(commands.Cog):
         for item in docs:
             item['EndEpoch'] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
             await bot.shift_management.shifts.update_by_id(item)
+            if context.verbose:
+                await context.send(item)
             bot.dispatch('shift_end', item['_id'])
         return 0
 
