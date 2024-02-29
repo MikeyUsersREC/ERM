@@ -279,8 +279,8 @@ class Actions(commands.Cog):
         docs = [i async for i in bot.shift_management.shifts.db.find({"Guild": guild_id, "EndEpoch": 0})]
         for item in docs:
             item['EndEpoch'] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-            bot.dispatch('shift_end', item['_id'])
             await bot.shift_management.shifts.update_by_id(item)
+            bot.dispatch('shift_end', item['_id'])
         return 0
 
     @staticmethod
