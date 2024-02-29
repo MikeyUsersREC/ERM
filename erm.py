@@ -177,7 +177,9 @@ class Bot(commands.AutoShardedBot):
             if environment == "DEVELOPMENT":
                 await bot.tree.sync(guild=discord.Object(id=987798554972143728))
             else:
-                await bot.tree.sync()
+                pass
+                # Prevent auto syncing
+                # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
             bot.is_synced = True
             check_reminders.start()
@@ -578,119 +580,136 @@ async def iterate_prc_logs():
     # enabled, as well as send all players joined during that time period.
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
         try:
-            guild = await bot.fetch_guild(item['_id'])
-        except discord.HTTPException:
-            continue
-        
-        try:
-            kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
-        except discord.HTTPException:
-            kill_logs_channel = None
-
-        try:
-            player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
-        except discord.HTTPException:
-            player_logs_channel = None
-
-
-        # if not kill_logs_channel and not player_logs_channel:
-        #     continue
+            try:
+                guild = await bot.fetch_guild(item['_id'])
+            except discord.HTTPException:
+                continue
             
-        try:
-            kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
-            player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
-        except prc_api.ResponseFailure:
-            continue
+            try:
+                kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
+            except discord.HTTPException:
+                kill_logs_channel = None
+
+            try:
+                player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
+            except discord.HTTPException:
+                player_logs_channel = None
 
 
-        sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=False)
-        sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=False)
+            # if not kill_logs_channel and not player_logs_channel:
+            #     continue
+                
+            try:
+                kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
+                player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
+            except prc_api.ResponseFailure:
+                continue
 
-        current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 
-        players = {}
+            sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp, reverse=False)
+            sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp, reverse=False)
+
+            current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+
+            players = {}
 
 
-        for item in sorted_kill_logs:
-            if (current_timestamp - item.timestamp) > 45:
-                break
-
-            if not players.get(item.killer_username):
-                players[item.killer_username] = [1, [item]]
-            else:
-                players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
-
-            if not kill_logs_channel is not None:    
-                await kill_logs_channel.send(
-                    embed=discord.Embed(
-                        title="Kill Log",
-                        description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>",
-                        color=BLANK_COLOR
-                    )
-                )
-
-        # Check for kill logs amount
-        for username, value in players.items():
-            count = value[0]
-            items = value[1]
-            if count > 3:
-                settings = await bot.settings.find_by_id(guild.id)
-                channel = ((settings or {}).get('ERLC', {}) or {}).get('rdm_channel', 0)
-                try:
-                    channel = await (await bot.fetch_guild(guild.id)).fetch_channel(channel)
-                except discord.HTTPException:
-                    channel = None
-                if not channel:
+            for item in sorted_kill_logs:
+                if (current_timestamp - item.timestamp) > 45:
                     break
-                roblox_player = await bot.roblox.get_user_by_username(username)
-                thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
-                thumbnail = thumbnails[0].image_url
-                pings = []
-                pings = [(guild.get_role(role_id)).mention if guild.get_role(role_id) else None for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', [])]
-                pings = list(filter(lambda x: x is not None, pings))
-                
-                await channel.send(
-                    ', '.join(pings) if pings not in [[], None] else '',
+
+                if not players.get(item.killer_username):
+                    players[item.killer_username] = [1, [item]]
+                else:
+                    players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
+
+                if not kill_logs_channel is not None:    
+                    await kill_logs_channel.send(
+                        embed=discord.Embed(
+                            title="Kill Log",
+                            description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>",
+                            color=BLANK_COLOR
+                        )
+                    )
+
+            # Check for kill logs amount
+            for username, value in players.items():
+                count = value[0]
+                items = value[1]
+                if count > 3:
+                    settings = await bot.settings.find_by_id(guild.id)
+                    channel = ((settings or {}).get('ERLC', {}) or {}).get('rdm_channel', 0)
+                    try:
+                        channel = await (await bot.fetch_guild(guild.id)).fetch_channel(channel)
+                    except discord.HTTPException:
+                        channel = None
+                    if not channel:
+                        break
+                    roblox_player = await bot.roblox.get_user_by_username(username)
+                    thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
+                    thumbnail = thumbnails[0].image_url
+                    pings = []
+                    pings = [(guild.get_role(role_id)).mention if guild.get_role(role_id) else None for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', [])]
+                    pings = list(filter(lambda x: x is not None, pings))
+                    
+                    await channel.send(
+                        ', '.join(pings) if pings not in [[], None] else '',
+                        embed=discord.Embed(
+                            title="<:security:1169804198741823538> RDM Detected",
+                            color=BLANK_COLOR
+                        ).add_field(
+                            name="User Information",
+                            value=(
+                                f"> **Username:** {roblox_player.name}\n"
+                                f"> **User ID:** {roblox_player.id}\n"
+                                f"> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
+                                f"> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
+                            ),
+                            inline=False
+                        ).add_field(
+                            name="Abuse Information",
+                            value=(
+                                f"> **Type:** Mass RDM\n"
+                                f"> **Individuals Affected [{count}]:** {', '.join([f'[{i.killed_username}](https://roblox.com/users/{i.killed_user_id}/profile)' for i in items])}\n"
+                                f"> **At:** <t:{int(items[0].timestamp)}>"
+                            ),
+                            inline=False
+                        ).set_thumbnail(
+                            url=thumbnail
+                        )
+                    )
+
+            for item in sorted_player_logs:
+                if (current_timestamp - item.timestamp) > 45:
+                    break
+                    
+                if not player_logs_channel:
+                    break
+
+                await player_logs_channel.send(
                     embed=discord.Embed(
-                        title="<:security:1169804198741823538> RDM Detected",
-                        color=BLANK_COLOR
-                    ).add_field(
-                        name="User Information",
-                        value=(
-                            f"> **Username:** {roblox_player.name}\n"
-                            f"> **User ID:** {roblox_player.id}\n"
-                            f"> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
-                            f"> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
-                        ),
-                        inline=False
-                    ).add_field(
-                        name="Abuse Information",
-                        value=(
-                            f"> **Type:** Mass RDM\n"
-                            f"> **Individuals Affected [{count}]:** {', '.join([f'[{i.killed_username}](https://roblox.com/users/{i.killed_user_id}/profile)' for i in items])}\n"
-                            f"> **At:** <t:{int(items[0].timestamp)}>"
-                        ),
-                        inline=False
-                    ).set_thumbnail(
-                        url=thumbnail
+                        title="Player Join/Leave Log",
+                        description=f"[{item.username}](https://roblox.com/users/{item.user_id}/profile) {'joined the server' if item.type == 'join' else 'left the server'} • <t:{int(item.timestamp)}:T>",
+                        color=GREEN_COLOR if item.type == 'join' else RED_COLOR
                     )
                 )
+        except Exception as error:
+            channel = await bot.fetch_channel(1193390631192641687)    
+            with push_scope() as scope:
+                scope.set_tag("error_id", "sentry_1234aqaq")
+                scope.set_level('error')
+                await bot.errors.upsert(
+                    {
+                        "_id": "sentry_1234aqaq",
+                        "error": str(error),
+                        "time": datetime.datetime.now(tz=pytz.UTC).strftime(
+                            "%m/%d/%Y, %H:%M:%S"
+                        ),
 
-        for item in sorted_player_logs:
-            if (current_timestamp - item.timestamp) > 45:
-                break
-                
-            if not player_logs_channel:
-                break
-
-            await player_logs_channel.send(
-                embed=discord.Embed(
-                    title="Player Join/Leave Log",
-                    description=f"[{item.username}](https://roblox.com/users/{item.user_id}/profile) {'joined the server' if item.type == 'join' else 'left the server'} • <t:{int(item.timestamp)}:T>",
-                    color=GREEN_COLOR if item.type == 'join' else RED_COLOR
+                    }
                 )
-            )
 
+                capture_exception(error)
                 
 
 
