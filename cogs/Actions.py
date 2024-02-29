@@ -278,11 +278,11 @@ class Actions(commands.Cog):
     async def force_off_duty(bot, guild_id: int, context):
         docs = [i async for i in bot.shift_management.shifts.db.find({"Guild": guild_id, "EndEpoch": 0})]
         for item in docs:
-            item['EndEpoch'] = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-            await bot.shift_management.shifts.update_by_id(item)
+            id = item['_id']
+            await bot.shift_management.shifts.db.update_one({"_id": id}, {"$set": {"EndEpoch": int(datetime.datetime.now(tz=pytz.UTC).timestamp())}})
+            bot.dispatch('shift_end', id)
             if context.verbose:
                 await context.send(item)
-            bot.dispatch('shift_end', item['_id'])
         return 0
 
     @staticmethod
