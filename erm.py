@@ -615,7 +615,7 @@ async def iterate_prc_logs():
 
         for item in sorted_kill_logs:
             if (current_timestamp - item.timestamp) > 45:
-                break
+                continue
 
             if not players.get(item.killer_username):
                 players[item.killer_username] = [1, [item]]
@@ -648,7 +648,7 @@ async def iterate_prc_logs():
                     thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
                     thumbnail = thumbnails[0].image_url
                     pings = []
-                    pings = [(guild.get_role(role_id)).mention if guild.get_role(role_id) else None for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', [])]
+                    pings = [((guild.get_role(role_id)).mention) if guild.get_role(role_id) else None for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', [])]
                     pings = list(filter(lambda x: x is not None, pings))
                     
                     await channel.send(
@@ -680,7 +680,7 @@ async def iterate_prc_logs():
 
         for item in sorted_player_logs:
             if (current_timestamp - item.timestamp) > 45:
-                break
+                continue
                 
             if not player_logs_channel:
                 break
