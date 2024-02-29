@@ -675,7 +675,13 @@ async def iterate_prc_logs():
                             inline=False
                         ).set_thumbnail(
                             url=thumbnail
-                        )
+                        ),
+                        allowed_mentions=discord.AllowedMentions(
+                            everyone=True,
+                            users=True,
+                            roles=True,
+                            replied_user=True,
+                        ),
                     )
 
         for item in sorted_player_logs:
