@@ -140,7 +140,7 @@ async def update_ics(bot, ctx, channel, return_val: dict, ics_id: int):
     queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
     players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
     mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-    admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+    admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
     total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
 
     if await bot.ics.db.count_documents({'_id': ics_id}):
@@ -221,6 +221,12 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
     string = string.replace("{channel}", channel.mention)
     string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
     
+    onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
+        "Guild": ctx.guild.id, "EndEpoch": 0
+    })])
+
+    string = string.replace("{onduty}", str(onduty))
+
     #### CUSTOM ERLC VARS
     # Fetch whether they should even be allowed to use ERLC vars
     if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
@@ -232,9 +238,8 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
     queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
     players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
     mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-    admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+    admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
     total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
-    
     
     string = string.replace("{join_code}", status.join_key)
     string = string.replace("{players}", str(status.current_players))
@@ -243,9 +248,6 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
     string = string.replace("{staff}", str(total_staff))
     string = string.replace("{admins}", str(admins))
     string = string.replace("{mods}", str(mods))
-
-    
-
 
     return string
 

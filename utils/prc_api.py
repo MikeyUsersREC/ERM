@@ -7,6 +7,7 @@ import roblox
 from discord.ext import commands
 import aiohttp
 from decouple import config
+from bson import ObjectId
 from utils.basedataclass import BaseDataClass
 from datamodels.ServerKeys import ServerKey
 
@@ -18,6 +19,10 @@ class ResponseFailure(Exception):
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+class BanItem(BaseDataClass):
+    username: str
+    user_id: int
 
 
 class CommandLog(BaseDataClass):
@@ -84,6 +89,8 @@ class PRCApiClient:
         pass
 
     async def _send_api_request(self, method: typing.Literal['GET', 'POST'], endpoint: str, guild_id: int, data: dict | None = None, key: str | None = None):
+
+
         if not key:
             internal_server_object = await self.get_server_key(guild_id)
             internal_server_key = internal_server_object if internal_server_object is not None else None
@@ -94,11 +101,26 @@ class PRCApiClient:
         else:
             internal_server_key = key
 
+        if await self.bot.prohibited.db.count_documents({"ServerKey": internal_server_key, "ProhibitedUntil": {"$gt": int(datetime.datetime.now().timestamp())}}):
+            raise ResponseFailure(
+                status_code=423,
+                json_data={"reason": "Request Blocked - Key Prohibited | ERM Systems"}
+            )
+
+
         async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers={
             "Authorization": self.api_key,
             "Server-Key": internal_server_key
         }, json=data or {}) as response:
-            return response.status, (await response.json() if response.content_type != "text/plain" else {})
+            if response.status == 403:
+                await self.bot.prohibited.insert({
+                    "_id": ObjectId(),
+                    "ServerKey": internal_server_key,
+                    "ProhibitedUntil": 9999999999
+                })
+                response.status = 423
+                
+            return response.status, ({"reason": "Request Blocked - Key Prohibited | ERM Systems"} if response.status == 423 else (await response.json() if response.content_type != "text/plain" else {}))
 
 
     async def get_server_status(self, guild_id: int):
@@ -202,6 +224,20 @@ class PRCApiClient:
                 json_data=response_json
             )
         
+    async def fetch_bans(self, guild_id: int):
+        status_code, response_json = await self._send_api_request('GET', '/server/bans', guild_id)
+        
+        if status_code == 200:
+            return [BanItem(
+                username=int(user_id),
+                user_id=username
+            ) for user_id, username in response_json.items()]
+        else:
+            raise ResponseFailure(
+                status_code=status_code,
+                json_data=response_json
+            )
+
     async def fetch_player_logs(self, guild_id: int):
         status_code, response_json = await self._send_api_request('GET', '/server/joinlogs', guild_id)
         if status_code == 200:
@@ -224,6 +260,17 @@ class PRCApiClient:
             "command": command
         })
         return status_code, response_json
+    
+    async def unban_user(self, guild_id: int, user_id: int):
+        status_code = 0
+        while status_code != 200:
+            status_code, response_json = await self._send_api_request('POST', '/server/command', guild_id, data={
+                "command": ":unban {}".format(str(user_id))
+            })
+            if status_code == 429:
+                await asyncio.sleep(response_json['retry_after']+0.1)
+            else:
+                return status_code
 
 
 # TODO: Testing code, remove in production

@@ -166,7 +166,7 @@ async def punishment_autocomplete(
             app_commands.Choice(
                 name=(item_identifier := item if isinstance(item, str) else item['name']),
                 value=item_identifier
-            ) for item in Data['types']
+            ) for item in Data['types'] + ["Warning", "Kick", "Ban", "BOLO"]
         ]
 
 async def user_autocomplete(

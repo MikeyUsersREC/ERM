@@ -14,7 +14,7 @@ from reactionmenu.abc import _PageController
 import pytz
 from datamodels.Settings import Settings
 from datamodels.Warnings import WarningItem
-from erm import generator, is_management, is_staff
+from erm import generator, is_management, is_staff, management_predicate
 from menus import (
     ChannelSelect,
     CustomisePunishmentType,
@@ -224,7 +224,8 @@ class Punishments(commands.Cog):
         aliases=["m"],
     )
     @require_settings()
-    @is_management()
+    # @is_management()
+    @is_staff()
     async def punishment_manage(self, ctx: commands.Context):
         embed = discord.Embed(
             title="Management Options",
@@ -250,7 +251,8 @@ class Punishments(commands.Cog):
                         title="Invalid Punishment ID",
                         description="This punishment ID is invalid.",
                         color=BLANK_COLOR
-                    )
+                    ),
+                    view=None
                 )
 
             punishment = await self.bot.punishments.get_warning_by_snowflake(punishment_id)
@@ -259,6 +261,16 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="Invalid Punishment ID",
                         description="This punishment ID is invalid.",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+                )
+            
+            if punishment['ModeratorID'] != ctx.author.id and not await management_predicate(ctx):
+                return await msg.edit(
+                    embed=discord.Embed(
+                        title="Access Denied",
+                        description="You are unable to edit other people's punishments as you only have the Staff permission.",
                         color=BLANK_COLOR
                     )
                 )
@@ -274,6 +286,15 @@ class Punishments(commands.Cog):
 
 
         elif view.value == "types":
+            if not await management_predicate(ctx):
+                return await msg.edit(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="You are not permitted to access this panel.",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+                )
             punishment_types = await self.bot.punishment_types.get_punishment_types(ctx.guild.id)
             if not punishment_types:
                 punishment_types = {'types': []}
@@ -365,6 +386,14 @@ class Punishments(commands.Cog):
                     view=None
                 )
             elif manage_types_view.value == "delete":
+                if not await management_predicate(ctx):
+                    return await msg.edit(
+                        embed=discord.Embed(
+                            title="Not Permitted",
+                            description="You are not permitted to access this panel.",
+                            color=BLANK_COLOR
+                    )
+                )
                 try:
                     type_id = int(manage_types_view.selected_for_deletion.strip())
                 except ValueError:

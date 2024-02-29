@@ -820,7 +820,7 @@ class Configuration(commands.Cog):
                     description=(
                         "**What is Game Logging?** Game Logging is an ERM module, particularly tailored towards private servers of Emergency Response: Liberty County, but can apply to other roleplay games in a similar genre. Game Logging allows for staff members to log events of interest, such as custom in-game messages, priority timers, as well as STS events. This allows for streamlined management of staff efficiency.\n\n"
                         "### Message Logging\n\n"
-                        "**Enabled:** This dictates whether the in-game message section of the Game Logging module is enabled. This part of the module automatically and allows for manual logs of in-game messages and 'hints' so that management can effectively see if staff members are sending thd correct amount of notifications.\n\n"
+                        "**Enabled:** This dictates whether the in-game message section of the Game Logging module is enabled. This part of the module automatically and allows for manual logs of in-game messages and 'hints' so that management can effectively see if staff members are sending the correct amount of notifications.\n\n"
                         "**Message Logging Channel:** This channel will be where these message and notification logs will be sent to.\n\n"
                         "### STS Logging\n\n"
                         "**Enabled:** This dictates whether the Shoulder-to-Shoulder event logging section of the Game Logging module is enabled. When enabled, staff members can log the duration of their events, as well as who hosted them and other important information.\n\n"

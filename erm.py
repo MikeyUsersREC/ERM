@@ -37,6 +37,7 @@ from datamodels.StaffConnections import StaffConnections
 from datamodels.Views import Views
 from datamodels.Actions import Actions
 from datamodels.Warnings import Warnings
+from datamodels.ProhibitedUseKeys import ProhibitedUseKeys
 from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
 from menus import CompleteReminder, LOAMenu
 from utils.bloxlink import Bloxlink
@@ -133,6 +134,7 @@ class Bot(commands.AutoShardedBot):
             self.staff_connections = StaffConnections(self.db, "staff_connections")
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
             self.actions = Actions(self.db, "actions")
+            self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
@@ -183,6 +185,7 @@ class Bot(commands.AutoShardedBot):
             iterate_ics.start()
             # GDPR.start()
             iterate_prc_logs.start()
+            tempban_checks.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -445,8 +448,6 @@ async def check_reminders():
                         new_go['_id'] = g_id
                     dT = datetime.datetime.now()
                     interval = item["interval"]
-                    full = None
-                    num = None
 
                     tD = dT + datetime.timedelta(seconds=interval)
 
@@ -509,6 +510,68 @@ async def check_reminders():
     except Exception as e:
         print(e)
 
+@tasks.loop(minutes=1, reconnect=True)
+async def tempban_checks():
+    # This will check for expired time bans
+    # and for servers which have this feature enabled
+    # to automatically remove the ban in-game
+    # using POST /server/command
+
+    # This will also use a GET request before
+    # sending that POST request, particularly
+    # GET /server/bans
+
+    # We also check if the punishment item is 
+    # before the update date, because else we'd
+    # have too high influx of invalid
+    # temporary bans
+
+    # For diagnostic purposes, we also choose to
+    # capture the amount of time it takes for this
+    # event to run, as it may cause issues in
+    # time registration.
+
+    cached_servers = {}
+    initial_time = time.time()
+    async for punishment_item in bot.punishments.db.find({
+        "Epoch": {"$gt": 1709164800},
+        "CheckExecuted": {"$exists": False},
+        "UntilEpoch": {"$lt": int(datetime.datetime.now(tz=pytz.UTC).timestamp())},
+        "Type": "Temporary Ban"
+    }):
+        try:
+            await bot.fetch_guild(punishment_item['Guild'])
+        except discord.HTTPException:
+            continue
+        
+        if not cached_servers.get(punishment_item['Guild']):
+            cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans()
+
+        punishment_item['CheckExecuted'] = True
+        await bot.punishments.update_by_id(punishment_item)
+
+        if punishment_item['UserID'] not in [i.user_id for i in cached_servers[punishment_item['Guild']]]:
+            continue
+
+        sorted_punishments = sorted([i async for i in await bot.punishments.db.find({"UserID": punishment_item['UserID'], "Guild": punishment_item['Guild']})], key=lambda x: x['Epoch'], reverse=True)
+        new_sorted_punishments = []
+        for item in sorted_punishments:
+            if item == punishment_item:
+                break
+            new_sorted_punishments.append(item)
+        
+        if any([i['Type'] in ["Ban", "Temporary Ban"] for i in new_sorted_punishments]):
+            continue
+            
+        await bot.prc_api.unban_user(punishment_item['Guild'], punishment_item['user_id'])
+    
+    end_time = time.time()
+    logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
+        
+
+
+
+
 @tasks.loop(seconds=45, reconnect=True)
 async def iterate_prc_logs():
     # This will check every 60 seconds for kill logs and player logs
@@ -570,23 +633,24 @@ async def iterate_prc_logs():
         for username, value in players.items():
             count = value[0]
             items = value[1]
-            print(players)
             if count > 3:
                 settings = await bot.settings.find_by_id(guild.id)
-                channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
+                channel = ((settings or {}).get('ERLC', {}) or {}).get('rdm_channel', 0)
                 try:
                     channel = await (await bot.fetch_guild(guild.id)).fetch_channel(channel)
                 except discord.HTTPException:
                     channel = None
-                print(579)
                 if not channel:
                     break
-                print(582)
                 roblox_player = await bot.roblox.get_user_by_username(username)
                 thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
                 thumbnail = thumbnails[0].image_url
-
+                pings = []
+                pings = [(guild.get_role(role_id)).mention if guild.get_role(role_id) else None for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', [])]
+                pings = list(filter(lambda x: x is not None, pings))
+                
                 await channel.send(
+                    ', '.join(pings) if pings not in [[], None] else '',
                     embed=discord.Embed(
                         title="<:security:1169804198741823538> RDM Detected",
                         color=BLANK_COLOR
@@ -662,9 +726,12 @@ async def iterate_ics():
         queue: int = await bot.prc_api.get_server_queue(guild.id, minimal=True)
         players: list[Player] = await bot.prc_api.get_server_players(guild.id)
         mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-        admins: int = len(list(filter(lambda x: x.permission == "Server Administrators", players)))
+        admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
         total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        
+        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
+            "Guild": guild.id, "EndEpoch": 0
+        })])
+
         new_data = {
                 'join_code': status.join_key,
                 'players': status.current_players,
@@ -672,7 +739,8 @@ async def iterate_ics():
                 'queue': queue,
                 'staff': total_staff,
                 'admins': admins,
-                'mods': mods
+                'mods': mods,
+                "onduty": onduty
             }
         print(json.dumps(new_data, indent=4))
         

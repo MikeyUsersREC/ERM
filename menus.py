@@ -1519,6 +1519,7 @@ class CustomCommandModification(discord.ui.View):
                     "`{server}` - Name of the server this is being ran in.\n"
                     "`{channel}` - Mention of the channel the command is being ran in.\n"
                     "`{prefix}` - The custom prefix of the bot.\n"
+                    "`{onduty}` - Number of staff which are on duty within your server.\n"
                     "\n**PRC Specific Variables**\n"
                     "`{join_code}` - Join Code of the ERLC server\n"
                     "`{players}` - Current players in the ERLC server\n"
@@ -1526,7 +1527,7 @@ class CustomCommandModification(discord.ui.View):
                     "`{queue}` - Number of players in the queue\n"
                     "`{staff}` - Number of staff members in-game\n"
                     "`{mods}` - Number of mods in-game\n"
-                    "`{admins}` - Number of admins in-game\n"
+                    "`{admins}` - Number of admins in-game\n",
                 ),
                 color=BLANK_COLOR
             ),
@@ -5453,7 +5454,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         bot = self.bot
 
         sett = await bot.settings.find_by_id(guild_id)
-        sett['punishments']['kick_channel'] = int(select.values[0].id or None)
+        sett['punishments']['kick_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Ban Channel", row=1, max_values=1,
@@ -5470,7 +5471,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         bot = self.bot
 
         sett = await bot.settings.find_by_id(guild_id)
-        sett['punishments']['ban_channel'] = int(select.values[0].id or None)
+        sett['punishments']['ban_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="BOLO Channel", row=2, max_values=1,
@@ -5487,7 +5488,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         bot = self.bot
 
         sett = await bot.settings.find_by_id(guild_id)
-        sett['punishments']['bolo_channel'] = int(select.values[0].id or None)
+        sett['punishments']['bolo_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
 
@@ -5535,7 +5536,7 @@ class PunishmentsConfiguration(AssociationConfigurationView):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        sett['punishments']['channel'] = int(select.values[0].id or None)
+        sett['punishments']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.button(
@@ -5614,7 +5615,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('game_security'):
             sett['game_security'] = {}
-        sett['game_security']['webhook_channel'] = int(select.values[0].id or None)
+        sett['game_security']['webhook_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Alert Channel", row=2, max_values=1, min_values=0,
@@ -5632,7 +5633,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('game_security'):
             sett['game_security'] = {}
-        sett['game_security']['channel'] = int(select.values[0].id or None)
+        sett['game_security']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Mentionables", row=3, max_values=25, min_values=0)
@@ -5826,7 +5827,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging'] = {"message": {}}
         if not sett.get('game_logging', {}).get('message'):
             sett['game_logging']['message'] = {}
-        sett['game_logging']['message']['channel'] = int(select.values[0].id or None)
+        sett['game_logging']['message']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="STS Logging Channel", row=1, max_values=1,
@@ -5846,7 +5847,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging'] = {"sts": {}}
         if not sett.get('game_logging', {}).get('sts'):
             sett['game_logging']['sts'] = {}
-        sett['game_logging']['sts']['channel'] = int(select.values[0].id or None)
+        sett['game_logging']['sts']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Priority Logging Channel", row=2, max_values=1,
@@ -5866,7 +5867,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging'] = {"priority": {}}
         if not sett.get('game_logging', {}).get('priority'):
             sett['game_logging']['priority'] = {}
-        sett['game_logging']['priority']['channel'] = int(select.values[0].id or None)
+        sett['game_logging']['priority']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
 
@@ -6111,6 +6112,47 @@ class GameLoggingConfiguration(AssociationConfigurationView):
         ])
         await interaction.response.send_message(view=new_view, ephemeral=True)
 
+class ExtendedERLCConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="RDM Mentionables", row=0, max_values=25, min_values=0)
+    async def rdm_mentionables(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['ERLC']['rdm_mentionables'] = [i.id for i in select.values]
+        await bot.settings.update_by_id(sett)
+
+
+    @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="RDM Alert Channel", row=1, max_values=1,
+                       min_values=0, channel_types=[discord.ChannelType.text])
+    async def rdm_alert_channel(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['game_logging']['rdm_channel'] = int(select.values[0].id or 0)
+        await bot.settings.update_by_id(sett)
+
 
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -6192,6 +6234,28 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         sett['ERLC']['kill_logs'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
 
+    @discord.ui.button(
+        label='More Options',
+        row=3
+    )
+    async def more_options(self, interaction: discord.Interaction, button: discord.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        new_view = ExtendedERLCConfiguration(self.bot, interaction.user.id, [
+            (
+                "RDM Mentionables",
+                [discord.utils.get(interaction.guild.roles,
+                                   id=i) for i in (sett.get('ERLC', {}).get('rdm_mentionables') or [])]
+            ),
+            (
+                "RDM Alert Channel",
+                [discord.utils.get(interaction.guild.channels,
+                                   id=sett.get('ERLC', {}).get('rdm_channel'))]
+            )
+        ])
+        await interaction.response.send_message(view=new_view, ephemeral=True)
 
 
 class RoleSelect(discord.ui.View):
