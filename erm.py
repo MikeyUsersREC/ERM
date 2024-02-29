@@ -547,7 +547,7 @@ async def tempban_checks():
             continue
         
         if not cached_servers.get(punishment_item['Guild']):
-            cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans()
+            cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans(punishment_item['Guild'])
 
         punishment_item['CheckExecuted'] = True
         await bot.punishments.update_by_id(punishment_item)
