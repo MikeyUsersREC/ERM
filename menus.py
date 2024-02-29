@@ -6150,7 +6150,7 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
             sett['ERLC'] = {}
-        sett['game_logging']['rdm_channel'] = int(select.values[0].id or 0)
+        sett['ERLC']['rdm_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
 
 
