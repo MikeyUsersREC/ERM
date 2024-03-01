@@ -81,14 +81,6 @@ class ERLC(commands.Cog):
                 )
             )
         else:
-            if command_response[0] == 423:
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="Request Blocked",
-                        description=f"This request from your server has been blocked.\nContact [ERM Support](https://discord.gg/BGfyfqU5fx) for details.\n**{command_response[1]['reason']}**",
-                        color=BLANK_COLOR
-                    )
-                )
             return await ctx.send(
                 embed=discord.Embed(
                     title="Not Executed",
@@ -118,14 +110,6 @@ class ERLC(commands.Cog):
                 )
             )
         else:
-            if command_response[0] == 423:
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="Request Blocked",
-                        description=f"This request from your server has been blocked.\nContact [ERM Support](https://discord.gg/BGfyfqU5fx) for details.\n**{command_response[1]['reason']}**",
-                        color=BLANK_COLOR
-                    )
-                )
             return await ctx.send(
                 embed=discord.Embed(
                     title="Not Executed",
@@ -230,14 +214,6 @@ class ERLC(commands.Cog):
                 )
             )
         else:
-            if command_response[0] == 423:
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="Request Blocked",
-                        description=f"This request from your server has been blocked.\nContact [ERM Support](https://discord.gg/BGfyfqU5fx) for details.\n**{command_response[1]['reason']}**",
-                        color=BLANK_COLOR
-                    )
-                )
             return await ctx.send(
                 embed=discord.Embed(
                     title=f"Not Executed ({command_response[0]})",

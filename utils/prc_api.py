@@ -101,26 +101,20 @@ class PRCApiClient:
         else:
             internal_server_key = key
 
-        if await self.bot.prohibited.db.count_documents({"ServerKey": internal_server_key, "ProhibitedUntil": {"$gt": int(datetime.datetime.now().timestamp())}}):
-            raise ResponseFailure(
-                status_code=423,
-                json_data={"reason": "Request Blocked - Key Prohibited | ERM Systems"}
-            )
-
 
         async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers={
             "Authorization": self.api_key,
             "Server-Key": internal_server_key
         }, json=data or {}) as response:
-            if response.status == 403:
-                await self.bot.prohibited.insert({
-                    "_id": ObjectId(),
-                    "ServerKey": internal_server_key,
-                    "ProhibitedUntil": 9999999999
-                })
-                response.status = 423
+            # if response.status == 403:
+            #     await self.bot.prohibited.insert({
+            #         "_id": ObjectId(),
+            #         "ServerKey": internal_server_key,
+            #         "ProhibitedUntil": 9999999999
+            #     })
+            #     response.status = 423
                 
-            return response.status, ({"reason": "Request Blocked - Key Prohibited | ERM Systems"} if response.status == 423 else (await response.json() if response.content_type != "text/plain" else {}))
+            return response.status, (await response.json() if response.content_type != "text/plain" else {})
 
 
     async def get_server_status(self, guild_id: int):
