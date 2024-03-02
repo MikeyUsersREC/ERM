@@ -61,16 +61,6 @@ class ShiftLogging(commands.Cog):
                 "Not Enabled",
                 "Shift Logging is not enabled on this server."
             )
-        try:
-            shift_channel = discord.utils.get(
-                ctx.guild.channels, id=configItem["shift_management"]["channel"]
-            )
-        except KeyError:
-            return await new_failure_embed(
-                ctx,
-                "Incorrect Configuration",
-                'This server is not configured correctly.',
-            )
 
         embed = discord.Embed(
             title=f"Total Shifts" if member == ctx.author else f'{member.name}\'s Total Shifts',
@@ -104,11 +94,23 @@ class ShiftLogging(commands.Cog):
                 shifts.append(s)
 
         total_seconds = sum([get_elapsed_time(i) for i in shifts])
+        sorted_roles = sorted(member.roles, key=lambda x: x.position)
+        selected_quota = 0
+        specified_quota_roles = configItem.get('shift_management', {}).get('role_quotas', [])
+        for role in sorted_roles:
+            print(role)
+            print(specified_quota_roles)
+            if role.id in [t['role'] for t in specified_quota_roles]:
+                found_item = [t for t in specified_quota_roles if t['role'] == role.id][0]
+                selected_quota = found_item['quota']
 
-        quota = configItem.get('shift_management', {}).get('quota', 0)
+
+        if selected_quota == 0:
+            selected_quota = configItem.get('shift_management').get('quota', 0)
+
         met_quota = None
-        if quota != 0:
-            met_quota = bool(total_seconds > quota)
+        if selected_quota != 0:
+            met_quota = bool(total_seconds > selected_quota)
 
         try:
             if shift:

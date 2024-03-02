@@ -56,7 +56,7 @@ class ShiftManagement:
         )
 
     async def add_shift_by_user(
-        self, member: discord.Member, shift_type: str, breaks: list, guild: int
+        self, member: discord.Member, shift_type: str, breaks: list, guild: int, timestamp: int = 0
     ):
         """
         Adds a shift for the specified user to the database, with the provided
@@ -92,7 +92,7 @@ class ShiftManagement:
             "Nickname": member.display_name,
             "UserID": member.id,
             "Type": shift_type,
-            "StartEpoch": datetime.datetime.now().timestamp(),
+            "StartEpoch": datetime.datetime.now().timestamp() if timestamp in [0, None] else timestamp,
             "Breaks": breaks,
             "Guild": guild,
             "Moderations": [],
@@ -134,7 +134,7 @@ class ShiftManagement:
         await self.shifts.update_by_id(document)
         return document
 
-    async def end_shift(self, identifier: str, guild_id: int | None = None):
+    async def end_shift(self, identifier: str, guild_id: int | None = None, timestamp: int | None = None):
         """
         Ends the specified user's shift.
         """
@@ -150,7 +150,7 @@ class ShiftManagement:
 
         for breaks in document["Breaks"]:
             if breaks["EndEpoch"] == 0:
-                breaks["EndEpoch"] = int(datetime.datetime.now().timestamp())
+                breaks["EndEpoch"] = int(datetime.datetime.now().timestamp()) if timestamp in [None, 0] else timestamp
 
         try:
             url_var = config("BASE_API_URL")

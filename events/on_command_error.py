@@ -10,7 +10,7 @@ from sentry_sdk import capture_exception, push_scope
 
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
-from utils.prc_api import ServerLinkNotFound
+from utils.prc_api import ServerLinkNotFound, ResponseFailure
 
 class OnCommandError(commands.Cog):
     def __init__(self, bot):
@@ -31,6 +31,15 @@ class OnCommandError(commands.Cog):
                 description="I could not connect to the ROBLOX API. Please try again later.",
                 color=BLANK_COLOR
             ))
+
+        if isinstance(error, ResponseFailure):
+            return await ctx.reply(
+                embed=discord.Embed(
+                    title=f"PRC Response Failure ({error.status_code})",
+                    description="Your server seems to be offline. If this is incorrect, PRC's API may be down." if error.status_code == 422 else "There seems to be issues with the PRC API. Stand by and wait a few minutes before trying again.",
+                    color=BLANK_COLOR
+                )
+            )
 
 
         if isinstance(error, commands.BadArgument):

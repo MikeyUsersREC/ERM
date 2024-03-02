@@ -1527,7 +1527,7 @@ class CustomCommandModification(discord.ui.View):
                     "`{queue}` - Number of players in the queue\n"
                     "`{staff}` - Number of staff members in-game\n"
                     "`{mods}` - Number of mods in-game\n"
-                    "`{admins}` - Number of admins in-game\n",
+                    "`{admins}` - Number of admins in-game\n"
                 ),
                 color=BLANK_COLOR
             ),
@@ -6112,6 +6112,7 @@ class GameLoggingConfiguration(AssociationConfigurationView):
         ])
         await interaction.response.send_message(view=new_view, ephemeral=True)
 
+
 class ExtendedERLCConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -6152,6 +6153,122 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
             sett['ERLC'] = {}
         sett['ERLC']['rdm_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+
+class AutomaticShiftConfiguration(discord.ui.View):
+    def __init__(self, bot, sustained_interaction: Interaction, shift_types: list, auto_data: dict):
+        self.bot = bot
+        self.shift_types = shift_types
+        self.sustained_interaction = sustained_interaction
+        self.auto_data = auto_data
+        super().__init__(timeout=None)
+        self.toggle_button_styling()
+
+
+    def toggle_button_styling(self):
+        for item in self.children:
+            if item.label == "Toggle Automatic Shifts":
+                item.style = discord.ButtonStyle.green if self.auto_data.get('enabled') is True else discord.ButtonStyle.danger
+            else:
+                item.disabled = True if (len(self.shift_types) == 0 and self.auto_data.get('shift_type') == 'Default') else False
+
+    @discord.ui.button(
+        label="Toggle Automatic Shifts",
+        style=discord.ButtonStyle.secondary
+    )
+    async def toggle_automatic_shifts(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.auto_data['enabled'] = not self.auto_data['enabled']
+        self.toggle_button_styling()
+        embed = discord.Embed(
+            title="Automatic Shifts",
+            description="",
+            color=BLANK_COLOR
+        )
+        for key, value in self.auto_data.items():
+            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await (await self.sustained_interaction.original_response()).edit(embed=embed, view=self)
+        await interaction.response.defer(thinking=False)
+
+    @discord.ui.button(
+        label="Change Shift Type",
+        style=discord.ButtonStyle.secondary,
+        row=1,
+        disabled=True
+    )
+    async def change_shift_type(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(
+            modal := CustomModal(
+                "Change Shift Type",
+                [
+                    (
+                        "shift_type",
+                        discord.ui.TextInput(
+                            label="Shift Type"
+                        )
+                    )
+                ], {
+                    "ephemeral": True
+                }
+            )
+        )
+        timeout = await modal.wait()
+        if timeout:
+            return
+        
+        if not modal.shift_type.value:
+            return
+        
+        if modal.shift_type.value.lower() == "default":
+            self.auto_data['shift_type'] = "Default"
+        else:
+            if (selected := {i['name'].lower(): i for i in self.shift_types}.get(modal.shift_type.value.lower())) is None:
+                return await modal.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Shift Type",
+                        description="This Shift Type does not exist in your server.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            self.auto_data['shift_type'] = selected['name']
+
+        
+        self.toggle_button_styling()
+        embed = discord.Embed(
+            title="Automatic Shifts",
+            description="",
+            color=BLANK_COLOR
+        )
+        for key, value in self.auto_data.items():
+            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await (await self.sustained_interaction.original_response()).edit(embed=embed, view=self)
+        # await interaction.response.defer(thinking=False)
+
+
+    @discord.ui.button(
+        label="Finish",
+        style=discord.ButtonStyle.success,
+        row=2
+    )
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        await (await self.sustained_interaction.original_response()).delete()
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['ERLC']['automatic_shifts'] = self.auto_data
+        await self.bot.settings.update_by_id(sett)
 
 
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
@@ -6256,6 +6373,42 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             )
         ])
         await interaction.response.send_message(view=new_view, ephemeral=True)
+
+    @discord.ui.button(
+        label="Automatic Shifts",
+        row=3
+    )
+    async def automatic_shifts(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        auto_shift_data = settings.get('ERLC', {}).get('automatic_shifts', {
+            "enabled": False,
+            "shift_type": "Default"
+        })
+
+        embed = discord.Embed(
+            title="Automatic Shifts",
+            description="",
+            color=BLANK_COLOR
+        )
+        for key, value in auto_shift_data.items():
+            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
+        view = AutomaticShiftConfiguration(self.bot, interaction, shift_types, auto_shift_data)
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
 
 
 class RoleSelect(discord.ui.View):

@@ -20,6 +20,9 @@ class ResponseFailure(Exception):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def __repr__(self):
+        return f'{self.status_code}: {self.json_data}'
+
 class BanItem(BaseDataClass):
     username: str
     user_id: int

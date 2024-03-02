@@ -31,7 +31,7 @@ class ERLC(commands.Cog):
 
     async def secure_logging(self, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str, attempted: bool = False):
         settings = await self.bot.settings.find_by_id(guild_id)
-        channel = ((settings or {}).get('game_security', {}) or {}).get('webhook_channel')
+        channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
         try:
             channel = await (await self.bot.fetch_guild(guild_id)).fetch_channel(channel)
         except discord.HTTPException:

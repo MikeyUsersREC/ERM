@@ -17,7 +17,7 @@ class Privacy(commands.Cog):
         description="Change your privacy settings.",
         extras={"category": "Privacy"},
     )
-    async def consent(self, ctx):
+    async def consent(self, ctx: commands.Context):
         bot = self.bot
         punishments_enabled = True
         ai_enabled = True
@@ -40,6 +40,10 @@ class Privacy(commands.Cog):
                 if document.get("ai_predictions") is not None
                 else True
             )
+            automatic_shifts_enabled = (
+                document.get('auto_shifts')
+                if document.get('auto_shifts') is not None else True
+            )
             selected = document
         embed = discord.Embed(
             title="User Settings",
@@ -51,6 +55,7 @@ class Privacy(commands.Cog):
                 f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                 f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                 f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
             ),
             inline=False
         )
@@ -116,6 +121,8 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+
                         ),
                         inline=False
                     )
@@ -158,6 +165,7 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
                         ),
                         inline=False
                     )
@@ -235,6 +243,7 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
                         ),
                         inline=False
                     )
@@ -276,6 +285,7 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
                         ),
                         inline=False
                     )
@@ -353,6 +363,7 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
                         ),
                         inline=False
                     )
@@ -398,6 +409,132 @@ class Privacy(commands.Cog):
                             f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
                             f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.danger
+                    await interaction.message.edit(
+                        content='',
+                        embed=embed,
+                        view=button.view,
+                    )
+            else:
+                await interaction.response.send_message(embed=discord.Embed(
+                    title="Not Permitted",
+                    description="You are not permitted to interact with these buttons.",
+                    color=BLANK_COLOR
+                ), ephemeral=True)
+
+        async def automatic_shifts(
+            interaction: discord.Interaction, button: discord.ui.Button
+        ):
+            if interaction.user.id == ctx.author.id:
+                nonlocal selected
+                nonlocal automatic_shifts_enabled
+                await interaction.response.defer()
+                view = CustomSelectMenu(
+                    ctx.author.id,
+                    [
+                        discord.SelectOption(
+                            label="Enable",
+                            value="enable",
+                            description="Enable Automatic Shifts.",
+                        ),
+                        discord.SelectOption(
+                            label="Disable",
+                            value="disable",
+                            description="Disable Automatic Shifts.",
+                        ),
+                    ],
+                )
+
+                await interaction.message.edit(
+                    view=view
+                )
+                await view.wait()
+                if view.value == "enable":
+                    if selected is None:
+                        selected = {"_id": ctx.author.id, "automatic_shifts": True}
+                        await bot.consent.insert(
+                            selected
+                        )
+                    else:
+                        selected["automatic_shifts"] = True
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
+                        await bot.consent.update_by_id(selected)
+                    shift_reports_enabled = True
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+
+                        ),
+                        inline=False
+                    )
+                    embed.set_author(
+                        name=ctx.guild.name,
+                        icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    )
+                    embed.set_thumbnail(
+                        url=ctx.author.display_avatar.url
+                    )
+                    embed.set_footer(
+                        text="User Settings"
+                    )
+                    embed.timestamp = datetime.datetime.now()
+                    button.style = discord.ButtonStyle.success
+
+                    await interaction.edit_original_response(
+                        content='',
+                        embed=embed,
+                        view=button.view,
+                    )
+
+                elif view.value == "disable":
+                    if selected is None:
+                        selected = {"_id": ctx.author.id, "automatic_shifts": False}
+                        await bot.consent.insert(
+                            selected
+                        )
+                    else:
+                        selected["automatic_shifts"] = False
+                        if not selected.get('_id'):
+                            selected['_id'] = ctx.author.id
+
+                        await bot.consent.update_by_id(selected)
+                    shift_reports_enabled = False
+                    embed = discord.Embed(
+                        title="User Settings",
+                        color=BLANK_COLOR
+                    )
+                    embed.add_field(
+                        name="Configurations",
+                        value=(
+                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **AI Predictions:** {'<:check:1163142000271429662>' if ai_enabled is True else '<:xmark:1166139967920164915>'}\n"
+                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+
                         ),
                         inline=False
                     )
@@ -444,6 +581,12 @@ class Privacy(commands.Cog):
                 style=discord.ButtonStyle.danger if not ai_enabled else discord.ButtonStyle.success,
                 func=punishment_predictions,
             ),
+            CustomExecutionButton(
+                ctx.author.id,
+                label="Automatic Shifts",
+                style=discord.ButtonStyle.danger if not automatic_shifts_enabled else discord.ButtonStyle.success,
+                func=automatic_shifts,
+            )
         ]
 
         for child in buttons:
