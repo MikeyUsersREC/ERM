@@ -33,13 +33,35 @@ class OnCommandError(commands.Cog):
             ))
 
         if isinstance(error, ResponseFailure):
-            return await ctx.reply(
+            await ctx.reply(
                 embed=discord.Embed(
                     title=f"PRC Response Failure ({error.status_code})",
                     description="Your server seems to be offline. If this is incorrect, PRC's API may be down." if error.status_code == 422 else "There seems to be issues with the PRC API. Stand by and wait a few minutes before trying again.",
                     color=BLANK_COLOR
                 )
             )
+            channel = await self.bot.fetch_channel(1213731821330894938)
+            with push_scope() as scope:
+                scope.set_tag("error_id", error_id)
+                scope.set_tag("guild_id", ctx.guild.id)
+                scope.set_tag('user_id', ctx.author.id)
+                scope.set_tag('shard_id', ctx.guild.shard_id)
+                scope.set_level('error')
+                await bot.errors.insert(
+                    {
+                        "_id": error_id,
+                        "error": str(error),
+                        "time": datetime.datetime.now(tz=pytz.UTC).strftime(
+                            "%m/%d/%Y, %H:%M:%S"
+                        ),
+                        "channel": ctx.channel.id,
+                        "guild": ctx.guild.id,
+                    }
+                )
+
+                capture_exception(error)
+            await channel.send(f'`{error_id}` {str(error)}')
+            return
 
 
         if isinstance(error, commands.BadArgument):

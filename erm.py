@@ -39,7 +39,7 @@ from datamodels.Actions import Actions
 from datamodels.Warnings import Warnings
 from datamodels.ProhibitedUseKeys import ProhibitedUseKeys
 from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
-from menus import CompleteReminder, LOAMenu
+from menus import CompleteReminder, LOAMenu, RDMActions
 from utils.bloxlink import Bloxlink
 from utils.prc_api import PRCApiClient
 from utils.utils import *
@@ -683,6 +683,7 @@ async def iterate_prc_logs():
                                 roles=True,
                                 replied_user=True,
                             ),
+                            view=RDMActions(bot)
                         )
 
             staff_roles = []
