@@ -98,8 +98,8 @@ class ShiftLogging(commands.Cog):
         selected_quota = 0
         specified_quota_roles = configItem.get('shift_management', {}).get('role_quotas', [])
         for role in sorted_roles:
-            print(role)
-            print(specified_quota_roles)
+            # print(role)
+            # print(specified_quota_roles)
             if role.id in [t['role'] for t in specified_quota_roles]:
                 found_item = [t for t in specified_quota_roles if t['role'] == role.id][0]
                 selected_quota = found_item['quota']
@@ -644,7 +644,7 @@ class ShiftLogging(commands.Cog):
         sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
         added_staff = []
         for index, staff in enumerate(sorted_staff):
-            # print(staff)
+            # # print(staff)
             member = discord.utils.get(ctx.guild.members, id=staff["id"])
             if not member:
                 continue
@@ -843,11 +843,11 @@ class ShiftLogging(commands.Cog):
 
                 if "Moderations" in document.keys():
                     moderations += len(document["Moderations"])
-                # print(document)
+                # # print(document)
                 total_seconds += (
                     get_elapsed_time(document)
                 )
-                # print(total_seconds)
+                # # print(total_seconds)
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(
                         {
@@ -901,7 +901,7 @@ class ShiftLogging(commands.Cog):
 
 
         embeds.append(embed)
-        # print(sorted_staff)
+        # # print(sorted_staff)
         data = []
         if not sorted_staff:
             if shift_type != 0 and shift_type is not None:
@@ -947,16 +947,16 @@ class ShiftLogging(commands.Cog):
                 member = await ctx.guild.fetch_member(i["id"])
             except discord.NotFound:
                 member = None
-            # print(index)
-            # print(i)
-            # print(member)
+            # # print(index)
+            # # print(i)
+            # # print(member)
             if member:
                 if member.id == ctx.author.id:
                     i["index"] = index
                     my_data = i
 
                 if buffer is None:
-                    # print("buffer none")
+                    # # print("buffer none")
                     buffer = "%s - %s" % (
                         f"{member.name}",
                         td_format(datetime.timedelta(seconds=i["total_seconds"])),
@@ -971,7 +971,7 @@ class ShiftLogging(commands.Cog):
                         ]
                     )
                 else:
-                    # print("buffer not none")
+                    # # print("buffer not none")
                     buffer = buffer + "\n%s - %s" % (
                         f"{member.name}",
                         td_format(datetime.timedelta(seconds=i["total_seconds"])),
@@ -997,7 +997,7 @@ class ShiftLogging(commands.Cog):
                         ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
 
                 else:
-                    # print("fields more than 24")
+                    # # print("fields more than 24")
                     new_embed = discord.Embed(
                         color=BLANK_COLOR, title="Shift Leaderboard"
                     )
@@ -1087,7 +1087,7 @@ class ShiftLogging(commands.Cog):
                                     ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                             else:
-                                # print("fields more than 24")
+                                # # print("fields more than 24")
                                 new_embed = discord.Embed(
                                     color=BLANK_COLOR, title="Shift Leaderboard"
                                 )
@@ -1157,7 +1157,7 @@ class ShiftLogging(commands.Cog):
                             ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                     else:
-                        # print("fields more than 24")
+                        # # print("fields more than 24")
                         new_embed = discord.Embed(
                             color=BLANK_COLOR, title="Shift Leaderboard"
                         )

@@ -72,15 +72,15 @@ class SelectPagination(discord.ui.View):
                 if getattr(item, 'default', None) is not None:
                     if item.default > len(item.options):
                         item.default = 0
-                        print(f'INVALID ::: {item}')
+                        # print(f'INVALID ::: {item}')
                 elif getattr(item, 'default_values', None) is not None:
                     if len(item.default_values) > item.max_values:
                         item.default_values = []
-                        print(f'INVALID ::: {item}')
+                        # print(f'INVALID ::: {item}')
                 else:
-                    print(item)
-                    print(f'Somewhat valid ::: {item}')
-
+                    # print(item)
+                    # print(f'Somewhat valid ::: {item}')
+                    pass
                 view.add_item(item)
         return view
 
@@ -121,7 +121,8 @@ class SelectPagination(discord.ui.View):
                     if len(item.default_values) > item.max_values:
                         item.default_values = []
                 else:
-                    print(item)
+                    # print(item)
+                    pass
                 view.add_item(item)
                 self.page_children.append(item)
 

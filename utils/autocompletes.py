@@ -130,7 +130,7 @@ async def command_autocomplete(
                 )
             ]
 
-       # # print(commands)
+       # # # print(commands)
         commandList = []
         for command in commands:
             if command not in [""]:
@@ -191,7 +191,7 @@ async def user_autocomplete(
             f'https://www.roblox.com/search/users/results?keyword={current}&maxRows=12&startIndex=0') as resp:
                 data_json = await resp.json()
                 if data_json:
-                    print(data_json)
+                    # print(data_json)
                     if isinstance(data_json.get('UserSearchResults'), list):
                         items = [item for item in data_json['UserSearchResults'][:25]]
                     else:

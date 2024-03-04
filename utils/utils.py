@@ -71,7 +71,7 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
             )
             if member_converted:
                 bl_user_data = await bot.bloxlink.find_roblox(member_converted.id)
-                print(bl_user_data)
+                # print(bl_user_data)
                 roblox_user = await bot.bloxlink.get_roblox_info(bl_user_data['robloxID'])
                 return roblox_user
         except KeyError:
@@ -354,7 +354,7 @@ async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage
             await member.edit(nick=new_name)
             changed_nick = True
         except Exception as e:
-            # # print(e)
+            # # # print(e)
             pass
 
     if shift_type:

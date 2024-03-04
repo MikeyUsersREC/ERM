@@ -18,8 +18,8 @@ class StaffConduct(commands.Cog):
     async def check_settings(self, ctx: commands.Context):
         error_text = '<:ERMClose:1111101633389146223> **{},** this server isn\'t setup with ERM! Please run `/setup` to setup the bot before trying to manage infractions'.format(ctx.author.name)
         guild_settings = await self.bot.settings.find_by_id(ctx.guild.id)
-        print(guild_settings)
-        print(guild_settings.get('staff_conduct'))
+        # print(guild_settings)
+        # print(guild_settings.get('staff_conduct'))
         if not guild_settings:
             await ctx.reply(error_text)
             return -1
@@ -264,12 +264,12 @@ a user upon receiving a **{infraction_type_name}**." if not message_data.get('co
                         view=(view := ChannelSelect(ctx.author.id, limit=1))
                     )
                     await view.wait()
-                    print(view.value)
+                    # print(view.value)
                     await message.edit(
                         content=f"{pendingEmoji} **{ctx.author.name},** should the member responsible for issuing the infraction that triggers an escalation request also have the authority to approve the escalation request? **{infraction_type_name}**.",
                         view=(view := YesNoMenu(ctx.author.id))
                     )
-                    print(view.value)
+                    # print(view.value)
             else:
                 await message.edit(
                     content=f"{successEmoji} **{infraction_type_name}** has been successfully submitted!",

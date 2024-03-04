@@ -427,8 +427,8 @@ class ActivityCoreCommands:
 
         expiry_timestamp = current_timestamp + duration_seconds
 
-        print(current_timestamp)
-        print(expiry_timestamp)
+        # print(current_timestamp)
+        # print(expiry_timestamp)
 
         schema = {
             "_id": f"{member.id}_{ctx.guild.id}_{current_timestamp}_{expiry_timestamp}",

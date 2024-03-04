@@ -107,6 +107,7 @@ class PRCApiClient:
 
         async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers={
             "Authorization": self.api_key,
+            "User-Agent": "Application",
             "Server-Key": internal_server_key
         }, json=data or {}) as response:
             # if response.status == 403:
@@ -157,7 +158,7 @@ class PRCApiClient:
         if status_code == 200:
             new_list = []
             for item in response_json:
-                print(item)
+                # print(item)
                 new_list.append(Player(
                     username=item['Player'].split(':')[0],
                     id=item['Player'].split(':')[1],
@@ -176,7 +177,7 @@ class PRCApiClient:
             if minimal:
                 return len(response_json)
             new_list = []
-            print(response_json)
+            # print(response_json)
             for user in (await self.bot.roblox.get_users(response_json, expand=False)):
                 new_list.append(Player(
                     username=user.name,
@@ -274,19 +275,19 @@ class PRCApiClient:
 # client = PRCApiClient(None, config("PRC_API_URL"), config("PRC_API_KEY"))
 # async def main():
 #     server_status = await client.get_server_status(0)
-#     print(f'There are currently {server_status.current_players}/{server_status.max_players} players in {server_status.join_key}.')
+#     # print(f'There are currently {server_status.current_players}/{server_status.max_players} players in {server_status.join_key}.')
 #     players = await client.get_server_players(0)
-#     print(f'There are {len(players)} players in server.')
+#     # print(f'There are {len(players)} players in server.')
 #     for player in players:
-#         print(f'- {player.username} ({player.id})\n- {player.permission}')
+#         # print(f'- {player.username} ({player.id})\n- {player.permission}')
 #     queue = await client.get_server_queue(0)
-#     print(f'There are {len(queue)} players in queue.')
-#     print(queue)
+#     # print(f'There are {len(queue)} players in queue.')
+#     # print(queue)
 #
 #     # await client.run_command(0, '')
 #     logs = (await client.fetch_server_logs(0))
 #     for log in logs:
-#         print(f"{datetime.datetime.fromtimestamp(log.timestamp).strftime('%m/%d/%Y, %H:%M:%S')} | {log.username}: {log.command}")
+#         # print(f"{datetime.datetime.fromtimestamp(log.timestamp).strftime('%m/%d/%Y, %H:%M:%S')} | {log.username}: {log.command}")
 #
 #
 # asyncio.run(main())

@@ -28,8 +28,8 @@ class OnError(commands.Cog):
             return
         if isinstance(error, commands.MissingRequiredArgument):
             return
-        # print(error)
-        # print(str(error))
+        # # print(error)
+        # # print(str(error))
         with push_scope() as scope:
             scope.set_tag("error_id", error_id)
             scope.level = "error"

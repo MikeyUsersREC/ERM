@@ -139,7 +139,8 @@ class Search(commands.Cog):
 
         if await staff_predicate(ctx):
             moderations = [await bot.punishments.fetch_warning(i['_id']) async for i in bot.punishments.db.find({
-                "ModeratorID": ctx.author.id
+                "ModeratorID": ctx.author.id,
+                "Guild": ctx.guild.id
             })]
             embed_list[0].add_field(
                 name="Staff Information",
@@ -156,7 +157,7 @@ class Search(commands.Cog):
 
 
 
-        # # print(result)
+        # # # print(result)
         def add_warning_field(warning):
             new_line = '\n'
             embed_list[-1].add_field(
@@ -196,8 +197,8 @@ class Search(commands.Cog):
                  index, embed in enumerate(embed_list)]
         paginator = SelectPagination(ctx.author.id, list(filter(lambda x: x is not None, pages)))
 
-        # print(embed_list)
-        # [print(obj) for obj in [embed.to_dict() for embed in embed_list]]
+        # # print(embed_list)
+        # [# print(obj) for obj in [embed.to_dict() for embed in embed_list]]
         if len(embed_list) == 1:
             return await ctx.send(
                 embeds=pages[0].embeds
@@ -352,7 +353,7 @@ class Search(commands.Cog):
             inline=False,
         )
 
-        # # print(result)
+        # # # print(result)
         def add_warning_field(warning):
             new_line = '\n'
             embed_list[-1].add_field(
@@ -393,8 +394,8 @@ class Search(commands.Cog):
                  index, embed in enumerate(embed_list)]
         paginator = SelectPagination(ctx.author.id, list(filter(lambda x: x is not None, pages)))
 
-        # print(embed_list)
-        # [print(obj) for obj in [embed.to_dict() for embed in embed_list]]
+        # # print(embed_list)
+        # [# print(obj) for obj in [embed.to_dict() for embed in embed_list]]
         if len(embed_list) == 1:
             return await ctx.send(
                 embeds=pages[0].embeds

@@ -37,7 +37,7 @@ class ERLC(commands.Cog):
         except discord.HTTPException:
             channel = None
         bloxlink_user = await self.bot.bloxlink.find_roblox(author_id)
-        # print(bloxlink_user)
+        # # print(bloxlink_user)
         server_status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         if channel is not None:
             if not attempted:

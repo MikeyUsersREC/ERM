@@ -371,7 +371,7 @@ class MultiDropdown(discord.ui.Select):
             elif isinstance(option, discord.SelectOption):
                 optionList.append(option)
 
-        # # print(optionList)
+        # # # # print(t(t(t(t(optionList)
 
         # The placeholder is what will be shown when no option is chosen
         # The min and max values indicate we can only pick one of the three options
@@ -921,8 +921,8 @@ class LOAMenu(discord.ui.View):
                 self.remove_item(item)
         await interaction.message.edit(view=self)
         s_loa = None
-        # # print(self)
-        # # print(self.bot)
+        # # # # print(t(t(t(t(self)
+        # # # # print(t(t(t(t(self.bot)
         for loa in await self.bot.loas.get_all():
             if (
                     loa["message_id"] == interaction.message.id
@@ -1687,7 +1687,7 @@ class CustomCommandModification(discord.ui.View):
         if timeout or not view.value:
             return
 
-        print(view.command_data)
+        # # print(t(t(t(t(view.command_data)
         self.command_data['buttons'] = view.command_data.get('buttons', [])
         await self.check_ability(interaction.message)
         await self.refresh_ui(interaction.message)
@@ -3088,9 +3088,9 @@ class CustomModalView(discord.ui.View):
             return await generalised_interaction_check_failure(interaction.followup)
 
         self.modal = CustomModal(self.label, self.options, self.epher_args)
-        # print(self.options)
-        # print(self.modal.children)
-        # print(self.modal)
+        # # # print(t(t(t(t(self.options)
+        # # # print(t(t(t(t(self.modal.children)
+        # # # print(t(t(t(t(self.modal)
         await interaction.response.send_modal(self.modal)
         await self.modal.wait()
         self.stop()
@@ -3558,12 +3558,12 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             additional_data=None,
             label="Google Spreadsheet",
     ):
-        # print(type)
+        # # # print(t(t(t(t(type)
         if type:
             self.type = type
         else:
             self.type = "lb"
-        # print(additional_data)
+        # # # print(t(t(t(t(additional_data)
         if additional_data:
             self.additional_data = additional_data
         else:
@@ -4248,8 +4248,8 @@ class AssociationConfigurationView(discord.ui.View):
         self.user_id = user_id
 
         for (label, defaults) in associated_defaults:
-            print(label)
-            print(defaults)
+            # # print(t(t(t(t(label)
+            # # print(t(t(t(t(defaults)
             use_configuration = None
             if len(defaults) == 0:
                 continue
@@ -4274,7 +4274,7 @@ class AssociationConfigurationView(discord.ui.View):
                         item = iterating_item
                         break
             if use_configuration is None:
-                print(3051)
+                # # print(t(t(t(t(3051)
                 for index, defa in enumerate(defaults):
                     if defa is None:
                         defaults[index] = 0
@@ -4313,12 +4313,12 @@ class AssociationConfigurationView(discord.ui.View):
         await self.message.edit(view=self)
 
     async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
-        print('3064 : Interaction Check')
+        # # print(t(t(t(t('3064 : Interaction Check')
         if interaction.user.id == self.user_id:
-            print('PASSED - {} - {}'.format(interaction.user.id, self.user_id))
+            # # print(t(t(t(t('PASSED - {} - {}'.format(interaction.user.id, self.user_id))
             return True
         else:
-            print('FAILED - {} - {}'.format(interaction.user.id, self.user_id))
+            # # print(t(t(t(t('FAILED - {} - {}'.format(interaction.user.id, self.user_id))
             await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
@@ -6307,7 +6307,7 @@ class AutomaticShiftConfiguration(discord.ui.View):
         for item in self.children:
             if item.label == "Toggle Automatic Shifts":
                 item.style = discord.ButtonStyle.green if self.auto_data.get('enabled') is True else discord.ButtonStyle.danger
-            else:
+            elif item.label == "Change Shift Type":
                 item.disabled = True if (len(self.shift_types) == 0 and self.auto_data.get('shift_type') == 'Default') else False
 
     @discord.ui.button(
@@ -6394,7 +6394,7 @@ class AutomaticShiftConfiguration(discord.ui.View):
 
 
     @discord.ui.button(
-        label="Finish",
+        label="Finish Configuration",
         style=discord.ButtonStyle.success,
         row=2
     )
@@ -6643,19 +6643,19 @@ class ExpandedRoleSelect(discord.ui.View):
     @discord.ui.button(label="I have more than 25 roles", style=discord.ButtonStyle.secondary, row=4)
     async def expand(self, interaction: discord.Interaction, button: discord.ui.Button):
         for i in self.children:
-            print(i)
+            # # print(t(t(t(t(i)
             if isinstance(i, discord.ui.RoleSelect):
                 for value in range(1, 3):
-                    print(value)
+                    # # print(t(t(t(t(value)
                     instance = discord.ui.RoleSelect(row=value, placeholder="Select roles", max_values=25)
-                    print('?')
+                    # # print(t(t(t(t('?')
                     # async def callback(interaction: discord.Interaction, select: discord.ui.Select):
                     #     await interaction.response.defer()
 
                     instance.callback = i.callback
-                    print('*')
+                    # # print(t(t(t(t('*')
                     self.add_item(instance)
-                    print('!')
+                    # # print(t(t(t(t('!')
         button.disabled = True
         await interaction.message.edit(view=self)
         await interaction.response.defer()
@@ -7522,9 +7522,9 @@ class AdministratedShiftMenu(discord.ui.View):
             )
         elif option not in ["void", "break"]:
             if not contained_document:
-                print('RAISE ::: - NOAH READ THIS')
-                print(self.shift)
-                print(self.contained_document)
+                # # print(t(t(t(t('RAISE ::: - NOAH READ THIS')
+                # # print(t(t(t(t(self.shift)
+                # # print(t(t(t(t(self.contained_document)
                 return
             uis = {
                 "on": discord.Embed(
@@ -7750,7 +7750,7 @@ class AdministratedShiftMenu(discord.ui.View):
 
             await self._manipulate_shift_time(interaction.message, "add", converted)
             await asyncio.sleep(0.02)
-            print(self.state)
+            # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
                 await self.cycle_ui(self.state, interaction.message)
             else:
@@ -7785,7 +7785,7 @@ class AdministratedShiftMenu(discord.ui.View):
 
             await self._manipulate_shift_time(interaction.message, "subtract", converted)
             await asyncio.sleep(0.02)
-            print(self.state)
+            # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
                 await self.cycle_ui(self.state, interaction.message)
             else:

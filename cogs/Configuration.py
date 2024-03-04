@@ -102,10 +102,10 @@ class Configuration(commands.Cog):
                     if item.callback != discard_unlock_override:
                         if len(item.values) == 0:
                             impurities.append(item)
-            print(impurities)
+            # print(impurities)
             if len(impurities) == 0:
                 buttons = list(filter(lambda x: isinstance(x, discord.ui.Button), view.children))
-                print(buttons)
+                # print(buttons)
                 if len(buttons) != 0:
                     buttons[0].disabled = False
                     for item in view.children:
@@ -119,11 +119,11 @@ class Configuration(commands.Cog):
                             for select_opt in item.options:
                                 if item.options[stored_index] != select_opt:
                                     select_opt.default = False
-                            print(f'defaults: {len([i for i in item.options if i.default is True])}')
+                            # print(f'defaults: {len([i for i in item.options if i.default is True])}')
                     await interaction.message.edit(view=view)
             else:
                 buttons = list(filter(lambda x: isinstance(x, discord.ui.Button), view.children))
-                print(buttons)
+                # print(buttons)
                 if len(buttons) != 0:
                     if buttons[0].disabled is False:
                         buttons[0].disabled = True

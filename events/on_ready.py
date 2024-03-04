@@ -28,9 +28,9 @@ class OnReady(commands.Cog):
                     )
                 )
             except Exception as e:
-                print(e)
+                # print(e)
                 pass
-        # # print('Shard connection')
+        # # # print('Shard connection')
         await callback()
 
     @commands.Cog.listener('on_shard_disconnect')
@@ -46,9 +46,9 @@ class OnReady(commands.Cog):
                     )
                 )
             except Exception as e:
-                # print(e)
+                # # print(e)
                 pass
-        # # print('Shard disconnection')
+        # # # print('Shard disconnection')
         await callback()
 
 async def setup(bot):

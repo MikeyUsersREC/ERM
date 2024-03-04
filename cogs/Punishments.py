@@ -512,7 +512,7 @@ class Punishments(commands.Cog):
                     )
 
                     embeds.append(new_embed)
-                   # # print("new embed")
+                   # # # print("new embed")
 
                 warning: WarningItem = await bot.punishments.fetch_warning(entry['_id'])
 
@@ -556,7 +556,7 @@ class Punishments(commands.Cog):
                 timeout = await view.wait()
                 if timeout:
                     return
-               # # print(bolos)
+               # # # print(bolos)
                 if view.modal.bolo:
                     id = view.modal.bolo.value
 
@@ -714,7 +714,7 @@ class Punishments(commands.Cog):
                     )
 
                     embeds.append(new_embed)
-                # # print("new embed")
+                # # # print("new embed")
 
                 warning: WarningItem = await bot.punishments.fetch_warning(entry['_id'])
 
@@ -757,7 +757,7 @@ class Punishments(commands.Cog):
                 timeout = await view.wait()
                 if timeout:
                     return
-               # # print(bolos)
+               # # # print(bolos)
                 if view.modal.bolo:
                     id = view.modal.bolo.value
 

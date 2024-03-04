@@ -102,12 +102,12 @@ class OnMessage(commands.Cog):
                                                 "kicked" in embed.description
                                                 or "banned" in embed.description
                                             ):
-                                                # print("used kick/ban command")
+                                                # # print("used kick/ban command")
                                                 if (
                                                     "Players Kicked" in embed.title
                                                     or "Players Banned" in embed.title
                                                 ):
-                                                    # print("command usage")
+                                                    # # print("command usage")
                                                     raw_content = embed.description
 
                                                     if "kicked" in raw_content:
@@ -120,7 +120,7 @@ class OnMessage(commands.Cog):
                                                     if command.count(",") + 1 >= 5:
                                                         people_affected = command.count(',') + 1
                                                         roblox_user = user.split(':')[0].replace('[', '')
-                                                        print(roblox_user)
+                                                        # print(roblox_user)
 
                                                         roblox_client = roblox.Client()
                                                         roblox_player = await roblox_client.get_user_by_username(roblox_user)
@@ -208,8 +208,8 @@ class OnMessage(commands.Cog):
 
             if not isStaffPermitted:
                 for role in antiping_roles:
-                    # print(antiping_roles)
-                    # print(role)
+                    # # print(antiping_roles)
+                    # # print(role)
                     if dataset["antiping"].get("use_hierarchy") in [True, None]:
                         if role is not None:
                             if mention.top_role > role or mention.top_role == role:

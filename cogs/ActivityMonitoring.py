@@ -79,8 +79,8 @@ class ActivityMonitoring(commands.Cog):
                 sorted_roles = sorted(member.roles, key=lambda x: x.position)
                 selected_quota = 0
                 for role in sorted_roles:
-                    print(role)
-                    print(specified_quota_roles)
+                    # print(role)
+                    # print(specified_quota_roles)
                     if role.id in [t['role'] for t in specified_quota_roles]:
                         found_item = [t for t in specified_quota_roles if t['role'] == role.id][0]
                         selected_quota = found_item['quota']
@@ -93,14 +93,14 @@ class ActivityMonitoring(commands.Cog):
                 all_staff[shift_document['UserID']][0] += shift_time
 
         sorted_all_staff = sorted(all_staff.items(), key= lambda x: x[1], reverse=True)
-        print(sorted_all_staff)
+        # print(sorted_all_staff)
         sorted_staff = dict(zip([item[0] for item in sorted_all_staff], [item[1] for item in sorted_all_staff]))
-        print(sorted_staff)
+        # print(sorted_staff)
         leaderboard_string = ""
         loa_string = ""
 
         for index, (user_id, (seconds, quota)) in enumerate(sorted_staff.items()):
-            print(seconds, quota)
+            # print(seconds, quota)
             leaderboard_string += f"**{index+1}.** <@{user_id}> • {td_format(datetime.timedelta(seconds=seconds))} {'<:check:1163142000271429662>' if seconds > quota else '<:xmark:1166139967920164915>'}\n"
             if index == len(sorted_staff)-1:
                 break

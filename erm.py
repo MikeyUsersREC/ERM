@@ -57,7 +57,7 @@ except decouple.UndefinedValueError:
     sentry_url = ""
     bloxlink_api_key = ""
 
-discord.utils.setup_logging(level=logging.INFO)
+discord.utils.setup_logging(level=logging.DEBUG)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -496,7 +496,6 @@ async def check_reminders():
                                 else:
                                     print('Integration success with 200 status code')
 
-
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
                                 allowed_mentions = discord.AllowedMentions(
@@ -508,9 +507,11 @@ async def check_reminders():
                                                    replied_user=True, everyone=True, roles=True, users=True
                                                ))
                 except Exception as e:
-                    print(e)
+                    # print(e)
+                    pass
     except Exception as e:
-        print(e)
+        # print(e)
+        pass
 
 @tasks.loop(minutes=1, reconnect=True)
 async def tempban_checks():
@@ -566,7 +567,7 @@ async def tempban_checks():
             continue
             
         await bot.prc_api.unban_user(punishment_item['Guild'], punishment_item['user_id'])
-    
+    del cached_servers
     end_time = time.time()
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
         
@@ -579,12 +580,13 @@ async def iterate_prc_logs():
     # This will check every 60 seconds for kill logs and player logs
     # enabled, as well as send all players joined during that time period.
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
-        try:
-            try:
-                guild = await bot.fetch_guild(item['_id'])
-            except discord.HTTPException:
-                continue
-            
+        # try:
+            if not (guild := bot.get_guild(item['_id'])):
+                try:
+                    guild = await bot.fetch_guild(item['_id'])
+                except discord.HTTPException:
+                    continue
+
             try:
                 kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
             except discord.HTTPException:
@@ -595,14 +597,19 @@ async def iterate_prc_logs():
             except discord.HTTPException:
                 player_logs_channel = None
 
+            if (await bot.server_keys.db.count_documents({"_id": guild.id})) == 0:
+                continue
+
 
             # if not kill_logs_channel and not player_logs_channel:
             #     continue
-                
             try:
                 kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
                 player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
-            except prc_api.ResponseFailure:
+            except prc_api.ResponseFailure as e:
+                if int(e.status_code) == 403:
+                    # This means the key is most likely banned or revoked.
+                    await bot.server_keys.delete_by_id(guild.id)
                 continue
 
 
@@ -631,6 +638,7 @@ async def iterate_prc_logs():
                             color=BLANK_COLOR
                         )
                     )
+
 
             # Check for kill logs amount
             for username, value in players.items():
@@ -701,10 +709,11 @@ async def iterate_prc_logs():
                 elif isinstance(settings["staff_management"]["management_role"], list):
                     for role in settings["staff_management"]["management_role"]:
                         staff_roles.append(role)
-            roles = await guild.fetch_roles()
-            staff_roles = [discord.utils.get(roles, id=role) for role in staff_roles]
+            
+            await guild.chunk()
+            staff_roles = [guild.get_role(role) for role in staff_roles]
             added_staff = []
-
+            # print(added_staff)
             for role in staff_roles.copy():
                 if role is None:
                     staff_roles.remove(role)
@@ -714,34 +723,36 @@ async def iterate_prc_logs():
                     lambda m: (
                         m.guild_permissions.manage_messages
                         or m.guild_permissions.manage_guild
+                        or m.guild_permissions.administrator
                     )
                     and not m.bot,
-                    guild.members,
+                    guild.members
                 )
             )
 
             for role in staff_roles:
                 for member in role.members:
-                    if member not in added_staff and not member.bot:
+                    if not member.bot and member not in added_staff:
                         added_staff.append(member)
             
             for member in perm_staff:
                 if member not in added_staff:
                     added_staff.append(member)
-            
-            print('Total staff: {}'.format(len(added_staff)))
-            print('Roled staff: {}'.format(len(added_staff) - len(perm_staff)))
-            print('Perm staff: {}'.format(len(perm_staff)))
-            print('Automatic Shifts: {}'.format('Enabled' if ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False) else 'Disabled'))
+
+            logging.debug('Guild ID: {}'.format(guild.id))         
+            logging.debug('Total staff: {}'.format(len(added_staff)))
+            logging.debug('Roled staff: {}'.format(len(added_staff) - len(perm_staff)))
+            logging.debug('Perm staff: {}'.format(len(perm_staff)))
+            logging.debug('Staff roles: {}'.format(staff_roles))
+            logging.debug('Automatic Shifts: {}'.format('Enabled' if ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False) else 'Disabled'))
             automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
             automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
-
             roblox_to_discord = {}
             t1 = time.time()
             for item in perm_staff:
                 roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID'))] = item
             t2 = time.time()
-            print('Total staff account indexing: {}'.format(t2 - t1))
+            logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
             for item in sorted_player_logs:
                 if (current_timestamp - item.timestamp) > 45:
@@ -769,18 +780,24 @@ async def iterate_prc_logs():
                         color=GREEN_COLOR if item.type == 'join' else RED_COLOR
                     )
                 )
-        except Exception as error:
-            channel = await bot.fetch_channel(1213523576603410452)                
-            await channel.send(content=str(error.with_traceback()))
+        # except Exception as error:
+        #     channel = await bot.fetch_channel(1213523576603410452)                
+        #     await channel.send(content=str(error))
 
 
-
+@iterate_prc_logs.before_loop
+async def anti_fetch_measure():
+    # This CANNOT be called in the main loop
+    # (as discord.py taught me) since it'll
+    # deadlock the main setup_hook as this
+    # loop is called on startup.
+    await bot.wait_until_ready()
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
-    print('ICS')
+    # print('ICS')
     async for item in bot.ics.db.find({}):
         try:
             guild = await bot.fetch_guild(item['guild'])
@@ -822,7 +839,7 @@ async def iterate_ics():
                 'mods': mods,
                 "onduty": onduty
             }
-        print(json.dumps(new_data, indent=4))
+        # print(json.dumps(new_data, indent=4))
         
         if new_data != item['data']:
             # Updated data
