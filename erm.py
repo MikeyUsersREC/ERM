@@ -580,7 +580,7 @@ async def iterate_prc_logs():
     # This will check every 60 seconds for kill logs and player logs
     # enabled, as well as send all players joined during that time period.
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
-        # try:
+        try:
             if not (guild := bot.get_guild(item['_id'])):
                 try:
                     guild = await bot.fetch_guild(item['_id'])
@@ -607,6 +607,9 @@ async def iterate_prc_logs():
                 kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
                 player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
             except prc_api.ResponseFailure as e:
+                channel = await bot.fetch_channel(1213523576603410452)                
+                await channel.send(content=str(e) or repr(e))
+                capture_exception(e)
                 if int(e.status_code) == 403:
                     # This means the key is most likely banned or revoked.
                     await bot.server_keys.delete_by_id(guild.id)
@@ -622,7 +625,7 @@ async def iterate_prc_logs():
 
 
             for item in sorted_kill_logs:
-                if (current_timestamp - item.timestamp) > 75:
+                if (current_timestamp - item.timestamp) > 45:
                     continue
 
                 if not players.get(item.killer_username):
@@ -755,7 +758,7 @@ async def iterate_prc_logs():
             logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
             for item in sorted_player_logs:
-                if (current_timestamp - item.timestamp) > 75:
+                if (current_timestamp - item.timestamp) > 45:
                     continue
 
                 if item.user_id in roblox_to_discord.keys():
@@ -780,9 +783,9 @@ async def iterate_prc_logs():
                         color=GREEN_COLOR if item.type == 'join' else RED_COLOR
                     )
                 )
-        # except Exception as error:
-        #     channel = await bot.fetch_channel(1213523576603410452)                
-        #     await channel.send(content=str(error))
+        except Exception as error:
+            channel = await bot.fetch_channel(1213523576603410452)                
+            await channel.send(content=str(error))
 
 
 @iterate_prc_logs.before_loop
