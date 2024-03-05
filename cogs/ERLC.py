@@ -346,15 +346,8 @@ class ERLC(commands.Cog):
 
             sorted_kill_logs = sorted(kill_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_kill_logs:
-                if len(embed.description) >= 4000:
-                   new = '\n'.join(embed.description.splitlines())
-                   embed.description = new
-                   break
                 embed.description += f"> [{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:R>\n"
 
-                
-            lines = [*[line for index, line in enumerate(embed.description.split('\n')) if index != len(embed.description.splitlines()) -1]]
-            embed.description = '\n'.join(lines)
             if embed.description in ['', '\n']:
                 embed.description = "> No kill logs found."
 
@@ -397,15 +390,9 @@ class ERLC(commands.Cog):
 
             sorted_logs = sorted(player_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_logs:
-                if len(embed.description) >= 4000:
-                   new = '\n'.join(embed.description.splitlines())
-                   embed.description = new
-                   break
                 embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:R>\n"
 
                 
-            lines = [*[line for index, line in enumerate(embed.description.split('\n')) if index != len(embed.description.splitlines()) -1]]
-            embed.description = '\n'.join(lines)
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
 
@@ -448,15 +435,8 @@ class ERLC(commands.Cog):
 
             sorted_logs = sorted(command_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_logs:
-                if len(embed.description) >= 4000:
-                   new = '\n'.join(embed.description.splitlines())
-                   embed.description = new
-                   break
                 embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command}` • <t:{int(log.timestamp)}:R>\n"
 
-                
-            lines = [*[line for index, line in enumerate(embed.description.split('\n')) if index != len(embed.description.splitlines()) -1]]
-            embed.description = '\n'.join(lines)
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
 
