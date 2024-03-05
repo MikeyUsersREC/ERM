@@ -622,7 +622,7 @@ async def iterate_prc_logs():
 
 
             for item in sorted_kill_logs:
-                if (current_timestamp - item.timestamp) > 45:
+                if (current_timestamp - item.timestamp) > 75:
                     continue
 
                 if not players.get(item.killer_username):
@@ -755,7 +755,7 @@ async def iterate_prc_logs():
             logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
             for item in sorted_player_logs:
-                if (current_timestamp - item.timestamp) > 45:
+                if (current_timestamp - item.timestamp) > 75:
                     continue
 
                 if item.user_id in roblox_to_discord.keys():
