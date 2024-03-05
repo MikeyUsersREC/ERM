@@ -586,6 +586,8 @@ async def iterate_prc_logs():
                     guild = await bot.fetch_guild(item['_id'])
                 except discord.HTTPException:
                     continue
+            if guild is None:
+                continue
 
             try:
                 kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
@@ -608,8 +610,10 @@ async def iterate_prc_logs():
                 player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
             except prc_api.ResponseFailure as e:
                 channel = await bot.fetch_channel(1213523576603410452)                
-                await channel.send(content=str(e) or repr(e))
-                capture_exception(e)
+                await channel.send(content=f"[1] {(str(e) or repr(e))=}")
+                with push_scope() as scope:
+                    scope.level = "error"
+                    capture_exception(e)
                 if int(e.status_code) == 403:
                     # This means the key is most likely banned or revoked.
                     await bot.server_keys.delete_by_id(guild.id)
@@ -753,7 +757,7 @@ async def iterate_prc_logs():
             roblox_to_discord = {}
             t1 = time.time()
             for item in perm_staff:
-                roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID'))] = item
+                roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
             t2 = time.time()
             logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
@@ -785,8 +789,10 @@ async def iterate_prc_logs():
                 )
         except Exception as error:
             channel = await bot.fetch_channel(1213523576603410452)                
-            await channel.send(content=str(error))
-
+            await channel.send(content=f"[2] {str(error)=}")
+            with push_scope() as scope:
+                scope.level = "error"
+                capture_exception(error)
 
 @iterate_prc_logs.before_loop
 async def anti_fetch_measure():

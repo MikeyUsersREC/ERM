@@ -601,7 +601,7 @@ class Punishments(commands.Cog):
                         doc["UserID"],
                         doc["Username"],
                         ctx.guild.id,
-                        f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {doc['Reason']}",
+                        f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {doc['Reason']} made by {doc['Moderator']} ({doc["ModeratorID"]})",
                         "Ban",
                         datetime.datetime.now(tz=pytz.UTC).timestamp(),
                     )
