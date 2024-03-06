@@ -227,8 +227,8 @@ class PRCApiClient:
         
         if status_code == 200:
             return [BanItem(
-                username=int(user_id),
-                user_id=username
+                user_id=int(user_id),
+                username=username
             ) for user_id, username in response_json.items()]
         else:
             raise ResponseFailure(
@@ -287,7 +287,7 @@ class PRCApiClient:
 #     # await client.run_command(0, '')
 #     logs = (await client.fetch_server_logs(0))
 #     for log in logs:
-#         # print(f"{datetime.datetime.fromtimestamp(log.timestamp).strftime('%m/%d/%Y, %H:%M:%S')} | {log.username}: {log.command}")
+#         # print(f"{datetime.datetime.fromtimestamp(log.timestamp).strftime('%m/%d/%Y, %H:%M:%S')} | {log.username}: {log}")
 #
 #
 # asyncio.run(main())

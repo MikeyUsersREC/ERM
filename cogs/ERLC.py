@@ -460,6 +460,47 @@ class ERLC(commands.Cog):
         await operate_and_reload_commandlogs(None, guild_id)
 
     @server.command(
+        name="bans",
+        description="Filter the bans of your server."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def bans(self, ctx: commands.Context, username: typing.Optional[str], user_id: typing.Optional[int]):
+        guild_id = ctx.guild.id
+        # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+        bans: list[prc_api.BanItem] = await self.bot.prc_api.fetch_bans(guild_id)
+        embed = discord.Embed(
+            color=BLANK_COLOR,
+            title="Bans",
+            description=""
+        )
+        status = username or user_id
+
+        if not username and user_id:
+            username = "[PLACEHOLDER]"
+        
+        if not user_id and username:
+            user_id = "999999999999999999999999"
+
+        for log in bans:
+            if str(username or "") in str(log.username) or str(user_id or "") in str(log.user_id):
+                if len(embed.description) > 3800:
+                    break
+                embed.description += f"> [{log.username}:{log.user_id}](https://roblox.com/users/{log.user_id}/profile)\n"
+
+        if embed.description in ['', '\n']:
+            embed.description = "> This ban was not found." if status else "> Bans were not found in your server."
+
+
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url
+        )
+
+        await ctx.send(embed=embed)
+
+
+    @server.command(
         name="players",
         description="See all players in the server."
     )
