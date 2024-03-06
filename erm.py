@@ -767,8 +767,8 @@ async def iterate_prc_logs():
             automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
             roblox_to_discord = {}
             t1 = time.time()
-            for item in perm_staff:
-                roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
+            # for item in perm_staff:
+            #     roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
             t2 = time.time()
             logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
