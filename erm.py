@@ -620,14 +620,15 @@ async def iterate_prc_logs():
                     capture_exception(e)
                 if int(e.status_code) == 403:
                     # This means the key is most likely banned or revoked.
-                    await bot.server_keys.delete_by_id(guild.id)
+                    # await bot.server_keys.delete_by_id(guild.id)
+                    pass
                 continue
             except Exception as e:
                 channel = await bot.fetch_channel(1213523576603410452)                
                 await channel.send(content=f"[3] {(str(e) or repr(e))=}")
-                with push_scope() as scope:
-                    scope.level = "error"
-                    capture_exception(e)
+                # with push_scope() as scope:
+                #     scope.level = "error"
+                #     capture_exception(e)
                 continue
 
 
