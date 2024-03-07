@@ -713,81 +713,81 @@ async def iterate_prc_logs():
                             view=RDMActions(bot)
                         )
 
-            staff_roles = []
-            settings = await bot.settings.find_by_id(guild.id)
-            if settings["staff_management"].get("role"):
-                if isinstance(settings["staff_management"]["role"], int):
-                    staff_roles.append(settings["staff_management"]["role"])
-                elif isinstance(settings["staff_management"]["role"], list):
-                    for role in settings["staff_management"]["role"]:
-                        staff_roles.append(role)
+            # staff_roles = []
+            # settings = await bot.settings.find_by_id(guild.id)
+            # if settings["staff_management"].get("role"):
+            #     if isinstance(settings["staff_management"]["role"], int):
+            #         staff_roles.append(settings["staff_management"]["role"])
+            #     elif isinstance(settings["staff_management"]["role"], list):
+            #         for role in settings["staff_management"]["role"]:
+            #             staff_roles.append(role)
 
-            if settings["staff_management"].get("management_role"):
-                if isinstance(settings["staff_management"]["management_role"], int):
-                    staff_roles.append(settings["staff_management"]["management_role"])
-                elif isinstance(settings["staff_management"]["management_role"], list):
-                    for role in settings["staff_management"]["management_role"]:
-                        staff_roles.append(role)
+            # if settings["staff_management"].get("management_role"):
+            #     if isinstance(settings["staff_management"]["management_role"], int):
+            #         staff_roles.append(settings["staff_management"]["management_role"])
+            #     elif isinstance(settings["staff_management"]["management_role"], list):
+            #         for role in settings["staff_management"]["management_role"]:
+            #             staff_roles.append(role)
             
-            await guild.chunk()
-            staff_roles = [guild.get_role(role) for role in staff_roles]
-            added_staff = []
-            # print(added_staff)
-            for role in staff_roles.copy():
-                if role is None:
-                    staff_roles.remove(role)
+            # await guild.chunk()
+            # staff_roles = [guild.get_role(role) for role in staff_roles]
+            # added_staff = []
+            # # print(added_staff)
+            # for role in staff_roles.copy():
+            #     if role is None:
+            #         staff_roles.remove(role)
             
-            perm_staff = list(
-                filter(
-                    lambda m: (
-                        m.guild_permissions.manage_messages
-                        or m.guild_permissions.manage_guild
-                        or m.guild_permissions.administrator
-                    )
-                    and not m.bot,
-                    guild.members
-                )
-            )
+            # perm_staff = list(
+            #     filter(
+            #         lambda m: (
+            #             m.guild_permissions.manage_messages
+            #             or m.guild_permissions.manage_guild
+            #             or m.guild_permissions.administrator
+            #         )
+            #         and not m.bot,
+            #         guild.members
+            #     )
+            # )
 
-            for role in staff_roles:
-                for member in role.members:
-                    if not member.bot and member not in added_staff:
-                        added_staff.append(member)
+            # for role in staff_roles:
+            #     for member in role.members:
+            #         if not member.bot and member not in added_staff:
+            #             added_staff.append(member)
             
-            for member in perm_staff:
-                if member not in added_staff:
-                    added_staff.append(member)
+            # for member in perm_staff:
+            #     if member not in added_staff:
+            #         added_staff.append(member)
 
-            logging.debug('Guild ID: {}'.format(guild.id))         
-            logging.debug('Total staff: {}'.format(len(added_staff)))
-            logging.debug('Roled staff: {}'.format(len(added_staff) - len(perm_staff)))
-            logging.debug('Perm staff: {}'.format(len(perm_staff)))
-            logging.debug('Staff roles: {}'.format(staff_roles))
-            logging.debug('Automatic Shifts: {}'.format('Enabled' if ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False) else 'Disabled'))
-            automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
-            automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
-            roblox_to_discord = {}
-            t1 = time.time()
-            # for item in perm_staff:
-            #     roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
-            t2 = time.time()
-            logging.debug('Total staff account indexing: {}'.format(t2 - t1))
+            # logging.debug('Guild ID: {}'.format(guild.id))         
+            # logging.debug('Total staff: {}'.format(len(added_staff)))
+            # logging.debug('Roled staff: {}'.format(len(added_staff) - len(perm_staff)))
+            # logging.debug('Perm staff: {}'.format(len(perm_staff)))
+            # logging.debug('Staff roles: {}'.format(staff_roles))
+            # logging.debug('Automatic Shifts: {}'.format('Enabled' if ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False) else 'Disabled'))
+            # automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
+            # automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
+            # roblox_to_discord = {}
+            # t1 = time.time()
+            # # for item in perm_staff:
+            # #     roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
+            # t2 = time.time()
+            # logging.debug('Total staff account indexing: {}'.format(t2 - t1))
 
             for item in sorted_player_logs:
                 if (current_timestamp - item.timestamp) > 45:
                     continue
 
-                if item.user_id in roblox_to_discord.keys():
-                    if automatic_shifts_enabled:
-                        consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
-                        if (consent_item or {}).get('auto_shifts', True) is True:
-                            shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
-                            if item.type == 'join':
-                                if not shift:
-                                    await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
-                            else:
-                                if shift:
-                                    await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
+                # if item.user_id in roblox_to_discord.keys():
+                #     if automatic_shifts_enabled:
+                #         consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
+                #         if (consent_item or {}).get('auto_shifts', True) is True:
+                #             shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
+                #             if item.type == 'join':
+                #                 if not shift:
+                #                     await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
+                #             else:
+                #                 if shift:
+                #                     await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
 
                 if not player_logs_channel:
                     break

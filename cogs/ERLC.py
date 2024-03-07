@@ -346,6 +346,8 @@ class ERLC(commands.Cog):
 
             sorted_kill_logs = sorted(kill_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_kill_logs:
+                if len(embed.description) > 3800:
+                    break
                 embed.description += f"> [{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
@@ -390,6 +392,8 @@ class ERLC(commands.Cog):
 
             sorted_logs = sorted(player_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_logs:
+                if len(embed.description) > 3800:
+                    break
                 embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:R>\n"
 
                 
@@ -435,6 +439,8 @@ class ERLC(commands.Cog):
 
             sorted_logs = sorted(command_logs, key=lambda log: log.timestamp, reverse=True)
             for log in sorted_logs:
+                if len(embed.description) > 3800:
+                    break
                 embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command}` • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
