@@ -10,6 +10,7 @@ import decouple
 import discord.mentions
 import dns.resolver
 import motor.motor_asyncio
+import asyncio
 import pytz
 import sentry_sdk
 from decouple import config
@@ -629,6 +630,7 @@ async def iterate_prc_logs():
                 # with push_scope() as scope:
                 #     scope.level = "error"
                 #     capture_exception(e)
+                await asyncio.sleep(1)
                 continue
 
 
