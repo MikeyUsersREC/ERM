@@ -486,18 +486,17 @@ async def check_reminders():
                         await bot.reminders.update_by_id(new_go)
 
 
-                        # !! THIS IS TEMPORARILY DISABLED
-                        # if isinstance(item.get('integration'), dict):
-                        #     # This has the ERLC integration enabled
-                        #     command = 'h' if item['integration']['type'] == 'Hint' else ('m' if item['integration']['type'] == 'Message' else None)
-                        #     content = item['integration']['content']
-                        #     total = ':' + command + ' ' + content
-                        #     if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
-                        #         resp = await bot.prc_api.run_command(channel.guild.id, total)
-                        #         if resp[0] != 200:
-                        #             print('Failed reaching PRC due to {} status code'.format(resp))
-                        #         else:
-                        #             print('Integration success with 200 status code')
+                        if isinstance(item.get('integration'), dict):
+                            # This has the ERLC integration enabled
+                            command = 'h' if item['integration']['type'] == 'Hint' else ('m' if item['integration']['type'] == 'Message' else None)
+                            content = item['integration']['content']
+                            total = ':' + command + ' ' + content
+                            if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
+                                resp = await bot.prc_api.run_command(channel.guild.id, total)
+                                if resp[0] != 200:
+                                    print('Failed reaching PRC due to {} status code'.format(resp))
+                                else:
+                                    print('Integration success with 200 status code')
 
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
