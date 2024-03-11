@@ -188,7 +188,7 @@ class Bot(commands.AutoShardedBot):
             iterate_ics.start()
             # GDPR.start()
             iterate_prc_logs.start()
-            tempban_checks.start()
+            # tempban_checks.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
