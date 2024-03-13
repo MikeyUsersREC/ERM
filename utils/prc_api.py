@@ -118,7 +118,7 @@ class PRCApiClient:
             #     })
             #     response.status = 423
                 
-            return response.status, (await response.json() if response.content_type != "text/plain" else {})
+            return response.status, (await response.json() if response.content_type != "text/html" else {})
 
 
     async def get_server_status(self, guild_id: int):
