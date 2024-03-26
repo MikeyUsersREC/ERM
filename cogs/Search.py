@@ -36,7 +36,9 @@ class Search(commands.Cog):
     )
     @require_settings()
     async def mywarnings(self, ctx: commands.Context):
-
+        guild_id = ctx.guild.id
+        if guild_id == 823606319529066548:
+            guild_id = 1015622817452138606
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,
@@ -58,7 +60,7 @@ class Search(commands.Cog):
         client = roblox.Client()
         roblox_player = await client.get_user(roblox_user)
 
-        warnings: list[WarningItem] = await bot.punishments.get_warnings(roblox_player.id, ctx.guild.id) or []
+        warnings: list[WarningItem] = await bot.punishments.get_warnings(roblox_player.id, guild_id) or []
 
         player_information_embed = discord.Embed(
             title=f"{roblox_player.name}",
@@ -81,8 +83,8 @@ class Search(commands.Cog):
 
         magic_flags_reverse = {v: k for k, v in magic_flags.items()}  # this is reverse mapping for quick lookup
 
-        guild_id = 987798554972143728
-        guild: discord.Guild = bot.get_guild(guild_id)
+        g_id = 987798554972143728
+        guild: discord.Guild = bot.get_guild(g_id)
         applied_flags = set()  # use set to automatically remove duplicates
         member: None | StaffConnection = await bot.staff_connections.fetch_by_spec(roblox_id=roblox_player.id)
 
@@ -140,7 +142,7 @@ class Search(commands.Cog):
         if await staff_predicate(ctx):
             moderations = [await bot.punishments.fetch_warning(i['_id']) async for i in bot.punishments.db.find({
                 "ModeratorID": ctx.author.id,
-                "Guild": ctx.guild.id
+                "Guild": guild_id
             })]
             embed_list[0].add_field(
                 name="Staff Information",
