@@ -5846,14 +5846,14 @@ class GameSecurityActions(discord.ui.View):
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
-        await asyncio.sleep(5)
-        _ = await bot.prc_api.run_command(interaction.guild.id, f":unmod {user_id}")
+        await asyncio.sleep(6)
+        cr_2 = await bot.prc_api.run_command(interaction.guild.id, f":unmod {user_id}")
 
         for item in self.children:
             item.disabled = False
         await interaction.message.edit(view=self)
 
-        if command_response[0] == 200:
+        if command_response[0] == 200 and cr_2[0] == 200:
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Revoked Permissions",
