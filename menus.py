@@ -5704,6 +5704,7 @@ class RDMActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":kick {user_id}")
@@ -5737,6 +5738,7 @@ class RDMActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":kick {user_id}")
@@ -5770,6 +5772,7 @@ class RDMActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":ban {user_id}")
 
@@ -5843,6 +5846,8 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
@@ -5883,6 +5888,7 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":kick {user_id}")
@@ -5917,6 +5923,7 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
+        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
         await interaction.response.defer(ephemeral=True, thinking=False)
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":ban {user_id}")
 
