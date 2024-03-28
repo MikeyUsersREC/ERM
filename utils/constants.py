@@ -3,24 +3,75 @@
 """
 import discord
 
-base_configuration = {
-    "_id": 0,
-    "verification": {
-        "enabled": False,
-        "role": None,
+{                         
+  "_id": 0,           
+  "antiping": {           
+    "enabled": False,     
+    "role": [], 
+    "bypass_role": [],    
+    "use_hierarchy": False 
+  },                      
+  "staff_management": {    
+    "enabled": False,     
+    "role": [],     
+    "management_role": [],
+    "channel": None,      
+    "loa_role": [],      
+    "ra_role": []        
+  },                    
+  "punishments": {      
+    "enabled": False,   
+    "channel": None,    
+    "kick_channel": None,
+    "ban_channel": None, 
+    "bolo_channel": None 
+  },                    
+  "shift_management": {  
+    "enabled": False,   
+    "role": [],        
+    "channel": None,
+    "quota": 0,
+    "nickname_prefix": "",
+    "maximum_staff": 0,
+    "role_quotas": []
+  },
+  "customisation": {
+    "prefix": ">"
+  },
+  "shift_types": {
+    "types": []
+  },
+  "game_security": {
+    "enabled": False,
+    "webhook_channel": None,
+    "channel": None,
+    "role": []
+  },
+  "game_logging": {
+    "message": {
+      "enabled": False,
+      "channel": None
     },
-    "antiping": {"enabled": False, "role": None, "bypass_role": "None"},
-    "staff_management": {"enabled": False, "channel": None},
-    "punishments": {"enabled": False, "channel": None},
-    "shift_management": {"enabled": False, "channel": None, "role": None},
-    "customisation": {
-        "color": "",
-        "prefix": ">",
-        "brand_name": "Emergency Response Management",
-        "thumbnail_url": "",
-        "footer_text": "Staff Logging Systems",
-        "ban_channel": None,
+    "sts": {
+      "enabled": False,
+      "channel": None
     },
+    "priority": {
+      "enabled": False,
+      "channel": None
+    }
+  },
+  "ERLC": {
+    "player_logs": None,
+    "kill_logs": None,
+    "elevation_required": None,
+    "rdm_mentionables": [],
+    "rdm_channel": None,
+    "automatic_shifts": {
+      "enabled": False,
+      "shift_type": None
+    }
+  }
 }
 
 """
