@@ -23,6 +23,7 @@ class Privacy(commands.Cog):
         ai_enabled = True
         selected = None
         shift_reports_enabled = True
+        automatic_shifts_enabled = True
 
         async for document in bot.consent.db.find({"_id": ctx.author.id}):
             punishments_enabled = (

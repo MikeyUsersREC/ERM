@@ -188,7 +188,7 @@ class Bot(commands.AutoShardedBot):
             iterate_ics.start()
             # GDPR.start()
             iterate_prc_logs.start()
-            # tempban_checks.start()
+            tempban_checks.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -430,7 +430,7 @@ except decouple.UndefinedValueError:
 async def change_status():
     await bot.wait_until_ready()
     logging.info("Changing status")
-    status = f"/help | ermbot.xyz"
+    status = f"/about | ermbot.xyz"
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name=status)
     )
