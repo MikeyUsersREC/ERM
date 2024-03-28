@@ -87,7 +87,7 @@ class Bot(commands.AutoShardedBot):
             459374864067723275, # Noah
             # 877195103335231558, # Larry
             333991360199917568, # Doge
-            # 315336291581558804, # ae453
+            315336291581558804, # ae453
         ]:  # Implement your own conditions here
             return True
 
