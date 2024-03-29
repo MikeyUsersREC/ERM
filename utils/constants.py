@@ -3,7 +3,7 @@
 """
 import discord
 
-{                         
+base_configuration = {                         
   "_id": 0,           
   "antiping": {           
     "enabled": False,     
