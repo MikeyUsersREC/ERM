@@ -8239,7 +8239,7 @@ class ShiftLoggingManagement(discord.ui.View):
             "Guild": interaction.guild.id,
             "Type": modal.shift_type.value
         }):
-            await self.bot.shift_management.shifts.delete_by_id(item)
+            await self.bot.shift_management.shifts.delete_by_id(item['_id'])
 
 
 
