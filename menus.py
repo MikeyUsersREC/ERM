@@ -8235,13 +8235,10 @@ class ShiftLoggingManagement(discord.ui.View):
             ephemeral=True
         )
 
-        async for item in self.bot.shift_management.shifts.db.find({
+        await self.bot.shift_management.shifts.db.delete_many({
             "Guild": interaction.guild.id,
             "Type": modal.shift_type.value
-        }):
-            await self.bot.shift_management.shifts.delete_by_id(item['_id'])
-
-
+        })
 
 class ManagementOptions(discord.ui.View):
     def __init__(self, user_id: int):
