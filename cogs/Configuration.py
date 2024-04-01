@@ -38,7 +38,8 @@ class Configuration(commands.Cog):
         bot = self.bot
         from utils.constants import base_configuration
         current_settings = None
-        modifications = {"_id": ctx.guild.id}
+        del base_configuration['_id']
+        modifications = {"_id": ctx.guild.id, **base_configuration}
         msg = None
 
         current_settings = await bot.settings.find_by_id(ctx.guild.id)
