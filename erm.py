@@ -432,7 +432,7 @@ async def change_status():
     logging.info("Changing status")
     status = f"/about | ermbot.xyz"
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.watching, name=status)
+        activity=discord.Activity(type=discord.CustomActivity, name=status)
     )
 
 
