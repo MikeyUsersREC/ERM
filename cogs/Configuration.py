@@ -38,7 +38,7 @@ class Configuration(commands.Cog):
         bot = self.bot
         from utils.constants import base_configuration
         current_settings = None
-        del base_configuration['_id']
+        # del base_configuration['_id']
         modifications = {"_id": ctx.guild.id, **base_configuration}
         msg = None
 
