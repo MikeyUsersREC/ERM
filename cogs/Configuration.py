@@ -207,16 +207,10 @@ class Configuration(commands.Cog):
             if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect):
                 if len(item.values) > 0:
                     if item.placeholder == "Staff Roles":
-                        if not modifications.get('staff_management'):
-                            modifications['staff_management'] = {}
                         modifications['staff_management']['role'] = [i.id for i in item.values]
                     if item.placeholder == "Prefix":
-                        if not modifications.get('customisation'):
-                            modifications['customisation'] = {}
                         modifications['customisation']['prefix'] = item.values[0]
                     elif item.placeholder == "Management Roles":
-                        if not modifications.get('staff_management'):
-                            modifications['staff_management'] = {}
                         modifications['staff_management']['management_role'] = [i.id for i in item.values]
 
         loa_requests_settings = discord.ui.View()
@@ -280,8 +274,8 @@ class Configuration(commands.Cog):
             if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
                 if len(item.values) > 0:
                     if item.placeholder == "LOA Role":
-                        modifications['staff_management']['loa_role'] = item.values[0].id
-                    if item.placeholder == "LOA Channel":
+                        modifications['staff_management']['loa_role'] = [r.id for r in item.values]
+                    elif item.placeholder == "LOA Channel":
                         modifications['staff_management']['channel'] = item.values[0].id
                     elif item.placeholder == "LOA Requests":
                         modifications['staff_management']['enabled'] = bool(item.values[0] == "enabled")
@@ -450,16 +444,10 @@ class Configuration(commands.Cog):
             if isinstance(item, discord.ui.Select) or isinstance(item, discord.ui.RoleSelect) or isinstance(item, discord.ui.ChannelSelect):
                 if len(item.values) > 0:
                     if item.placeholder == "Shift Management":
-                        if not modifications.get('shift_management'):
-                            modifications['shift_management'] = {}
                         modifications['shift_management']['enabled'] = bool(item.values[0] == "enabled")
                     elif item.placeholder == "Shift Channel":
-                        if not modifications.get('shift_management'):
-                            modifications['shift_management'] = {}
                         modifications['shift_management']['channel'] = item.values[0].id
                     elif item.placeholder == "On-Duty Role":
-                        if not modifications.get('shift_management'):
-                            modifications['shift_management'] = {}
                         modifications['shift_management']['role'] = [role.id for role in item.values]
 
         new_configuration = copy(base_configuration)
