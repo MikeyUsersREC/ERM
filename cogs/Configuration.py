@@ -40,6 +40,7 @@ class Configuration(commands.Cog):
         current_settings = None
         # del base_configuration['_id']
         modifications = {"_id": ctx.guild.id, **base_configuration}
+        modifications['_id'] = ctx.guild.id
         msg = None
 
         current_settings = await bot.settings.find_by_id(ctx.guild.id)
@@ -463,7 +464,7 @@ class Configuration(commands.Cog):
 
         new_configuration = copy(base_configuration)
         new_configuration.update(modifications)
-
+        new_configuration['_id'] = ctx.guild.id
         await bot.settings.upsert(new_configuration)
         await msg.edit(
             embed=discord.Embed(
