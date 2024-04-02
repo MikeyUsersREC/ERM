@@ -562,7 +562,7 @@ async def tempban_checks():
         if punishment_item['UserID'] not in [i.user_id for i in cached_servers[punishment_item['Guild']]]:
             continue
 
-        sorted_punishments = sorted([i async for i in await bot.punishments.db.find({"UserID": punishment_item['UserID'], "Guild": punishment_item['Guild']})], key=lambda x: x['Epoch'], reverse=True)
+        sorted_punishments = sorted([i async for i in bot.punishments.db.find({"UserID": punishment_item['UserID'], "Guild": punishment_item['Guild']})], key=lambda x: x['Epoch'], reverse=True)
         new_sorted_punishments = []
         for item in sorted_punishments:
             if item == punishment_item:
