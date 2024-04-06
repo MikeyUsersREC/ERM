@@ -616,7 +616,8 @@ async def iterate_prc_logs():
                 player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
             except prc_api.ResponseFailure as e:
                 channel = await bot.fetch_channel(1213523576603410452)                
-                await channel.send(content=f"[1] {(str(e) or repr(e))=}")
+                # await channel.send(content=f"[1] {(str(e) or repr(e))=}")
+                await asyncio.sleep(0.2)
                 with push_scope() as scope:
                     scope.level = "error"
                     capture_exception(e)
