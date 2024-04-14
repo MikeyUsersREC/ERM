@@ -8229,7 +8229,7 @@ class ShiftLoggingManagement(discord.ui.View):
         await sustained_interaction.followup.send(
             embed=discord.Embed(
                 title="<:success:1163149118366040106> Erased Shifts",
-                description=f"All shifts of **{modal.punishment_type.value}** have been deleted.",
+                description=f"All shifts of **{modal.shift_type.value}** have been deleted.",
                 color=GREEN_COLOR
             ),
             ephemeral=True
