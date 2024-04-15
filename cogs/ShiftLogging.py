@@ -680,7 +680,7 @@ class ShiftLogging(commands.Cog):
                             title="No Active Shifts",
                             description="No active shifts have been found in this server.",
                             color=BLANK_COLOR
-                        )
+                        ), view=None
                     )
                 except UnboundLocalError:
                     return await ctx.send(
