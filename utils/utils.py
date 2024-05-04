@@ -213,43 +213,46 @@ async def interpret_content(bot, ctx, channel, content: str, ics_id):
 
 
 async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
-    string = string.replace("{user}", ctx.author.mention)
-    string = string.replace("{username}", ctx.author.name)
-    string = string.replace("{display_name}", ctx.author.display_name)
-    string = string.replace("{time}", f"<t:{int(datetime.datetime.now().timestamp())}>")
-    string = string.replace("{server}",  ctx.guild.name)
-    string = string.replace("{channel}", channel.mention)
-    string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
-    
-    onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
-        "Guild": ctx.guild.id, "EndEpoch": 0
-    })])
+    try:
+        string = string.replace("{user}", ctx.author.mention)
+        string = string.replace("{username}", ctx.author.name)
+        string = string.replace("{display_name}", ctx.author.display_name)
+        string = string.replace("{time}", f"<t:{int(datetime.datetime.now().timestamp())}>")
+        string = string.replace("{server}",  ctx.guild.name)
+        string = string.replace("{channel}", channel.mention)
+        string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
+        
+        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
+            "Guild": ctx.guild.id, "EndEpoch": 0
+        })])
 
-    string = string.replace("{onduty}", str(onduty))
+        string = string.replace("{onduty}", str(onduty))
 
-    #### CUSTOM ERLC VARS
-    # Fetch whether they should even be allowed to use ERLC vars
-    if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
-        return string # end here no point
-    
-    status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
-    if not isinstance(status, ServerStatus):
-        return string # Invalid key
-    queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
-    players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
-    mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-    admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
-    total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
-    
-    string = string.replace("{join_code}", status.join_key)
-    string = string.replace("{players}", str(status.current_players))
-    string = string.replace("{max_players}", str(status.max_players))
-    string = string.replace("{queue}", str(queue))
-    string = string.replace("{staff}", str(total_staff))
-    string = string.replace("{admins}", str(admins))
-    string = string.replace("{mods}", str(mods))
+        #### CUSTOM ERLC VARS
+        # Fetch whether they should even be allowed to use ERLC vars
+        if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
+            return string # end here no point
+        
+        status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
+        if not isinstance(status, ServerStatus):
+            return string # Invalid key
+        queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
+        players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
+        mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
+        admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
+        total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        
+        string = string.replace("{join_code}", status.join_key)
+        string = string.replace("{players}", str(status.current_players))
+        string = string.replace("{max_players}", str(status.max_players))
+        string = string.replace("{queue}", str(queue))
+        string = string.replace("{staff}", str(total_staff))
+        string = string.replace("{admins}", str(admins))
+        string = string.replace("{mods}", str(mods))
 
-    return string
+        return string
+    except:
+        return string
 
 
 def get_elapsed_time(document):
