@@ -8709,3 +8709,129 @@ class PunishmentModifier(discord.ui.View):
             await self.bot.punishments.upsert(self.dataset)
         self.cancelled = False
         self.stop()
+
+
+class CompleteVerification(discord.ui.View):
+    def __init__(self, user: discord.Member):
+        self.user = user
+        super().__init__(timeout=600.0)
+
+    @discord.ui.button(label="I have changed my description", style=discord.ButtonStyle.success)
+    async def changed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.user:
+            return await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Not Permitted",
+                    description="You are not permitted to utilise these buttons.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+
+        await interaction.response.defer(thinking=False, ephemeral=False)
+        self.stop()
+
+
+class AccountLinkingMenu(discord.ui.View):
+    def __init__(self, user: discord.Member):
+        self.user = user
+        self.mode = "OAuth2"
+        self.associated = None
+
+        super().__init__(timeout=600.0)
+        self.add_item(discord.ui.Button(label="Link Roblox", url="https://authorize.roblox.com/?client_id=5489705006553717980&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={ctx.author.id}"))
+    
+    @discord.ui.button(label="Code Verification")
+    async def code_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.user:
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Not Authorized",
+                    description="You are not authorized to utilise this menu.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+            return
+
+        msg = interaction.message
+        await interaction.response.send_modal(
+            (modal := CustomModal(
+                "Legacy Code Verification",
+                [
+                    (
+                        "username",
+                        (
+                            discord.ui.TextInput(
+                                label="Roblox Username",
+                                placeholder="Roblox Username (e.g. i_iMikey)",
+                                required=True,
+                            )
+                        ),
+                    )
+                ],
+            ))
+        )
+        timeout = await modal.wait()
+        if timeout:
+            return
+        if not modal.username.value:
+            return
+
+        try:
+            user = await bot.roblox.get_user_by_username(modal.username.value)
+        except:
+            return
+        
+        available_string_subsets = [
+            "One",
+            "Two",
+            "Three",
+            "Four",
+            "Five",
+            "Six",
+            "Seven",
+            "Eight",
+            "Nine",
+            "Zero"
+        ]
+
+        full_string = f"ERM {' '.join([random.choice(available_string_subsets) for _ in range(6)])}"
+        
+        await msg.edit(
+            embed=discord.Embed(
+                title="Legacy Code Verification",
+                description=f"To utilise this verification for **{user.name}**, put the following code in your Roblox account description.\n`{full_string}`",
+                color=BLANK_COLOR
+            ),
+            view=(view := CompleteVerification(interaction.user))
+        )
+        timeout = await view.wait()
+        if timeout:
+            return
+        
+        try:
+            new_user = await bot.roblox.get_user_by_username(modal.username.value)
+        except:
+            return
+        
+        if full_string.lower() in new_user.description.lower():
+            await bot.pending_oauth2.db.delete_one({"discord_id": interaction.user.id})
+            await bot.oauth2_users.db.insert_one({"roblox_id": new_user.id, "discord_id": interaction.user.id})
+            
+            self.mode = "Code"
+            self.username = new_user.name 
+            await interaction.message.edit(
+                embed=discord.Embed(
+                    title="<:check:1163142000271429662> Successfully Linked",
+                    description=f"You have been successfully linked to **{new_user.name}**.",
+                    color=GREEN_COLOR
+                )
+            )
+        else:
+            await interaction.message.edit(
+                embed=discord.Embed(
+                    title="Not Linked",
+                    description="You did not include the code in your description. Please try again later."
+                )
+            )

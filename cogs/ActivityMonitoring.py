@@ -4,7 +4,7 @@ import discord
 import pytz
 from discord import app_commands
 from discord.ext import commands
-
+import typing
 from menus import CustomExecutionButton
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from erm import is_management
@@ -33,7 +33,8 @@ class ActivityMonitoring(commands.Cog):
     )
     @is_management()
     @require_settings()
-    async def activity_show(self, ctx: commands.Context, duration: str):
+    async def activity_show(self, ctx: commands.Context, duration: str, selected_role: typing.Optional[discord.Role]):
+
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings.get('shift_management').get('enabled'):
             return await ctx.send(
@@ -76,6 +77,9 @@ class ActivityMonitoring(commands.Cog):
                 if not member:
                     continue
                 roles = member.roles
+                if selected_role is not None:
+                    if selected_role not in roles:
+                        continue
                 sorted_roles = sorted(member.roles, key=lambda x: x.position)
                 selected_quota = 0
                 for role in sorted_roles:
@@ -91,6 +95,11 @@ class ActivityMonitoring(commands.Cog):
                 all_staff[shift_document['UserID']] = [shift_time, selected_quota]
             else:
                 all_staff[shift_document['UserID']][0] += shift_time
+
+        if selected_role is not None:
+            for item in selected_role.members:
+                if item.id not in all_staff.keys():
+                    all_staff[item.id] = [0, settings.get('shift_management').get('quota', 0)]
 
         sorted_all_staff = sorted(all_staff.items(), key= lambda x: x[1], reverse=True)
         # print(sorted_all_staff)
