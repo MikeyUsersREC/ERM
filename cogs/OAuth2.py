@@ -46,7 +46,7 @@ class OAuth2(commands.Cog):
                 description="**To link your account with ERM, click the button below.**\nIf you encounter an error, please contact ERM Support by running `/support`.",
                 color=BLANK_COLOR
             ),
-            "view": LinkView(label="Link Roblox", url=f"https://authorize.roblox.com/?client_id=5489705006553717980&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={ctx.author.id}")
+            "view": LinkView(label="Link Roblox", url=f"https://authorize.roblox.com/?client_id=9037343251472961537&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={ctx.author.id}")
         }
 
         await self.bot.pending_oauth2.db.insert_one({
