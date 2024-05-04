@@ -252,7 +252,7 @@ class OnMessage(commands.Cog):
 
         if bypass_roles is not None:
             for role in bypass_roles:
-                if role in message.author.roles:
+                if role in message.author.guild.roles:
                     return
 
         for mention in message.mentions:
