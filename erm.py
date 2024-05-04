@@ -39,8 +39,11 @@ from datamodels.Views import Views
 from datamodels.Actions import Actions
 from datamodels.Warnings import Warnings
 from datamodels.ProhibitedUseKeys import ProhibitedUseKeys
+from datamodels.PendingOAuth2 import PendingOAuth2
+from datamodels.OAuth2Users import OAuth2Users
 from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
 from menus import CompleteReminder, LOAMenu, RDMActions
+from utils.viewstatemanger import ViewStateManager
 from utils.bloxlink import Bloxlink
 from utils.prc_api import PRCApiClient
 from utils.utils import *
@@ -83,19 +86,19 @@ class Bot(commands.AutoShardedBot):
         await super().close()
 
     async def is_owner(self, user: discord.User):
-        if user.id in [
-            459374864067723275, # Noah
-            # 877195103335231558, # Larry
-            333991360199917568, # Doge
-            315336291581558804, # ae453
-        ]:  # Implement your own conditions here
-            return True
+        # Only developers of the bot on the team should have
+        # full access to Jishaku commands. Hard-coded
+        # IDs are a security vulnerability.
 
         # Else fall back to the original
+        if user.id == 1165311055728226444:
+            return True
+        
         return await super().is_owner(user)
 
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
+        self.view_state_manager: ViewStateManager = ViewStateManager()
 
         global setup
         if not setup:
@@ -136,6 +139,9 @@ class Bot(commands.AutoShardedBot):
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
+
+            self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
+            self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
@@ -492,11 +498,21 @@ async def check_reminders():
                             content = item['integration']['content']
                             total = ':' + command + ' ' + content
                             if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
-                                resp = await bot.prc_api.run_command(channel.guild.id, total)
-                                if resp[0] != 200:
-                                    print('Failed reaching PRC due to {} status code'.format(resp))
+                                do_not_complete = False
+                                try:
+                                    status = await bot.prc_api.get_server_status(channel.guild.id)
+                                except prc_api.ResponseFailure as e:
+                                    do_not_complete = True
+                                print(status)
+                                
+                                if not do_not_complete:
+                                    resp = await bot.prc_api.run_command(channel.guild.id, total)
+                                    if resp[0] != 200:
+                                        print('Failed reaching PRC due to {} status code'.format(resp))
+                                    else:
+                                        print('Integration success with 200 status code')
                                 else:
-                                    print('Integration success with 200 status code')
+                                    print(f'Cancelled execution of reminder for {channel.guild.id} - {e.status_code}')
 
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
@@ -581,7 +597,7 @@ async def tempban_checks():
 
 
 
-@tasks.loop(seconds=45, reconnect=True)
+@tasks.loop(seconds=75, reconnect=True)
 async def iterate_prc_logs():
     # This will check every 60 seconds for kill logs and player logs
     # enabled, as well as send all players joined during that time period.
@@ -645,7 +661,7 @@ async def iterate_prc_logs():
 
 
             for item in sorted_kill_logs:
-                if (current_timestamp - item.timestamp) > 45:
+                if (current_timestamp - item.timestamp) > 75:
                     continue
 
                 if not players.get(item.killer_username):
@@ -717,81 +733,72 @@ async def iterate_prc_logs():
                             view=RDMActions(bot)
                         )
 
-            # staff_roles = []
-            # settings = await bot.settings.find_by_id(guild.id)
-            # if settings["staff_management"].get("role"):
-            #     if isinstance(settings["staff_management"]["role"], int):
-            #         staff_roles.append(settings["staff_management"]["role"])
-            #     elif isinstance(settings["staff_management"]["role"], list):
-            #         for role in settings["staff_management"]["role"]:
-            #             staff_roles.append(role)
+            staff_roles = []
+            settings = await bot.settings.find_by_id(guild.id)
+            if settings["staff_management"].get("role"):
+                if isinstance(settings["staff_management"]["role"], int):
+                    staff_roles.append(settings["staff_management"]["role"])
+                elif isinstance(settings["staff_management"]["role"], list):
+                    for role in settings["staff_management"]["role"]:
+                        staff_roles.append(role)
 
-            # if settings["staff_management"].get("management_role"):
-            #     if isinstance(settings["staff_management"]["management_role"], int):
-            #         staff_roles.append(settings["staff_management"]["management_role"])
-            #     elif isinstance(settings["staff_management"]["management_role"], list):
-            #         for role in settings["staff_management"]["management_role"]:
-            #             staff_roles.append(role)
+            if settings["staff_management"].get("management_role"):
+                if isinstance(settings["staff_management"]["management_role"], int):
+                    staff_roles.append(settings["staff_management"]["management_role"])
+                elif isinstance(settings["staff_management"]["management_role"], list):
+                    for role in settings["staff_management"]["management_role"]:
+                        staff_roles.append(role)
             
-            # await guild.chunk()
-            # staff_roles = [guild.get_role(role) for role in staff_roles]
-            # added_staff = []
-            # # print(added_staff)
-            # for role in staff_roles.copy():
-            #     if role is None:
-            #         staff_roles.remove(role)
+            await guild.chunk()
+            staff_roles = [guild.get_role(role) for role in staff_roles]
+            added_staff = []
+            # print(added_staff)
+            for role in staff_roles.copy():
+                if role is None:
+                    staff_roles.remove(role)
             
-            # perm_staff = list(
-            #     filter(
-            #         lambda m: (
-            #             m.guild_permissions.manage_messages
-            #             or m.guild_permissions.manage_guild
-            #             or m.guild_permissions.administrator
-            #         )
-            #         and not m.bot,
-            #         guild.members
-            #     )
-            # )
+            perm_staff = list(
+                filter(
+                    lambda m: (
+                        m.guild_permissions.manage_messages
+                        or m.guild_permissions.manage_guild
+                        or m.guild_permissions.administrator
+                    )
+                    and not m.bot,
+                    guild.members
+                )
+            )
 
-            # for role in staff_roles:
-            #     for member in role.members:
-            #         if not member.bot and member not in added_staff:
-            #             added_staff.append(member)
+            for role in staff_roles:
+                for member in role.members:
+                    if not member.bot and member not in added_staff:
+                        added_staff.append(member)
             
-            # for member in perm_staff:
-            #     if member not in added_staff:
-            #         added_staff.append(member)
+            for member in perm_staff:
+                if member not in added_staff:
+                    added_staff.append(member)
 
-            # logging.debug('Guild ID: {}'.format(guild.id))         
-            # logging.debug('Total staff: {}'.format(len(added_staff)))
-            # logging.debug('Roled staff: {}'.format(len(added_staff) - len(perm_staff)))
-            # logging.debug('Perm staff: {}'.format(len(perm_staff)))
-            # logging.debug('Staff roles: {}'.format(staff_roles))
-            # logging.debug('Automatic Shifts: {}'.format('Enabled' if ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False) else 'Disabled'))
-            # automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
-            # automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
-            # roblox_to_discord = {}
-            # t1 = time.time()
-            # # for item in perm_staff:
-            # #     roblox_to_discord[int(((await bot.bloxlink.find_roblox(item.id)) or {}).get('robloxID') or "0")] = item
-            # t2 = time.time()
-            # logging.debug('Total staff account indexing: {}'.format(t2 - t1))
+            automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
+            automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
+            roblox_to_discord = {}
+            for item in perm_staff:
+                roblox_to_discord[int(((await bot.oauth2_users.db.find_one({"discord_id": item.id})) or {}).get("roblox_id", 0))] = item
 
             for item in sorted_player_logs:
-                if (current_timestamp - item.timestamp) > 45:
+                if (current_timestamp - item.timestamp) > 75:
                     continue
 
-                # if item.user_id in roblox_to_discord.keys():
-                #     if automatic_shifts_enabled:
-                #         consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
-                #         if (consent_item or {}).get('auto_shifts', True) is True:
-                #             shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
-                #             if item.type == 'join':
-                #                 if not shift:
-                #                     await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
-                #             else:
-                #                 if shift:
-                #                     await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
+                if item.user_id in roblox_to_discord.keys():
+                    if automatic_shifts_enabled:
+                        consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
+                        if (consent_item or {}).get('auto_shifts', True) is True:
+                            shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
+                            if item.type == 'join':
+                                if not shift:
+                                    await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
+                            else:
+                                if shift:
+                                    await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
 
                 if not player_logs_channel:
                     break

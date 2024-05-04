@@ -8,6 +8,7 @@ class Bloxlink:
         self.api_key = key
         self.session = aiohttp.ClientSession()
         bot.external_http_sessions.append(self.session)
+        self.bot = bot
 
     async def _send_request(self, method, url, params=None, body=None):
         async with self.session.request(method, url, params=params, headers={
@@ -16,6 +17,10 @@ class Bloxlink:
             return (resp, await resp.json())
 
     async def find_roblox(self, user_id: int):
+        doc = await self.bot.oauth2_users.db.find_one({"discord_id": user_id})
+        if doc:
+            return { "robloxID": doc["roblox_id"]}
+
         response, resp_json = await self._send_request(
             'GET',
             f'https://api.blox.link/v4/public/discord-to-roblox/{user_id}'

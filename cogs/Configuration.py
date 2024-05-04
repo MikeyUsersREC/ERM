@@ -18,7 +18,7 @@ from menus import (
     ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement,
 )
 from utils.paginators import CustomPage, SelectPagination
-from utils.utils import require_settings
+from utils.utils import require_settings, generator
 
 
 class Configuration(commands.Cog):
@@ -80,14 +80,13 @@ class Configuration(commands.Cog):
             ), view=None)
             return
 
-        view_state = None
+        secret_key = next(generator)
 
         def get_active_view_state() -> discord.ui.View | None:
-            return view_state
+            return self.bot.view_state_manager.get(secret_key)
 
         def set_active_view_state(view: discord.ui.View):
-            nonlocal view_state
-            view_state = view
+            self.bot.view_state_manager[secret_key] = view
 
         async def discard_unlock_override(interaction: discord.Interaction):
             await interaction.response.defer()

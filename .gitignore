@@ -10,3 +10,4 @@ Pipfile.lock
 .git/
 package.json
 package_lock.json
+venv/

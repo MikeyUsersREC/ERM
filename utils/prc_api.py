@@ -60,6 +60,8 @@ class Player(BaseDataClass):
             'Server Co-Owner'
         ]
     ] = None # This doesn't return when we query for queue, so we type for optional.
+    callsign: str | None = None
+    team: str | None = None
 
 
 
@@ -72,6 +74,11 @@ class ServerStatus(BaseDataClass):
     join_key: str
     account_verified_request: bool
     team_balance: bool
+
+class ActiveVehicle(BaseDataClass):
+    username: str
+    texture: str
+    vehicle: str
 
 class ServerLinkNotFound(commands.CheckFailure):
     pass
@@ -162,9 +169,25 @@ class PRCApiClient:
                 new_list.append(Player(
                     username=item['Player'].split(':')[0],
                     id=item['Player'].split(':')[1],
-                    permission=item['Permission']
+                    permission=item['Permission'],
+                    callsign=item.get('Callsign'),
+                    team=item["Team"]
                 ))
             return new_list
+        else:
+            raise ResponseFailure(
+                status_code=status_code,
+                json_data=response_json
+            )
+        
+    async def get_server_vehicles(self, guild_id: int) -> list:
+        status_code, response_json = await self._send_api_request('GET', '/server/vehicles', guild_id)
+        if status_code == 200:
+            return [ActiveVehicle(
+                texture=i.get("Texture", "Default"),
+                username=i["Owner"],
+                vehicle=i['Name']
+            ) for i in response_json]
         else:
             raise ResponseFailure(
                 status_code=status_code,

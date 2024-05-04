@@ -6417,6 +6417,60 @@ class AutomaticShiftConfiguration(discord.ui.View):
         await self.bot.settings.update_by_id(sett)
 
 
+class RemoteCommandConfiguration(discord.ui.View):
+    def __init__(self, bot, sustained_interaction: Interaction, shift_types: list, auto_data: dict):
+        self.bot = bot
+        self.shift_types = shift_types
+        self.sustained_interaction = sustained_interaction
+        self.auto_data = auto_data
+        super().__init__(timeout=None)
+        
+
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect,
+        placeholder="Webhook Channel",
+        max_values=1,
+        min_values=0    
+    )
+    async def webhook_channel(self, interaction: discord.Interaction, select: discord.ui.Select):
+        if len(select.values) == 0:
+            self.auto_data['webhook_channel'] = None
+        else:
+            self.auto_data['webhook_channel'] = select.values[0].id
+        print(self.auto_data)
+        embed = discord.Embed(
+            title="Remote Commands",
+            description="",
+            color=BLANK_COLOR
+        )
+        for key, value in self.auto_data.items():
+            embed.description += f"**{key.replace('_', ' ').title()}:** {'<#' + str(value) + '>' if isinstance(value, int) else 'None'}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await (await self.sustained_interaction.original_response()).edit(embed=embed, view=self)
+        await interaction.response.defer(thinking=False)
+
+
+    @discord.ui.button(
+        label="Finish Configuration",
+        style=discord.ButtonStyle.success,
+        row=2
+    )
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        await (await self.sustained_interaction.original_response()).delete()
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['ERLC']['remote_commands'] = self.auto_data
+        await self.bot.settings.update_by_id(sett)
+
+
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -6555,6 +6609,43 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             view=view,
             ephemeral=True
         )
+
+
+    @discord.ui.button(
+        label="Remote ERM Commands",
+        row=3
+    )
+    async def remote_commands(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        auto_shift_data = settings.get('ERLC', {}).get('remote_commands', {
+            "webhook_channel": None
+        })
+
+        embed = discord.Embed(
+            title="Remote Commands",
+            description="",
+            color=BLANK_COLOR
+        )
+        for key, value in auto_shift_data.items():
+            embed.description += f"**{key.replace('_', ' ').title()}:** {'<#' + str(value) + '>' if isinstance(value, int) else 'None'}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
+        view = RemoteCommandConfiguration(self.bot, interaction, shift_types, auto_shift_data)
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
+
 
 
 class RoleSelect(discord.ui.View):

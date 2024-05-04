@@ -62,6 +62,15 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
+        flags = []
+        if "--kick" in reason.lower():
+            flags.append('autokick')
+            reason = reason.replace("--kick", "")
+        elif "--ban" in reason.lower():
+            flags.append('autoban')
+            reason = reason.replace("--ban", "")
+
+
         if self.bot.punishments_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -158,6 +167,16 @@ class Punishments(commands.Cog):
         warning: WarningItem = await self.bot.punishments.fetch_warning(oid)
         newline = '\n'
         if msg is not None:
+            if 'autoban' in flags:
+                try:
+                    await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.username))
+                except:
+                    pass
+            elif 'autokick' in flags:
+                try:
+                    await self.bot.prc_api.run_command(ctx.guild.id, ":kick {}".format(warning.username))
+                except:
+                    pass
             return await msg.edit(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Logged Punishment",
@@ -175,6 +194,7 @@ class Punishments(commands.Cog):
                         f"> **At:** <t:{int(warning.time_epoch)}>\n"
                         f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
                         f"> **ID:** `{warning.snowflake}`"
+                        f"> **Custom Flags:** {'`N/A`' if len(flags) == 0 else '`{}`'.format(', '.join(flags))}"
                     ),
                     inline=False
                 ).set_thumbnail(
@@ -198,13 +218,25 @@ class Punishments(commands.Cog):
                     f"> **Reason:** {warning.reason}\n"
                     f"> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
-                    f"> **ID:** `{warning.snowflake}`"
+                    f"> **ID:** `{warning.snowflake}`\n"
+                    f"> **Custom Flags:** {'`N/A`' if len(flags) == 0 else '{}'.format(', '.join(flags))}"
                 ),
                 inline=False
             ).set_thumbnail(
                 url=thumbnail
             )
         )
+        if 'autoban' in flags:
+            try:
+                await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.username))
+            except:
+                pass
+        elif 'autokick' in flags:
+            try:
+                await self.bot.prc_api.run_command(ctx.guild.id, ":kick {}".format(warning.username))
+            except:
+                pass
+
 
 
     @commands.hybrid_group(

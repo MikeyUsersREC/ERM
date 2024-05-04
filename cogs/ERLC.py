@@ -69,25 +69,29 @@ class ERLC(commands.Cog):
     async def erlc_message(self, ctx: commands.Context, *, message: str):
         guild_id = ctx.guild.id
         
-        await self.secure_logging(guild_id, ctx.author.id, 'Message', message)
 
         command_response = await self.bot.prc_api.run_command(guild_id, f":m {message}")
         if command_response[0] == 200:
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Successfully Sent",
                     description="This message has been sent to the server!",
                     color=GREEN_COLOR
                 )
             )
+            await self.secure_logging(guild_id, ctx.author.id, 'Message', message)
         else:
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
                     title="Not Executed",
                     description="This message has not been sent to the server successfully.",
                     color=BLANK_COLOR
                 )
             )
+            await self.secure_logging(guild_id, ctx.author.id, 'Message', message)
+
+        
+    
         
     @server.command(
         name="hint",
@@ -201,26 +205,28 @@ class ERLC(commands.Cog):
                     )
                 return
 
-        await self.secure_logging(int(ctx.guild.id), ctx.author.id, 'Command', command)
 
         guild_id = int(ctx.guild.id)
         command_response = await self.bot.prc_api.run_command(guild_id, command)
         if command_response[0] == 200:
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Successfully Ran",
                     description="This command should have now been executed in your server.",
                     color=GREEN_COLOR
                 )
             )
+            await self.secure_logging(int(ctx.guild.id), ctx.author.id, 'Command', command)
         else:
-            return await ctx.send(
+            await ctx.send(
                 embed=discord.Embed(
                     title=f"Not Executed ({command_response[0]})",
                     description="This command has not been sent to the server successfully.",
                     color=BLANK_COLOR
                 )
             )
+            await self.secure_logging(int(ctx.guild.id), ctx.author.id, 'Command', command)
+
 
     @server.command(
         name="info",
@@ -474,7 +480,16 @@ class ERLC(commands.Cog):
     async def bans(self, ctx: commands.Context, username: typing.Optional[str], user_id: typing.Optional[int]):
         guild_id = ctx.guild.id
         # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
-        bans: list[prc_api.BanItem] = await self.bot.prc_api.fetch_bans(guild_id)
+        try:
+            bans: list[prc_api.BanItem] = await self.bot.prc_api.fetch_bans(guild_id)
+        except prc_api.ResponseFailure:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="PRC API Error",
+                    description="There were no bans, or your API key is incorrect.",
+                    color=BLANK_COLOR
+                )
+            )
         embed = discord.Embed(
             color=BLANK_COLOR,
             title="Bans",
@@ -533,7 +548,7 @@ class ERLC(commands.Cog):
 
         embed2.description += (
             f"**Server Staff [{len(staff)}]**\n" + 
-            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
+            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
         )
         if list(embed2.description).index(']') > len(embed2.description) + 5:
             embed2.description += "No players."
@@ -541,7 +556,7 @@ class ERLC(commands.Cog):
         
         embed2.description += (
             f"\n\n**Online Players [{len(actual_players)}]**\n" +
-            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
         )
         if list(embed2.description).index(']') > len(embed2.description) + 5:
             embed2.description += "No players."
@@ -551,6 +566,55 @@ class ERLC(commands.Cog):
             f"\n\n**Queue [{len(queue)}]**\n" +
             ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
         )
+        if list(embed2.description).index(']') > len(embed2.description) + 5:
+            embed2.description += "No players."
+
+        embed2.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url
+        )
+
+        await ctx.send(embed=embed2)
+
+    @server.command(
+        name="vehicles",
+        description="See all vehicles of players in the server."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def server_vehicles(self, ctx: commands.Context):
+        guild_id = int(ctx.guild.id)
+        # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        vehicles: list[prc_api.ActiveVehicle] = await self.bot.prc_api.get_server_vehicles(guild_id)
+        matched = {}
+        for item in vehicles:
+            for x in players:
+                if x.username == item.username:
+                    matched[item] = x
+
+        embed2 = discord.Embed(
+            title=f"Server Vehicles [{len(players)}]",
+            color=BLANK_COLOR,
+            description=""
+        )
+        actual_players = []
+        key_maps = {}
+        staff = []
+        for item in players:
+            if item.permission == "Normal":
+                actual_players.append(item)
+            else:
+                staff.append(item)
+        
+        embed2.description += (
+            f"**Active Vehicles [{len(vehicles)}]**\n> " +
+            '\n> '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**' for veh, plr in matched.items()])
+        )
+        if list(embed2.description).index(']') > len(embed2.description) + 5:
+            embed2.description += "No players."
+
+
         if list(embed2.description).index(']') > len(embed2.description) + 5:
             embed2.description += "No players."
 

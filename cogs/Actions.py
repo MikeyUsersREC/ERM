@@ -161,7 +161,7 @@ class Actions(commands.Cog):
             return 1
         
         try:
-            await context.author.add_role(role)
+            await context.author.add_roles(role)
         except discord.HTTPException:
             return 1
         
@@ -177,7 +177,7 @@ class Actions(commands.Cog):
             return 1
         
         try:
-            await context.author.remove_role(role)
+            await context.author.remove_roles(role)
         except discord.HTTPException:
             return 1
 

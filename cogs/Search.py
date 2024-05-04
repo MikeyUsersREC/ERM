@@ -35,7 +35,9 @@ class Search(commands.Cog):
         with_app_command=True,
     )
     @require_settings()
-    async def mywarnings(self, ctx: commands.Context):
+    async def mywarnings(self, ctx: commands.Context, user: discord.User = None):
+        if user is None:
+           user = ctx.author 
         guild_id = ctx.guild.id
         if guild_id == 823606319529066548:
             guild_id = 1015622817452138606
@@ -46,12 +48,12 @@ class Search(commands.Cog):
             )
 
         bot = self.bot
-        roblox_user = await bot.bloxlink.find_roblox(ctx.author.id)
+        roblox_user = await bot.bloxlink.find_roblox(user.id)
         if not roblox_user or not (roblox_user or {}).get('robloxID'):
             return await ctx.send(
                 embed=discord.Embed(
                     title="Could not find user",
-                    description="I could not find your ROBLOX account. Ensure that you are linked with Bloxlink and try again.",
+                    description="I could not find this user's ROBLOX account. Ensure that they are linked with Bloxlink and try again.",
                     color=BLANK_COLOR
                 )
             )
@@ -126,18 +128,19 @@ class Search(commands.Cog):
             inline=False
         )
 
-        embed_list[0].add_field(
-            name="Punishments",
-            value=(
-                f"> **Total Punishments:** {len(warnings)}\n"
-                f"> **Warnings:** {len(list(filter(lambda x: x.warning_type == 'Warning', warnings)))}\n"
-                f"> **Kicks:** {len(list(filter(lambda x: x.warning_type == 'Kick', warnings)))}\n"
-                f"> **Bans:** {len(list(filter(lambda x: x.warning_type == 'Ban', warnings)))}\n"
-                f"> **BOLOs:** {len(list(filter(lambda x: x.warning_type.upper() == 'BOLO', warnings)))}\n"
-                f"> **Other:** {len(list(filter(lambda x: x.warning_type.upper() not in ['WARNING', 'KICK', 'BAN', 'BOLO'], warnings)))}"
-            ),
-            inline=False,
-        )
+        if ctx.author == user:
+            embed_list[0].add_field(
+                name="Punishments",
+                value=(
+                    f"> **Total Punishments:** {len(warnings)}\n"
+                    f"> **Warnings:** {len(list(filter(lambda x: x.warning_type == 'Warning', warnings)))}\n"
+                    f"> **Kicks:** {len(list(filter(lambda x: x.warning_type == 'Kick', warnings)))}\n"
+                    f"> **Bans:** {len(list(filter(lambda x: x.warning_type == 'Ban', warnings)))}\n"
+                    f"> **BOLOs:** {len(list(filter(lambda x: x.warning_type.upper() == 'BOLO', warnings)))}\n"
+                    f"> **Other:** {len(list(filter(lambda x: x.warning_type.upper() not in ['WARNING', 'KICK', 'BAN', 'BOLO'], warnings)))}"
+                ),
+                inline=False,
+            )
 
         if await staff_predicate(ctx):
             moderations = [await bot.punishments.fetch_warning(i['_id']) async for i in bot.punishments.db.find({
@@ -156,10 +159,16 @@ class Search(commands.Cog):
                 ),
                 inline=False
             )
+        else:
+            if user != ctx.author:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="No Staff Moderations",
+                        description="This user has no moderations that they've handed out, so they cannot be viewed for privacy reasons.",
+                        color=BLANK_COLOR
+                    )
+                )
 
-
-
-        # # # print(result)
         def add_warning_field(warning):
             new_line = '\n'
             embed_list[-1].add_field(
@@ -174,6 +183,8 @@ class Search(commands.Cog):
             )
 
         for warning in warnings:
+            if ctx.author != user:
+                break
             if len(embed_list[-1].fields) <= 2:
                 add_warning_field(warning)
             else:
