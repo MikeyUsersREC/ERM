@@ -8788,16 +8788,16 @@ class AccountLinkingMenu(discord.ui.View):
             return
         
         available_string_subsets = [
-            "One",
-            "Two",
-            "Three",
-            "Four",
-            "Five",
-            "Six",
-            "Seven",
-            "Eight",
-            "Nine",
-            "Zero"
+            "Dog",
+            "Cat",
+            "Doge",
+            "Horse",
+            "Greece",
+            "Romania",
+            "America",
+            "Germany",
+            "ERM",
+            "Electricity"
         ]
 
         full_string = f"ERM {' '.join([random.choice(available_string_subsets) for _ in range(6)])}"
