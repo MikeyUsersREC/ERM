@@ -8838,9 +8838,10 @@ class AccountLinkingMenu(discord.ui.View):
             self.username = new_user.name 
             await msg.edit(
                 embed=discord.Embed(
-                    title="<:check:1163142000271429662> Successfully Linked",
+                    title="<:success:1163149118366040106> Successfully Linked",
                     description=f"You have been successfully linked to **{new_user.name}**.",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
+                    view=None
                 )
             )
         else:
