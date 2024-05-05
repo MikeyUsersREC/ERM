@@ -597,7 +597,7 @@ async def tempban_checks():
 
 
 
-@tasks.loop(minutes=2, reconnect=True)
+@tasks.loop(seconds=75, reconnect=True)
 async def iterate_prc_logs():
     # This will check every 60 seconds for kill logs and player logs
     # enabled, as well as send all players joined during that time period.
