@@ -8849,5 +8849,6 @@ class AccountLinkingMenu(discord.ui.View):
                     title="Not Linked",
                     description="You did not include the code in your description. Please try again later.",
                     color=BLANK_COLOR
-                )
+                ),
+                view=None
             )
