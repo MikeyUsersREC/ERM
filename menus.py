@@ -8840,8 +8840,7 @@ class AccountLinkingMenu(discord.ui.View):
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Successfully Linked",
                     description=f"You have been successfully linked to **{new_user.name}**.",
-                    color=GREEN_COLOR,
-                    view=None
+                    color=GREEN_COLOR                    
                 )
             )
         else:
