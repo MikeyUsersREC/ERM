@@ -12,8 +12,9 @@ from datamodels.ShiftManagement import ShiftItem
 from utils.constants import blank_color, BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.timestamp import td_format
 from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed, time_converter, get_elapsed_time, \
-    generalised_interaction_check_failure, generator
+    generalised_interaction_check_failure, generator, ArgumentMockingInstance
 import gspread_asyncio
+import random
 
 REQUIREMENTS = ["gspread", "oauth2client"]
 
@@ -8733,15 +8734,18 @@ class CompleteVerification(discord.ui.View):
 
 
 class AccountLinkingMenu(discord.ui.View):
-    def __init__(self, user: discord.Member):
+    def __init__(self, bot: commands.Bot, user: discord.Member, sustained_interaction: discord.Interaction):
+        self.bot = bot
         self.user = user
         self.mode = "OAuth2"
         self.associated = None
+        self.sustained_interaction = sustained_interaction
 
         super().__init__(timeout=600.0)
-        self.add_item(discord.ui.Button(label="Link Roblox", url="https://authorize.roblox.com/?client_id=5489705006553717980&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={ctx.author.id}"))
-    
-    @discord.ui.button(label="Code Verification")
+        self.add_item(discord.ui.Button(label="Link Roblox", url=f"https://authorize.roblox.com/?client_id=5489705006553717980&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={self.user.id}"))
+
+
+    @discord.ui.button(label="Legacy Code Verification", row=1)
     async def code_verification(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != self.user:
             await interaction.response.send_message(
@@ -8754,7 +8758,7 @@ class AccountLinkingMenu(discord.ui.View):
             )
             return
 
-        msg = interaction.message
+        msg = self.sustained_interaction.message if self.sustained_interaction else None
         await interaction.response.send_modal(
             (modal := CustomModal(
                 "Legacy Code Verification",
@@ -8779,7 +8783,7 @@ class AccountLinkingMenu(discord.ui.View):
             return
 
         try:
-            user = await bot.roblox.get_user_by_username(modal.username.value)
+            user = await self.bot.roblox.get_user_by_username(modal.username.value)
         except:
             return
         
@@ -8798,30 +8802,41 @@ class AccountLinkingMenu(discord.ui.View):
 
         full_string = f"ERM {' '.join([random.choice(available_string_subsets) for _ in range(6)])}"
         
-        await msg.edit(
-            embed=discord.Embed(
-                title="Legacy Code Verification",
-                description=f"To utilise this verification for **{user.name}**, put the following code in your Roblox account description.\n`{full_string}`",
-                color=BLANK_COLOR
-            ),
-            view=(view := CompleteVerification(interaction.user))
-        )
+
+
+        if msg:
+            await msg.edit(
+                embed=discord.Embed(
+                    title="Legacy Code Verification",
+                    description=f"To utilise this verification for **{user.name}**, put the following code in your Roblox account description.\n`{full_string}`",
+                    color=BLANK_COLOR
+                ),
+                view=(view := CompleteVerification(interaction.user))
+            )
+        else:
+            msg = await interaction.followup.send(embed=discord.Embed(
+                    title="Legacy Code Verification",
+                    description=f"To utilise this verification for **{user.name}**, put the following code in your Roblox account description.\n`{full_string}`",
+                    color=BLANK_COLOR
+                ),
+                view=(view := CompleteVerification(interaction.user)))
+
         timeout = await view.wait()
         if timeout:
             return
         
         try:
-            new_user = await bot.roblox.get_user_by_username(modal.username.value)
+            new_user = await self.bot.roblox.get_user_by_username(modal.username.value)
         except:
             return
         
         if full_string.lower() in new_user.description.lower():
-            await bot.pending_oauth2.db.delete_one({"discord_id": interaction.user.id})
-            await bot.oauth2_users.db.insert_one({"roblox_id": new_user.id, "discord_id": interaction.user.id})
+            await self.bot.pending_oauth2.db.delete_one({"discord_id": interaction.user.id})
+            await self.bot.oauth2_users.db.insert_one({"roblox_id": new_user.id, "discord_id": interaction.user.id})
             
             self.mode = "Code"
             self.username = new_user.name 
-            await interaction.message.edit(
+            await msg.edit(
                 embed=discord.Embed(
                     title="<:check:1163142000271429662> Successfully Linked",
                     description=f"You have been successfully linked to **{new_user.name}**.",
@@ -8829,9 +8844,10 @@ class AccountLinkingMenu(discord.ui.View):
                 )
             )
         else:
-            await interaction.message.edit(
+            await msg.edit(
                 embed=discord.Embed(
                     title="Not Linked",
-                    description="You did not include the code in your description. Please try again later."
+                    description="You did not include the code in your description. Please try again later.",
+                    color=BLANK_COLOR
                 )
             )

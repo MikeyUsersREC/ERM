@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from menus import LinkView, YesNoMenu
+from menus import YesNoMenu, AccountLinkingMenu
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 import asyncio
 import time
@@ -46,7 +46,8 @@ class OAuth2(commands.Cog):
                 description="**To link your account with ERM, click the button below.**\nIf you encounter an error, please contact ERM Support by running `/support`.",
                 color=BLANK_COLOR
             ),
-            "view": LinkView(label="Link Roblox", url=f"https://authorize.roblox.com/?client_id=5489705006553717980&response_type=code&redirect_uri=https://verify.ermbot.xyz/auth&scope=openid+profile&state={ctx.author.id}")
+
+            "view": AccountLinkingMenu(self.bot, ctx.author, ctx.interaction)
         }
 
         await self.bot.pending_oauth2.db.insert_one({

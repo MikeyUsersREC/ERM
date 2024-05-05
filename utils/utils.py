@@ -14,6 +14,13 @@ from utils.constants import BLANK_COLOR
 from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
 
+
+class ArgumentMockingInstance:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            self.key = value
+
+
 tokenGenerator = ZUID(
     prefix="",
     length=64,
