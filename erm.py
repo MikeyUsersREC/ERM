@@ -671,7 +671,7 @@ async def iterate_prc_logs():
                         players[item.killer_username] = [1, [item]]
                     else:
                         players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
-                    await kill_logs_channel.send(f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>")
+                    await kill_logs_channel.send(embed=discord.Embed(title="Kill Log", color=BLANK_COLOR, description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>"))
 
 
 
