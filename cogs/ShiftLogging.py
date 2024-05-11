@@ -345,6 +345,7 @@ class ShiftLogging(commands.Cog):
 
         shift_types = settings.get('shift_types', {}).get('types', [])
         msg = None
+        shift_type_item = None
         if shift_types:
             if type.lower() not in [t['name'].lower() for t in shift_types]:
                 msg = await ctx.send(
@@ -372,7 +373,6 @@ class ShiftLogging(commands.Cog):
                 if view.value:
                     type = view.value
 
-            shift_type_item = None
             for item in shift_types:
                 if item['name'].lower() == type.lower():
                     shift_type_item = item
@@ -485,7 +485,7 @@ class ShiftLogging(commands.Cog):
             self.bot,
             status,
             ctx.author.id,
-            type,
+            shift_type_item["name"] if shift_type_item else type,
             starting_document=shift,
             starting_container=contained_document
         )
