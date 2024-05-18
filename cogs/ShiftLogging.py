@@ -547,7 +547,8 @@ class ShiftLogging(commands.Cog):
                         )
                     ],
                 )
-                if not (type or '').lower() in [i["name"].lower() for i in shift_types]:
+                type_value = (type or '').lower()
+                if type_value not in [i["name"].lower() for i in shift_types] and type_value != "all":
                     msg = await ctx.reply(
                         embed=discord.Embed(
                             title="Incorrect Shift Type",
@@ -561,17 +562,17 @@ class ShiftLogging(commands.Cog):
                     if timeout:
                         return
 
-                    type_value = view.value
+                    type_value = view.value.lower()
                 else:
-                    type_value = type
+                    type_value = type_value.lower()
 
                 if type_value:
-                    if type_value.lower() == "all":
+                    if type_value == "all":
                         shift_type = None
                     else:
                         shift_type_str = type_value
                         shift_list = [
-                            i for i in shift_types if i["name"].lower() == shift_type_str.lower()
+                            i for i in shift_types if i["name"].lower() == shift_type_str
                         ]
                         if shift_list:
                             shift_type = shift_list[0]
