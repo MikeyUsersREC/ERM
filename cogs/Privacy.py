@@ -476,7 +476,7 @@ class Privacy(commands.Cog):
                         if not selected.get('_id'):
                             selected['_id'] = ctx.author.id
                         await bot.consent.update_by_id(selected)
-                    shift_reports_enabled = True
+                    automatic_shifts_enabled = True
                     embed = discord.Embed(
                         title="User Settings",
                         color=BLANK_COLOR
@@ -523,7 +523,7 @@ class Privacy(commands.Cog):
                             selected['_id'] = ctx.author.id
 
                         await bot.consent.update_by_id(selected)
-                    shift_reports_enabled = False
+                    automatic_shifts_enabled = False
                     embed = discord.Embed(
                         title="User Settings",
                         color=BLANK_COLOR
