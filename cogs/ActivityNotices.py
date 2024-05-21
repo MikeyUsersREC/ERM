@@ -129,6 +129,15 @@ class ActivityCoreCommands:
 
     async def core_command_admin(self, ctx: commands.Context, request_type_object: str, victim: discord.Member):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        if not settings:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Setup",
+                    description="Your server is not setup.",
+                    color=BLANK_COLOR
+                )
+            )
+        
         if not settings.get('staff_management') or not settings.get('staff_management', {}).get(
                 f'{request_type_object.lower()}_role', None) or not settings.get('staff_management', {}).get('channel'):
             await ctx.send(
