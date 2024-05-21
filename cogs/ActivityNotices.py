@@ -151,7 +151,7 @@ class ActivityCoreCommands:
 
         try:
             staff_channel = await ctx.guild.fetch_channel(settings['staff_management']['channel'])
-        except discord.NotFound:
+        except Exception as _:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Channel Not Found",
