@@ -35,6 +35,11 @@ class OnMessage(commands.Cog):
         if not message.guild:
             return
 
+        if isinstance(message.author, discord.User):
+            msg = copy(message)
+            msg.author = await message.guild.fetch_member(message.author.id)
+            message = msg
+        
         dataset = await bot.settings.find_by_id(message.guild.id)
         if dataset == None:
             return
