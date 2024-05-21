@@ -36,7 +36,7 @@ class OnMessage(commands.Cog):
             return
 
         if isinstance(message.author, discord.User):
-            msg = copy(message)
+            msg = copy.copy(message)
             msg.author = await message.guild.fetch_member(message.author.id)
             message = msg
         
