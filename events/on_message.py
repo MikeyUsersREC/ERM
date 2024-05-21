@@ -40,7 +40,7 @@ class OnMessage(commands.Cog):
             #msg.author = await message.guild.fetch_member(message.author.id)
             #message = msg
             ch = await bot.fetch_channel(1213731821330894938)
-            await ch.send(f"{type(message.author)=} | {message.guild.chunked=}")
+            await ch.send(f"{type(message.author)=} | {message.guild.chunked=} | {message.guild.member_count=} | {len(message.guild.members)=}")
         
         dataset = await bot.settings.find_by_id(message.guild.id)
         if dataset == None:
