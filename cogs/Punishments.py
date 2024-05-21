@@ -62,6 +62,24 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
+        settings = await self.bot.settings.find_by_id(ctx.guild.id) or {}
+        if not settings:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Setup",
+                    description="Your server is not setup.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        if not (settings.get('punishments') or {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled", 
+                    description="Your server has punishments disabled.",
+                    color=BLANK_COLOR
+                )
+            )
         flags = []
         if "--kick" in reason.lower():
             flags.append('autokick')
