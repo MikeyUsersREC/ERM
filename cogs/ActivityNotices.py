@@ -370,6 +370,40 @@ class ActivityCoreCommands:
                 )
             )
 
+        elif view.value == "end":
+            async def respond(embed: discord.Embed):
+                if view.stored_interaction is not None:
+                    await view.stored_interaction.followup.send(
+                        embed=embed,
+                        ephemeral=True
+                    )
+                else:
+                    await msg.edit(
+                        embed=embed,
+                        view=None
+                    )
+
+            if not current_notice:
+                return await respond(
+                    embed=discord.Embed(
+                        title="No Active Notice",
+                        description="This staff member has no active notice."
+                    )
+                )
+
+            current_time = int(datetime.datetime.now().timestamp())
+            await self.bot.loas.db.update_one(
+                {"_id": current_notice["_id"]},
+                {"$set": {"expiry": current_time}}
+            )
+
+            return await respond(
+                embed=discord.Embed(
+                    title="Notice Ended Early",
+                    description=f"{victim.mention}'s {request_type_object.upper()} has been ended early.",
+                    color=GREEN_COLOR
+                )
+            )
 
 
 
@@ -673,17 +707,6 @@ class StaffManagement(commands.Cog):
     @app_commands.describe(reason="What is your reason for going on LoA?")
     async def loa_request(self, ctx, time, *, reason):
         await self.core_commands.core_command_request(ctx, 'loa', time, reason)
-
-    @commands.guild_only()
-    @loa.command(
-        name="end",
-        description = "End your LOA Early",
-        extras = {"category": "Staff Management", "ephemeral": True},
-        with_app_command=True
-    )
-    @is_staff()
-    async def loa_end(self,ctx):
-        await self.core_commands.core_command_early(ctx,ctx.author)
 
     @commands.guild_only()
     @loa.command(

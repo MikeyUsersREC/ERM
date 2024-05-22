@@ -4031,6 +4031,18 @@ class ActivityNoticeAdministration(discord.ui.View):
 
         await self.visual_close(interaction.message)
         self.stop()
+    
+    @discord.ui.button(
+        label="End",
+        style=discord.ButtonStyle.secondary
+    )
+    async def end(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.stored_interaction = interaction
+        self.value = "end"
+
+        await self.visual_close(interaction.message)
+        self.stop()
 
 
 
