@@ -4031,7 +4031,44 @@ class ActivityNoticeAdministration(discord.ui.View):
 
         await self.visual_close(interaction.message)
         self.stop()
+    
+    @discord.ui.button(
+        label="End",
+        style=discord.ButtonStyle.secondary
+    )
+    async def end(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.stored_interaction = interaction
+        self.value = "end"
 
+        await self.visual_close(interaction.message)
+        self.stop()
+
+    @discord.ui.button(
+        label="Extend",
+        style=discord.ButtonStyle.green
+    )
+    async def extend(self,interaction:discord.Interaction,button:discord.ui.Button):
+        self.modal = CustomModal(
+            'Extend Activity Notice',
+            [
+                (
+                    'duration',
+                    discord.ui.TextInput(
+                        label="Duration"
+                    )
+                )
+            ], {
+                "ephemeral": True
+            }
+        )
+
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        self.stored_interaction = self.modal.interaction
+        self.value = "extend"
+        self.visual_close(interaction.message)
+        self.stop()
 
 
 class MultiSelectMenu(discord.ui.View):

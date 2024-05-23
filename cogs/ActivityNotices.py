@@ -370,7 +370,96 @@ class ActivityCoreCommands:
                 )
             )
 
+        elif view.value == "end":
+            async def respond(embed: discord.Embed):
+                if view.stored_interaction is not None:
+                    await view.stored_interaction.followup.send(
+                        embed=embed,
+                        ephemeral=True
+                    )
+                else:
+                    await msg.edit(
+                        embed=embed,
+                        view=None
+                    )
 
+            if not current_notice:
+                return await respond(
+                    embed=discord.Embed(
+                        title="No Active Notice",
+                        description="This staff member has no active notice."
+                    )
+                )
+
+            current_time = int(datetime.datetime.now().timestamp())
+            await self.bot.loas.db.update_one(
+                {"_id": current_notice["_id"]},
+                {"$set": {"expiry": current_time}}
+            )
+
+            return await respond(
+                embed=discord.Embed(
+                    title="Notice Ended Early",
+                    description=f"{victim.mention}'s {request_type_object.upper()} has been ended early.",
+                    color=GREEN_COLOR
+                )
+            )
+        
+        elif view.value == "extend":
+            async def respond(embed: discord.Embed):
+                if view.stored_interaction is not None:
+                    await view.stored_interaction.followup.send(
+                        embed=embed,
+                        ephemeral=True
+                    )
+                else:
+                    await msg.edit(
+                        embed=embed,
+                        view=None
+                    )
+
+            if not current_notice:
+                return await respond(
+                    embed=discord.Embed(
+                        title="No Active Notice",
+                        description="This staff member has no active notice."
+                    )
+                )
+
+            duration = view.modal.duration.value
+            if duration is None:
+                return await respond(
+                    embed=discord.Embed(
+                        title="Cancelled",
+                        description="You did not provide a duration.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            try:
+                duration_seconds = time_converter(duration)
+            except ValueError:
+                return await respond(
+                    embed=discord.Embed(
+                        title="Invalid Time",
+                        description="You did not provide a valid time format.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            new_expiry = current_notice['expiry'] + duration_seconds
+            await self.bot.loas.db.update_one(
+                {"_id": current_notice["_id"]},
+                {"$set": {"expiry": new_expiry}}
+            )
+
+            return await respond(
+                embed=discord.Embed(
+                    title="Notice Extended",
+                    description=f"{victim.mention}'s {request_type_object.upper()} has been extended by {duration}.",
+                    color=GREEN_COLOR
+                )
+            )
 
 
     async def core_command_request(self, ctx: commands.Context, request_type_object: str, duration: str, reason: str, return_bypass = None, override_victim = None):
@@ -470,6 +559,41 @@ class ActivityCoreCommands:
                     color=GREEN_COLOR
                 )
             )
+
+    async def core_command_early(self, ctx: commands.Context, user: discord.Member):
+        current_loa = await self.bot.loas.db.find_one({
+            "guild_id": ctx.guild.id,
+            "user_id": user.id,
+            "accepted": True,
+            "denied": False,
+            "voided": False,
+            "expired": False,
+            "type": "LOA"
+        })
+
+        if current_loa is None:
+            await ctx.send(
+                embed=discord.Embed(
+                    title="No Active LOA",
+                    description=f"{user.mention} does not have an active LOA.",
+                    color=discord.Color.red()
+                )
+            )
+            return
+
+        current_time = int(datetime.datetime.now().timestamp())
+        await self.bot.loas.db.update_one(
+            {"_id": current_loa["_id"]},
+            {"$set": {"expiry": current_time}}
+        )
+
+        await ctx.send(
+            embed=discord.Embed(
+                title="LOA Ended Early",
+                description=f"{user.mention}'s LOA has been ended early.",
+                color=discord.Color.green()
+            )
+        )
 
 
     async def core_command_active(self, ctx: commands.Context, request_type_object: str):
