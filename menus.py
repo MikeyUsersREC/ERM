@@ -7885,6 +7885,37 @@ class AdministratedShiftMenu(discord.ui.View):
                 )
 
             await self._manipulate_shift_time(interaction.message, "add", converted)
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
+                "UserID": self.target_id,
+                "Guild": interaction.guild.id,
+                "EndEpoch": {'$ne': 0}
+            })]
+            if settings.get('shift_management', {}).get('channel'):
+                log_channel = interaction.guild.get_channel(settings['shift_management']['channel'])
+                if log_channel:
+                    embed=discord.Embed(
+                            title="Shift Time Added",
+                            description=(
+                                f"> **User:** <@{self.target_id}> \n"
+                                f"> **Shift Type:** {self.shift_type}\n"
+                                f"> **Time Added:** {td_format(datetime.timedelta(seconds=converted))}"
+                            ),
+                            color=0x2F3136
+                        )
+                    embed.add_field(
+                        name="Added By:",
+                        value=f"> {interaction.user.mention}"
+                    )
+                    embed.add_field(
+                        name="New Total Shift Time:",
+                        value=f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n",
+                        inline=False
+                    )
+                    embed.set_thumbnail(url=interaction.guild.get_member(self.target_id).avatar.url)
+                    await log_channel.send(
+                        embed=embed
+                    )
             await asyncio.sleep(0.02)
             # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
@@ -7920,6 +7951,37 @@ class AdministratedShiftMenu(discord.ui.View):
                 )
 
             await self._manipulate_shift_time(interaction.message, "subtract", converted)
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
+                "UserID": self.target_id,
+                "Guild": interaction.guild.id,
+                "EndEpoch": {'$ne': 0}
+            })]
+            if settings.get('shift_management', {}).get('channel'):
+                log_channel = interaction.guild.get_channel(settings['shift_management']['channel'])
+                if log_channel:
+                    embed=discord.Embed(
+                            title="Shift Time Subtracted",
+                            description=(
+                                f"> **User:** <@{self.target_id}> \n"
+                                f"> **Shift Type:** {self.shift_type}\n"
+                                f"> **Time Subtracted:** {td_format(datetime.timedelta(seconds=converted))}"
+                            ),
+                            color=0x2F3136
+                        )
+                    embed.add_field(
+                        name="Subtracted By:",
+                        value=f"> {interaction.user.mention}"
+                    )
+                    embed.add_field(
+                        name="New Total Shift Time:",
+                        value=f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n",
+                        inline=False
+                    )
+                    embed.set_thumbnail(url=interaction.guild.get_member(self.target_id).avatar.url)
+                    await log_channel.send(
+                        embed=embed
+                    )
             await asyncio.sleep(0.02)
             # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
