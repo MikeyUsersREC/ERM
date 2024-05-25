@@ -560,42 +560,6 @@ class ActivityCoreCommands:
                 )
             )
 
-    async def core_command_early(self, ctx: commands.Context, user: discord.Member):
-        current_loa = await self.bot.loas.db.find_one({
-            "guild_id": ctx.guild.id,
-            "user_id": user.id,
-            "accepted": True,
-            "denied": False,
-            "voided": False,
-            "expired": False,
-            "type": "LOA"
-        })
-
-        if current_loa is None:
-            await ctx.send(
-                embed=discord.Embed(
-                    title="No Active LOA",
-                    description=f"{user.mention} does not have an active LOA.",
-                    color=discord.Color.red()
-                )
-            )
-            return
-
-        current_time = int(datetime.datetime.now().timestamp())
-        await self.bot.loas.db.update_one(
-            {"_id": current_loa["_id"]},
-            {"$set": {"expiry": current_time}}
-        )
-
-        await ctx.send(
-            embed=discord.Embed(
-                title="LOA Ended Early",
-                description=f"{user.mention}'s LOA has been ended early.",
-                color=discord.Color.green()
-            )
-        )
-
-
     async def core_command_active(self, ctx: commands.Context, request_type_object: str):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings.get('staff_management') or not settings.get('staff_management', {}).get(f'{request_type_object.lower()}_role', None):

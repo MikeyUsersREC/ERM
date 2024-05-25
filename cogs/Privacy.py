@@ -42,8 +42,8 @@ class Privacy(commands.Cog):
                 else True
             )
             automatic_shifts_enabled = (
-                document.get('auto_shifts')
-                if document.get('auto_shifts') is not None else True
+                document.get('automatic_shifts')
+                if document.get('automatic_shifts') is not None else True
             )
             selected = document
         embed = discord.Embed(
