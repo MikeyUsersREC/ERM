@@ -7339,15 +7339,32 @@ class CustomCommandOptionSelect(discord.ui.View):
 
         self.stop()
 
-    # @discord.ui.button(
-    #     label="Edit",
-    #     style=discord.ButtonStyle.secondary,
-    #     row=0
-    # )
-    # async def edit_custom_command(self, interaction: discord.Interaction, button: discord.Button):
-    #     self.value = "edit"
-    #     await interaction.response.defer()
-    #     self.stop()
+    @discord.ui.button(
+        label="Edit",
+        style=discord.ButtonStyle.secondary,
+        row=0
+    )
+    async def edit_custom_command(self, interaction: discord.Interaction, _: discord.Button):
+        self.value = "edit"
+        self.modal = CustomModal(
+            "Edit a Custom Command",
+            [
+                (
+                    "name",
+                    discord.ui.TextInput(
+                        label="Custom Command Name"
+                    )
+                )
+            ],
+            {
+                "thinking": False
+            }
+        )
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        if self.modal.name.value is None:
+            return
+        self.stop()
 
     @discord.ui.button(
         label="Delete",

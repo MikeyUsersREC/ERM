@@ -359,11 +359,15 @@ class ERLC(commands.Cog):
             if embed.description in ['', '\n']:
                 embed.description = "> No kill logs found."
 
-
-            embed.set_author(
-                name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url
-            )
+            try:
+                embed.set_author(
+                    name=ctx.guild.name,
+                    icon_url=ctx.guild.icon.url
+                )
+            except:
+                embed.set_author(
+                    name=ctx.guild.name
+                )
 
 
                 # embed.set_footer(icon_url="https://cdn.discordapp.com/emojis/1176999148084535326.webp?size=128&quality=lossless",

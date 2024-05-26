@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
-from bson import ObjectId
+from bson import ObjectId, Int64
 from roblox.client import Client
 from datamodels.Warnings import WarningItem
 from utils.constants import BLANK_COLOR
 import roblox
+import logging
 
 class OnPunishment(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -58,13 +59,61 @@ class OnPunishment(commands.Cog):
 
         if not moderator:
             return
-
+        
         roblox_client: Client = Client()
         roblox_user = await roblox_client.get_user(warning.user_id)
         thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
         thumbnail = thumbnails[0].image_url
 
+        async def get_discord_id_by_roblox_id(self, roblox_id):
+            linked_account = await self.bot.oauth2_users.db.find_one({"roblox_id": roblox_id})
+            if linked_account:
+                return linked_account["discord_id"]
+            return None
+                
         if channel is not None:
+            try:
+                shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
+                warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
+                if shift:
+                    moderations_dict = {entry['type']: entry['count'] for entry in shift['Moderations']}
+                    warning_type = warning.warning_type.lower()
+                    moderations_dict[warning_type] = moderations_dict.get(warning_type, 0) + 1
+                    moderations_array = [{'type': key, 'count': value} for key, value in moderations_dict.items()]
+                    doc = {
+                        "_id": shift['_id'],
+                        "Moderations": moderations_array
+                    }
+                    await self.bot.shift_management.shifts.update_by_id(doc)
+                    #print(f"Updated {shift['_id']} with {warning_type}")
+            except Exception as e:
+                logging.error(e)
+            try:
+                async for document in self.bot.consent.db.find({"_id": warned_discord_id}):
+                    punishments_enabled = (
+                        document.get("punishments")
+                        if document.get("punishments") is not None
+                        else True
+                    )
+                if punishments_enabled:
+                    user_to_dm = await guild.fetch_member(warned_discord_id)
+                    embed = discord.Embed(
+                        title="You have been Moderated.",
+                        description=(
+                            f"{guild.name} has moderated you in-game.\n"
+                        ),
+                        color=BLANK_COLOR
+                    ).add_field(
+                        name="Moderation Information",
+                        value=(
+                            f"> **Punishment Type:** {warning.warning_type}\n"
+                            f"> **Reason:** {warning.reason}\n"
+                        )
+                    ).set_thumbnail(url=thumbnail)
+                    await user_to_dm.send(embed=embed)
+            except:
+                pass
+
             return await channel.send(embed=discord.Embed(
                 title="Punishment Issued",
                 color=BLANK_COLOR
@@ -90,7 +139,7 @@ class OnPunishment(commands.Cog):
                 name=guild.name,
                 icon_url=guild.icon.url if guild.icon else ''
             ).set_thumbnail(url=thumbnail))
-
+            
 
 
 

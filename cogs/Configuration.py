@@ -456,7 +456,7 @@ class Configuration(commands.Cog):
         await msg.edit(
             embed=discord.Embed(
                 title='<:success:1163149118366040106> Success!',
-                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config change`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
+                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
                 color=0x1fd373
             ),
             view=None

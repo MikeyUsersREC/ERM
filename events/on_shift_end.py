@@ -103,6 +103,50 @@ class OnShiftEnd(commands.Cog):
             ).set_thumbnail(
                 url=staff_member.display_avatar.url
             ))
+            async for document in self.bot.consent.db.find({"_id": staff_member.id}):
+                shift_reports_enabled = (
+                    document.get("shift_reports")
+                    if document.get("shift_reports") is not None
+                    else True
+                )
+            if shift_reports_enabled:
+                warnings_count = next((entry['count'] for entry in shift.moderations if entry['type'] == 'warning'), 0)
+                ban_count = next((entry['count'] for entry in shift.moderations if entry['type'] == 'ban'), 0)
+                bolo_count = next((entry['count'] for entry in shift.moderations if entry['type'] == 'bolo'), 0)
+                custom = next((entry['count'] for entry in shift.moderations if entry['type'] == 'custom'), 0)
+                kick_count = next((entry['count'] for entry in shift.moderations if entry['type'] == 'kick'), 0)
+                embed = discord.Embed(
+                    title="Shift Report",
+                    color=BLANK_COLOR
+                ).add_field(
+                    name="Shift Information",
+                    value=(
+                        f"> **Shift Type:** {shift_type}\n"
+                        f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                        f"> **Shift End:** <t:{int(shift.end_epoch)}>\n"
+                        f"> **Nickname:** `{shift.nickname}`\n"
+                    ),
+                    inline=False
+                ).add_field(
+                    name="Total Moderations:",
+                    value=(
+                        "\n".join([
+                            f"> **Warnings:** {warnings_count}" if warnings_count > 0 else "",
+                            f"> **Bans:** {ban_count}" if ban_count > 0 else "",
+                            f"> **Bolos:** {bolo_count}" if bolo_count > 0 else "",
+                            f"> **Custom:** {custom}" if custom > 0 else "",
+                            f"> **Kicks:** {kick_count}" if kick_count > 0 else "",
+                            f"> No Moderations Found" if warnings_count == 0 and ban_count == 0 and bolo_count == 0 and custom == 0 and kick_count == 0 else ""
+                        ])
+                    ),
+                    inline=False
+                ).add_field(    
+                    name="Elaspse Time",
+                    value=f"> {td_format(datetime.timedelta(seconds=shift.end_epoch - shift.start_epoch - (sum((br.end_epoch) - (br.start_epoch) for br in shift.breaks)) + (shift.added_time if shift.added_time > (86400 * 7) else 0) - (shift.removed_time if shift.removed_time > (86400 * 7) else 0)))}",
+                    inline=False
+                ).set_thumbnail(url=staff_member.display_avatar.url)
+                await staff_member.send(embed=embed)
+            
 
 
 async def setup(bot: commands.Bot):
