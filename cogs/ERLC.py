@@ -1,5 +1,5 @@
 import datetime
-
+import re
 import discord
 import roblox
 from discord.ext import commands
@@ -628,6 +628,49 @@ class ERLC(commands.Cog):
         )
 
         await ctx.send(embed=embed2)
+
+    @server.hybrid_group(
+        name="discord",
+        description="A subcommand group for ERLC to Discord-related commands."
+    )
+    async def discord(self, ctx: commands.Context):
+        pass
+
+    @discord.command(
+        name="check",
+        description="Perform a check to see if ERLC players have joined the Discord server."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def discord_check(self, ctx: commands.Context):
+        guild_id = ctx.guild.id
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        embed = discord.Embed(
+            title="Players in ERLC Not in Discord",
+            color=BLANK_COLOR,
+            description=""
+        )
+
+        for player in players:
+            pattern = re.compile(re.escape(player.username), re.IGNORECASE)
+            member_found = False
+            
+            for member in ctx.guild.members:
+                if pattern.search(member.display_name):
+                    member_found = True
+                    break 
+            
+            if not member_found:
+                embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
+        
+        if embed.description == "":
+            embed.description = "> All players are in the Discord server."
+
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon.url
+        )
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

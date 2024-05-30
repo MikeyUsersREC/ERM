@@ -8333,10 +8333,33 @@ class ShiftLoggingManagement(discord.ui.View):
             ephemeral=True
         )
 
+        active_shift_users = []
+        async for shift in self.bot.shift_management.shifts.db.find({
+            "Guild": interaction.guild.id,
+            "EndEpoch": 0 
+        }):
+            user_id = shift["UserID"]
+            member = discord.utils.get(interaction.guild.members, id=user_id)
+            if member and member not in active_shift_users:
+                active_shift_users.append(member)
+                
+
         async for item in self.bot.shift_management.shifts.db.find({
             "Guild": interaction.guild.id
         }):
             await self.bot.shift_management.shifts.delete_by_id(item['_id'])
+        
+        for member in active_shift_users:
+            try:
+                await member.send(
+                    embed=discord.Embed(
+                        title="Shift Termination Notice",
+                        description=f"Your active shift has been terminated due to a shift wipe in {interaction.guild.name}.",
+                        color=discord.Color.red()
+                    )
+                )
+            except discord.Forbidden:
+                print(f"Could not send DM to {member.name}")
 
 
     @discord.ui.button(
