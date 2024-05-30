@@ -195,8 +195,12 @@ class Bot(commands.AutoShardedBot):
             # GDPR.start()
             iterate_prc_logs.start()
             tempban_checks.start()
-            change_status.start()
+            await bot.change_presence(
+                    activity = discord.CustomActivity(name="📝 /about | ermbot.xyz"))    
+
             logging.info("Setup_hook complete! All tasks are now running!")
+
+
 
             async for document in self.views.db.find({}):
                 if document["view_type"] == "LOAMenu":
@@ -213,6 +217,9 @@ class Bot(commands.AutoShardedBot):
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
             setup = True
+
+
+        
 
 
 bot = Bot(
@@ -432,15 +439,8 @@ except decouple.UndefinedValueError:
 # status change discord.ext.tasks
 
 
-@tasks.loop(hours=1)
-async def change_status():
-    await bot.wait_until_ready()
-    logging.info("Changing status")
-    status = "📝 /about | ermbot.xyz"
-    await bot.change_presence(
-        activity = discord.Activity(discord.ActivityType.custom, name=status, state=status) 
 
-    )
+
 
 
 @tasks.loop(minutes=1)
