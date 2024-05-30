@@ -437,11 +437,9 @@ async def change_status():
     await bot.wait_until_ready()
     logging.info("Changing status")
     status = "📝 /about | ermbot.xyz"
-    await bot.change_presence(
-        activity = discord.Activity(discord.ActivityType.custom, name=status, state=status) 
-
+    await _bot.change_presence(
+        activity=discord.CustomActivity(name=status)
     )
-
 
 @tasks.loop(minutes=1)
 async def check_reminders():
