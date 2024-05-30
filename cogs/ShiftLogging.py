@@ -149,7 +149,7 @@ class ShiftLogging(commands.Cog):
     @app_commands.autocomplete(
         type=shift_type_autocomplete
     )
-    async def duty_admin(self, ctx, member: discord.Member, type: str = "Default"):
+    async def duty_admin(self, ctx, member: discord.Member, type: str = "Default",force:str = "false"):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -210,7 +210,7 @@ class ShiftLogging(commands.Cog):
                             if role in [i.id for i in member.roles]:
                                 access = True
                                 break
-                        if access is False:
+                        if access is False and force.lower() != "true":
                             if not msg:
                                 return await ctx.send(
                                     embed=discord.Embed(
@@ -228,6 +228,8 @@ class ShiftLogging(commands.Cog):
                                     ),
                                     view=None
                                 )
+                        elif access is False and force.lower() == "true":
+                            pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
 
