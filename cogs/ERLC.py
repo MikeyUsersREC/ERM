@@ -629,7 +629,7 @@ class ERLC(commands.Cog):
 
         await ctx.send(embed=embed2)
 
-    @server.hybrid_group(
+    @server.group(
         name="discord",
         description="A subcommand group for ERLC to Discord-related commands."
     )
@@ -642,9 +642,17 @@ class ERLC(commands.Cog):
     )
     @is_staff()
     @is_server_linked()
-    async def discord_check(self, ctx: commands.Context):
+    async def check(self, ctx: commands.Context):
         guild_id = ctx.guild.id
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        if not players:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Players Found",
+                    description="There are no players in the server to check.",
+                    color=BLANK_COLOR
+                )
+            )
         embed = discord.Embed(
             title="Players in ERLC Not in Discord",
             color=BLANK_COLOR,
