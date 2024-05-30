@@ -38,7 +38,7 @@ class Actions(commands.Cog):
                 value=(
                     f"> **Name:** {item['ActionName']}\n"
                     f"> **ID:** `{item['ActionID']}`\n"
-                    f"> **Trigerred:** {item['Triggers']}"
+                    f"> **Triggered:** {item['Triggers']}"
                 ),
                 inline=False
             )
