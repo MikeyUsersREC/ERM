@@ -4,6 +4,7 @@ import logging
 import time
 from dataclasses import MISSING
 from pkgutil import iter_modules
+import re
 
 import aiohttp
 import decouple
@@ -195,6 +196,7 @@ class Bot(commands.AutoShardedBot):
             # GDPR.start()
             iterate_prc_logs.start()
             tempban_checks.start()
+            check_exotic_car.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -592,10 +594,60 @@ async def tempban_checks():
     del cached_servers
     end_time = time.time()
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
-        
 
+exotic_car_names = ['name1', 'name2']
+pm_counter = {}
 
-
+@tasks.loop(minutes=1, reconnect=True)
+async def check_exotic_car():
+    try:
+        async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
+            guild_id = items['_id']
+            guild = await bot.fetch_guild(guild_id)
+            exotic_role_id = items['ERLC'].get('exotic_roles')
+            alert_channel_id = items['ERLC'].get('exotic_channel')
+            if exotic_role_id is None or alert_channel_id is None:
+                continue
+            exotic_role = discord.utils.get(guild.roles, id=exotic_role_id)
+            alert_channel = bot.get_channel(alert_channel_id)
+            if not exotic_role or not alert_channel:
+                continue
+            players = await bot.prc_api.get_server_players(guild_id)
+            vehicles = await bot.prc_api.get_server_vehicles(guild_id)
+            for vehicle, player in zip(vehicles, players):
+                player_username = vehicle.username
+                member_found = False
+                member = None
+                pattern = re.compile(re.escape(player.username), re.IGNORECASE)
+                for guild_member in guild.members:
+                    if pattern.search(guild_member.display_name):
+                        member_found = True
+                        member = guild_member
+                        break
+                if not member_found:
+                    continue
+                if exotic_role in member.roles:
+                    continue
+                if player_username not in pm_counter:
+                    pm_counter[player_username] = 0
+                pm_counter[player_username] += 1
+                await bot.prc_api.run_command(guild_id, f':pm {player_username} Please change your car to a normal car.')
+                if pm_counter[player_username] >= 3:
+                    embed = discord.Embed(
+                        title="Exotic Car Warning",
+                        description=f"Player [{player_username}](https://roblox.com/users/{vehicle.player_id}/profile) has been PMed 3 times to change their exotic car.",
+                        color=discord.Color.red(),
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.set_footer(text=f"Guild: {guild.name}")
+                    await alert_channel.send(embed=embed)
+                if all(vehicle.vehicle not in exotic_car_names for vehicle in vehicles if vehicle.username == player_username):
+                    del pm_counter[player_username]
+    except Exception as e:
+        with push_scope() as scope:
+            scope.level = "error"
+            capture_exception(e)
+    logging.info(f"Event check_exotic_car ran successfully.")
 
 @tasks.loop(seconds=75, reconnect=True)
 async def iterate_prc_logs():

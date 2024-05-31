@@ -15,7 +15,7 @@ from menus import (
     YesNoColourMenu,
     NextView, BasicConfiguration, LOAConfiguration, ShiftConfiguration, RAConfiguration,
     PunishmentsConfiguration, GameSecurityConfiguration, GameLoggingConfiguration, AntipingConfiguration,
-    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement,
+    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement, ExoticConfiguration
 )
 from utils.paginators import CustomPage, SelectPagination
 from utils.utils import require_settings, generator
@@ -740,11 +740,37 @@ class Configuration(commands.Cog):
                 ),
             ]
         )
+        
+        erlc_settings = settings.get('ERLC', {}) or {}
+        #print(erlc_settings)
+        erlc_exotic_roles = erlc_settings.get('exotic_roles')
+        #print(erlc_exotic_roles)
+        if isinstance(erlc_exotic_roles, list):
+            erlc_exotic_roles = [discord.utils.get(ctx.guild.roles, id=i) for i in erlc_exotic_roles]
+        elif isinstance(erlc_exotic_roles, int):
+            erlc_exotic_roles = [discord.utils.get(ctx.guild.roles, id=erlc_exotic_roles)]
+        else:
+            erlc_exotic_roles = [0]
 
+        exotic_view = ExoticConfiguration(
+            bot,
+            ctx.author.id,
+            [
+                (
+                    'Exotic Roles',
+                    erlc_exotic_roles
+                ),
+                (
+                    'Exotic Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := erlc_settings.get('exotic_channel')) else 0]
+                ),
+            ]
+        )
 
         pages = []
 
-        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view]):
+        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view, exotic_view]):
             corresponding_embeds = [
                 discord.Embed(
                     title="Basic Settings",
@@ -837,9 +863,17 @@ class Configuration(commands.Cog):
                         "**What is the ER:LC Integration?** ER:LC Integration allows for ERM to communicate with the Police Roleplay Community APIs, and your Emergency Response: Liberty County server. In particular, these configurations allow for Join Logs, Leave Logs, and Kill Logs to be logged.\n\n"
                         "**Elevation Required:** This setting dictates whether elevated permissions are required to run commands such as `:admin` and `:unadmin`. In such case where this is enabled, Co-Owner permissions are required to run these commands to prevent security risk. If disabled, those with the Management Roles in your server can run these commands. **It is advised you keep this enabled unless you have a valid reason to turn it off.** Contact ERM Support if you are unsure what this setting does.\n\n"
                         "**Player Logs Channel:** This channel is where Player Join and Leave logs will be sent by ERM. ERM will check your server every 45 seconds to see if new members have joined or left, and report of their time accordingly.\n\n"
-                        "**Kill Logs Channel:** This setting is where Kill Logs will be sent by ERM. ERM will check your server every 45 seconds and constantly contact your ER:LC private server to know if there are any new kill logs. If there are, to log them in the corresponding channel."
+                        "**Kill Logs Channel:** This setting is where Kill Logs will be sent by ERM. ERM will check your server every 45 seconds and constantly contact your ER:LC private server to know if there are any new kill logs. If there are, to log them in the corresponding channel.\n\n"
                     )
-                )
+                ),
+                discord.Embed(
+                    title="Exotic Configuration",
+                    color=blank_color,
+                    description=(
+                        "**Exotic Roles:** These roles are given to those who have boosted your server. They allow users to drive exotics in-game without any alerts.\n\n"
+                        "**Exotic Channel:** This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times."
+                    )
+                ),
             ]
             embed = corresponding_embeds[index]
             page = CustomPage()

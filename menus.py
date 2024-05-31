@@ -6508,7 +6508,60 @@ class RemoteCommandConfiguration(discord.ui.View):
         sett['ERLC']['remote_commands'] = self.auto_data
         await self.bot.settings.update_by_id(sett)
 
+class ExoticConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    @discord.ui.select(
+        cls=discord.ui.RoleSelect,
+        placeholder="Exotic Roles",
+        max_values=1,
+        min_values=0)
+    async def exotic_roles(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value:
+            return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'exotic_roles': [],
+                'exotic_channel': 0
+            }
+        sett['ERLC']['exotic_roles'] = [i.id for i in select.values]
+        await bot.settings.update_by_id(sett)
+
+    @discord.ui.select(
+            cls=discord.ui.ChannelSelect, 
+            placeholder="Exotic Channel",
+            max_values=1, 
+            min_values=0)
+    async def exotic_channel(
+            self, interaction: discord.Interaction, select: discord.ui.ChannelSelect
+    ):
+        value = await self.interaction_check(interaction)
+        if not value:
+            return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'exotic_roles': [],
+                'exotic_channel': 0
+            }
+        sett['ERLC']['exotic_channel'] = select.values[0].id if select.values else 0
+        await bot.settings.update_by_id(sett)
+    
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
