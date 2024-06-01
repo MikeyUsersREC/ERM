@@ -438,7 +438,7 @@ except decouple.UndefinedValueError:
 async def change_status():
     await bot.wait_until_ready()
     logging.info("Changing status")
-    status = "📝 /about | ermbot.xyz"
+    status = "⚡️ /about | ermbot.xyz"
     await bot.change_presence(
         activity=discord.CustomActivity(name=status)
     )
