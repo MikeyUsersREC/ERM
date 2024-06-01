@@ -134,7 +134,8 @@ class Utility(commands.Cog):
                 "> **Website:** [View Website](https://ermbot.xyz)\n"
                 "> **Support:** [Join Server](https://discord.gg/FAC629TzBy)\n"
                 f"> **Invite:** [Invite Bot](https://discord.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot%20applications.commands)\n"
-                "> **Documentation:** [View Documentation](https://docs.ermbot.xyz)"
+                "> **Documentation:** [View Documentation](https://docs.ermbot.xyz)\n"
+                "> **Desktop:** [Download ERM Desktop](https://ermbot.xyz/download)"
             ),
             inline=False,
         )
