@@ -331,7 +331,7 @@ class ERLC(commands.Cog):
                     inline=False
                 )
 
-        if embed2.description in [None, ""]:
+        if len(embed2.fields) == 0:
             embed2.description = "> There are no online staff members."
         await ctx.send(embed=embed2)
 
