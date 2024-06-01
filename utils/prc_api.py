@@ -249,6 +249,8 @@ class PRCApiClient:
         status_code, response_json = await self._send_api_request('GET', '/server/bans', guild_id)
         
         if status_code == 200:
+            if response_json == []:
+                return []
             return [BanItem(
                 user_id=int(user_id),
                 username=username
