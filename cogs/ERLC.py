@@ -331,7 +331,7 @@ class ERLC(commands.Cog):
                     inline=False
                 )
 
-        if embed2.description in [None, ""]:
+        if len(embed2.fields) == 0:
             embed2.description = "> There are no online staff members."
         await ctx.send(embed=embed2)
 
@@ -597,7 +597,7 @@ class ERLC(commands.Cog):
                     matched[item] = x
 
         embed2 = discord.Embed(
-            title=f"Server Vehicles [{len(players)}]",
+            title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
             color=BLANK_COLOR,
             description=""
         )
@@ -614,6 +614,10 @@ class ERLC(commands.Cog):
             f"**Active Vehicles [{len(vehicles)}]**\n> " +
             '\n> '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**' for veh, plr in matched.items()])
         )
+
+        if len(vehicles) == 0:
+            embed2.description = "> There are no active vehicles in your server."
+        
         if list(embed2.description).index(']') > len(embed2.description) + 5:
             embed2.description += "No players."
 
