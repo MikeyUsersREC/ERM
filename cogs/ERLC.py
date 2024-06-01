@@ -617,13 +617,6 @@ class ERLC(commands.Cog):
 
         if len(vehicles) == 0:
             embed2.description = "> There are no active vehicles in your server."
-        
-        if list(embed2.description).index(']') > len(embed2.description) + 5:
-            embed2.description += "No players."
-
-
-        if list(embed2.description).index(']') > len(embed2.description) + 5:
-            embed2.description += "No players."
 
         embed2.set_author(
             name=ctx.guild.name,
