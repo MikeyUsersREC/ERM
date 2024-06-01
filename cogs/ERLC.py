@@ -636,7 +636,7 @@ class ERLC(commands.Cog):
     async def discord(self, ctx: commands.Context):
         pass
 
-    @discord.command(
+    @commands.command(
         name="check",
         description="Perform a check to see if ERLC players have joined the Discord server."
     )
@@ -653,6 +653,7 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
+        
         embed = discord.Embed(
             title="Players in ERLC Not in Discord",
             color=BLANK_COLOR,
@@ -662,21 +663,30 @@ class ERLC(commands.Cog):
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
             member_found = False
-            
-            for member in ctx.guild.members:
-                if pattern.search(member.display_name):
-                    member_found = True
-                    break 
-            
+            #method = ""
+
+            try:
+                for member in ctx.guild.members:
+                    if pattern.search(member.name):
+                        member_found = True
+                        #method = "Username"
+                        break
+                    elif pattern.search(member.display_name):
+                        member_found = True
+                        #method = "Display Name"
+                        break
+            except:
+                pass
+
             if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
-        
+
         if embed.description == "":
             embed.description = "> All players are in the Discord server."
 
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else None
         )
         await ctx.send(embed=embed)
 

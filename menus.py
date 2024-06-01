@@ -1251,7 +1251,7 @@ class ManageReminders(discord.ui.View):
 
 
 
-
+#Update ManageActions to add Discord Commands
 class ManageActions(discord.ui.View):
     def __init__(self, bot, user_id):
         super().__init__(timeout=600.0)
@@ -6508,16 +6508,20 @@ class RemoteCommandConfiguration(discord.ui.View):
         sett['ERLC']['remote_commands'] = self.auto_data
         await self.bot.settings.update_by_id(sett)
 
-class ExoticConfiguration(AssociationConfigurationView):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class WhitelistVehiclesManagement(AssociationConfigurationView):
+    def __init__(self, *args, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, **kwargs):
+        self.whitelisted_vehicles_roles = whitelisted_vehicles_roles or []
+        self.whitelisted_vehicle_alert_channel = whitelisted_vehicle_alert_channel
+        self.whitelisted_vehicles = whitelisted_vehicles or []
+        associated_defaults = associated_defaults or []  # Ensure it's an iterable
+        super().__init__(*args, associated_defaults=associated_defaults, **kwargs)
 
     @discord.ui.select(
         cls=discord.ui.RoleSelect,
-        placeholder="Exotic Roles",
-        max_values=1,
-        min_values=0)
-    async def exotic_roles(
+        placeholder="Whitelisted Vehicles Roles",
+        max_values=10,
+        min_values=1)
+    async def whitelisted_vehicles_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
         value = await self.interaction_check(interaction)
@@ -6531,18 +6535,20 @@ class ExoticConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'exotic_roles': [],
-                'exotic_channel': 0
+                'whitelisted_vehicles_roles': [],
+                'whitelisted_vehicle_alert_channel': 0,
+                'whitelisted_vehicles': []
             }
-        sett['ERLC']['exotic_roles'] = [i.id for i in select.values]
+        sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
 
     @discord.ui.select(
             cls=discord.ui.ChannelSelect, 
-            placeholder="Exotic Channel",
+            placeholder="Whitelisted Vehicle Alert Channel",
             max_values=1, 
-            min_values=0)
-    async def exotic_channel(
+            min_values=0,
+            channel_types=[discord.ChannelType.text])
+    async def whitelisted_vehicle_alert_channel(
             self, interaction: discord.Interaction, select: discord.ui.ChannelSelect
     ):
         value = await self.interaction_check(interaction)
@@ -6556,12 +6562,65 @@ class ExoticConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'exotic_roles': [],
-                'exotic_channel': 0
+                'whitelisted_vehicles_roles': [],
+                'whitelisted_vehicle_alert_channel': 0,
+                'whitelisted_vehicles': []
             }
-        sett['ERLC']['exotic_channel'] = select.values[0].id if select.values else 0
+        sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
-    
+
+    @discord.ui.button(
+        label="Add Vehicle to Role",
+        style=discord.ButtonStyle.secondary,
+        row=2
+    )
+    async def add_vehicle_to_role(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild_id = interaction.guild.id
+        bot = self.bot
+
+        # Retrieve existing whitelisted vehicles
+        sett = await bot.settings.find_by_id(guild_id)
+        existing_vehicles = sett.get('ERLC', {}).get('whitelisted_vehicles', [])
+
+        # Pre-fill the modal text input with existing vehicles, separated by commas
+        existing_vehicles_str = ', '.join(existing_vehicles)
+
+        modal = CustomModal(
+            "Add Vehicle to Role",
+            [
+                (
+                    "vehicle",
+                    discord.ui.TextInput(
+                        label="Vehicle",
+                        placeholder="e.g. 'CUP_B_HMMWV_Ambulance_USMC'",
+                        default=existing_vehicles_str
+                    )
+                )
+            ], {
+                "ephemeral": True
+            }
+        )
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.vehicle.value:
+            return
+
+        vehicles = [i.strip() for i in modal.vehicle.value.split(',')]
+        if not vehicles:
+            return
+
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'whitelisted_vehicles_roles': [],
+                'whitelisted_vehicle_alert_channel': 0,
+                'whitelisted_vehicles': []
+            }
+
+        # Update settings with new vehicles
+        sett['ERLC']['whitelisted_vehicles'] = vehicles
+        await bot.settings.update_by_id(sett)
+
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -6737,6 +6796,49 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             ephemeral=True
         )
 
+    @discord.ui.button(
+        label="Add Vehicle Restriction",
+        row=3
+    )
+    async def add_vehicle_restriction(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
+        vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
+        vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
+        
+        view = WhitelistVehiclesManagement(
+            self.bot, 
+            interaction.user.id, 
+            whitelisted_vehicles_roles=vehicle_restrictions_roles,
+            whitelisted_vehicle_alert_channel=vehicle_restrictions_channel,
+            whitelisted_vehicles=vehicle_restrictions_cars
+        )
+        embed = discord.Embed(
+                    title="WhiteListed Vehicles",
+                    color=blank_color,
+                    description=(
+                        "**Role:** These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.\n\n"
+                        "**Alert Channel:** This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times.\n\n"
+                    )
+                ).add_field(
+                    name="Current Roles",
+                    value="\n".join([f"<@&{i}>" for i in vehicle_restrictions_roles]) or "No Roles"
+                ).add_field(
+                    name="Current Alert Channel",
+                    value=f"<#{vehicle_restrictions_channel}>" if vehicle_restrictions_channel else "No Alert Channel"
+                ).add_field(
+                    name="Current Vehicles",
+                    value="\n".join(vehicle_restrictions_cars) or "No Vehicles"
+                )
+        await interaction.response.send_message(
+            embed = embed,
+            view=view,
+            ephemeral=True
+    )
 
 
 class RoleSelect(discord.ui.View):
