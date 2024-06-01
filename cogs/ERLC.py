@@ -330,6 +330,9 @@ class ERLC(commands.Cog):
                     value=value,
                     inline=False
                 )
+
+        if embed2.description in [None, ""]:
+            embed2.description = "> There are no online staff members."
         await ctx.send(embed=embed2)
 
     @server.command(

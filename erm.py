@@ -436,11 +436,10 @@ except decouple.UndefinedValueError:
 async def change_status():
     await bot.wait_until_ready()
     logging.info("Changing status")
-    status = "📝 /about | ermbot.xyz"
+    status = "⚡️ /about | ermbot.xyz"
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.custom, name=status)
+        activity=discord.CustomActivity(name=status)
     )
-
 
 @tasks.loop(minutes=1)
 async def check_reminders():
