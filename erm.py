@@ -5,6 +5,7 @@ import time
 from dataclasses import MISSING
 from pkgutil import iter_modules
 import re
+from fuzzywuzzy import fuzz
 
 import aiohttp
 import decouple
@@ -605,15 +606,12 @@ async def check_exotic_car():
             whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
             alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
             whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
-
             if whitelisted_vehicle_roles is None or alert_channel_id is None:
                 continue
-            
             exotic_role = discord.utils.get(guild.roles, id=whitelisted_vehicle_roles)
             alert_channel = bot.get_channel(alert_channel_id)
             if not exotic_role or not alert_channel:
                 continue
-            
             players = await bot.prc_api.get_server_players(guild_id)
             vehicles = await bot.prc_api.get_server_vehicles(guild_id)
             for vehicle, player in zip(vehicles, players):
@@ -626,17 +624,27 @@ async def check_exotic_car():
                         member_found = True
                         member = guild_member
                         break
-                
                 if not member_found:
                     continue
-                
+                # Function to check if a vehicle matches a whitelisted vehicle using fuzzy matching
+                def is_whitelisted(vehicle_name, whitelisted_vehicle):
+                    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
+                    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
+                    if vehicle_year_match and whitelisted_year_match:
+                        vehicle_year = vehicle_year_match.group()
+                        whitelisted_year = whitelisted_year_match.group()
+                        if vehicle_year != whitelisted_year:
+                            return False
+                        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
+                        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
+                        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+                    return False
                 # Checking if the player is using a whitelisted vehicle and does not have the whitelisted vehicle role
-                if any(vehicle.vehicle.lower() == whitelisted_vehicle.lower() for whitelisted_vehicle in whitelisted_vehicles) and exotic_role not in member.roles:
+                if any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles) and exotic_role not in member.roles:
                     if player_username not in pm_counter:
                         pm_counter[player_username] = 0
                     pm_counter[player_username] += 1
                     await bot.prc_api.run_command(guild_id, f':pm {player_username} Please change your car to a normal car.')
-                    
                     if pm_counter[player_username] >= 3:
                         embed = discord.Embed(
                             title="Exotic Car Warning",
@@ -646,9 +654,7 @@ async def check_exotic_car():
                         )
                         embed.set_footer(text=f"Guild: {guild.name}")
                         await alert_channel.send(embed=embed)
-                    
-                    # If the player changes their vehicle, remove them from the pm couter dict.
-                    if all(vehicle.vehicle.lower() not in [name.lower() for name in whitelisted_vehicles] for vehicle in vehicles if vehicle.username == player_username):
+                    if all(not is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles if vehicle.username == player_username):
                         del pm_counter[player_username]
     except Exception as e:
         with push_scope() as scope:

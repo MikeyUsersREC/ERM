@@ -6592,7 +6592,7 @@ class WhitelistVehiclesManagement(AssociationConfigurationView):
                     "vehicle",
                     discord.ui.TextInput(
                         label="Vehicle",
-                        placeholder="e.g. 'CUP_B_HMMWV_Ambulance_USMC'",
+                        placeholder="e.g. Falcon Fission 2015,Navara Imperium 2020,etc ",
                         default=existing_vehicles_str
                     )
                 )
@@ -6818,7 +6818,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             whitelisted_vehicles=vehicle_restrictions_cars
         )
         embed = discord.Embed(
-                    title="WhiteListed Vehicles",
+                    title="Whitelisted Vehicles",
                     color=blank_color,
                     description=(
                         "**Role:** These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.\n\n"
