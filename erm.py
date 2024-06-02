@@ -593,7 +593,14 @@ async def tempban_checks():
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
         
 
-
+async def fetch_get_channel(target, identifier):
+    channel = target.get_channel(identifier)
+    if not channel:
+        try:
+            channel = await target.fetch_channel(identifier)
+        except discord.HTTPException as e:
+            channel = None
+    return channel
 
 
 @tasks.loop(seconds=75, reconnect=True)
@@ -610,15 +617,9 @@ async def iterate_prc_logs():
             if guild is None:
                 continue
 
-            try:
-                kill_logs_channel = await guild.fetch_channel(item['ERLC'].get('kill_logs'))
-            except discord.HTTPException:
-                kill_logs_channel = None
+            kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
 
-            try:
-                player_logs_channel = await guild.fetch_channel(item['ERLC'].get('player_logs'))
-            except discord.HTTPException:
-                player_logs_channel = None
+            player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
 
             if (await bot.server_keys.db.count_documents({"_id": guild.id})) == 0:
                 continue
@@ -631,16 +632,10 @@ async def iterate_prc_logs():
                 kill_logs: list[prc_api.KillLog] = await bot.prc_api.fetch_kill_logs(guild.id)
                 player_logs: list[prc_api.JoinLeaveLog] = await bot.prc_api.fetch_player_logs(guild.id)
             except prc_api.ResponseFailure as e:
-                channel = await bot.fetch_channel(1213523576603410452)                
-                # await channel.send(content=f"[1] {(str(e) or repr(e))=}")
                 await asyncio.sleep(0.2)
                 with push_scope() as scope:
                     scope.level = "error"
                     capture_exception(e)
-                if int(e.status_code) == 403:
-                    # This means the key is most likely banned or revoked.
-                    # await bot.server_keys.delete_by_id(guild.id)
-                    pass
                 continue
             except Exception as e:
                 channel = await bot.fetch_channel(1213523576603410452)                
@@ -673,14 +668,9 @@ async def iterate_prc_logs():
                     await kill_logs_channel.send(embed=discord.Embed(title="Kill Log", color=BLANK_COLOR, description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>"))
 
 
-
-
             settings = await bot.settings.find_by_id(guild.id)
             channel = ((settings or {}).get('ERLC', {}) or {}).get('rdm_channel', 0)
-            try:
-                channel = await (await bot.fetch_guild(guild.id)).fetch_channel(channel)
-            except discord.HTTPException:
-                channel = None
+            channel = await fetch_get_channel(guild, channel)
                 
             if channel:
                 # Check for kill logs amount
@@ -746,7 +736,7 @@ async def iterate_prc_logs():
                     for role in settings["staff_management"]["management_role"]:
                         staff_roles.append(role)
             
-            await guild.chunk()
+            # await guild.chunk()
             staff_roles = [guild.get_role(role) for role in staff_roles]
             added_staff = []
             # print(added_staff)
@@ -806,8 +796,6 @@ async def iterate_prc_logs():
                         )
                     )
         except Exception as error:
-            channel = await bot.fetch_channel(1213523576603410452)                
-            await channel.send(content=f"[2] {str(error)=}")
             with push_scope() as scope:
                 scope.level = "error"
                 capture_exception(error)
