@@ -558,9 +558,8 @@ class ERLC(commands.Cog):
         embed2.description += (
             f"\n\n**Online Players [{len(actual_players)}]**\n" +
             ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+        )
         
-
-
         embed2.description += (
             f"\n\n**Queue [{len(queue)}]**\n" +
             ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
