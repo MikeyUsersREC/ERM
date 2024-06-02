@@ -250,6 +250,10 @@ class OnMessage(commands.Cog):
                 print(new_message)
                 await bot.process_commands(new_message)
 
+        if isinstance(message.author, discord.User):
+            print(message.author)
+            return
+        
         if antiping_roles is None:
             return
 
