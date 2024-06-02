@@ -553,29 +553,39 @@ class ERLC(commands.Cog):
             f"**Server Staff [{len(staff)}]**\n" + 
             ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
         )
-        if list(embed2.description).index(']') > len(embed2.description) + 5:
-            embed2.description += "No players."
         
         
         embed2.description += (
             f"\n\n**Online Players [{len(actual_players)}]**\n" +
             ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
-        )
-        if list(embed2.description).index(']') > len(embed2.description) + 5:
-            embed2.description += "No players."
+        
 
 
         embed2.description += (
             f"\n\n**Queue [{len(queue)}]**\n" +
             ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
         )
-        if list(embed2.description).index(']') > len(embed2.description) + 5:
-            embed2.description += "No players."
 
         embed2.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon.url
         )
+        if len(embed2.description) > 3999:
+            embed2.description = ""
+            embed2.description += (
+                f"**Server Staff [{len(staff)}]**\n" + 
+                ', '.join([f'{plr.username} ({plr.team})' for plr in staff])
+            )
+        
+            embed2.description += (
+                f"\n\n**Online Players [{len(actual_players)}]**\n" +
+                ', '.join([f'{plr.username} ({plr.team})' for plr in actual_players])
+            )
+
+            embed2.description += (
+                f"\n\n**Queue [{len(queue)}]**\n" +
+                ', '.join([f'{plr.username}' for plr in queue])
+            )
 
         await ctx.send(embed=embed2)
 
