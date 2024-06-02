@@ -308,7 +308,7 @@ class CustomCommands(commands.Cog):
             if doc is None:
                 return
             doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
-            doc['_id'] = ctx.guild.id
+            doc['_id'] = doc.get('_id') or selected['id']
             await bot.ics.update_by_id(doc)
 
 
