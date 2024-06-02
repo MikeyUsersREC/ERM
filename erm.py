@@ -5,7 +5,11 @@ import time
 from dataclasses import MISSING
 from pkgutil import iter_modules
 import re
-from fuzzywuzzy import fuzz
+try:
+    import Levenshtein
+    from fuzzywuzzy import fuzz, process
+except ImportError:
+    from fuzzywuzzy import fuzz, process
 
 import aiohttp
 import decouple
@@ -635,6 +639,7 @@ async def check_exotic_car():
                         whitelisted_year = whitelisted_year_match.group()
                         if vehicle_year != whitelisted_year:
                             return False
+                        # Remove the year part for fuzzy matching
                         vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
                         whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
                         return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
@@ -654,6 +659,7 @@ async def check_exotic_car():
                         )
                         embed.set_footer(text=f"Guild: {guild.name}")
                         await alert_channel.send(embed=embed)
+                    # If the player changes their vehicle, remove them from the pm counter dict.
                     if all(not is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles if vehicle.username == player_username):
                         del pm_counter[player_username]
     except Exception as e:
