@@ -953,8 +953,8 @@ async def check_loa():
                         if member:
                             try:
                                 await member.send(embed=discord.Embed(
-                                    title="LOA Expired",
-                                    description=f"Your LOA has expired in **{guild.name}**.",
+                                    title=f"{doc['type']} Expired",
+                                    description=f"Your {doc['type']} has expired in **{guild.name}**.",
                                     color=BLANK_COLOR
                                 ))
                             except discord.Forbidden:
