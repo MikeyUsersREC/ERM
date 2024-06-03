@@ -598,6 +598,7 @@ async def tempban_checks():
     del cached_servers
     end_time = time.time()
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
+
 async def fetch_get_channel(target, identifier):
     channel = target.get_channel(identifier)
     if not channel:
