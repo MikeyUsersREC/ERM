@@ -415,7 +415,33 @@ class ShiftLogging(commands.Cog):
                 "Maintenance",
                 "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
+        try:
+            maximum_staff = settings.get('shift_management', {}).get('maximum_staff', 0)
+            #print(f"Maximum Staff: {maximum_staff}")
+        except AttributeError:
+            #print("Attribute Error")
+            return
 
+        try:
+            on_duty_staff = await self.bot.shift_management.shifts.db.count_documents({
+                "Guild": ctx.guild.id,
+                "EndEpoch": 0
+            })
+            #print(f"Staff on Duty: {on_duty_staff}")
+        except AttributeError:
+            #print("Attribute Error")
+            return
+
+        if on_duty_staff >= maximum_staff and maximum_staff != 0:
+            await ctx.send(
+                embed=discord.Embed(
+                    title="Staff Limit Reached",
+                    description="The maximum amount of staff members on duty has been reached. Please wait until a staff member logs off.",
+                    color=BLANK_COLOR
+                )
+            )
+            return
+        
         shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         # view = ModificationSelectMenu(ctx.author.id)
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({

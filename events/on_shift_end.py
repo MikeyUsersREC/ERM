@@ -103,7 +103,8 @@ class OnShiftEnd(commands.Cog):
             ).set_thumbnail(
                 url=staff_member.display_avatar.url
             ))
-            async for document in self.bot.consent.db.find({"_id": staff_member.id}):
+        shift_reports_enabled = True
+        async for document in self.bot.consent.db.find({"_id": staff_member.id}):
                 shift_reports_enabled = (
                     document.get("shift_reports")
                     if document.get("shift_reports") is not None
