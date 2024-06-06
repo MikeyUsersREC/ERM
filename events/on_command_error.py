@@ -22,8 +22,15 @@ class OnCommandError(commands.Cog):
         error_id = error_gen()
 
 
-        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error) or 'Unknown message' in str(error):
+        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error) or 'Unknown message' in str(error) or isinstance(error, ContentTypeError) or isinstance(error, asyncio.TimeoutError):
             return
+
+        if isinstance(error, HybridCommandError) and 'RemoteProtocolError: Server disconnected without sending a response.' in str(error):
+        return await ctx.reply(embed=discord.Embed(
+            title="Connection Error",
+            description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
+            color=BLANK_COLOR
+        ))
 
         if isinstance(error, httpcore.ConnectTimeout):
             return await ctx.reply(embed=discord.Embed(

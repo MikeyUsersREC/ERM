@@ -78,7 +78,7 @@ class GameLogging(commands.Cog):
             )
 
         embed = discord.Embed(
-            title="<:gamelog:1169802877200515203> Message Logged",
+            title="Message Logged",
             color=BLANK_COLOR,
         )
 
@@ -90,9 +90,9 @@ class GameLogging(commands.Cog):
         embed.add_field(
             name="Announcement Information",
             value=(
-                f"<:replytop:1138257149705863209> **Staff:** {ctx.author.mention}\n"
-                f"<:replymiddle:1138257195121791046> **Announcement:** {announcement}\n"
-                f"<:replybottom:1138257250448855090> **At:** <t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>"
+                f"> **Staff:** {ctx.author.mention}\n"
+                f"> **Announcement:** {announcement}\n"
+                f"> **At:** <t:{int(datetime.datetime.now(tz=pytz.UTC).timestamp())}>"
             ),
             inline=False,
         )
@@ -156,7 +156,7 @@ class GameLogging(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="<:gamelog:1169802877200515203> STS Logged",
+            title="STS Logged",
             color=BLANK_COLOR,
         )
 
@@ -192,10 +192,10 @@ class GameLogging(commands.Cog):
             name="STS Information",
             value=
             (
-                f"<:replytop:1138257149705863209> **Host:** {ctx.author.mention}\n"
-                f"<:replymiddle:1138257195121791046> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
-                f"<:replymiddle:1138257195121791046> **Hosted At:** <t:{int(ctx.message.created_at.timestamp())}>\n"
-                f"<:replybottom:1138257250448855090> **Reason:** {reason}"
+                f"> **Host:** {ctx.author.mention}\n"
+                f"> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
+                f"> **Hosted At:** <t:{int(ctx.message.created_at.timestamp())}>\n"
+                f"> **Reason:** {reason}"
             ),
             inline=False,
         )
@@ -283,7 +283,7 @@ class GameLogging(commands.Cog):
 
 
         embed = discord.Embed(
-            title="<:gamelog:1169802877200515203> Priority Logged",
+            title="Priority Logged",
             color=BLANK_COLOR,
         )
 
@@ -317,10 +317,10 @@ class GameLogging(commands.Cog):
             name="Priority Information",
             value=
             (
-                f"<:replytop:1138257149705863209> **Staff:** {ctx.author.mention}\n"
-                f"<:replymiddle:1138257195121791046> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
-                f"<:replymiddle:1138257195121791046> **Reason:** {reason}\n"
-                f"<:replybottom:1138257250448855090> **At:** <t:{int(ctx.message.created_at.timestamp())}>"
+                f"> **Staff:** {ctx.author.mention}\n"
+                f"> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
+                f"> **Reason:** {reason}\n"
+                f"> **At:** <t:{int(ctx.message.created_at.timestamp())}>"
             ),
             inline=False,
         )

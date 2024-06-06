@@ -160,7 +160,7 @@ class SelectPagination(discord.ui.View):
 
         msg = await interaction.followup.send(
             embed=discord.Embed(
-                title='<:log:1163524830319104171> Change Pages',
+                title='Change Pages',
                 description="What page would you like to change to?",
                 color=blank_color
             ),
