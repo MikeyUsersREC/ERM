@@ -1,11 +1,13 @@
 import datetime
 import logging
 
+import asyncio
 import discord
 import httpcore
 import pytz
 import roblox
 from discord.ext import commands
+from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
 
 from utils.constants import BLANK_COLOR, RED_COLOR
@@ -22,15 +24,15 @@ class OnCommandError(commands.Cog):
         error_id = error_gen()
 
 
-        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error) or 'Unknown message' in str(error) or isinstance(error, ContentTypeError) or isinstance(error, asyncio.TimeoutError):
+        if 'Invalid Webhook Token' in str(error) or 'Unknown Message' in str(error) or 'Unknown message' in str(error) or isinstance(error, asyncio.TimeoutError):
             return
 
         if isinstance(error, HybridCommandError) and 'RemoteProtocolError: Server disconnected without sending a response.' in str(error):
-        return await ctx.reply(embed=discord.Embed(
-            title="Connection Error",
-            description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
-            color=BLANK_COLOR
-        ))
+            return await ctx.reply(embed=discord.Embed(
+                title="Connection Error",
+                description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
+                color=BLANK_COLOR
+            ))
 
         if isinstance(error, httpcore.ConnectTimeout):
             return await ctx.reply(embed=discord.Embed(
