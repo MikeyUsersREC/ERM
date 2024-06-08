@@ -37,7 +37,7 @@ class CustomDebugCog(*OPTIONAL_FEATURES, *STANDARD_FEATURES):
         embed.add_field(name="ID", value=f"{owner.id}", inline=False)
         embed.set_footer(
             text=f"{owner.name}#{owner.discriminator} is the owner of {self.bot.user.name}",
-            icon_url=ctx.guild.icon.url,
+            icon_url=ctx.guild.icon,
         )
         embed.set_thumbnail(url=owner.display_avatar.url)
         await ctx.send(embed=embed)
