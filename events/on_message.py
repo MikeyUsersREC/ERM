@@ -375,16 +375,11 @@ class OnMessage(commands.Cog):
         if management_roles is None:
             return
         
-        if command in bot.commands:
-            ctx = await bot.get_context(message)
-            await bot.invoke(ctx)
-            return
-        
         if message.content.startswith(prefix):
             try:
                 command_parts = message.content.split(" ")
                 command = command_parts[0].replace(prefix, "").lower()
-                if command == 'custom':
+                if command in bot.all_commands:
                     return
                 channel_id = int(command_parts[1].replace("<#", "").replace(">", ""))
                 channel = discord.utils.get(message.guild.text_channels, id=channel_id)
@@ -392,6 +387,7 @@ class OnMessage(commands.Cog):
                 command = message.content.replace(prefix, "").lower()
                 channel = None
 
+            ctx = await bot.get_context(message)
             if "commands" in custom_commands:
                 if isinstance(custom_commands["commands"], list):
                     selected = next((cmd for cmd in custom_commands["commands"]
@@ -404,11 +400,6 @@ class OnMessage(commands.Cog):
 
             if not is_command:
                 return
-            
-            ctx = await bot.get_context(message)
-
-            if not channel:
-                channel = ctx.channel if selected.get("channel") is None else discord.utils.get(ctx.guild.text_channels, id=selected["channel"])
 
             if not channel:
                 channel = ctx.channel
@@ -483,6 +474,8 @@ class OnMessage(commands.Cog):
             doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
             doc['_id'] = ctx.guild.id
             await bot.ics.update_by_id(doc)
+            
         return
+    
 async def setup(bot):
     await bot.add_cog(OnMessage(bot))
