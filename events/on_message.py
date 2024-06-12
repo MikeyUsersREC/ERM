@@ -204,7 +204,11 @@ class OnMessage(commands.Cog):
 
                 profile_link = user.split('(')[1].split(')')[0]
                 user = user.split('(')[0].replace('[', '').replace(']', '')
-                person = command.split(' ')[1]
+                try:
+                    person = command.split(' ')[1]
+                except IndexError:
+                    logging.error('IndexError in remote command usage embed')
+                    break
 
                 combined = ""
                 for word in command.split(' ')[1:]:

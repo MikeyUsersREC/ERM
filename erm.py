@@ -274,7 +274,6 @@ async def AutoDefer(ctx: commands.Context):
         if ctx.command.extras.get("ignoreDefer") is True:
             return
 
-    await ctx.defer()
 
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):

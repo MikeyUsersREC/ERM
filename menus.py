@@ -3,6 +3,7 @@ import datetime
 import typing
 import discord
 import pytz
+import logging
 import roblox
 from discord import Interaction
 from discord.ext import commands
@@ -4346,7 +4347,7 @@ class AssociationConfigurationView(discord.ui.View):
     async def on_timeout(self) -> None:
         for i in self.children:
             i.disabled = True
-        if not self.message:
+        if not hasattr(self, 'message') or not self.message:
             return
         await self.message.edit(view=self)
 
@@ -7750,7 +7751,10 @@ class ShiftMenu(discord.ui.View):
         self.contained_document = await self.bot.shift_management.fetch_shift(self.contained_document.id)
         self.shift = await self.bot.shift_management.shifts.find_by_id(self.contained_document.id)
         await self.cycle_ui('off', interaction.message)
-        self.bot.dispatch('shift_end', self.contained_document.id)
+        try:
+            self.bot.dispatch('shift_end', self.contained_document.id)
+        except Exception as e:
+            logging.info(f"Error dispatching shift_end: {e}")
         return
 
 

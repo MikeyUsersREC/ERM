@@ -154,24 +154,27 @@ class SelectPagination(discord.ui.View):
             return await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=blank_color
+                color=discord.Color.red()
             ), ephemeral=True)
+        
         await interaction.response.defer(ephemeral=True, thinking=True)
+
+        options = [
+            discord.SelectOption(label=page.identifier, value=str(index))
+            for index, page in enumerate(self.pages[:25])
+        ]
+
+        view = CustomSelectMenu(self.user_id, options)
 
         msg = await interaction.followup.send(
             embed=discord.Embed(
                 title='Change Pages',
                 description="What page would you like to change to?",
-                color=blank_color
+                color=discord.Color.blue()
             ),
-            view=(view := CustomSelectMenu(self.user_id, [
-                discord.SelectOption(
-                    label=page.identifier,
-                    value=str(index)
-                ) for index, page in enumerate(self.pages)
-            ]))
+            view=view
         )
-
+        
         await view.wait()
         index = int(view.value or '1000')
         await msg.delete()

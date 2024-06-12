@@ -416,7 +416,7 @@ class ERLC(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url
+                icon_url=ctx.guild.icon
             )
 
 
