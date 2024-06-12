@@ -10,8 +10,12 @@ import roblox
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
-from utils.constants import BLANK_COLOR
+from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
+from utils.utils import (
+    interpret_content,
+    interpret_embed
+)
 from menus import CustomSelectMenu, GameSecurityActions
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
@@ -357,7 +361,129 @@ class OnMessage(commands.Cog):
                             return
 
                         return
+                    
+        custom_commands = await bot.custom_commands.find_by_id(message.guild.id)
+        if custom_commands is None:
+            return
+        
+        prefix = (dataset or {}).get("customisation", {}).get("prefix", ">")
+        management_roles = dataset.get("staff_management", {}).get("management_role")
+        if management_roles is None:
+            return
 
+        if not any(discord.utils.get(message.author.roles, id=role) for role in management_roles):
+            await message.channel.send("You do not have permission to use custom commands.")
+            return
 
+        if message.content.startswith(prefix):
+            try:
+                command_parts = message.content.split(" ")
+                command = command_parts[0].replace(prefix, "").lower()
+                if command == 'custom':
+                    return
+                channel_id = int(command_parts[1].replace("<#", "").replace(">", ""))
+                channel = discord.utils.get(message.guild.text_channels, id=channel_id)
+            except (IndexError, ValueError):
+                command = message.content.replace(prefix, "").lower()
+                channel = None
+
+            if "commands" in custom_commands:
+                if isinstance(custom_commands["commands"], list):
+                    selected = next((cmd for cmd in custom_commands["commands"]
+                                    if cmd["name"].lower().replace(" ", "") == command.lower().replace(" ", "")), None)
+                    is_command = selected is not None
+                else:
+                    is_command = False
+            else:
+                is_command = False
+
+            if not is_command:
+                return await message.channel.send(
+                    embed=discord.Embed(
+                        title="Command Mismatch",
+                        description="This custom command doesn't exist.",
+                        color=discord.Color.red()
+                    )
+                )
+
+            ctx = await bot.get_context(message)
+
+            if not channel:
+                channel = ctx.channel if selected.get("channel") is None else discord.utils.get(ctx.guild.text_channels, id=selected["channel"])
+
+            if not channel:
+                channel = ctx.channel
+
+            embeds = [await interpret_embed(bot, ctx, channel, embed, selected['id']) for embed in selected["message"]["embeds"]]
+
+            view = discord.ui.View()
+            for item in selected.get('buttons', []):
+                view.add_item(discord.ui.Button(
+                    label=item['label'],
+                    url=item['url'],
+                    row=item['row'],
+                    style=discord.ButtonStyle.url
+                ))
+
+            if ctx.interaction:
+                if not selected['message']['content'] and not selected['message']['embeds']:
+                    return await ctx.interaction.followup.send(
+                        embed=discord.Embed(
+                            title='Empty Command',
+                            description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                            color=discord.Color.red()
+                        )
+                    )
+                await ctx.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Command Ran",
+                        description=f"I've just ran the custom command in {channel.mention}.",
+                        color=discord.Color.green()
+                    )
+                )
+                msg = await channel.send(
+                    content=await interpret_content(
+                        bot, ctx, channel, selected["message"]["content"], selected['id']
+                    ),
+                    embeds=embeds,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(
+                        everyone=True, users=True, roles=True, replied_user=True
+                    ),
+                )
+            else:
+                if not selected['message']['content'] and not selected['message']['embeds']:
+                    return await ctx.reply(
+                        embed=discord.Embed(
+                            title='Empty Command',
+                            description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                            color=discord.Color.red()
+                        )
+                    )
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Command Ran",
+                        description=f"I've just ran the custom command in {channel.mention}.",
+                        color=discord.Color.green()
+                    )
+                )
+                msg = await channel.send(
+                    content=await interpret_content(
+                        bot, ctx, channel, selected["message"]["content"], selected['id']
+                    ),
+                    embeds=embeds,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(
+                        everyone=True, users=True, roles=True, replied_user=True
+                    ),
+                )
+
+            doc = await bot.ics.find_by_id(selected['id']) or {}
+            if doc is None:
+                return
+            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
+            doc['_id'] = ctx.guild.id
+            await bot.ics.update_by_id(doc)
+        return
 async def setup(bot):
     await bot.add_cog(OnMessage(bot))

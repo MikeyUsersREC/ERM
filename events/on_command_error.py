@@ -1,6 +1,7 @@
 import datetime
 import logging
-
+import asyncio
+from aiohttp import ContentTypeError
 import discord
 import httpcore
 import pytz
@@ -26,11 +27,11 @@ class OnCommandError(commands.Cog):
             return
 
         if isinstance(error, HybridCommandError) and 'RemoteProtocolError: Server disconnected without sending a response.' in str(error):
-        return await ctx.reply(embed=discord.Embed(
-            title="Connection Error",
-            description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
-            color=BLANK_COLOR
-        ))
+            return await ctx.reply(embed=discord.Embed(
+                title="Connection Error",
+                description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
+                color=BLANK_COLOR
+            ))
 
         if isinstance(error, httpcore.ConnectTimeout):
             return await ctx.reply(embed=discord.Embed(

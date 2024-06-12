@@ -600,43 +600,45 @@ class ERLC(commands.Cog):
     @is_server_linked()
     async def server_vehicles(self, ctx: commands.Context):
         guild_id = int(ctx.guild.id)
-        # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         vehicles: list[prc_api.ActiveVehicle] = await self.bot.prc_api.get_server_vehicles(guild_id)
+
         matched = {}
         for item in vehicles:
             for x in players:
                 if x.username == item.username:
                     matched[item] = x
 
-        embed2 = discord.Embed(
-            title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
-            color=BLANK_COLOR,
-            description=""
-        )
         actual_players = []
-        key_maps = {}
         staff = []
         for item in players:
             if item.permission == "Normal":
                 actual_players.append(item)
             else:
                 staff.append(item)
-        
-        embed2.description += (
-            f"**Active Vehicles [{len(vehicles)}]**\n> " +
-            '\n> '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**' for veh, plr in matched.items()])
-        )
 
-        if len(vehicles) == 0:
-            embed2.description = "> There are no active vehicles in your server."
+        descriptions = []
+        description = ""
+        for index, (veh, plr) in enumerate(matched.items()):
+            description += f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**\n'
+            if (index + 1) % 20 == 0 or (index + 1) == len(matched):
+                descriptions.append(description)
+                description = ""
 
-        embed2.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url
-        )
+        if not descriptions:
+            descriptions.append("> There are no active vehicles in your server.")
 
-        await ctx.send(embed=embed2)
+        for description in descriptions:
+            embed = discord.Embed(
+                title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
+                color=BLANK_COLOR,
+                description=description
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon.url
+            )
+            await ctx.send(embed=embed)
 
     @server.group(
         name="discord",
