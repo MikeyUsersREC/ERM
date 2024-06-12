@@ -674,19 +674,19 @@ class ERLC(commands.Cog):
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
             member_found = False
-            #method = ""
 
             try:
                 for member in ctx.guild.members:
                     if pattern.search(member.name):
                         member_found = True
-                        #method = "Username"
                         break
                     elif pattern.search(member.display_name):
                         member_found = True
-                        #method = "Display Name"
                         break
-            except:
+                    elif hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name):
+                        member_found = True
+                        break
+            except Exception:
                 pass
 
             if not member_found:

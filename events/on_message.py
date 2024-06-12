@@ -374,11 +374,12 @@ class OnMessage(commands.Cog):
         management_roles = dataset.get("staff_management", {}).get("management_role")
         if management_roles is None:
             return
-
-        if not any(discord.utils.get(message.author.roles, id=role) for role in management_roles):
-            await message.channel.send("You do not have permission to use custom commands.")
+        
+        if command in bot.commands:
+            ctx = await bot.get_context(message)
+            await bot.invoke(ctx)
             return
-
+        
         if message.content.startswith(prefix):
             try:
                 command_parts = message.content.split(" ")
@@ -402,14 +403,8 @@ class OnMessage(commands.Cog):
                 is_command = False
 
             if not is_command:
-                return await message.channel.send(
-                    embed=discord.Embed(
-                        title="Command Mismatch",
-                        description="This custom command doesn't exist.",
-                        color=discord.Color.red()
-                    )
-                )
-
+                return
+            
             ctx = await bot.get_context(message)
 
             if not channel:
