@@ -9,6 +9,7 @@ from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog
 import utils.prc_api as prc_api
+from utils.utils import get_discord_by_roblox
 from discord import app_commands
 import typing
 
@@ -686,6 +687,13 @@ class ERLC(commands.Cog):
                     elif hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name):
                         member_found = True
                         break
+                    else:
+                        discord_id = await get_discord_by_roblox(self.bot, player.username)
+                        if discord_id:
+                            member = ctx.guild.get_member(discord_id)
+                            if member:
+                                member_found = True
+                                break
             except Exception:
                 pass
 

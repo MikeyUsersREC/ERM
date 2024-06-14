@@ -625,17 +625,32 @@ async def check_exotic_car():
             if not exotic_role or not alert_channel:
                 continue
             players = await bot.prc_api.get_server_players(guild_id)
-            vehicles = await bot.prc_api.get_server_vehicles(guild_id)
+            vehicles = await bot.prc_api.get_server_vehicles(guild_id)      
+
             for vehicle, player in zip(vehicles, players):
                 player_username = vehicle.username
                 member_found = False
                 member = None
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
                 for guild_member in guild.members:
-                    if pattern.search(guild_member.display_name):
+                    if pattern.search(guild_member.name):
                         member_found = True
                         member = guild_member
                         break
+                    elif pattern.search(guild_member.display_name):
+                        member_found = True
+                        member = guild_member
+                        break
+                    elif hasattr(guild_member, 'global_name') and guild_member.global_name and pattern.search(guild_member.global_name):
+                        member_found = True
+                        member = guild_member
+                        break
+                    else:
+                        discord_id = await get_discord_by_roblox(bot, player.username)
+                        if discord_id:
+                            member = guild.get_member(discord_id)
+                            member_found = True
+                            break
                 if not member_found:
                     continue
                 # Function to check if a vehicle matches a whitelisted vehicle using fuzzy matching

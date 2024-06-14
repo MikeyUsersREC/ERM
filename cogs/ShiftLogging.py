@@ -1,6 +1,6 @@
 import datetime
 from io import BytesIO
-
+import logging
 
 import discord
 import pytz
@@ -280,13 +280,27 @@ class ShiftLogging(commands.Cog):
             )
             embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
         elif status == "break":
+            print("On Break status called 2")
             contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+
+            current_break = None
+            for break_item in contained_document.breaks:
+                logging.info(f"Checking break: {break_item}")  # Debugging log to print each break
+                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                    current_break = break_item
+                    break
+
+            if current_break:
+                break_start_time = f"> **Break Started:** <t:{int(current_break.start_epoch)}:R>\n"
+            else:
+                break_start_time = "> **Break Started:** No ongoing break\n"
+
             embed.colour = ORANGE_COLOR
             embed.add_field(
                 name="Current Shift",
                 value=(
                     f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"{break_start_time}"
                     f"> **Breaks:** {len(contained_document.breaks)}\n"
                     f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
@@ -431,16 +445,22 @@ class ShiftLogging(commands.Cog):
         except AttributeError:
             #print("Attribute Error")
             return
+        #if author is on duty then bypass the limit
+        shift_cursor = self.bot.shift_management.shifts.db.find({"Guild": ctx.guild.id, "EndEpoch": 0})
+        shifts = await shift_cursor.to_list(length=None)
 
-        if on_duty_staff >= maximum_staff and maximum_staff != 0:
-            await ctx.send(
-                embed=discord.Embed(
-                    title="Staff Limit Reached",
-                    description="The maximum amount of staff members on duty has been reached. Please wait until a staff member logs off.",
-                    color=BLANK_COLOR
+        if ctx.author.id not in [i['UserID'] for i in shifts]:
+            if on_duty_staff >= maximum_staff and maximum_staff != 0:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Staff Limit Reached",
+                        description="The maximum amount of staff members on duty has been reached. Please wait until a staff member logs off.",
+                        color=BLANK_COLOR
+                    )
                 )
-            )
-            return
+                return
+        else:
+            pass
         
         shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         # view = ModificationSelectMenu(ctx.author.id)
@@ -492,13 +512,28 @@ class ShiftLogging(commands.Cog):
             )
             embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
         elif status == "break":
+            print("On Break status called")
             contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            
+            logging.info(f"All Breaks: {contained_document.breaks}")
+            
+            current_break = None
+            for break_item in contained_document.breaks:
+                logging.info(f"Checking break: {break_item}")  # Debugging log to print each break
+                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                    current_break = break_item
+                    break
+
+            if current_break:
+                break_start_time = f"> **Break Started:** <t:{int(current_break.start_epoch)}:R>\n"
+            else:
+                break_start_time = "> **Break Started:** No ongoing break\n"
             embed.colour = ORANGE_COLOR
             embed.add_field(
                 name="Current Shift",
                 value=(
                     f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"{break_start_time}"
                     f"> **Breaks:** {len(contained_document.breaks)}\n"
                     f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),

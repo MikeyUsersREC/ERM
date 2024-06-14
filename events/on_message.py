@@ -365,7 +365,10 @@ class OnMessage(commands.Cog):
                             return
 
                         return
-                    
+        
+        if message.author.bot:
+            return
+
         custom_commands = await bot.custom_commands.find_by_id(message.guild.id)
         if custom_commands is None:
             return

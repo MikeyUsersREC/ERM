@@ -7649,6 +7649,18 @@ class ShiftMenu(discord.ui.View):
             )
         }
         if option == "break":
+            current_break = None
+            for break_item in contained_document.breaks:
+                logging.info(f"Checking break: {break_item}")  # Debugging log to print each break
+                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                    current_break = break_item
+                    break
+
+            if current_break:
+                break_start_time = f"> **Break Started:** <t:{int(current_break.start_epoch)}:R>\n"
+            else:
+                break_start_time = "> **Break Started:** No ongoing break\n"
+
             selected_ui = discord.Embed(
                 title="<:ShiftBreak:1178034531702411375> **On-Break**",
                 color=ORANGE_COLOR
@@ -7659,7 +7671,7 @@ class ShiftMenu(discord.ui.View):
                 name="Current Shift",
                 value=(
                     f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"{break_start_time}"
                     f"> **Breaks:** {len(self.shift['Breaks'])}\n"
                     f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
