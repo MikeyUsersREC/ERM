@@ -262,13 +262,13 @@ class OnMessage(commands.Cog):
             print(message.author)
             return
         
+        if message.author.bot:
+            return
+        
         if antiping_roles is None:
             return
 
-        if (
-            dataset["antiping"]["enabled"] is False
-            or dataset["antiping"]["role"] is None
-        ):
+        if dataset["antiping"]["enabled"] is False or dataset["antiping"]["role"] is None:
             return
 
         if bypass_roles is not None:
@@ -277,97 +277,81 @@ class OnMessage(commands.Cog):
                     return
 
         for mention in message.mentions:
-            isStaffPermitted = False
-
             if mention.bot:
                 return
 
             if dataset["antiping"].get("use_hierarchy") in [True, None]:
                 for role in antiping_roles:
-                    if role != None:
-                        if (
-                            message.author.top_role > role
-                            or message.author.top_role == role
-                        ):
-                            return
+                    if role is not None:
+                        if message.author.top_role >= role:
+                            continue
+                if message.author == message.guild.owner:
+                    return
 
-            if message.author == message.guild.owner:
-                return
-
-            if not isStaffPermitted:
                 for role in antiping_roles:
-                    # # print(antiping_roles)
-                    # # print(role)
-                    if dataset["antiping"].get("use_hierarchy") in [True, None]:
                         if role is not None:
-                            if mention.top_role > role or mention.top_role == role:
+                            if role in mention.roles and role not in message.author.roles:
                                 embed = discord.Embed(
                                     title=f"Do not ping {role.name} or above!",
-                                    color=BLANK_COLOR,
-                                    description=f"Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.",
+                                    color=discord.Color.red(),
+                                    description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
                                 )
                                 try:
+                                    if message.reference:
+                                        msg = await message.channel.fetch_message(
+                                            message.reference.message_id
+                                        )
+                                        if msg.author == mention:
+                                            embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                                except discord.NotFound:
+                                    pass
+                                try:
+                                    embed.set_footer(
+                                        text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                        icon_url=get_guild_icon(bot, message.guild),
+                                    )
+                                except KeyError:
+                                    embed.set_footer(
+                                        text=f'Thanks, ERM',
+                                        icon_url=get_guild_icon(bot, message.guild),
+                                    )
+
+                                ctx = await bot.get_context(message)
+                                await ctx.reply(f"{message.author.mention}", embed=embed, delete_after=15)
+                                return
+                            
+            if dataset["antiping"].get("use_hierarchy") not in [True, None]:
+                for role in antiping_roles:
+                    if role is not None:
+                        if role in mention.roles and role not in message.author.roles:
+                            embed = discord.Embed(
+                                title=f"Do not ping {role.name}!",
+                                color=discord.Color.red(),
+                                description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
+                            )
+                            try:
+                                if message.reference:
                                     msg = await message.channel.fetch_message(
                                         message.reference.message_id
                                     )
                                     if msg.author == mention:
-                                        embed.set_image(
-                                            url="https://i.imgur.com/pXesTnm.gif"
-                                        )
-                                except AttributeError:
-                                    pass
-
+                                        embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                            except discord.NotFound:
+                                pass
+                            try:
+                                embed.set_footer(
+                                    text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                    icon_url=get_guild_icon(bot, message.guild),
+                                )
+                            except KeyError:
                                 embed.set_footer(
                                     text=f'Thanks, ERM',
                                     icon_url=get_guild_icon(bot, message.guild),
                                 )
 
-                                ctx = await bot.get_context(message)
-                                await ctx.reply(
-                                    f"{message.author.mention}", embed=embed, delete_after=15
-                                )
-                                return
+                            ctx = await bot.get_context(message)
+                            await ctx.reply(f"{message.author.mention}", embed=embed)
                             return
-                        return
-                    else:
-                        if role is not None:
-                            if (
-                                role in mention.roles
-                                and not role in message.author.roles
-                            ):
-                                embed = discord.Embed(
-                                    title=f"Do not ping {role.name}!",
-                                    color=discord.Color.red(),
-                                    description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
-                                )
-                                try:
-                                    msg = await message.channel.fetch_message(
-                                        message.reference.message_id
-                                    )
-                                    if msg.author == mention:
-                                        embed.set_image(
-                                            url="https://i.imgur.com/pXesTnm.gif"
-                                        )
-                                except discord.NotFound:
-                                    pass
-
-                                embed.set_footer(
-                                    text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                    icon_url=get_guild_icon(bot, message.guild),
-                                )
-
-                                ctx = await bot.get_context(message)
-                                await ctx.reply(
-                                    f"{message.author.mention}", embed=embed
-                                )
-                                return
-
-                            return
-
-                        return
-        
-        if message.author.bot:
-            return
 
         custom_commands = await bot.custom_commands.find_by_id(message.guild.id)
         if custom_commands is None:
