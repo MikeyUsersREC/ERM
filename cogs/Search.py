@@ -29,7 +29,7 @@ class Search(commands.Cog):
     @commands.guild_only()
     @commands.hybrid_command(
         name="mywarnings",
-        aliases=["mymoderations", "mypunishments"],
+        aliases=["mymoderations", "mypunishments", "moderations"],
         description="Lookup your punishments with ERM.",
         extras={"category": "Search"},
         with_app_command=True,
@@ -143,10 +143,17 @@ class Search(commands.Cog):
             )
 
         if await staff_predicate(ctx):
-            moderations = [await bot.punishments.fetch_warning(i['_id']) async for i in bot.punishments.db.find({
-                "ModeratorID": ctx.author.id,
-                "Guild": guild_id
-            })]
+
+            moderator_id = user.id if user else ctx.author.id
+
+            moderations = [
+                await bot.punishments.fetch_warning(i['_id'])
+                async for i in bot.punishments.db.find({
+                    "ModeratorID": moderator_id,
+                    "Guild": guild_id
+                })
+            ]
+
             embed_list[0].add_field(
                 name="Staff Information",
                 value=(
