@@ -350,7 +350,7 @@ class OnMessage(commands.Cog):
                                 )
 
                             ctx = await bot.get_context(message)
-                            await ctx.reply(f"{message.author.mention}", embed=embed)
+                            await ctx.reply(f"{message.author.mention}", embed=embed, delete_after=15)
                             return
 
         custom_commands = await bot.custom_commands.find_by_id(message.guild.id)
