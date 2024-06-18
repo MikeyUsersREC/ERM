@@ -154,7 +154,7 @@ class SelectPagination(discord.ui.View):
             return await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=discord.Color.red()
+                color=blank_color
             ), ephemeral=True)
         
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -170,7 +170,7 @@ class SelectPagination(discord.ui.View):
             embed=discord.Embed(
                 title='Change Pages',
                 description="What page would you like to change to?",
-                color=discord.Color.blue()
+                color=blank_color
             ),
             view=view
         )
