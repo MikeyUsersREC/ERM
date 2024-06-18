@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from datamodels.ShiftManagement import ShiftItem
-from erm import credentials_dict, is_management, is_staff, management_predicate, scope
+from erm import credentials_dict, is_management, is_staff,is_admin, management_predicate, scope
 from menus import (
     CustomExecutionButton,
     CustomSelectMenu,
@@ -21,7 +21,7 @@ from utils.autocompletes import shift_type_autocomplete, all_shift_type_autocomp
 from utils.constants import BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.paginators import SelectPagination, CustomPage
 from utils.timestamp import td_format
-from utils.utils import get_elapsed_time, new_failure_embed, require_settings
+from utils.utils import get_elapsed_time, new_failure_embed, require_settings, log_command_usage
 
 
 class ShiftLogging(commands.Cog):
@@ -145,7 +145,7 @@ class ShiftLogging(commands.Cog):
         extras={"category": "Shift Management"},
     )
     @require_settings()
-    @is_management()
+    @is_admin()
     @app_commands.autocomplete(
         type=shift_type_autocomplete
     )
@@ -232,7 +232,10 @@ class ShiftLogging(commands.Cog):
                             pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
-
+        try:
+            await log_command_usage(self.bot,ctx.guild,ctx.author,f"Duty Admin for {member.name}")
+        except:
+            await log_command_usage(self.bot,ctx.guild,ctx.user,f"Duty Admin for {member.name}")
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
@@ -285,7 +288,6 @@ class ShiftLogging(commands.Cog):
 
             current_break = None
             for break_item in contained_document.breaks:
-                logging.info(f"Checking break: {break_item}")  # Debugging log to print each break
                 if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
                     current_break = break_item
                     break

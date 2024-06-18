@@ -13,7 +13,7 @@ from datamodels.ShiftManagement import ShiftItem
 from utils.constants import blank_color, BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.timestamp import td_format
 from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed, time_converter, get_elapsed_time, \
-    generalised_interaction_check_failure, generator, ArgumentMockingInstance
+    generalised_interaction_check_failure, generator, ArgumentMockingInstance, config_change_log
 import gspread_asyncio
 import random
 
@@ -4691,8 +4691,25 @@ class BasicConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Staff Roles have been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Management Roles", row=1, max_values=25, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Admin Role", row=1, max_values=25) 
+    async def admin_role_select(
+            self, interaction: discord.Interaction, select: discord.ui.RoleSelect   
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        sett['staff_management']['admin_role'] = [i.id for i in select.values]
+        await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Admin Role has been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.")
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Management Roles", row=2, max_values=25, min_values=0)
     async def management_role_select(
             self, interaction: discord.Interaction, select: discord.ui.Select
     ):
@@ -4706,8 +4723,9 @@ class BasicConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['management_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Management Roles have been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
-    @discord.ui.select(placeholder="Prefix", row=2, options=[
+    @discord.ui.select(placeholder="Prefix", row=3, options=[
         discord.SelectOption(
             label="!",
             description="Use '!' as your custom prefix."
@@ -4736,6 +4754,7 @@ class BasicConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['customisation']['prefix'] = select.values[0]
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Prefix has been set to {select.values[0]}.")
         for i in select.options:
             i.default = False
 
@@ -4796,6 +4815,7 @@ class LOAConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['loa_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"LOA Role has been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="LOA Channel", row=2, max_values=1,
                        channel_types=[discord.ChannelType.text])
@@ -4812,6 +4832,7 @@ class LOAConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['channel'] = select.values[0].id
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"LOA Channel has been set to <#{select.values[0].id}>.")
 
     @discord.ui.select(placeholder="LOA Requests", row=0, options=[
         discord.SelectOption(
@@ -4836,6 +4857,7 @@ class LOAConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"LOA Requests have been {'enabled' if select.values[0] == 'enabled' else 'disabled'}.")
         for i in select.options:
             i.default = False
 
@@ -4932,6 +4954,7 @@ class ExtendedShiftOptions(discord.ui.View):
         sett = await bot.settings.find_by_id(interaction.guild.id)
         sett['shift_management']['maximum_staff'] = max_staff
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Maximum Staff Online has been set to {max_staff}.")
         self.modal_default = max_staff
 
     @discord.ui.button(
@@ -4958,6 +4981,7 @@ class ExtendedShiftOptions(discord.ui.View):
         sett = await bot.settings.find_by_id(interaction.guild.id)
         sett['shift_management']['nickname_prefix'] = nickname_prefix
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Nickname Prefix has been set to {nickname_prefix}.")
         self.nickname_default = nickname_prefix
 
     @discord.ui.button(
@@ -4997,6 +5021,7 @@ class ExtendedShiftOptions(discord.ui.View):
         sett = await bot.settings.find_by_id(interaction.guild.id)
         sett['shift_management']['quota'] = seconds
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Quota has been set to {td_format(datetime.timedelta(seconds=seconds))}.")
         self.quota_default = seconds
 
 
@@ -5019,6 +5044,7 @@ class ShiftConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['shift_management']['role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"On-Duty Role has been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Shift Channel", row=1, max_values=1,
                        channel_types=[discord.ChannelType.text])
@@ -5035,6 +5061,7 @@ class ShiftConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['shift_management']['channel'] = select.values[0].id
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Shift Channel has been set to <#{select.values[0].id}>.")
 
     @discord.ui.select(placeholder="Shift Management", row=0, options=[
         discord.SelectOption(
@@ -5059,6 +5086,7 @@ class ShiftConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['shift_management']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(bot, interaction.guild, interaction.user, f"Shift Management has been {'enabled' if select.values[0] == 'enabled' else 'disabled'}.")
         for i in select.options:
             i.default = False
 
@@ -5261,6 +5289,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                 ),
                 view=None
             )
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Shift Type Created: {view.dataset['name']}")
             return
         elif view.value == "delete":
             try:
@@ -5306,6 +5335,7 @@ class ShiftConfiguration(AssociationConfigurationView):
 
             settings['shift_types']['types'] = shift_types
             await self.bot.settings.update_by_id(settings)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Shift Type Deleted: {item['name']}")
             msg = await interaction.original_response()
             await msg.edit(
                 embed=discord.Embed(
@@ -5396,6 +5426,7 @@ class ShiftConfiguration(AssociationConfigurationView):
             settings['shift_management']['role_quotas'] = dataset
 
             await self.bot.settings.update_by_id(settings)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Role Quota Created: {view.dataset['role']} | Quota: {td_format(datetime.timedelta(seconds=view.dataset['quota']))}")
             await msg.edit(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Role Quota Created",
@@ -5446,6 +5477,7 @@ class ShiftConfiguration(AssociationConfigurationView):
             settings['shift_management']['role_quotas'] = role_quotas
             await self.bot.settings.update_by_id(settings)
             msg = await interaction.original_response()
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Role Quota Deleted: {item['role']} | Quota: {td_format(datetime.timedelta(seconds=item['quota']))}")
             await msg.edit(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Role Quota Deleted",
@@ -5455,6 +5487,25 @@ class ShiftConfiguration(AssociationConfigurationView):
                 view=None
             )
 
+class ERMCommandLog(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="ERM Log Channel", row=0, max_values=1,min_values=0, channel_types=[discord.ChannelType.text])
+    async def command_log_channel_select(
+            self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        sett['erm_log_channel'] = select.values[0].id
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"ERM Log Channel Set: <#{select.values[0].id}>")
 
 class RAConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -5474,6 +5525,7 @@ class RAConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['staff_management']['ra_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"RA Role Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
 class ExtendedPunishmentConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -5495,6 +5547,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['punishments']['kick_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Kick Channel Set: <#{select.values[0].id}>  ")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Ban Channel", row=1, max_values=1,
                        min_values=0, channel_types=[discord.ChannelType.text])
@@ -5512,6 +5565,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['punishments']['ban_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot,interaction.guild,interaction.user,f"Ban Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="BOLO Channel", row=2, max_values=1,
                        min_values=0, channel_types=[discord.ChannelType.text])
@@ -5529,6 +5583,7 @@ class ExtendedPunishmentConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['punishments']['bolo_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"BOLO Channel Set: <#{select.values[0].id}>")
 
 
 
@@ -5559,6 +5614,7 @@ class PunishmentsConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['punishments']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"ROBLOX Punishments {select.values[0]}.")
         for i in select.options:
             i.default = False
 
@@ -5577,6 +5633,7 @@ class PunishmentsConfiguration(AssociationConfigurationView):
         sett = await bot.settings.find_by_id(guild_id)
         sett['punishments']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Punishments Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.button(
         label='More Options',
@@ -5636,6 +5693,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
             sett['game_security'] = {}
         sett['game_security']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Game Security {select.values[0]}.")
         for i in select.options:
             i.default = False
 
@@ -5656,6 +5714,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
             sett['game_security'] = {}
         sett['game_security']['webhook_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Game Security Webhook Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Alert Channel", row=2, max_values=1, min_values=0,
                        channel_types=[discord.ChannelType.text])
@@ -5674,6 +5733,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
             sett['game_security'] = {}
         sett['game_security']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Game Security Alert Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Mentionables", row=3, max_values=25, min_values=0)
     async def security_mentionables(
@@ -5691,6 +5751,7 @@ class GameSecurityConfiguration(AssociationConfigurationView):
             sett['game_security'] = {}
         sett['game_security']['role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Game Security Mentionables Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
 
 class RDMActions(discord.ui.View):
@@ -6014,6 +6075,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging']['message'] = {}
         sett['game_logging']['message']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Message Logging Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="STS Logging Channel", row=1, max_values=1,
                        min_values=0, channel_types=[discord.ChannelType.text])
@@ -6034,6 +6096,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging']['sts'] = {}
         sett['game_logging']['sts']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"STS Logging Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Priority Logging Channel", row=2, max_values=1,
                        min_values=0, channel_types=[discord.ChannelType.text])
@@ -6054,6 +6117,7 @@ class ExtendedGameLogging(AssociationConfigurationView):
             sett['game_logging']['priority'] = {}
         sett['game_logging']['priority']['channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Priority Logging Channel Set: <#{select.values[0].id}>")
 
 
 class AntipingConfiguration(AssociationConfigurationView):
@@ -6086,6 +6150,7 @@ class AntipingConfiguration(AssociationConfigurationView):
 
         sett['antiping']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti-Ping {select.values[0]}.")
         for i in select.options:
             i.default = False
 
@@ -6109,6 +6174,7 @@ class AntipingConfiguration(AssociationConfigurationView):
             }
         sett['antiping']['role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti Ping Affected Roles: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Bypass Roles", row=2, max_values=5, min_values=0)
     async def bypass_roles(
@@ -6130,6 +6196,7 @@ class AntipingConfiguration(AssociationConfigurationView):
             }
         sett['antiping']['bypass_role'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti Ping Bypass Roles: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     @discord.ui.select(placeholder="Use Hierarchy", row=3, options=[
         discord.SelectOption(
@@ -6162,6 +6229,7 @@ class AntipingConfiguration(AssociationConfigurationView):
 
         sett['antiping']['use_hierarchy'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti Ping Hierarchy {select.values[0]}")
         for i in select.options:
             i.default = False
 
@@ -6200,6 +6268,7 @@ class GameLoggingConfiguration(AssociationConfigurationView):
 
         sett['game_logging']['message']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Message Logging {select.values[0]}")
         for i in select.options:
             i.default = False
 
@@ -6233,6 +6302,7 @@ class GameLoggingConfiguration(AssociationConfigurationView):
 
         sett['game_logging']['sts']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"STS Logging {select.values[0]}")
         for i in select.options:
             i.default = False
 
@@ -6266,6 +6336,7 @@ class GameLoggingConfiguration(AssociationConfigurationView):
 
         sett['game_logging']['priority']['enabled'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Priority Logging {select.values[0]}")
         for i in select.options:
             i.default = False
 
@@ -6319,6 +6390,7 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
             sett['ERLC'] = {}
         sett['ERLC']['rdm_mentionables'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"RDM Mentionables Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="RDM Alert Channel", row=1, max_values=1,
@@ -6338,6 +6410,7 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
             sett['ERLC'] = {}
         sett['ERLC']['rdm_channel'] = int(select.values[0].id or 0)
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"RDM Alert Channel Set: <#{select.values[0].id}>")
 
 class AutomaticShiftConfiguration(discord.ui.View):
     def __init__(self, bot, sustained_interaction: Interaction, shift_types: list, auto_data: dict):
@@ -6542,6 +6615,7 @@ class WhitelistVehiclesManagement(AssociationConfigurationView):
             }
         sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Roles Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     @discord.ui.select(
             cls=discord.ui.ChannelSelect, 
@@ -6569,6 +6643,7 @@ class WhitelistVehiclesManagement(AssociationConfigurationView):
             }
         sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicle Alert Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.button(
         label="Add Vehicle to Role",
@@ -6621,6 +6696,7 @@ class WhitelistVehiclesManagement(AssociationConfigurationView):
         # Update settings with new vehicles
         sett['ERLC']['whitelisted_vehicles'] = vehicles
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Added: {', '.join(vehicles)}")
 
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -6657,6 +6733,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
 
         sett['ERLC']['elevation_required'] = bool(select.values[0] == "enabled")
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Elevation Required {select.values[0]}")
         for i in select.options:
             i.default = False
 
@@ -6680,6 +6757,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             }
         sett['ERLC']['player_logs'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Player Logs Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Kill Logs Channel", row=2, max_values=1, min_values=0)
     async def kill_logs_channel(
@@ -6701,6 +6779,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             }
         sett['ERLC']['kill_logs'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Kill Logs Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.button(
         label='More Options',

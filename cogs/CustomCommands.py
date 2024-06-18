@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from erm import is_management
+from erm import is_management,is_admin
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
 from menus import (
@@ -20,6 +20,7 @@ from utils.utils import (
     interpret_embed,
     invis_embed,
     request_response,
+    log_command_usage,
 )
 
 
@@ -28,7 +29,7 @@ class CustomCommands(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(name="custom")
-    @is_management()
+    @is_admin()
     async def custom(self, ctx):
         pass
 
@@ -38,11 +39,14 @@ class CustomCommands(commands.Cog):
         description="Manage your custom commands.",
         extras={"category": "Custom Commands"},
     )
-    @is_management()
+    @is_admin()
     async def custom_manage(self, ctx):
         bot = self.bot
         Data = await bot.custom_commands.find_by_id(ctx.guild.id)
-
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Custom Manage")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Custom Manage")
         if Data is None:
             Data = {"_id": ctx.guild.id, "commands": []}
 
@@ -258,7 +262,7 @@ class CustomCommands(commands.Cog):
         extras={"category": "Custom Commands", "ephemeral": True},
     )
     @app_commands.autocomplete(command=command_autocomplete)
-    @is_management()
+    @is_admin()
     @app_commands.describe(command="What custom command would you like to run?")
     @app_commands.describe(
         channel="Where do you want this custom command's output to go? (e.g. #general)"

@@ -1,7 +1,7 @@
 import datetime
 import discord
 from discord.ext import commands
-from erm import is_management
+from erm import is_management, is_admin
 from menus import (
     ManageReminders,
     YesNoColourMenu,
@@ -13,6 +13,7 @@ from utils.utils import (
     generator,
     time_converter,
     require_settings,
+    log_command_usage
 )
 
 
@@ -31,10 +32,14 @@ class Reminders(commands.Cog):
         description="Manage your reminders",
         extras={"category": "Reminders"},
     )
-    @is_management()
+    @is_admin()
     @require_settings()
     async def manage_reminders(self, ctx):
         bot = self.bot
+        try:
+            await log_command_usage(bot,ctx.guild, ctx.author, f"Reminders manage")
+        except:
+            await log_command_usage(bot,ctx.guild, ctx.user, f"Reminders manage")
         reminder_data = await bot.reminders.find_by_id(ctx.guild.id)
         if reminder_data is None:
             reminder_data = {"_id": ctx.guild.id, "reminders": []}

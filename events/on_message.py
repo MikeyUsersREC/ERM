@@ -10,6 +10,7 @@ import roblox
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
+from utils.prc_api import Player
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
 from utils.utils import (
@@ -209,7 +210,44 @@ class OnMessage(commands.Cog):
                 except IndexError:
                     logging.error('IndexError in remote command usage embed')
                     break
+                #Adding check for the command to see if onlt admin is using the ban command
+                try:
+                    players: list[Player] = await self.bot.prc_api.get_server_players(message.guild.id)
+                    actual_players = []
+                    key_maps = {}
 
+                    for item in players:
+                        if item.permission == "Normal":
+                            actual_players.append(item)
+                        else:
+                            if item.permission not in key_maps:
+                                key_maps[item.permission] = [item]
+                            else:
+                                key_maps[item.permission].append(item)
+
+                    # Create a map for key roles
+                    new_maps = ["Server Owners", "Server Administrators", "Server Moderators"]
+                    new_vals = [
+                        key_maps.get('Server Owner', []) + key_maps.get('Server Co-Owner', []),
+                        key_maps.get('Server Administrator', []),
+                        key_maps.get('Server Moderator', [])
+                    ]
+                    new_keymap = dict(zip(new_maps, new_vals))
+
+                    user_permission = None
+                    for role, players in new_keymap.items():
+                        if any(plr.username == user for plr in players):
+                            user_permission = role
+                            break
+
+                    # If the user is a Server Moderator and used the ban command
+                    if user_permission == "Server Moderators" and 'ban' in command:
+                        await message.add_reaction('⛔')
+                        return
+                except Exception as e:
+                    logging.error(f"Error checking command permissions: {e}")
+                    continue
+                
                 combined = ""
                 for word in command.split(' ')[1:]:
                     if not bot.get_command(combined.strip()):

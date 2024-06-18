@@ -9,7 +9,7 @@ from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog
 import utils.prc_api as prc_api
-from utils.utils import get_discord_by_roblox
+from utils.utils import get_discord_by_roblox, log_command_usage
 from discord import app_commands
 import typing
 
@@ -134,6 +134,10 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"ERLC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(

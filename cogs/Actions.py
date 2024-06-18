@@ -3,12 +3,12 @@ from discord.ext import commands
 import asyncio
 import datetime
 import pytz
-from erm import is_management, is_staff
+from erm import is_management, is_staff, is_admin
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from menus import ManageActions
 from discord import app_commands
 from utils.autocompletes import action_autocomplete
-from utils.utils import interpret_content, interpret_embed
+from utils.utils import interpret_content, interpret_embed, log_command_usage
 
 class Actions(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -25,12 +25,16 @@ class Actions(commands.Cog):
         name="manage",
         description="Manage your ERM Actions easily."
     )
-    @is_management()
+    @is_admin()
     async def actions_manage(self, ctx: commands.Context):
         embed = discord.Embed(
             title="Actions",
             color=BLANK_COLOR
         )
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Actions Manage")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Actions Manage")
         actions = [i async for i in self.bot.db.actions.find({'Guild': ctx.guild.id})]
         for item in actions:
             embed.add_field(
