@@ -778,6 +778,7 @@ class Configuration(commands.Cog):
                     title="Basic Settings",
                     description=(
                         "**Staff Role:** A staff role is the role that is going to be able to use most ERM commands. You'd assign this role to the people you want to be able to use ERM's core functionalities.\n\n"
+                        "**Admin Role:** An admin role is the role that can manage LOAs, RAs & other peoples' shifts but it can not use server manage and config.\n\n"
                         "**Management Role:** A management role is the roles of your server management members. These people will be able to delete punishments, modify people's shift time, and accept LOA Requests.\n\n"
                         "**Prefix:** This will be a prefix you are able to use instead of our slash command system. You can use this prefix to execute commands slightly faster and to take advantage of some extra features."
                     ),
