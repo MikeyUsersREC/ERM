@@ -129,7 +129,7 @@ class ActivityMonitoring(commands.Cog):
         embed.description = f"**Leaderboard**\n"
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         embeds.append(embed)
         for item in leaderboard_string.split('\n'):
@@ -140,7 +140,7 @@ class ActivityMonitoring(commands.Cog):
                 )
                 embed.set_author(
                     name=ctx.guild.name,
-                    icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    icon_url=ctx.guild.icon
                 )
                 embeds.append(embed)
                 embeds[-1].description = f"**Leaderboard**\n"
@@ -167,7 +167,7 @@ class ActivityMonitoring(commands.Cog):
                 )
                 embed.set_author(
                     name=ctx.guild.name,
-                    icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    icon_url=ctx.guild.icon
                 )
                 return embed
 

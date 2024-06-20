@@ -84,7 +84,7 @@ class GameLogging(commands.Cog):
 
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
 
         embed.add_field(
@@ -160,7 +160,7 @@ class GameLogging(commands.Cog):
             color=BLANK_COLOR,
         )
 
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon.url if ctx.guild.icon else '')
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
 
         embed.add_field(
             name="Staff Members",
@@ -287,7 +287,7 @@ class GameLogging(commands.Cog):
             color=BLANK_COLOR,
         )
 
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon.url if ctx.guild.icon else '')
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
 
         embed.add_field(
             name="Players",

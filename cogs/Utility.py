@@ -59,7 +59,7 @@ class Utility(commands.Cog):
         if ctx.guild is not None:
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                icon_url=ctx.guild.icon,
             )
         else:
             embed.set_author(
@@ -91,7 +91,7 @@ class Utility(commands.Cog):
             text= f"Shard {ctx.guild.shard_id if ctx.guild else 0}/{self.bot.shard_count-1}"
         )
         embed.timestamp = datetime.datetime.utcnow()
-        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else '')
+        embed.set_thumbnail(url=ctx.guild.icon)
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(

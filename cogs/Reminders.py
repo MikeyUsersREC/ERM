@@ -45,10 +45,10 @@ class Reminders(commands.Cog):
         )
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         embed.set_thumbnail(
-            url=ctx.guild.icon.url if ctx.guild.icon else ''
+            url=ctx.guild.icon
         )
         [embed.add_field(
             name=f"{reminder['name']}",

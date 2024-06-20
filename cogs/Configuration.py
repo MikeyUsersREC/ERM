@@ -892,7 +892,7 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ).set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                icon_url=ctx.guild.icon
             ),
             discord.Embed(
                 title="Activity Notices",
@@ -903,7 +903,7 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ).set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                icon_url=ctx.guild.icon
             ),
             discord.Embed(
                 title="ROBLOX Punishments",
@@ -914,7 +914,7 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ).set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                icon_url=ctx.guild.icon
             ),
             discord.Embed(
                 title="Shift Logging",
@@ -925,7 +925,7 @@ class Configuration(commands.Cog):
                 color=BLANK_COLOR
             ).set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                icon_url=ctx.guild.icon
             )
         ]
         views = [

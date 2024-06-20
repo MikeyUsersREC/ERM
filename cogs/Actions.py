@@ -49,7 +49,7 @@ class Actions(commands.Cog):
                 inline=False
             )
         
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon.url if ctx.guild.icon else '')
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
         view = ManageActions(self.bot, ctx.author.id)
         await ctx.send(
             embed=embed,

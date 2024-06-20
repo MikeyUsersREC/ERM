@@ -248,7 +248,7 @@ class ERLC(commands.Cog):
         )
         embed1.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         embed1.add_field(
             name="Basic Info",
@@ -298,7 +298,7 @@ class ERLC(commands.Cog):
         )
         embed2.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         actual_players = []
         key_maps = {}
@@ -365,7 +365,7 @@ class ERLC(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url
+                icon_url=ctx.guild.icon
             )
 
 
@@ -412,7 +412,7 @@ class ERLC(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url
+                icon_url=ctx.guild.icon
             )
 
 
@@ -458,7 +458,7 @@ class ERLC(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url
+                icon_url=ctx.guild.icon
             )
 
 
@@ -518,7 +518,7 @@ class ERLC(commands.Cog):
 
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url
+            icon_url=ctx.guild.icon
         )
 
         await ctx.send(embed=embed)
@@ -567,7 +567,7 @@ class ERLC(commands.Cog):
 
         embed2.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url
+            icon_url=ctx.guild.icon
         )
         if len(embed2.description) > 3999:
             embed2.description = ""
@@ -629,7 +629,7 @@ class ERLC(commands.Cog):
 
         embed2.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url
+            icon_url=ctx.guild.icon
         )
 
         await ctx.send(embed=embed2)
