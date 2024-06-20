@@ -103,6 +103,49 @@ class OnShiftEnd(commands.Cog):
             ).set_thumbnail(
                 url=staff_member.display_avatar.url
             ))
+        shift_reports_enabled = True
+        async for document in self.bot.consent.db.find({"_id": staff_member.id}):
+                shift_reports_enabled = (
+                    document.get("shift_reports")
+                    if document.get("shift_reports") is not None
+                    else True
+                )
+        if shift_reports_enabled:
+            moderation_counts = {}
+            for entry in shift.moderations:
+                if entry['type'] in moderation_counts:
+                    moderation_counts[entry['type']] += entry['count']
+                else:
+                    moderation_counts[entry['type']] = entry['count']
+            
+            embed = discord.Embed(
+                title="Shift Report",
+                color=BLANK_COLOR
+            ).add_field(
+                name="Shift Information",
+                value=(
+                    f"> **Shift Type:** {shift_type}\n"
+                    f"> **Shift Start:** <t:{int(shift.start_epoch)}>\n"
+                    f"> **Shift End:** <t:{int(shift.end_epoch)}>\n"
+                    f"> **Nickname:** `{shift.nickname}`\n"
+                ),
+                inline=False
+            ).add_field(
+                name="Total Moderations:",
+                value=(
+                    "\n".join([
+                        f"> **{moderation_type.capitalize()}s:** {count}" 
+                        for moderation_type, count in moderation_counts.items()
+                    ]) if moderation_counts else "> No Moderations Found"
+                ),
+                inline=False
+            ).add_field(    
+                name="Elapsed Time",
+                value=f"> {td_format(datetime.timedelta(seconds=shift.end_epoch - shift.start_epoch - (sum((br.end_epoch) - (br.start_epoch) for br in shift.breaks)) + (shift.added_time if shift.added_time > (86400 * 7) else 0) - (shift.removed_time if shift.removed_time > (86400 * 7) else 0)))}",
+                inline=False
+            ).set_thumbnail(url=staff_member.display_avatar.url)
+            await staff_member.send(embed=embed)
+            
 
 
 async def setup(bot: commands.Bot):

@@ -24,3 +24,5 @@ aiohttp-cors
 pymongo~=4.4.1
 pydantic~=2.1.1
 gspread_asyncio
+fuzzywuzzy
+python-Levenshtein

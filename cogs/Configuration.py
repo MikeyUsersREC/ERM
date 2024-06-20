@@ -15,10 +15,10 @@ from menus import (
     YesNoColourMenu,
     NextView, BasicConfiguration, LOAConfiguration, ShiftConfiguration, RAConfiguration,
     PunishmentsConfiguration, GameSecurityConfiguration, GameLoggingConfiguration, AntipingConfiguration,
-    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement,
+    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement, ERMCommandLog, WhitelistVehiclesManagement
 )
 from utils.paginators import CustomPage, SelectPagination
-from utils.utils import require_settings, generator
+from utils.utils import require_settings, generator, log_command_usage
 
 
 class Configuration(commands.Cog):
@@ -35,6 +35,10 @@ class Configuration(commands.Cog):
     )
     @is_management()
     async def _setup(self, ctx: commands.Context):
+        try:
+            await log_command_usage(ctx.guild, ctx.author, f"Setup")
+        except:
+            await log_command_usage(ctx.guild, ctx.user, f"Setup")
         bot = self.bot
         from utils.constants import base_configuration
         current_settings = None
@@ -192,6 +196,7 @@ class Configuration(commands.Cog):
                 title="Basic Settings",
                 description=(
                     "**Staff Role:** A staff role is the role that is going to be able to use most ERM commands. You'd assign this role to the people you want to be able to use ERM's core functionalities.\n\n"
+                    "**Admin Role:** An admin role is the role that can manage LOAs, RAs & other peoples' shifts but it can not use server manage and config.\n\n"
                     "**Management Role:** A management role is the roles of your server management members. These people will be able to delete punishments, modify people's shift time, and accept LOA Requests.\n\n"
                     "**Prefix:** This will be a prefix you are able to use instead of our slash command system. You can use this prefix to execute commands slightly faster and to take advantage of some extra features."
                 ),
@@ -211,6 +216,8 @@ class Configuration(commands.Cog):
                         modifications['customisation']['prefix'] = item.values[0]
                     elif item.placeholder == "Management Roles":
                         modifications['staff_management']['management_role'] = [i.id for i in item.values]
+                    elif item.placeholder == "Admin Roles":
+                        modifications['staff_management']['admin_role'] = [i.id for i in item.values]
 
         loa_requests_settings = discord.ui.View()
 
@@ -256,10 +263,10 @@ class Configuration(commands.Cog):
             embed=discord.Embed(
                 title="<:loa:1169799727143977090> LOA Requests",
                 description=(
-                    "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
-                    "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
-                    "**LOA Channel:** This channel will be where Leave of Absence requests will be logged, and where they will be accepted or denied. Make sure this is a channel that Management members can see, so that they can approve LOA requests."
-                ),
+                        "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
+                        "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
+                        "**LOA Channel:** This channel will be where Leave of Absence requests will be logged, and where they will be accepted or denied. Make sure this is a channel that Management members can see, so that they can approve LOA requests."
+                    ),
                 color=blank_color
             ),
             view=loa_requests_settings
@@ -456,7 +463,7 @@ class Configuration(commands.Cog):
         await msg.edit(
             embed=discord.Embed(
                 title='<:success:1163149118366040106> Success!',
-                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config change`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
+                description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
                 color=0x1fd373
             ),
             view=None
@@ -477,12 +484,22 @@ class Configuration(commands.Cog):
         bot = self.bot
         settings = await bot.settings.find_by_id(ctx.guild.id)
 
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Config")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Config")
 
         basic_settings_view = BasicConfiguration(bot, ctx.author.id, [
             (
                 'Staff Roles',
                 [
                     discord.utils.get(ctx.guild.roles, id=role) for role in settings['staff_management'].get('role') or [0]
+                ]
+            ),
+            (
+                'Admin Role',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) for role in settings['staff_management'].get('admin_role') or [0]
                 ]
             ),
             (
@@ -740,16 +757,28 @@ class Configuration(commands.Cog):
                 ),
             ]
         )
-
+        
+        erm_command_log_view = ERMCommandLog(
+            bot,
+            ctx.author.id,
+            [
+                (
+                    'ERM Log Channel',
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := settings.get('erm_log_channel')) else 0]
+                )
+            ]
+        )
 
         pages = []
 
-        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view]):
+        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view, erm_command_log_view]):
             corresponding_embeds = [
                 discord.Embed(
                     title="Basic Settings",
                     description=(
                         "**Staff Role:** A staff role is the role that is going to be able to use most ERM commands. You'd assign this role to the people you want to be able to use ERM's core functionalities.\n\n"
+                        "**Admin Role:** An admin role is the role that can manage LOAs, RAs & other peoples' shifts but it can not use server manage and config.\n\n"
                         "**Management Role:** A management role is the roles of your server management members. These people will be able to delete punishments, modify people's shift time, and accept LOA Requests.\n\n"
                         "**Prefix:** This will be a prefix you are able to use instead of our slash command system. You can use this prefix to execute commands slightly faster and to take advantage of some extra features."
                     ),
@@ -839,7 +868,16 @@ class Configuration(commands.Cog):
                         "**Player Logs Channel:** This channel is where Player Join and Leave logs will be sent by ERM. ERM will check your server every 45 seconds to see if new members have joined or left, and report of their time accordingly.\n\n"
                         "**Kill Logs Channel:** This setting is where Kill Logs will be sent by ERM. ERM will check your server every 45 seconds and constantly contact your ER:LC private server to know if there are any new kill logs. If there are, to log them in the corresponding channel."
                     )
+                ),
+                discord.Embed(
+                    title="ERM Logging",
+                    color=blank_color,
+                    description=(
+                        "**ERM Log Channel:** This channel is where ERM will log all administrative commands and configuration changes made by Admin & Management Roles. This is useful for auditing purposes, ensuring transparency, and detecting any potential abuse of administrative privileges. This is a critical part of ERM and should be enabled for all servers using ERM.\n\n"
+                        "All commands such as Duty Admin, LOA Admin, RA Admin, Server Manage, Config, etc., as well as nearly all configuration changes, will be logged in this channel."
+                    )
                 )
+
             ]
             embed = corresponding_embeds[index]
             page = CustomPage()
@@ -880,6 +918,11 @@ class Configuration(commands.Cog):
     @is_management()
     @require_settings()
     async def server_management(self, ctx: commands.Context):
+        try:
+            await log_command_usage(ctx.guild, ctx.author, f"/server manage")
+        except:
+            await log_command_usage(ctx.guild, ctx.user, f"server manage")
+
         embeds = [
             discord.Embed(
                 title="Introduction",

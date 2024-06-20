@@ -10,8 +10,13 @@ import roblox
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
 
-from utils.constants import BLANK_COLOR
+from utils.prc_api import Player
+from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
+from utils.utils import (
+    interpret_content,
+    interpret_embed
+)
 from menus import CustomSelectMenu, GameSecurityActions
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
@@ -200,8 +205,49 @@ class OnMessage(commands.Cog):
 
                 profile_link = user.split('(')[1].split(')')[0]
                 user = user.split('(')[0].replace('[', '').replace(']', '')
-                person = command.split(' ')[1]
+                try:
+                    person = command.split(' ')[1]
+                except IndexError:
+                    logging.error('IndexError in remote command usage embed')
+                    break
+                #Adding check for the command to see if onlt admin is using the ban command
+                try:
+                    players: list[Player] = await self.bot.prc_api.get_server_players(message.guild.id)
+                    actual_players = []
+                    key_maps = {}
 
+                    for item in players:
+                        if item.permission == "Normal":
+                            actual_players.append(item)
+                        else:
+                            if item.permission not in key_maps:
+                                key_maps[item.permission] = [item]
+                            else:
+                                key_maps[item.permission].append(item)
+
+                    # Create a map for key roles
+                    new_maps = ["Server Owners", "Server Administrators", "Server Moderators"]
+                    new_vals = [
+                        key_maps.get('Server Owner', []) + key_maps.get('Server Co-Owner', []),
+                        key_maps.get('Server Administrator', []),
+                        key_maps.get('Server Moderator', [])
+                    ]
+                    new_keymap = dict(zip(new_maps, new_vals))
+
+                    user_permission = None
+                    for role, players in new_keymap.items():
+                        if any(plr.username == user for plr in players):
+                            user_permission = role
+                            break
+
+                    # If the user is a Server Moderator and used the ban command
+                    if user_permission == "Server Moderators" and 'ban' in command:
+                        await message.add_reaction('⛔')
+                        return
+                except Exception as e:
+                    logging.error(f"Error checking command permissions: {e}")
+                    continue
+                
                 combined = ""
                 for word in command.split(' ')[1:]:
                     if not bot.get_command(combined.strip()):
@@ -254,13 +300,13 @@ class OnMessage(commands.Cog):
             print(message.author)
             return
         
+        if message.author.bot:
+            return
+        
         if antiping_roles is None:
             return
 
-        if (
-            dataset["antiping"]["enabled"] is False
-            or dataset["antiping"]["role"] is None
-        ):
+        if dataset["antiping"]["enabled"] is False or dataset["antiping"]["role"] is None:
             return
 
         if bypass_roles is not None:
@@ -269,95 +315,192 @@ class OnMessage(commands.Cog):
                     return
 
         for mention in message.mentions:
-            isStaffPermitted = False
-
             if mention.bot:
                 return
 
             if dataset["antiping"].get("use_hierarchy") in [True, None]:
                 for role in antiping_roles:
-                    if role != None:
-                        if (
-                            message.author.top_role > role
-                            or message.author.top_role == role
-                        ):
-                            return
+                    if role is not None:
+                        if message.author.top_role >= role:
+                            continue
+                if message.author == message.guild.owner:
+                    return
 
-            if message.author == message.guild.owner:
-                return
-
-            if not isStaffPermitted:
                 for role in antiping_roles:
-                    # # print(antiping_roles)
-                    # # print(role)
-                    if dataset["antiping"].get("use_hierarchy") in [True, None]:
                         if role is not None:
-                            if mention.top_role > role or mention.top_role == role:
+                            if role in mention.roles and role not in message.author.roles:
                                 embed = discord.Embed(
                                     title=f"Do not ping {role.name} or above!",
-                                    color=BLANK_COLOR,
-                                    description=f"Do not ping {role.name} or above!\nIt is a violation of the rules, and you will be punished if you continue.",
+                                    color=discord.Color.red(),
+                                    description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
                                 )
                                 try:
+                                    if message.reference:
+                                        msg = await message.channel.fetch_message(
+                                            message.reference.message_id
+                                        )
+                                        if msg.author == mention:
+                                            embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                                except discord.NotFound:
+                                    pass
+                                try:
+                                    embed.set_footer(
+                                        text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                        icon_url=get_guild_icon(bot, message.guild),
+                                    )
+                                except KeyError:
+                                    embed.set_footer(
+                                        text=f'Thanks, ERM',
+                                        icon_url=get_guild_icon(bot, message.guild),
+                                    )
+
+                                ctx = await bot.get_context(message)
+                                await ctx.reply(f"{message.author.mention}", embed=embed, delete_after=15)
+                                return
+                            
+            if dataset["antiping"].get("use_hierarchy") not in [True, None]:
+                for role in antiping_roles:
+                    if role is not None:
+                        if role in mention.roles and role not in message.author.roles:
+                            embed = discord.Embed(
+                                title=f"Do not ping {role.name}!",
+                                color=discord.Color.red(),
+                                description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
+                            )
+                            try:
+                                if message.reference:
                                     msg = await message.channel.fetch_message(
                                         message.reference.message_id
                                     )
                                     if msg.author == mention:
-                                        embed.set_image(
-                                            url="https://i.imgur.com/pXesTnm.gif"
-                                        )
-                                except AttributeError:
-                                    pass
-
+                                        embed.set_image(url="https://i.imgur.com/pXesTnm.gif")
+                            except discord.NotFound:
+                                pass
+                            try:
+                                embed.set_footer(
+                                    text=f'Thanks, {dataset["customisation"]["brand_name"]}',
+                                    icon_url=get_guild_icon(bot, message.guild),
+                                )
+                            except KeyError:
                                 embed.set_footer(
                                     text=f'Thanks, ERM',
                                     icon_url=get_guild_icon(bot, message.guild),
                                 )
 
-                                ctx = await bot.get_context(message)
-                                await ctx.reply(
-                                    f"{message.author.mention}", embed=embed, delete_after=15
-                                )
-                                return
-                            return
-                        return
-                    else:
-                        if role is not None:
-                            if (
-                                role in mention.roles
-                                and not role in message.author.roles
-                            ):
-                                embed = discord.Embed(
-                                    title=f"Do not ping {role.name}!",
-                                    color=discord.Color.red(),
-                                    description=f"Do not ping those with {role.name}!\nIt is a violation of the rules, and you will be punished if you continue.",
-                                )
-                                try:
-                                    msg = await message.channel.fetch_message(
-                                        message.reference.message_id
-                                    )
-                                    if msg.author == mention:
-                                        embed.set_image(
-                                            url="https://i.imgur.com/pXesTnm.gif"
-                                        )
-                                except discord.NotFound:
-                                    pass
-
-                                embed.set_footer(
-                                    text=f'Thanks, {dataset["customisation"]["brand_name"]}',
-                                    icon_url=get_guild_icon(bot, message.guild),
-                                )
-
-                                ctx = await bot.get_context(message)
-                                await ctx.reply(
-                                    f"{message.author.mention}", embed=embed
-                                )
-                                return
-
+                            ctx = await bot.get_context(message)
+                            await ctx.reply(f"{message.author.mention}", embed=embed, delete_after=15)
                             return
 
-                        return
+        custom_commands = await bot.custom_commands.find_by_id(message.guild.id)
+        if custom_commands is None:
+            return
+        
+        prefix = (dataset or {}).get("customisation", {}).get("prefix", ">")
+        management_roles = dataset.get("staff_management", {}).get("management_role")
+        if management_roles is None:
+            return
+        
+        if message.content.startswith(prefix):
+            try:
+                command_parts = message.content.split(" ")
+                command = command_parts[0].replace(prefix, "").lower()
+                if command in bot.all_commands:
+                    return
+                channel_id = int(command_parts[1].replace("<#", "").replace(">", ""))
+                channel = discord.utils.get(message.guild.text_channels, id=channel_id)
+            except (IndexError, ValueError):
+                command = message.content.replace(prefix, "").lower()
+                channel = None
 
+            ctx = await bot.get_context(message)
+            if "commands" in custom_commands:
+                if isinstance(custom_commands["commands"], list):
+                    selected = next((cmd for cmd in custom_commands["commands"]
+                                    if cmd["name"].lower().replace(" ", "") == command.lower().replace(" ", "")), None)
+                    is_command = selected is not None
+                else:
+                    is_command = False
+            else:
+                is_command = False
 
+            if not is_command:
+                return
+
+            if not channel:
+                channel = ctx.channel
+
+            embeds = [await interpret_embed(bot, ctx, channel, embed, selected['id']) for embed in selected["message"]["embeds"]]
+
+            view = discord.ui.View()
+            for item in selected.get('buttons', []):
+                view.add_item(discord.ui.Button(
+                    label=item['label'],
+                    url=item['url'],
+                    row=item['row'],
+                    style=discord.ButtonStyle.url
+                ))
+
+            if ctx.interaction:
+                if not selected['message']['content'] and not selected['message']['embeds']:
+                    return await ctx.interaction.followup.send(
+                        embed=discord.Embed(
+                            title='Empty Command',
+                            description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                            color=discord.Color.red()
+                        )
+                    )
+                await ctx.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Command Ran",
+                        description=f"I've just ran the custom command in {channel.mention}.",
+                        color=discord.Color.green()
+                    )
+                )
+                msg = await channel.send(
+                    content=await interpret_content(
+                        bot, ctx, channel, selected["message"]["content"], selected['id']
+                    ),
+                    embeds=embeds,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(
+                        everyone=True, users=True, roles=True, replied_user=True
+                    ),
+                )
+            else:
+                if not selected['message']['content'] and not selected['message']['embeds']:
+                    return await ctx.reply(
+                        embed=discord.Embed(
+                            title='Empty Command',
+                            description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
+                            color=discord.Color.red()
+                        )
+                    )
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Command Ran",
+                        description=f"I've just ran the custom command in {channel.mention}.",
+                        color=discord.Color.green()
+                    )
+                )
+                msg = await channel.send(
+                    content=await interpret_content(
+                        bot, ctx, channel, selected["message"]["content"], selected['id']
+                    ),
+                    embeds=embeds,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(
+                        everyone=True, users=True, roles=True, replied_user=True
+                    ),
+                )
+
+            doc = await bot.ics.find_by_id(selected['id']) or {}
+            if doc is None:
+                return
+            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
+            doc['_id'] = ctx.guild.id
+            await bot.ics.update_by_id(doc)
+            
+        return
+    
 async def setup(bot):
     await bot.add_cog(OnMessage(bot))

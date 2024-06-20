@@ -13,7 +13,8 @@ from zuid import ZUID
 from utils.constants import BLANK_COLOR
 from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
-
+import requests
+import json
 
 class ArgumentMockingInstance:
     def __init__(self, **kwargs):
@@ -525,3 +526,73 @@ def make_ordinal(n):
     else:
         suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
     return str(n) + suffix
+
+async def get_discord_by_roblox(bot,username):
+    api_url = "https://users.roblox.com/v1/usernames/users"
+    payload = {"usernames": [username], "excludeBannedUsers": True}
+    response = requests.post(api_url, json=payload)
+    if response.status_code == 200:
+        data = response.json()["data"][0]
+        id = data["id"]
+        linked_account = await bot.oauth2_users.db.find_one({"roblox_id": id})
+        if linked_account:
+            return linked_account["discord_id"]
+        else:
+            return None
+        
+async def log_command_usage(bot, guild, member, command_name):
+    settings = await bot.settings.find_by_id(guild.id)
+    if not settings.get("erm_log_channel"):
+        #print("Command logging not enabled.")
+        return
+
+    try:
+        log_channel_id = int(settings.get("erm_log_channel"))
+        #print(f"Logging channel ID: {log_channel_id}")
+    except (ValueError, TypeError) as e:
+        #print(f"Invalid log channel ID: {e}")
+        return
+
+    log_channel = guild.get_channel(log_channel_id)
+    if log_channel is None:
+        #print("Log channel not found in guild channels.")
+        #print(f"Available channels: {[channel.id for channel in guild.text_channels]}")
+        return
+
+    if not log_channel.permissions_for(guild.me).send_messages:
+        #print("Bot does not have permission to send messages in the log channel.")
+        return
+
+    embed = discord.Embed(
+        title="ERM Command Log",
+        description=f"Command `{command_name}` used by {member.mention}",
+        color=BLANK_COLOR
+    )
+    embed.set_footer(text=f"User ID: {member.id}")
+    embed.set_author(name=member.name, icon_url=member.display_avatar.url)
+    embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+
+    await log_channel.send(embed=embed)
+
+async def config_change_log(bot,guild,member,data):
+    setting = await bot.settings.find_by_id(guild.id)
+    if not setting.get("erm_log_channel"):
+        return
+    try:
+        log_channel_id = int(setting.get("erm_log_channel"))
+    except (ValueError,TypeError) as e:
+        return
+    log_channel = guild.get_channel(log_channel_id)
+    if log_channel is None:
+        return
+    if not log_channel.permissions_for(guild.me).send_messages:
+        return
+    embed = discord.Embed(
+        title="ERM Config Change Log",
+        description=f"Configuration change made by {member.mention}",
+        color=BLANK_COLOR
+    ).add_field(name="Configuration Change",value=data)
+    embed.set_footer(text=f"User ID: {member.id}")
+    embed.set_author(name=member.name, icon_url=member.display_avatar.url)
+    embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
+    await log_channel.send(embed=embed)

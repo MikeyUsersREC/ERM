@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 from reactionmenu import ViewButton, ViewMenu
 
-from erm import is_management, system_code_gen, is_staff
+from erm import is_management,is_admin, system_code_gen, is_staff
 from menus import (
     ActivityNoticeModification,
     CustomModalView,
@@ -18,7 +18,7 @@ from menus import (
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.paginators import CustomPage, SelectPagination
 from utils.timestamp import td_format
-from utils.utils import invis_embed, removesuffix, require_settings, time_converter, get_elapsed_time
+from utils.utils import invis_embed, removesuffix, require_settings, time_converter, get_elapsed_time, log_command_usage
 
 
 class ActivityCoreCommands:
@@ -661,7 +661,7 @@ class StaffManagement(commands.Cog):
         description="View all active RAs",
         extras={"category": "Staff Management"},
     )
-    @is_management()
+    @is_admin()
     @require_settings()
     async def ra_active(self, ctx):
         await self.core_commands.core_command_active(ctx, 'ra')
@@ -686,11 +686,15 @@ class StaffManagement(commands.Cog):
         extras={"category": "Staff Management"},
         with_app_command=True,
     )
-    @is_management()
+    @is_admin()
     @app_commands.describe(
         member="Who's RA would you like to administrate? Specify a Discord user."
     )
     async def ra_admin(self, ctx, member: discord.Member):
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"RA Admin: {member}")
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
     @commands.hybrid_group(
@@ -710,7 +714,7 @@ class StaffManagement(commands.Cog):
         description="View all active LOAs",
         extras={"category": "Staff Management"},
     )
-    @is_management()
+    @is_admin()
     async def loa_active(self, ctx):
         await self.core_commands.core_command_active(ctx, 'loa')
 
@@ -734,11 +738,16 @@ class StaffManagement(commands.Cog):
         extras={"category": "Staff Management"},
         with_app_command=True,
     )
-    @is_management()
+    @is_admin()
     @app_commands.describe(
         member="Who's LOA would you like to administrate? Specify a Discord user."
     )
     async def loa_admin(self, ctx, member: discord.Member):
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"LOA Admin: {member}")
+
         return await self.core_commands.core_command_admin(ctx, 'loa', member)
 
 

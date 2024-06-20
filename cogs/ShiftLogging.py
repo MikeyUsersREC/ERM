@@ -1,6 +1,6 @@
 import datetime
 from io import BytesIO
-
+import logging
 
 import discord
 import pytz
@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from datamodels.ShiftManagement import ShiftItem
-from erm import credentials_dict, is_management, is_staff, management_predicate, scope
+from erm import credentials_dict, is_management, is_staff,is_admin, management_predicate, scope
 from menus import (
     CustomExecutionButton,
     CustomSelectMenu,
@@ -21,7 +21,7 @@ from utils.autocompletes import shift_type_autocomplete, all_shift_type_autocomp
 from utils.constants import BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR, RED_COLOR
 from utils.paginators import SelectPagination, CustomPage
 from utils.timestamp import td_format
-from utils.utils import get_elapsed_time, new_failure_embed, require_settings
+from utils.utils import get_elapsed_time, new_failure_embed, require_settings, log_command_usage
 
 
 class ShiftLogging(commands.Cog):
@@ -145,11 +145,11 @@ class ShiftLogging(commands.Cog):
         extras={"category": "Shift Management"},
     )
     @require_settings()
-    @is_management()
+    @is_admin()
     @app_commands.autocomplete(
         type=shift_type_autocomplete
     )
-    async def duty_admin(self, ctx, member: discord.Member, type: str = "Default"):
+    async def duty_admin(self, ctx, member: discord.Member, type: str = "Default",force:str = "false"):
         if self.bot.shift_management_disabled is True:
             return await new_failure_embed(
                 ctx,
@@ -210,7 +210,7 @@ class ShiftLogging(commands.Cog):
                             if role in [i.id for i in member.roles]:
                                 access = True
                                 break
-                        if access is False:
+                        if access is False and force.lower() != "true":
                             if not msg:
                                 return await ctx.send(
                                     embed=discord.Embed(
@@ -228,9 +228,14 @@ class ShiftLogging(commands.Cog):
                                     ),
                                     view=None
                                 )
+                        elif access is False and force.lower() == "true":
+                            pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
-
+        try:
+            await log_command_usage(self.bot,ctx.guild,ctx.author,f"Duty Admin for {member.name}")
+        except:
+            await log_command_usage(self.bot,ctx.guild,ctx.user,f"Duty Admin for {member.name}")
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
@@ -278,13 +283,26 @@ class ShiftLogging(commands.Cog):
             )
             embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
         elif status == "break":
+            print("On Break status called 2")
             contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+
+            current_break = None
+            for break_item in contained_document.breaks:
+                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                    current_break = break_item
+                    break
+
+            if current_break:
+                break_start_time = f"> **Break Started:** <t:{int(current_break.start_epoch)}:R>\n"
+            else:
+                break_start_time = "> **Break Started:** No ongoing break\n"
+
             embed.colour = ORANGE_COLOR
             embed.add_field(
                 name="Current Shift",
                 value=(
                     f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"{break_start_time}"
                     f"> **Breaks:** {len(contained_document.breaks)}\n"
                     f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),
@@ -413,7 +431,39 @@ class ShiftLogging(commands.Cog):
                 "Maintenance",
                 "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
+        try:
+            maximum_staff = settings.get('shift_management', {}).get('maximum_staff', 0)
+            #print(f"Maximum Staff: {maximum_staff}")
+        except AttributeError:
+            #print("Attribute Error")
+            return
 
+        try:
+            on_duty_staff = await self.bot.shift_management.shifts.db.count_documents({
+                "Guild": ctx.guild.id,
+                "EndEpoch": 0
+            })
+            #print(f"Staff on Duty: {on_duty_staff}")
+        except AttributeError:
+            #print("Attribute Error")
+            return
+        #if author is on duty then bypass the limit
+        shift_cursor = self.bot.shift_management.shifts.db.find({"Guild": ctx.guild.id, "EndEpoch": 0})
+        shifts = await shift_cursor.to_list(length=None)
+
+        if ctx.author.id not in [i['UserID'] for i in shifts]:
+            if on_duty_staff >= maximum_staff and maximum_staff != 0:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Staff Limit Reached",
+                        description="The maximum amount of staff members on duty has been reached. Please wait until a staff member logs off.",
+                        color=BLANK_COLOR
+                    )
+                )
+                return
+        else:
+            pass
+        
         shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         # view = ModificationSelectMenu(ctx.author.id)
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
@@ -464,13 +514,28 @@ class ShiftLogging(commands.Cog):
             )
             embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
         elif status == "break":
+            print("On Break status called")
             contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
+            
+            logging.info(f"All Breaks: {contained_document.breaks}")
+            
+            current_break = None
+            for break_item in contained_document.breaks:
+                logging.info(f"Checking break: {break_item}")  # Debugging log to print each break
+                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                    current_break = break_item
+                    break
+
+            if current_break:
+                break_start_time = f"> **Break Started:** <t:{int(current_break.start_epoch)}:R>\n"
+            else:
+                break_start_time = "> **Break Started:** No ongoing break\n"
             embed.colour = ORANGE_COLOR
             embed.add_field(
                 name="Current Shift",
                 value=(
                     f"> **Shift Started:** <t:{int(contained_document.start_epoch)}:R>\n"
-                    f"> **Break Started:** <t:{int(contained_document.breaks[0].start_epoch)}:R>\n"
+                    f"{break_start_time}"
                     f"> **Breaks:** {len(contained_document.breaks)}\n"
                     f"> **Elapsed Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}"
                 ),

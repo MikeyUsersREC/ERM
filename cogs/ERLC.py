@@ -1,5 +1,5 @@
 import datetime
-
+import re
 import discord
 import roblox
 from discord.ext import commands
@@ -9,6 +9,7 @@ from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog
 import utils.prc_api as prc_api
+from utils.utils import get_discord_by_roblox, log_command_usage
 from discord import app_commands
 import typing
 
@@ -133,6 +134,10 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
+        try:
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
+        except:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"ERLC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(
@@ -596,43 +601,113 @@ class ERLC(commands.Cog):
     @is_server_linked()
     async def server_vehicles(self, ctx: commands.Context):
         guild_id = int(ctx.guild.id)
-        # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         vehicles: list[prc_api.ActiveVehicle] = await self.bot.prc_api.get_server_vehicles(guild_id)
+
         matched = {}
         for item in vehicles:
             for x in players:
                 if x.username == item.username:
                     matched[item] = x
 
-        embed2 = discord.Embed(
-            title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
-            color=BLANK_COLOR,
-            description=""
-        )
         actual_players = []
-        key_maps = {}
         staff = []
         for item in players:
             if item.permission == "Normal":
                 actual_players.append(item)
             else:
                 staff.append(item)
+
+        descriptions = []
+        description = ""
+        for index, (veh, plr) in enumerate(matched.items()):
+            description += f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**\n'
+            if (index + 1) % 20 == 0 or (index + 1) == len(matched):
+                descriptions.append(description)
+                description = ""
+
+        if not descriptions:
+            descriptions.append("> There are no active vehicles in your server.")
+
+        for description in descriptions:
+            embed = discord.Embed(
+                title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
+                color=BLANK_COLOR,
+                description=description
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon.url
+            )
+            await ctx.send(embed=embed)
+
+    @server.group(
+        name="discord",
+        description="A subcommand group for ERLC to Discord-related commands."
+    )
+    async def discord(self, ctx: commands.Context):
+        pass
+
+    @commands.command(
+        name="check",
+        description="Perform a check to see if ERLC players have joined the Discord server."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def check(self, ctx: commands.Context):
+        guild_id = ctx.guild.id
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        if not players:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Players Found",
+                    description="There are no players in the server to check.",
+                    color=BLANK_COLOR
+                )
+            )
         
-        embed2.description += (
-            f"**Active Vehicles [{len(vehicles)}]**\n> " +
-            '\n> '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**' for veh, plr in matched.items()])
+        embed = discord.Embed(
+            title="Players in ERLC Not in Discord",
+            color=BLANK_COLOR,
+            description=""
         )
 
-        if len(vehicles) == 0:
-            embed2.description = "> There are no active vehicles in your server."
+        for player in players:
+            pattern = re.compile(re.escape(player.username), re.IGNORECASE)
+            member_found = False
 
-        embed2.set_author(
+            try:
+                for member in ctx.guild.members:
+                    if pattern.search(member.name):
+                        member_found = True
+                        break
+                    elif pattern.search(member.display_name):
+                        member_found = True
+                        break
+                    elif hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name):
+                        member_found = True
+                        break
+                    else:
+                        discord_id = await get_discord_by_roblox(self.bot, player.username)
+                        if discord_id:
+                            member = ctx.guild.get_member(discord_id)
+                            if member:
+                                member_found = True
+                                break
+            except Exception:
+                pass
+
+            if not member_found:
+                embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
+
+        if embed.description == "":
+            embed.description = "> All players are in the Discord server."
+
+        embed.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
-
-        await ctx.send(embed=embed2)
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):
