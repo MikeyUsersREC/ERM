@@ -48,6 +48,7 @@ class Punishments(commands.Cog):
     @commands.guild_only()
     @commands.hybrid_command(
         name="punish",
+        aliases=["p"],
         description="Punish a user",
         extras={"category": "Punishments"},
         usage="punish <user> <type> <reason>",
