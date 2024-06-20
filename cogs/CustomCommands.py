@@ -56,9 +56,10 @@ class CustomCommands(commands.Cog):
             color=BLANK_COLOR
         ).set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
-        ).set_thumbnail(
-            url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
+        )
+        embed.set_thumbnail(
+            url=ctx.guild.icon
         )
 
         for item in Data["commands"]:

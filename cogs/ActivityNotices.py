@@ -186,7 +186,7 @@ class ActivityCoreCommands:
         )
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         embed.add_field(
             name="Staff Information",
@@ -291,7 +291,7 @@ class ActivityCoreCommands:
                 )
                 embed.set_author(
                     name=ctx.guild.name,
-                    icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    icon_url=ctx.guild.icon
                 )
                 return embed
 
@@ -593,7 +593,7 @@ class ActivityCoreCommands:
             )
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                icon_url=ctx.guild.icon
             )
             return embed
 

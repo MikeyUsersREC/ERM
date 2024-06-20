@@ -68,7 +68,7 @@ class ShiftLogging(commands.Cog):
         )
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
 
 
@@ -257,7 +257,7 @@ class ShiftLogging(commands.Cog):
 
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+            icon_url=ctx.guild.icon,
         )
 
         if shift:
@@ -488,7 +488,7 @@ class ShiftLogging(commands.Cog):
 
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+            icon_url=ctx.guild.icon,
         )
 
         if shift:
@@ -656,7 +656,7 @@ class ShiftLogging(commands.Cog):
         embed.description = f"**Total Shifts**"
         embed.set_author(
             name=f"{ctx.guild.name}",
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+            icon_url=ctx.guild.icon,
         )
 
         embeds = []
@@ -725,7 +725,7 @@ class ShiftLogging(commands.Cog):
                 embed.description = f"**Total Shifts**"
                 embed.set_author(
                     name=f"{ctx.guild.name}",
-                    icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                    icon_url=ctx.guild.icon,
                 )
                 added_staff.append(member.id)
                 embeds.append(embed)
@@ -962,7 +962,7 @@ class ShiftLogging(commands.Cog):
         )
         embed.set_author(
             name=f"{ctx.guild.name}",
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+            icon_url=ctx.guild.icon,
         )
 
 
@@ -1070,7 +1070,7 @@ class ShiftLogging(commands.Cog):
 
                     new_embed.set_author(
                         name=f"{ctx.guild.name}",
-                        icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                        icon_url=ctx.guild.icon,
                     )
                     new_embed.description = ""
                     new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
@@ -1160,7 +1160,7 @@ class ShiftLogging(commands.Cog):
 
                                 new_embed.set_author(
                                     name=f"{ctx.guild.name}",
-                                    icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                                    icon_url=ctx.guild.icon,
                                 )
                                 new_embed.description = ""
                                 new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=0))}\n"
@@ -1230,7 +1230,7 @@ class ShiftLogging(commands.Cog):
 
                         new_embed.set_author(
                             name=f"{ctx.guild.name}",
-                            icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                            icon_url=ctx.guild.icon,
                         )
                         new_embed.description = ""
                         new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"

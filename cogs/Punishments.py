@@ -48,6 +48,7 @@ class Punishments(commands.Cog):
     @commands.guild_only()
     @commands.hybrid_command(
         name="punish",
+        aliases=["p"],
         description="Punish a user",
         extras={"category": "Punishments"},
         usage="punish <user> <type> <reason>",
@@ -284,7 +285,7 @@ class Punishments(commands.Cog):
         )
         embed.set_author(
             name=ctx.guild.name,
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+            icon_url=ctx.guild.icon
         )
         view = ManagementOptions(ctx.author.id)
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
@@ -358,7 +359,7 @@ class Punishments(commands.Cog):
                 )
                 embed.set_author(
                     name=ctx.guild.name,
-                    icon_url=ctx.guild.icon.url if ctx.guild.icon else ''
+                    icon_url=ctx.guild.icon
                 )
                 return embed
 
@@ -542,7 +543,7 @@ class Punishments(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                icon_url=ctx.guild.icon,
             )
 
             embed.set_footer(text="Click 'Mark as Complete' then, enter BOLO ID.")
@@ -558,7 +559,7 @@ class Punishments(commands.Cog):
 
                     new_embed.set_author(
                         name=ctx.guild.name,
-                        icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                        icon_url=ctx.guild.icon,
                     )
 
                     embeds.append(new_embed)
@@ -744,7 +745,7 @@ class Punishments(commands.Cog):
 
             embed.set_author(
                 name=ctx.guild.name,
-                icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                icon_url=ctx.guild.icon,
             )
 
             embed.set_footer(text="Click 'Mark as Complete' then, enter BOLO ID.")
@@ -760,7 +761,7 @@ class Punishments(commands.Cog):
 
                     new_embed.set_author(
                         name=ctx.guild.name,
-                        icon_url=ctx.guild.icon.url if ctx.guild.icon else '',
+                        icon_url=ctx.guild.icon,
                     )
 
                     embeds.append(new_embed)
