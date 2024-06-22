@@ -232,10 +232,10 @@ class ShiftLogging(commands.Cog):
                             pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
-        try:
-            await log_command_usage(self.bot,ctx.guild,ctx.author,f"Duty Admin for {member.name}")
-        except:
-            await log_command_usage(self.bot,ctx.guild,ctx.user,f"Duty Admin for {member.name}")
+        if isinstance(ctx, commands.Context):
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Duty Admin for {member.name}")
+        else:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Duty Admin for {member.name}")
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
@@ -283,12 +283,11 @@ class ShiftLogging(commands.Cog):
             )
             embed.title = "<:ShiftStarted:1178033763477889175> **On-Duty**"
         elif status == "break":
-            print("On Break status called 2")
             contained_document: ShiftItem = await self.bot.shift_management.fetch_shift(shift['_id'])
 
             current_break = None
             for break_item in contained_document.breaks:
-                if break_item.end_epoch == 0:  # Assuming end_epoch is 0 if the break hasn't ended yet
+                if break_item.end_epoch == 0:
                     current_break = break_item
                     break
 

@@ -210,7 +210,7 @@ class OnMessage(commands.Cog):
                 except IndexError:
                     logging.error('IndexError in remote command usage embed')
                     break
-                #Adding check for the command to see if onlt admin is using the ban command
+                #Adding check for the command to see if only admin is using the ban command
                 try:
                     players: list[Player] = await self.bot.prc_api.get_server_players(message.guild.id)
                     actual_players = []

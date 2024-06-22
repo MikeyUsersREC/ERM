@@ -542,8 +542,9 @@ async def get_discord_by_roblox(bot,username):
         
 async def log_command_usage(bot, guild, member, command_name):
     settings = await bot.settings.find_by_id(guild.id)
+    if not settings:
+        return
     if not settings.get("erm_log_channel"):
-        #print("Command logging not enabled.")
         return
 
     try:
@@ -576,6 +577,8 @@ async def log_command_usage(bot, guild, member, command_name):
 
 async def config_change_log(bot,guild,member,data):
     setting = await bot.settings.find_by_id(guild.id)
+    if not setting:
+        return
     if not setting.get("erm_log_channel"):
         return
     try:
