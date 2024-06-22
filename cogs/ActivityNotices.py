@@ -743,9 +743,9 @@ class StaffManagement(commands.Cog):
         member="Who's LOA would you like to administrate? Specify a Discord user."
     )
     async def loa_admin(self, ctx, member: discord.Member):
-        try:
+        if isinstance(ctx, commands.Context):
             await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
-        except:
+        else:
             await log_command_usage(self.bot,ctx.guild, ctx.user, f"LOA Admin: {member}")
 
         return await self.core_commands.core_command_admin(ctx, 'loa', member)

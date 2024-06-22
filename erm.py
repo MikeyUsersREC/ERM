@@ -644,9 +644,9 @@ async def fetch_get_channel(target, identifier):
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
 async def check_exotic_car():
+    initial_time = time.time()
     try:
         async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
-            initial_time = time.time()
             guild_id = items['_id']
             guild = await bot.fetch_guild(guild_id)
             whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')

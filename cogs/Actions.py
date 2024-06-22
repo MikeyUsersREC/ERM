@@ -31,9 +31,9 @@ class Actions(commands.Cog):
             title="Actions",
             color=BLANK_COLOR
         )
-        try:
+        if isinstance(ctx, commands.Context):
             await log_command_usage(self.bot,ctx.guild, ctx.author, f"Actions Manage")
-        except:
+        else:
             await log_command_usage(self.bot,ctx.guild, ctx.user, f"Actions Manage")
         actions = [i async for i in self.bot.db.actions.find({'Guild': ctx.guild.id})]
         for item in actions:

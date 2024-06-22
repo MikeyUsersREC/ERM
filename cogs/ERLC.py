@@ -134,9 +134,9 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
-        try:
+        if isinstance(ctx, commands.Context):
             await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
-        except:
+        else:
             await log_command_usage(self.bot,ctx.guild, ctx.user, f"ERLC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):

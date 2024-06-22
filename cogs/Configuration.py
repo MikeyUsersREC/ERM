@@ -35,10 +35,10 @@ class Configuration(commands.Cog):
     )
     @is_management()
     async def _setup(self, ctx: commands.Context):
-        try:
-            await log_command_usage(ctx.guild, ctx.author, f"Setup")
-        except:
-            await log_command_usage(ctx.guild, ctx.user, f"Setup")
+        if isinstance(ctx, commands.Context):
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Setup")
+        else:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Setup")
         bot = self.bot
         from utils.constants import base_configuration
         current_settings = None
@@ -484,9 +484,9 @@ class Configuration(commands.Cog):
         bot = self.bot
         settings = await bot.settings.find_by_id(ctx.guild.id)
 
-        try:
+        if isinstance(ctx, commands.Context):
             await log_command_usage(self.bot,ctx.guild, ctx.author, f"Config")
-        except:
+        else:
             await log_command_usage(self.bot,ctx.guild, ctx.user, f"Config")
 
         basic_settings_view = BasicConfiguration(bot, ctx.author.id, [
@@ -519,7 +519,6 @@ class Configuration(commands.Cog):
 
             )
         ])
-
         
         loa_config = settings['staff_management'].get('loa_role')
         if isinstance(loa_config, list):
