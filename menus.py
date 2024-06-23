@@ -6658,6 +6658,9 @@ class WhitelistVehiclesManagement(discord.ui.View):
             }
         sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
+        embed = interaction.message.embeds[0]
+        embed.set_field_at(3, name="Current Roles", value=", ".join([f"<@&{i.id}>" for i in select.values]) if select.values else "None")
+        await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Roles Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
     async def whitelisted_vehicle_alert_channel_callback(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
@@ -6678,6 +6681,9 @@ class WhitelistVehiclesManagement(discord.ui.View):
             }
         sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
+        embed = interaction.message.embeds[0]
+        embed.set_field_at(4, name="Current Channel", value=f"<#{select.values[0].id}>")
+        await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicle Alert Channel Set: <#{select.values[0].id}>")
 
     async def add_vehicle_to_role(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -6725,7 +6731,11 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         # Update settings with new vehicles
         sett['ERLC']['whitelisted_vehicles'] = vehicles
+        channel = sett["ERLC"]["whitelisted_vehicle_alert_channel"]
         await bot.settings.update_by_id(sett)
+        embed = interaction.message.embeds[0]
+        embed.set_field_at(5, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
+        await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Added: {', '.join(vehicles)}")
 
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
@@ -6943,6 +6953,15 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                     name="Whitelisted Vehicles",
                     value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game.",
                     inline=False
+                ).add_field(
+                    name="Current Roles",
+                    value=", ".join([f"<@&{i}>" for i in vehicle_restrictions_roles]) if vehicle_restrictions_roles else "None",
+                ).add_field(
+                    name="Current Channel",
+                    value=f"<#{vehicle_restrictions_channel}>" if vehicle_restrictions_channel else "None",
+                ).add_field(
+                    name="Current Whitelisted Vehicles",
+                    value=", ".join(vehicle_restrictions_cars) if vehicle_restrictions_cars else "None",
                 )
         await interaction.response.send_message(
             embed = embed,
