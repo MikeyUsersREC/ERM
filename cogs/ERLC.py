@@ -4,10 +4,11 @@ import discord
 import roblox
 from discord.ext import commands
 
+import logging
 from erm import is_staff, is_management
 from menus import ReloadView
 from utils.constants import *
-from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog
+from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog, ResponseFailure
 import utils.prc_api as prc_api
 from utils.utils import get_discord_by_roblox, log_command_usage
 from discord import app_commands
@@ -641,22 +642,25 @@ class ERLC(commands.Cog):
             )
             await ctx.send(embed=embed)
 
-    @server.group(
-        name="discord",
-        description="A subcommand group for ERLC to Discord-related commands."
-    )
-    async def discord(self, ctx: commands.Context):
-        pass
-
-    @discord.command(
+    @server.command(
         name="check",
-        description="Perform a check to see if ERLC players have joined the Discord server."
+        description="Perform a Discord check on your server to see if all players are in the Discord server."
     )
     @is_staff()
     @is_server_linked()
     async def check(self, ctx: commands.Context):
         guild_id = ctx.guild.id
-        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        try:
+            players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        except ResponseFailure:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="PRC API Error",
+                    description="There was an error fetching players from the PRC API.",
+                    color=BLANK_COLOR
+                )
+            )
+
         if not players:
             return await ctx.send(
                 embed=discord.Embed(
@@ -665,7 +669,7 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-        
+
         embed = discord.Embed(
             title="Players in ERLC Not in Discord",
             color=BLANK_COLOR,
@@ -676,26 +680,26 @@ class ERLC(commands.Cog):
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
             member_found = False
 
-            try:
-                for member in ctx.guild.members:
-                    if pattern.search(member.name):
-                        member_found = True
-                        break
-                    elif pattern.search(member.display_name):
-                        member_found = True
-                        break
-                    elif hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name):
-                        member_found = True
-                        break
-                    else:
-                        discord_id = await get_discord_by_roblox(self.bot, player.username)
-                        if discord_id:
-                            member = ctx.guild.get_member(discord_id)
-                            if member:
-                                member_found = True
-                                break
-            except Exception:
-                pass
+            for member in ctx.guild.members:
+                if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
+                    member_found = True
+                    break
+
+            if not member_found:
+                try:
+                    discord_id = await get_discord_by_roblox(self.bot, player.username)
+                    if discord_id:
+                        member = ctx.guild.get_member(discord_id)
+                        if member:
+                            member_found = True
+                except discord.HTTPException:
+                    return await ctx.send(
+                        embed=discord.Embed(
+                            title="Discord API Error",
+                            description="There was an error while accessing the Discord API.",
+                            color=BLANK_COLOR
+                        )
+                    )
 
             if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
@@ -708,7 +712,6 @@ class ERLC(commands.Cog):
             icon_url=ctx.guild.icon
         )
         await ctx.send(embed=embed)
-
 
 async def setup(bot):
     await bot.add_cog(ERLC(bot))
