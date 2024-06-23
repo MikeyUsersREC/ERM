@@ -201,7 +201,7 @@ class Bot(commands.AutoShardedBot):
             # GDPR.start()
             iterate_prc_logs.start()
             tempban_checks.start()
-            check_exotic_car.start()
+            check_whitelisted_car.start()
             change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -643,7 +643,7 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
-async def check_exotic_car():
+async def check_whitelisted_car():
     initial_time = time.time()
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
             guild_id = items['_id']
@@ -869,7 +869,7 @@ async def handle_guild_logs(item):
     sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
-    current_timestamp = int(datetime.now(tz=pytz.UTC).timestamp())
+    current_timestamp = int(datetime.datetime)
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
 
