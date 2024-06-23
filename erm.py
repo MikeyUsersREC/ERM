@@ -698,6 +698,7 @@ async def check_whitelisted_car():
                         pm_counter[player.username] = 0
                     pm_counter[player.username] += 1
                     await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
+                    await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
                     if pm_counter[player.username] >= 3:
                         embed = discord.Embed(
                             title="Exotic Car Warning",
@@ -721,8 +722,23 @@ async def get_guild(guild_id):
         except discord.HTTPException:
             return None
     return guild
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        try:
+            guild = await bot.fetch_guild(guild_id)
+        except discord.HTTPException:
+            return None
+    return guild
 
 async def fetch_logs(guild_id):
+    try:
+        kill_logs = await bot.prc_api.fetch_kill_logs(guild_id)
+        player_logs = await bot.prc_api.fetch_player_logs(guild_id)
+        return kill_logs, player_logs
+    except Exception as e:
+        channel = await bot.fetch_channel(1213523576603410452)
+        await channel.send(content=f"[3] {(str(e) or repr(e))=}")
+        await asyncio.sleep(1)
     try:
         kill_logs = await bot.prc_api.fetch_kill_logs(guild_id)
         player_logs = await bot.prc_api.fetch_player_logs(guild_id)
@@ -739,7 +755,17 @@ async def process_kill_logs(guild, kill_logs_channel, kill_logs, current_timesta
         for item in kill_logs:
             if (current_timestamp - item.timestamp) > 75:
                 continue
+    players = {}
+    if kill_logs_channel:
+        for item in kill_logs:
+            if (current_timestamp - item.timestamp) > 75:
+                continue
 
+            if item.killer_username not in players:
+                players[item.killer_username] = [1, [item]]
+            else:
+                players[item.killer_username][0] += 1
+                players[item.killer_username][1].append(item)
             if item.killer_username not in players:
                 players[item.killer_username] = [1, [item]]
             else:
@@ -752,9 +778,17 @@ async def process_kill_logs(guild, kill_logs_channel, kill_logs, current_timesta
                 description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>"
             )
             await kill_logs_channel.send(embed=embed)
+            embed = discord.Embed(
+                title="Kill Log",
+                color=BLANK_COLOR,
+                description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>"
+            )
+            await kill_logs_channel.send(embed=embed)
     return players
 
 async def notify_rdm(guild, players):
+    settings = await bot.settings.find_by_id(guild.id)
+    channel = await fetch_get_channel(guild, (settings or {}).get('ERLC', {}).get('rdm_channel', 0))
     settings = await bot.settings.find_by_id(guild.id)
     channel = await fetch_get_channel(guild, (settings or {}).get('ERLC', {}).get('rdm_channel', 0))
         
@@ -766,7 +800,38 @@ async def notify_rdm(guild, players):
                 thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
                 thumbnail = thumbnails[0].image_url
                 pings = [guild.get_role(role_id).mention for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', []) if guild.get_role(role_id)]
+    if channel:
+        for username, value in players.items():
+            count, items = value
+            if count > 3:
+                roblox_player = await bot.roblox.get_user_by_username(username)
+                thumbnails = await bot.roblox.thumbnails.get_user_avatar_thumbnails([roblox_player], size=(420, 420))
+                thumbnail = thumbnails[0].image_url
+                pings = [guild.get_role(role_id).mention for role_id in (settings or {}).get('ERLC', {}).get('rdm_mentionables', []) if guild.get_role(role_id)]
                     
+                embed = discord.Embed(
+                    title="<:security:1169804198741823538> RDM Detected",
+                    color=BLANK_COLOR
+                ).add_field(
+                    name="User Information",
+                    value=(
+                        f"> **Username:** {roblox_player.name}\n"
+                        f"> **User ID:** {roblox_player.id}\n"
+                        f"> **Profile Link:** [Click here](https://roblox.com/users/{roblox_player.id}/profile)\n"
+                        f"> **Account Created:** <t:{int(roblox_player.created.timestamp())}>"
+                    ),
+                    inline=False
+                ).add_field(
+                    name="Abuse Information",
+                    value=(
+                        f"> **Type:** Mass RDM\n"
+                        f"> **Individuals Affected [{count}]:** {', '.join([f'[{i.killed_username}](https://roblox.com/users/{i.killed_user_id}/profile)' for i in items])}\n"
+                        f"> **At:** <t:{int(items[0].timestamp)}>"
+                    ),
+                    inline=False
+                ).set_thumbnail(
+                    url=thumbnail
+                )
                 embed = discord.Embed(
                     title="<:security:1169804198741823538> RDM Detected",
                     color=BLANK_COLOR
@@ -802,22 +867,58 @@ async def notify_rdm(guild, players):
                     ),
                     view=RDMActions(bot)
                 )
+                await channel.send(
+                    ', '.join(pings) if pings else '',
+                    embed=embed,
+                    allowed_mentions=discord.AllowedMentions(
+                        everyone=True,
+                        users=True,
+                        roles=True,
+                        replied_user=True,
+                    ),
+                    view=RDMActions(bot)
+                )
 
 async def handle_shifts(guild, player_logs, current_timestamp, player_logs_channel):
+    settings = await bot.settings.find_by_id(guild.id)
+    automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
+    automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
     settings = await bot.settings.find_by_id(guild.id)
     automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
     automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
 
     staff_roles = await get_staff_roles(guild, settings)
     perm_staff = [member for member in guild.members if member.guild_permissions.manage_messages or member.guild_permissions.manage_guild or member.guild_permissions.administrator and not member.bot]
+    staff_roles = await get_staff_roles(guild, settings)
+    perm_staff = [member for member in guild.members if member.guild_permissions.manage_messages or member.guild_permissions.manage_guild or member.guild_permissions.administrator and not member.bot]
 
+    roblox_to_discord = {int((await bot.oauth2_users.db.find_one({"discord_id": member.id}) or {}).get("roblox_id", 0)): member for member in perm_staff}
     roblox_to_discord = {int((await bot.oauth2_users.db.find_one({"discord_id": member.id}) or {}).get("roblox_id", 0)): member for member in perm_staff}
         
     if player_logs_channel:
         for item in player_logs:
             if (current_timestamp - item.timestamp) > 75:
                 continue
+    if player_logs_channel:
+        for item in player_logs:
+            if (current_timestamp - item.timestamp) > 75:
+                continue
 
+            if item.user_id in roblox_to_discord:
+                if automatic_shifts_enabled:
+                    consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
+                    if (consent_item or {}).get('auto_shifts', True):
+                        shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
+                        if item.type == 'join' and not shift:
+                            await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
+                        elif item.type == 'leave' and shift:
+                            await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
+            embed = discord.Embed(
+                title="Player Join/Leave Log",
+                description=f"[{item.username}](https://roblox.com/users/{item.user_id}/profile) {'joined the server' if item.type == 'join' else 'left the server'} • <t:{int(item.timestamp)}:T>",
+                color=GREEN_COLOR if item.type == 'join' else RED_COLOR
+            )
+            await player_logs_channel.send(embed=embed)
             if item.user_id in roblox_to_discord:
                 if automatic_shifts_enabled:
                     consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
@@ -841,7 +942,18 @@ async def get_staff_roles(guild, settings):
             staff_roles.append(settings["staff_management"]["role"])
         elif isinstance(settings["staff_management"]["role"], list):
             staff_roles.extend(settings["staff_management"]["role"])
+    staff_roles = []
+    if settings["staff_management"].get("role"):
+        if isinstance(settings["staff_management"]["role"], int):
+            staff_roles.append(settings["staff_management"]["role"])
+        elif isinstance(settings["staff_management"]["role"], list):
+            staff_roles.extend(settings["staff_management"]["role"])
 
+    if settings["staff_management"].get("management_role"):
+        if isinstance(settings["staff_management"]["management_role"], int):
+            staff_roles.append(settings["staff_management"]["management_role"])
+        elif isinstance(settings["staff_management"]["management_role"], list):
+            staff_roles.extend(settings["staff_management"]["management_role"])
     if settings["staff_management"].get("management_role"):
         if isinstance(settings["staff_management"]["management_role"], int):
             staff_roles.append(settings["staff_management"]["management_role"])
@@ -851,28 +963,47 @@ async def get_staff_roles(guild, settings):
     staff_roles = [guild.get_role(role) for role in staff_roles if guild.get_role(role)]
     return staff_roles
 
+    staff_roles = [guild.get_role(role) for role in staff_roles if guild.get_role(role)]
+    return staff_roles
+
 async def handle_guild_logs(item):
+    guild = await get_guild(item['_id'])
+    if not guild:
+        return
     guild = await get_guild(item['_id'])
     if not guild:
         return
 
     kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
     player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
+    kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
+    player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
 
+    if not kill_logs_channel and not player_logs_channel:
+        return
     if not kill_logs_channel and not player_logs_channel:
         return
             
     kill_logs, player_logs = await fetch_logs(guild.id)
     if kill_logs is None or player_logs is None:
         return
+    kill_logs, player_logs = await fetch_logs(guild.id)
+    if kill_logs is None or player_logs is None:
+        return
 
+    sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
+    sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
     sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
     current_timestamp = int(datetime.datetime)
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
+    players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
 
+    await notify_rdm(guild, players)
+    await handle_shifts(guild, sorted_player_logs, current_timestamp, player_logs_channel)
+            
     await notify_rdm(guild, players)
     await handle_shifts(guild, sorted_player_logs, current_timestamp, player_logs_channel)
             
