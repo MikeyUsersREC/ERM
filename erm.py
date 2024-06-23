@@ -1079,7 +1079,26 @@ async def check_loa():
                                                     atomic=True,
                                                 )
                                             except discord.HTTPException:
-                                                pass
+                                                channel = settings["staff_management"]["channel"]
+                                                if channel:
+                                                    channel = guild.get_channel(channel)
+                                                    if channel:
+                                                        await channel.send(
+                                                            embed = discord.Embed(
+                                                                title="Failed to Remove Role",
+                                                                description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                                color=RED_COLOR
+                                                            )
+                                                        )
+                                                else:
+                                                    owner = guild.owner
+                                                    await owner.send(
+                                                        embed = discord.Embed(
+                                                            title="Failed to Remove Role",
+                                                            description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                            color=RED_COLOR
+                                                        )
+                                                    )
                         if member:
                             try:
                                 await member.send(embed=discord.Embed(
