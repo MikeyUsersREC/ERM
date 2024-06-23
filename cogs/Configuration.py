@@ -924,10 +924,10 @@ class Configuration(commands.Cog):
     @is_management()
     @require_settings()
     async def server_management(self, ctx: commands.Context):
-        try:
-            await log_command_usage(ctx.guild, ctx.author, f"/server manage")
-        except:
-            await log_command_usage(ctx.guild, ctx.user, f"server manage")
+        if isinstance(ctx, commands.Context):
+            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Server Manage")
+        else:
+            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Server Manage")
 
         embeds = [
             discord.Embed(

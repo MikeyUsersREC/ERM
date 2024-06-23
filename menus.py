@@ -6933,13 +6933,16 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                     description=" "
                 ).add_field(
                     name="Whitelisted Vehicles Roles",
-                    value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts."
+                    value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.",
+                    inline=False
                 ).add_field(
                     name="Whitelisted Vehicle Alert Channel",
-                    value="This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times."
+                    value="This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times.",
+                    inline=False
                 ).add_field(
                     name="Whitelisted Vehicles",
-                    value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game."
+                    value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game.",
+                    inline=False
                 )
         await interaction.response.send_message(
             embed = embed,
