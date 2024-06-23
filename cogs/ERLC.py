@@ -648,7 +648,7 @@ class ERLC(commands.Cog):
     async def discord(self, ctx: commands.Context):
         pass
 
-    @commands.command(
+    @discord.command(
         name="check",
         description="Perform a check to see if ERLC players have joined the Discord server."
     )

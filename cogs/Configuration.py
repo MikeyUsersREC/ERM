@@ -143,9 +143,16 @@ class Configuration(commands.Cog):
         next_button.disabled = True
 
         staff_roles = RoleSelect(ctx.author.id).children[0]
+        staff_roles.row = 0
         staff_roles.placeholder = "Staff Roles"
         staff_roles.callback = check_unlock_override
         staff_roles.min_values = 0
+
+        admin_roles = RoleSelect(ctx.author.id).children[0]
+        admin_roles.row = 1
+        admin_roles.placeholder = "Admin Roles"
+        admin_roles.callback = check_unlock_override
+        admin_roles.min_values = 0
 
         management_roles = RoleSelect(ctx.author.id).children[0]
         management_roles.row = 2
@@ -186,7 +193,7 @@ class Configuration(commands.Cog):
         # prefix.callback = callback_override
         next_button.callback = stop_override
 
-        for item in [staff_roles, management_roles, prefix, next_button]:
+        for item in [staff_roles,admin_roles, management_roles, prefix, next_button]:
             basic_settings.add_item(item)
 
         set_active_view_state(basic_settings)
