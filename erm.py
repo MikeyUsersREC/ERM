@@ -226,7 +226,6 @@ bot = Bot(
     command_prefix=get_prefix,
     case_insensitive=True,
     intents=intents,
-    chunk_guilds_at_startup=False,
     help_command=None,
     allowed_mentions=discord.AllowedMentions(
         replied_user=False, everyone=False, roles=False
