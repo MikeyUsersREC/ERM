@@ -966,53 +966,40 @@ async def get_staff_roles(guild, settings):
     staff_roles = [guild.get_role(role) for role in staff_roles if guild.get_role(role)]
     return staff_roles
 
+import datetime
+from discord.ext import tasks
+
 async def handle_guild_logs(item):
     guild = await get_guild(item['_id'])
     if not guild:
         return
-    guild = await get_guild(item['_id'])
-    if not guild:
-        return
 
-    kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
-    player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
     kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
     player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
 
     if not kill_logs_channel and not player_logs_channel:
         return
-    if not kill_logs_channel and not player_logs_channel:
-        return
-            
-    kill_logs, player_logs = await fetch_logs(guild.id)
-    if kill_logs is None or player_logs is None:
-        return
+
     kill_logs, player_logs = await fetch_logs(guild.id)
     if kill_logs is None or player_logs is None:
         return
 
     sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
-    sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
-    sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
-    current_timestamp = int(datetime.now)
+    current_timestamp = int(datetime.datetime.utcnow().timestamp())
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
-    players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
+    await notify_rdm(guild, players)
+    await handle_shifts(guild, sorted_player_logs, current_timestamp, player_logs_channel)
 
-    await notify_rdm(guild, players)
-    await handle_shifts(guild, sorted_player_logs, current_timestamp, player_logs_channel)
-            
-    await notify_rdm(guild, players)
-    await handle_shifts(guild, sorted_player_logs, current_timestamp, player_logs_channel)
-            
 @tasks.loop(seconds=75, reconnect=True)
 async def iterate_prc_logs():
     # This will aim to constantly update the PRC Logs
     # and the relevant storage data.
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
         await handle_guild_logs(item)
+
 
 @iterate_prc_logs.before_loop
 async def anti_fetch_measure():
