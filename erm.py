@@ -662,7 +662,6 @@ async def check_whitelisted_car():
             logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
-        # Handle both single INT64 and list of role IDs
         if isinstance(whitelisted_vehicle_roles, int):
             exotic_roles = [guild.get_role(whitelisted_vehicle_roles)]
         elif isinstance(whitelisted_vehicle_roles, list):
@@ -683,7 +682,6 @@ async def check_whitelisted_car():
         logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
         logging.info(f"Found {len(players)} players in guild {guild_id}")
 
-        # Create a mapping of vehicles to players
         matched = {}
         for item in vehicles:
             for x in players:
@@ -694,38 +692,39 @@ async def check_whitelisted_car():
             if any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
                 member_found = False
-                # Check if the player is in the guild by name
                 for member in guild.members:
                     if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
                         member_found = True
-                        # If member found, check if they have the required role
                         if not any(role in member.roles for role in exotic_roles):
-                            command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
-                            command_response = await bot.prc_api.run_command(guild_id, command)
-                            if command_response[0] == 200:
-                                logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
-                            else:
-                                logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
-
+                            await run_command(guild_id, player.username, f"Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator.")
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
                             else:
                                 pm_counter[player.username] += 1
-
                             if pm_counter[player.username] == 4:
                                 await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
-                    command = f":pm {player.username} You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role."
-                    command_response = await bot.prc_api.run_command(guild_id, command)
-                    if command_response[0] == 200:
-                        logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
-                    else:
-                        logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
+                    await run_command(guild_id, player.username, "You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role.")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
+
+async def run_command(guild_id, username, message):
+    while True:
+        command = f":pm {username} {message}"
+        command_response = await bot.prc_api.run_command(guild_id, command)
+        if command_response[0] == 200:
+            logging.info(f"Sent PM to {username} in guild {guild_id}")
+            break
+        elif command_response[0] == 429:
+            retry_after = int(command_response[1].get('Retry-After', 5))
+            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
+            break
 
 def is_whitelisted(vehicle_name, whitelisted_vehicle):
     vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
