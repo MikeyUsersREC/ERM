@@ -693,9 +693,8 @@ async def check_whitelisted_car():
         for item in vehicles:
             for x in players:
                 if x.username == item.username:
-                    if item.permission == "Normal":
-                        matched[item] = x
-                        logging.info(f"Matched vehicle {item.name} to player {x.username}.")
+                    matched[item] = x
+                    logging.info(f"Matched vehicle {item.name} to player {x.username}.")
 
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
