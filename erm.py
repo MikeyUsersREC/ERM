@@ -691,7 +691,7 @@ async def check_whitelisted_car():
                     matched[item] = x
 
         for vehicle, player in matched.items():
-            if any(is_whitelisted(vehicle.vehicle_name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
+            if any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
                 member_found = False
                 # Check if the player is in the guild by name
