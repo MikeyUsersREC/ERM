@@ -643,12 +643,10 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 
-@tasks.loop(seconds=30, reconnect=True)
+@tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
-    print("Starting check_whitelisted_car loop...")
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
-        print("Processing guild settings...")
         guild_id = items['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
@@ -661,14 +659,12 @@ async def check_whitelisted_car():
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         
         if not whitelisted_vehicle_roles or not alert_channel_id:
-            print("Missing whitelisted vehicle roles or alert channel ID.")
             continue
 
         exotic_role = discord.utils.get(guild.roles, id=whitelisted_vehicle_roles)
         alert_channel = bot.get_channel(alert_channel_id)
         
         if not exotic_role or not alert_channel:
-            print("Exotic role or alert channel not found.")
             continue
 
         players = await bot.prc_api.get_server_players(guild_id)
@@ -688,7 +684,6 @@ async def check_whitelisted_car():
                     member = guild.get_member(discord_id)
 
             if not member:
-                print(f"No member found for player {player.username}.")
                 continue
 
             def is_whitelisted(vehicle_name, whitelisted_vehicle):
@@ -708,7 +703,6 @@ async def check_whitelisted_car():
                 if player.username not in pm_counter:
                     pm_counter[player.username] = 0
                 pm_counter[player.username] += 1
-                print(f"PMing {player.username} to change their car to a normal car.")
                 await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
                 if pm_counter[player.username] >= 3:
                     embed = discord.Embed(
@@ -722,10 +716,8 @@ async def check_whitelisted_car():
             else:
                 if player.username in pm_counter:
                     del pm_counter[player.username]
-                print(f"{player.username} is not driving an exotic car or has the exotic role.")
-
     end_time = time.time()
-    print(f"Event check_exotic took {end_time - initial_time} seconds")
+    logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
 
 
 async def get_guild(guild_id):
