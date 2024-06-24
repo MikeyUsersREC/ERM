@@ -698,7 +698,7 @@ async def check_whitelisted_car():
                     #If member found, check if they have the required role
                     vehicle = matched.get(player.username)
                     if vehicle and any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles) and not any(role in member.roles for role in exotic_roles):
-                        command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin."
+                        command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
                         command_response = await bot.prc_api.run_command(guild_id, command)
                         if command_response[0] == 200:
                             logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
