@@ -677,57 +677,53 @@ async def check_whitelisted_car():
             logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
             continue
 
-        players = await bot.prc_api.get_server_players(guild_id)
-        vehicles = await bot.prc_api.get_server_vehicles(guild_id)
+        players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+        vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
 
-        # Check users with the whitelisted vehicle role(s)
-        for exotic_role in exotic_roles:
-            if not exotic_role:
-                continue
-            for member in exotic_role.members:
-                player = next((p for p in players if p.username == member.name), None)
-                vehicle = next((v for v in vehicles if v.player_id == player.player_id), None)
-                if player and vehicle:
-                    if not any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
-                        pm_counter[player.username] = pm_counter.get(player.username, 0) + 1
-                        await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a whitelisted vehicle.')
-                        if pm_counter[player.username] >= 3:
-                            logging.info(f"Sending warning message for player {player.username} in guild {guild_id}.")
-                            await alert_channel.send(create_warning_embed(player.username, vehicle.player_id, guild.name))
-                    else:
-                        pm_counter.pop(player.username, None)
+        # Create a mapping of vehicles to players
+        matched = {}
+        for item in vehicles:
+            for x in players:
+                if x.username == item.username:
+                    if item.permission == "Normal":
+                        matched[item] = x
 
-        # Check users without the whitelisted vehicle role(s)
-        for player, vehicle in zip(players, vehicles):
-            member = await find_member(guild, player.username)
-            if member and not any(exotic_role in member.roles for exotic_role in exotic_roles):
-                whitelisted = False
-                for whitelisted_vehicle in whitelisted_vehicles:
-                    if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
-                        whitelisted = True
-                        break
-                
-                if not whitelisted:
-                    pm_counter[player.username] = pm_counter.get(player.username, 0) + 1
-                    await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
-                    if pm_counter[player.username] >= 3:
-                        logging.info(f"Sending warning message for player {player.username} in guild {guild_id}.")
-                        await alert_channel.send(create_warning_embed(player.username, vehicle.player_id, guild.name))
+        for player in players:
+            pattern = re.compile(re.escape(player.username), re.IGNORECASE)
+            member_found = False
+            # Check if the player is in the guild by name
+            for member in guild.members:
+                if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
+                    member_found = True
+                    #If member found, check if they have the required role
+                    vehicle = matched.get(player.username)
+                    if vehicle and any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles) and not any(role in member.roles for role in exotic_roles):
+                        command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
+                        command_response = await bot.prc_api.run_command(guild_id, command)
+                        if command_response[0] == 200:
+                            logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
+                        else:
+                            logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
+
+                        if player.username not in pm_counter:
+                            pm_counter[player.username] = 1
+                        else:
+                            pm_counter[player.username] += 1
+
+                        if pm_counter[player.username] == 4:
+                            await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
+                            pm_counter.pop(player.username)
+                    break
+            if not member_found:
+                command = f":pm {player.username} You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role."
+                command_response = await bot.prc_api.run_command(guild_id, command)
+                if command_response[0] == 200:
+                    logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
                 else:
-                    pm_counter.pop(player.username, None)
+                    logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
-
-async def find_member(guild, username):
-    pattern = re.compile(re.escape(username), re.IGNORECASE)
-    for guild_member in guild.members:
-        if pattern.search(guild_member.name) or pattern.search(guild_member.display_name) or (hasattr(guild_member, 'global_name') and pattern.search(guild_member.global_name)):
-            return guild_member
-    discord_id = await get_discord_by_roblox(bot, username)
-    if discord_id:
-        return guild.get_member(discord_id)
-    return None
 
 def is_whitelisted(vehicle_name, whitelisted_vehicle):
     vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
@@ -745,11 +741,10 @@ def is_whitelisted(vehicle_name, whitelisted_vehicle):
 def create_warning_embed(username, player_id, guild_name):
     return discord.Embed(
         title="Exotic Car Warning",
-        description=f"Player [{username}](https://roblox.com/users/{player_id}/profile) has been PMed 3 times to change their exotic car.",
+        description=f"Player [{username}](https://roblox.com/users/{player_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.",
         color=discord.Color.red(),
         timestamp=datetime.utcnow()
     ).set_footer(text=f"Guild: {guild_name}")
-
 
 async def get_guild(guild_id):
     guild = bot.get_guild(guild_id)
