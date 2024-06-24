@@ -642,7 +642,7 @@ async def fetch_get_channel(target, identifier):
     return channel
 
 pm_counter = {}
-@tasks.loop(minutes=2, reconnect=True)
+@tasks.loop(minutes=30, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
@@ -702,7 +702,7 @@ async def check_whitelisted_car():
                 if player.username not in pm_counter:
                     pm_counter[player.username] = 0
                 pm_counter[player.username] += 1
-                await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
+                print(f"PMing {player.username} to change their car to a normal car.")
                 await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
                 if pm_counter[player.username] >= 3:
                     embed = discord.Embed(
@@ -716,6 +716,8 @@ async def check_whitelisted_car():
             else:
                 if player.username in pm_counter:
                     del pm_counter[player.username]
+                print(f"{player.username} is not driving an exotic car or has the exotic role.")
+
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
 
