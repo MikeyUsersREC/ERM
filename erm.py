@@ -683,10 +683,6 @@ async def check_whitelisted_car():
         logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
         logging.info(f"Found {len(players)} players in guild {guild_id}")
 
-        # Log the attributes of the first vehicle to identify the correct attribute name
-        if vehicles:
-            logging.debug(f"Vehicle attributes: {dir(vehicles[0])}")
-
         # Create a mapping of vehicles to players
         matched = {}
         for item in vehicles:
@@ -695,7 +691,7 @@ async def check_whitelisted_car():
                     matched[item] = x
 
         for vehicle, player in matched.items():
-            if any(is_whitelisted(vehicle.vehicle_name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
+            if any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
                 member_found = False
                 # Check if the player is in the guild by name
