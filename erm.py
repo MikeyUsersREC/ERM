@@ -643,26 +643,13 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 
-import logging
-import time
-import re
-from datetime import datetime
-from fuzzywuzzy import fuzz
-import discord
-from discord.ext import tasks
-
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
-    logging.info("Starting check_whitelisted_car task.")
-    
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
         guild_id = items['_id']
-        logging.info(f"Processing guild with ID: {guild_id}")
-        
         try:
             guild = await bot.fetch_guild(guild_id)
-            logging.info(f"Fetched guild: {guild.name} ({guild.id})")
         except discord.errors.NotFound:
             logging.error(f"Guild with ID {guild_id} not found.")
             continue
@@ -691,18 +678,18 @@ async def check_whitelisted_car():
             continue
 
         players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-        logging.info(f"Retrieved {len(players)} players for guild {guild_id}.")
-        
         vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-        logging.info(f"Retrieved {len(vehicles)} vehicles for guild {guild_id}.")
+
+        logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
+        logging.info(f"Found {len(players)} players in guild {guild_id}")
 
         # Create a mapping of vehicles to players
         matched = {}
         for item in vehicles:
             for x in players:
                 if x.username == item.username:
-                    matched[item] = x
-                    logging.info(f"Matched vehicle with ID {item.id} to player {x.username}.")  # Assuming `item` has an `id` attribute
+                    if item.permission == "Normal":
+                        matched[item] = x
 
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
@@ -711,19 +698,15 @@ async def check_whitelisted_car():
             for member in guild.members:
                 if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
                     member_found = True
-                    logging.info(f"Found guild member matching player {player.username}.")
-                    
                     # If member found, check if they have the required role
                     vehicle = matched.get(player.username)
                     if vehicle and any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles) and not any(role in member.roles for role in exotic_roles):
-                        logging.info(f"User {player.username} is using a whitelisted vehicle without the required role.")
-                        
                         command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
                         command_response = await bot.prc_api.run_command(guild_id, command)
                         if command_response[0] == 200:
-                            logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id}).")
+                            logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
                         else:
-                            logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id}).")
+                            logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
 
                         if player.username not in pm_counter:
                             pm_counter[player.username] = 1
@@ -734,16 +717,13 @@ async def check_whitelisted_car():
                             await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
                             pm_counter.pop(player.username)
                     break
-            
             if not member_found:
-                logging.info(f"Player {player.username} not found in guild members.")
-                
                 command = f":pm {player.username} You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role."
                 command_response = await bot.prc_api.run_command(guild_id, command)
                 if command_response[0] == 200:
-                    logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id}).")
+                    logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
                 else:
-                    logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id}).")
+                    logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
@@ -774,11 +754,9 @@ async def get_guild(guild_id):
     if not guild:
         try:
             guild = await bot.fetch_guild(guild_id)
-            logging.info(f"Fetched guild: {guild.name} ({guild.id})")
         except discord.HTTPException:
-            logging.error(f"Failed to fetch guild with ID {guild_id}.")
             return None
-    return guild
+    return guild.
 
 async def fetch_logs(guild_id):
     try:
