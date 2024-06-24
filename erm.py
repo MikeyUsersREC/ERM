@@ -756,7 +756,7 @@ async def get_guild(guild_id):
             guild = await bot.fetch_guild(guild_id)
         except discord.HTTPException:
             return None
-    return guild.
+    return guild
 
 async def fetch_logs(guild_id):
     try:
