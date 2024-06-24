@@ -711,7 +711,7 @@ async def check_whitelisted_car():
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
-                    await run_command(guild_id, player.username, "You are not in the server, but your vehicle is whitelisted. If you continue to use this vehicle, you will be warned.")
+                    await run_command(guild_id, player.username, "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
