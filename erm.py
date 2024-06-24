@@ -682,6 +682,8 @@ async def check_whitelisted_car():
 
         # Check users with the whitelisted vehicle role(s)
         for exotic_role in exotic_roles:
+            if not exotic_role:
+                continue
             for member in exotic_role.members:
                 player = next((p for p in players if p.username == member.name), None)
                 vehicle = next((v for v in vehicles if v.player_id == player.player_id), None)
@@ -699,7 +701,13 @@ async def check_whitelisted_car():
         for player, vehicle in zip(players, vehicles):
             member = await find_member(guild, player.username)
             if member and not any(exotic_role in member.roles for exotic_role in exotic_roles):
-                if any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
+                whitelisted = False
+                for whitelisted_vehicle in whitelisted_vehicles:
+                    if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
+                        whitelisted = True
+                        break
+                
+                if not whitelisted:
                     pm_counter[player.username] = pm_counter.get(player.username, 0) + 1
                     await bot.prc_api.run_command(guild_id, f':pm {player.username} Please change your car to a normal car.')
                     if pm_counter[player.username] >= 3:
@@ -724,20 +732,14 @@ async def find_member(guild, username):
 def is_whitelisted(vehicle_name, whitelisted_vehicle):
     vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
     whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    
     if vehicle_year_match and whitelisted_year_match:
         vehicle_year = vehicle_year_match.group()
         whitelisted_year = whitelisted_year_match.group()
-        
         if vehicle_year != whitelisted_year:
             return False
-        
         vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
         whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        
-        # Compare base names with fuzzy matching
         return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    
     return False
 
 def create_warning_embed(username, player_id, guild_name):
@@ -865,7 +867,7 @@ async def handle_shifts(guild, player_logs, current_timestamp, player_logs_chann
                         elif item.type == 'leave' and shift:
                             await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
             embed = discord.Embed(
-                title=f"Player {"Join" if item.type == 'join' else 'Leave'} Log",
+                title=f"Player {'Join' if item.type == 'join' else 'Leave'} Log",
                 description=f"[{item.username}](https://roblox.com/users/{item.user_id}/profile) {'joined the server' if item.type == 'join' else 'left the server'} • <t:{int(item.timestamp)}:T>",
                 color=GREEN_COLOR if item.type == 'join' else RED_COLOR
             )
