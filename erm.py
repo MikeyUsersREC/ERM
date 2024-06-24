@@ -690,39 +690,39 @@ async def check_whitelisted_car():
                 if x.username == item.username:
                     matched[item] = x
 
-        for player in players:
-            pattern = re.compile(re.escape(player.username), re.IGNORECASE)
-            member_found = False
-            # Check if the player is in the guild by name
-            for member in guild.members:
-                if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
-                    member_found = True
-                    # If member found, check if they have the required role
-                    vehicle = matched.get(player.username)
-                    if vehicle and any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles) and not any(role in member.roles for role in exotic_roles):
-                        command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
-                        command_response = await bot.prc_api.run_command(guild_id, command)
-                        if command_response[0] == 200:
-                            logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
-                        else:
-                            logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
+        for vehicle, player in matched.items():
+            if any(is_whitelisted(vehicle.name, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
+                pattern = re.compile(re.escape(player.username), re.IGNORECASE)
+                member_found = False
+                # Check if the player is in the guild by name
+                for member in guild.members:
+                    if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
+                        member_found = True
+                        # If member found, check if they have the required role
+                        if not any(role in member.roles for role in exotic_roles):
+                            command = f":pm {player.username} Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator."
+                            command_response = await bot.prc_api.run_command(guild_id, command)
+                            if command_response[0] == 200:
+                                logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
+                            else:
+                                logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
 
-                        if player.username not in pm_counter:
-                            pm_counter[player.username] = 1
-                        else:
-                            pm_counter[player.username] += 1
+                            if player.username not in pm_counter:
+                                pm_counter[player.username] = 1
+                            else:
+                                pm_counter[player.username] += 1
 
-                        if pm_counter[player.username] == 4:
-                            await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
-                            pm_counter.pop(player.username)
-                    break
-            if not member_found:
-                command = f":pm {player.username} You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role."
-                command_response = await bot.prc_api.run_command(guild_id, command)
-                if command_response[0] == 200:
-                    logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
-                else:
-                    logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
+                            if pm_counter[player.username] == 4:
+                                await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
+                                pm_counter.pop(player.username)
+                        break
+                if not member_found:
+                    command = f":pm {player.username} You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role."
+                    command_response = await bot.prc_api.run_command(guild_id, command)
+                    if command_response[0] == 200:
+                        logging.info(f"Sent PM to {player.username} in guild {guild.name} ({guild.id})")
+                    else:
+                        logging.error(f"Failed to send PM to {player.username} in guild {guild.name} ({guild.id})")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
