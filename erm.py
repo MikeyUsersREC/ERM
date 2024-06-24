@@ -643,6 +643,14 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 
+import logging
+import time
+import re
+from datetime import datetime
+from fuzzywuzzy import fuzz
+import discord
+from discord.ext import tasks
+
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
@@ -694,7 +702,7 @@ async def check_whitelisted_car():
             for x in players:
                 if x.username == item.username:
                     matched[item] = x
-                    logging.info(f"Matched vehicle {item.name} to player {x.username}.")
+                    logging.info(f"Matched vehicle with ID {item.id} to player {x.username}.")  # Assuming `item` has an `id` attribute
 
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
