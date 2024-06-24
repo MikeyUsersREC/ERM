@@ -642,10 +642,13 @@ async def fetch_get_channel(target, identifier):
     return channel
 
 pm_counter = {}
-@tasks.loop(seconds=30, reconnect=True)
+
+@tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
+    print("Starting check_whitelisted_car loop...")
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
+        print("Processing guild settings...")
         guild_id = items['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
@@ -658,12 +661,14 @@ async def check_whitelisted_car():
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         
         if not whitelisted_vehicle_roles or not alert_channel_id:
+            print("Missing whitelisted vehicle roles or alert channel ID.")
             continue
 
         exotic_role = discord.utils.get(guild.roles, id=whitelisted_vehicle_roles)
         alert_channel = bot.get_channel(alert_channel_id)
         
         if not exotic_role or not alert_channel:
+            print("Exotic role or alert channel not found.")
             continue
 
         players = await bot.prc_api.get_server_players(guild_id)
@@ -683,6 +688,7 @@ async def check_whitelisted_car():
                     member = guild.get_member(discord_id)
 
             if not member:
+                print(f"No member found for player {player.username}.")
                 continue
 
             def is_whitelisted(vehicle_name, whitelisted_vehicle):
@@ -719,7 +725,8 @@ async def check_whitelisted_car():
                 print(f"{player.username} is not driving an exotic car or has the exotic role.")
 
     end_time = time.time()
-    logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
+    print(f"Event check_exotic took {end_time - initial_time} seconds")
+
 
 async def get_guild(guild_id):
     guild = bot.get_guild(guild_id)
