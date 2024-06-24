@@ -662,7 +662,13 @@ async def check_whitelisted_car():
             logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
-        exotic_role = guild.get_role(whitelisted_vehicle_roles)
+        exotic_role = None
+        if isinstance(whitelisted_vehicle_roles, int):
+            exotic_role = guild.get_role(whitelisted_vehicle_roles)
+        else:
+            logging.warning(f"Invalid whitelisted_vehicle_roles data: {whitelisted_vehicle_roles}")
+            continue
+
         alert_channel = bot.get_channel(alert_channel_id)
 
         if not exotic_role or not alert_channel:
