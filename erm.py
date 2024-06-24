@@ -696,17 +696,22 @@ async def check_whitelisted_car():
                     if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
                         member_found = True
                         if not any(role in member.roles for role in exotic_roles):
-                            await run_command(guild_id, player.username, f"Your vehicle is whitelisted, but you do not have the required role. Please contact an admin or moderator.")
+                            await run_command(guild_id, player.username, f"You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
                             else:
                                 pm_counter[player.username] += 1
+
+                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
+
                             if pm_counter[player.username] == 4:
+                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
-                    await run_command(guild_id, player.username, "You are not in the server, but your vehicle is whitelisted. Please join the server to obtain the required role.")
+                    await run_command(guild_id, player.username, "You are not in the server, but your vehicle is whitelisted. If you continue to use this vehicle, you will be warned.")
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
@@ -740,6 +745,7 @@ def is_whitelisted(vehicle_name, whitelisted_vehicle):
     return False
 
 def create_warning_embed(username, player_id, guild_name):
+    logging.debug(f"Creating warning embed for {username} in guild {guild_name}")
     return discord.Embed(
         title="Exotic Car Warning",
         description=f"Player [{username}](https://roblox.com/users/{player_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.",
@@ -755,6 +761,7 @@ async def get_guild(guild_id):
         except discord.HTTPException:
             return None
     return guild
+
 
 async def fetch_logs(guild_id):
     try:
@@ -885,9 +892,6 @@ async def get_staff_roles(guild, settings):
 
     staff_roles = [guild.get_role(role) for role in staff_roles if guild.get_role(role)]
     return staff_roles
-
-import datetime
-from discord.ext import tasks
 
 async def handle_guild_logs(item):
     guild = await get_guild(item['_id'])
