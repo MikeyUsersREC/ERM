@@ -713,7 +713,7 @@ async def check_whitelisted_car():
 
                             logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                            if pm_counter[player.username] > 3:
+                            if pm_counter[player.username] >= 3:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
                                 pm_counter.pop(player.username)
