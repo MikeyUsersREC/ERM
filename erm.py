@@ -713,7 +713,7 @@ async def check_whitelisted_car():
 
                             logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                            if pm_counter[player.username] == 4:
+                            if pm_counter[player.username] >= 3:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
                                     embed = discord.Embed(
