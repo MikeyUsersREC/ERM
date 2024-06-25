@@ -657,6 +657,7 @@ async def check_whitelisted_car():
         whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
         alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
+        alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
             logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
@@ -671,6 +672,13 @@ async def check_whitelisted_car():
             continue
 
         alert_channel = bot.get_channel(alert_channel_id)
+        if not alert_channel:
+            try:
+                alert_channel = await bot.fetch_channel(alert_channel_id)
+            except discord.HTTPException:
+                alert_channel = None
+                logging.warning(f"Alert channel not found for guild {guild_id}")
+                continue
 
         if not exotic_roles or not alert_channel:
             logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
@@ -696,7 +704,7 @@ async def check_whitelisted_car():
                     if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
                         member_found = True
                         if not any(role in member.roles for role in exotic_roles):
-                            await run_command(guild_id, player.username, f"You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+                            await run_command(guild_id, player.username, alert_message)
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
@@ -705,13 +713,13 @@ async def check_whitelisted_car():
 
                             logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                            if pm_counter[player.username] == 4:
+                            if pm_counter[player.username] >= 3:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
-                    await run_command(guild_id, player.username, "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+                    await run_command(guild_id, player.username, alert_message)
 
     end_time = time.time()
     logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")

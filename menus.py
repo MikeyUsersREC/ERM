@@ -6583,13 +6583,14 @@ class RemoteCommandConfiguration(discord.ui.View):
         await self.bot.settings.update_by_id(sett)
 
 class WhitelistVehiclesManagement(discord.ui.View):
-    def __init__(self, bot, guild_id, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None):
+    def __init__(self, bot, guild_id, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None,alert_message=None):
         super().__init__(timeout=900.0)
         self.bot = bot
         self.guild_id = guild_id
         self.whitelisted_vehicles_roles = whitelisted_vehicles_roles or []
         self.whitelisted_vehicle_alert_channel = whitelisted_vehicle_alert_channel
         self.whitelisted_vehicles = whitelisted_vehicles or []
+        self.alert_message = alert_message or ""
         associated_defaults = associated_defaults or []
 
         # Fetch roles from the guild using their IDs
@@ -6619,15 +6620,23 @@ class WhitelistVehiclesManagement(discord.ui.View):
             row=2
         )
 
+        self.add_message_button = discord.ui.Button(
+            label="Add Alert Message",
+            style=discord.ButtonStyle.secondary,
+            row=2
+        )
+
         # Add components to the view
         self.add_item(self.whitelisted_vehicles_roles_select)
         self.add_item(self.whitelisted_vehicle_alert_channel_select)
         self.add_item(self.add_vehicle_button)
+        self.add_item(self.add_message_button)
 
         # Set the callback for the select menus and button
         self.whitelisted_vehicles_roles_select.callback = self.create_callback(self.whitelisted_vehicles_roles_callback, self.whitelisted_vehicles_roles_select)
         self.whitelisted_vehicle_alert_channel_select.callback = self.create_callback(self.whitelisted_vehicle_alert_channel_callback, self.whitelisted_vehicle_alert_channel_select)
         self.add_vehicle_button.callback = self.create_callback(self.add_vehicle_to_role, self.add_vehicle_button)
+        self.add_message_button.callback = self.create_callback(self.add_alert_message, self.add_message_button)
 
     def create_callback(self, func, component):
         async def callback(interaction: discord.Interaction):
@@ -6737,6 +6746,50 @@ class WhitelistVehiclesManagement(discord.ui.View):
         embed.set_field_at(5, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
         await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Added: {', '.join(vehicles)}")
+
+    async def add_alert_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild_id = interaction.guild.id
+        bot = self.bot
+
+        # Retrieve existing message if any
+        sett = await bot.settings.find_by_id(guild_id)
+        existing_message = sett.get('ERLC', {}).get('alert_message', "")
+
+        modal = CustomModal(
+            "Add Alert Message",
+            [
+                (
+                    "message",
+                    discord.ui.TextInput(
+                        label="Message",
+                        placeholder="e.g. You are not allowed to drive this vehicle. Please contact an admin for assistance.",
+                        default=existing_message
+                    )
+                )
+            ], {
+                "ephemeral": True
+            }
+        )
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        
+        if not modal.message.value:
+            return
+        
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'whitelisted_vehicles_roles': [],
+                'whitelisted_vehicle_alert_channel': 0,
+                'whitelisted_vehicles': [],
+                'alert_message': ""
+            }
+        
+        sett['ERLC']['alert_message'] = modal.message.value
+        await bot.settings.update_by_id(sett)
+        embed = interaction.message.embeds[0]
+        embed.set_field_at(6, name="Alert Message", value=modal.message.value)
+        await interaction.edit_original_response(embed=embed)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicle Alert Message Set: {modal.message.value}")
 
 class ERLCIntegrationConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -6929,13 +6982,15 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
         vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
         vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
+        alert_message = settings.get('ERLC', {}).get('alert_message', "")
         
         view = WhitelistVehiclesManagement(
             self.bot,
             interaction.guild.id,
             whitelisted_vehicles_roles=vehicle_restrictions_roles,
             whitelisted_vehicle_alert_channel=vehicle_restrictions_channel,
-            whitelisted_vehicles=vehicle_restrictions_cars
+            whitelisted_vehicles=vehicle_restrictions_cars,
+            alert_message=alert_message
         )
         embed = discord.Embed(
                     title="Whitelisted Vehicles",
@@ -6954,6 +7009,10 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                     value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game.",
                     inline=False
                 ).add_field(
+                    name="Alert Message",
+                    value="This is the message that is sent to the roblox player if they are caught using a whitelisted vehicle without the correct roles.",
+                    inline=False
+                ).add_field(
                     name="Current Roles",
                     value=", ".join([f"<@&{i}>" for i in vehicle_restrictions_roles]) if vehicle_restrictions_roles else "None",
                 ).add_field(
@@ -6962,6 +7021,9 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 ).add_field(
                     name="Current Whitelisted Vehicles",
                     value=", ".join(vehicle_restrictions_cars) if vehicle_restrictions_cars else "None",
+                ).add_field(
+                    name="Alert Message",
+                    value=alert_message if alert_message else "None",
                 )
         await interaction.response.send_message(
             embed = embed,
