@@ -713,9 +713,23 @@ async def check_whitelisted_car():
 
                             logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                            if pm_counter[player.username] >= 3:
+                            if pm_counter[player.username] == 4:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
-                                await alert_channel.send(embed=create_warning_embed(player.username, player.user_id, guild.name))
+                                try:
+                                    embed = discord.Embed(
+                                        title="Whitelisted Vehicle Warning",
+                                        description=f"""
+                                        > Player [{player.username}](https://roblox.com/users/{player.user_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                        """,
+                                        color=discord.Color.red(),
+                                        timestamp=datetime.utcnow()
+                                    ).set_footer(
+                                        text=f"Guild: {guild.name}",
+                                    )
+                                    await alert_channel.send(embed=embed)
+                                except discord.HTTPException as e:
+                                    logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                                logging.info(f"Removing {player.username} from PM counter")
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
@@ -751,15 +765,6 @@ def is_whitelisted(vehicle_name, whitelisted_vehicle):
         whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
         return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
     return False
-
-def create_warning_embed(username, player_id, guild_name):
-    logging.debug(f"Creating warning embed for {username} in guild {guild_name}")
-    return discord.Embed(
-        title="Exotic Car Warning",
-        description=f"Player [{username}](https://roblox.com/users/{player_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.",
-        color=discord.Color.red(),
-        timestamp=datetime.utcnow()
-    ).set_footer(text=f"Guild: {guild_name}")
 
 async def get_guild(guild_id):
     guild = bot.get_guild(guild_id)
