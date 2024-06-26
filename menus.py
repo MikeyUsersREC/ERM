@@ -6668,7 +6668,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
         sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
-        embed.set_field_at(3, name="Current Roles", value=", ".join([f"<@&{i.id}>" for i in select.values]) if select.values else "None")
+        embed.set_field_at(4, name="Current Roles", value=", ".join([f"<@&{i.id}>" for i in select.values]) if select.values else "None")
         await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Roles Set: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
@@ -6691,7 +6691,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
         sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
-        embed.set_field_at(4, name="Current Channel", value=f"<#{select.values[0].id}>")
+        embed.set_field_at(5, name="Current Channel", value=f"<#{select.values[0].id}>")
         await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicle Alert Channel Set: <#{select.values[0].id}>")
 
@@ -6743,7 +6743,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
         channel = sett["ERLC"]["whitelisted_vehicle_alert_channel"]
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
-        embed.set_field_at(5, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
+        embed.set_field_at(6, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
         await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicles Added: {', '.join(vehicles)}")
 
@@ -6787,7 +6787,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
         sett['ERLC']['alert_message'] = modal.message.value
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
-        embed.set_field_at(6, name="Alert Message", value=modal.message.value)
+        embed.set_field_at(7, name="Alert Message", value=modal.message.value)
         await interaction.edit_original_response(embed=embed)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Whitelisted Vehicle Alert Message Set: {modal.message.value}")
 
