@@ -729,7 +729,7 @@ async def check_whitelisted_car():
                                         > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                         """,
                                         color=discord.Color.red(),
-                                        timestamp=datetime.utcnow()
+                                        timestamp=datetime.datetime.now()
                                     ).set_footer(
                                         text=f"Guild: {guild.name}",
                                     )
@@ -759,7 +759,7 @@ async def check_whitelisted_car():
                                 > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                 """,
                                 color=discord.Color.red(),
-                                timestamp=datetime.utcnow()
+                                timestamp=datetime.datetime.now()
                             ).set_footer(
                                 text=f"Guild: {guild.name}",
                             )
