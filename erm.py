@@ -643,7 +643,7 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 
-@tasks.loop(seconds=30, reconnect=True)
+@tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
@@ -723,16 +723,17 @@ async def check_whitelisted_car():
                             if pm_counter[player.username] >= 4:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
+                                    avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
                                         title="Whitelisted Vehicle Warning",
                                         description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
                                         """,
                                         color=discord.Color.red(),
                                         timestamp=datetime.utcnow()
                                     ).set_footer(
-                                        text=f"Guild: {guild.name}",
-                                    )
+                                        text=f"Powered by ERM Systems",
+                                    ).set_thumbnail(url=avatar_url)
                                     await alert_channel.send(embed=embed)
                                 except discord.HTTPException as e:
                                     logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
@@ -753,15 +754,17 @@ async def check_whitelisted_car():
                     if pm_counter[player.username] >= 4:
                         logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                         try:
+                            avatar_url = await get_player_avatar_url(player.id)
                             embed = discord.Embed(
                                 title="Whitelisted Vehicle Warning",
                                 description=f"""
-                                > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
                                 """,
                                 color=discord.Color.red(),
                                 timestamp=datetime.datetime.now(tz=pytz.UTC)
                             ).set_footer(
-                                text=f"Guild: {guild.name}",
+                                text=f"Powered by ERM Systems",
+                                ).set_thumbnail(url=avatar_url),
                             )
                             await alert_channel.send(embed=embed)
                         except discord.HTTPException as e:
@@ -809,6 +812,12 @@ async def get_guild(guild_id):
             return None
     return guild
 
+async def get_player_avatar_url(player_id):
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=30x30&format=Png&isCircular=false"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return data['data'][0]['imageUrl']
 
 async def fetch_logs(guild_id):
     try:
