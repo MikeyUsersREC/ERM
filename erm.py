@@ -643,7 +643,7 @@ async def fetch_get_channel(target, identifier):
 
 pm_counter = {}
 
-@tasks.loop(minutes=2, reconnect=True)
+@tasks.loop(seconds=30, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
     async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
