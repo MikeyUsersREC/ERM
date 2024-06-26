@@ -763,9 +763,8 @@ async def check_whitelisted_car():
                                 color=discord.Color.red(),
                                 timestamp=datetime.datetime.now(tz=pytz.UTC)
                             ).set_footer(
-                                text=f"Powered by ERM Systems",
-                                ).set_thumbnail(url=avatar_url),
-                            )
+                                text="Powered by ERM Systems",
+                            ).set_thumbnail(url=avatar_url)
                             await alert_channel.send(embed=embed)
                         except discord.HTTPException as e:
                             logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
