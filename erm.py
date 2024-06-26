@@ -812,7 +812,7 @@ async def get_guild(guild_id):
     return guild
 
 async def get_player_avatar_url(player_id):
-    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=30x30&format=Png&isCircular=false"
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             data = await response.json()
