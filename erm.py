@@ -703,17 +703,24 @@ async def check_whitelisted_car():
                 for member in guild.members:
                     if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
                         member_found = True
-                        if not any(role in member.roles for role in exotic_roles):
+                        has_exotic_role = False
+                        for role in exotic_roles:
+                            if role in member.roles:
+                                has_exotic_role = True
+                                break
+                        
+                        if not has_exotic_role:
+                            logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
                             await run_command(guild_id, player.username, alert_message)
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
+                                logging.debug(f"PM Counter for {player.username}: 1")
                             else:
                                 pm_counter[player.username] += 1
+                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
-
-                            if pm_counter[player.username] == 4:
+                            if pm_counter[player.username] >= 4:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
                                     embed = discord.Embed(
@@ -733,11 +740,38 @@ async def check_whitelisted_car():
                                 pm_counter.pop(player.username)
                         break
                 if not member_found:
+                    logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
                     await run_command(guild_id, player.username, alert_message)
 
-    end_time = time.time()
-    logging.warning(f"Event check_exotic took {end_time - initial_time} seconds")
+                    if player.username not in pm_counter:
+                        pm_counter[player.username] = 1
+                        logging.debug(f"PM Counter for {player.username}: 1")
+                    else:
+                        pm_counter[player.username] += 1
+                        logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
+                    if pm_counter[player.username] >= 4:
+                        logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
+                        try:
+                            embed = discord.Embed(
+                                title="Whitelisted Vehicle Warning",
+                                description=f"""
+                                > Player [{player.username}](https://roblox.com/users/{player.user_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                """,
+                                color=discord.Color.red(),
+                                timestamp=datetime.utcnow()
+                            ).set_footer(
+                                text=f"Guild: {guild.name}",
+                            )
+                            await alert_channel.send(embed=embed)
+                        except discord.HTTPException as e:
+                            logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                        logging.info(f"Removing {player.username} from PM counter")
+                        pm_counter.pop(player.username)
+
+    end_time = time.time()
+    logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
+    
 async def run_command(guild_id, username, message):
     while True:
         command = f":pm {username} {message}"
