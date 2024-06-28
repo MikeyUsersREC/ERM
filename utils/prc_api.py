@@ -239,6 +239,9 @@ class PRCApiClient:
                 killed_username=log_item['Killed'].split(':')[0],
                 killed_user_id=log_item['Killed'].split(':')[1]
             ) for log_item in response_json]
+        elif status_code == 429:
+            retry_after = int(response_json[1].get('Retry-After', 5))
+            await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
                 status_code=status_code,
@@ -270,6 +273,9 @@ class PRCApiClient:
                 timestamp=log_item['Timestamp'],
                 type='join' if log_item['Join'] is True else 'leave'
             ) for log_item in response_json]
+        elif status_code == 429:
+            retry_after = int(response_json[1].get('Retry-After', 5))
+            await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
                 status_code=status_code,

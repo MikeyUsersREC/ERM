@@ -4199,6 +4199,104 @@ class ShiftTypeManagement(discord.ui.View):
         self.value = "delete"
         self.stop()
 
+class PermissionTypeManagement(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=600.0)
+        self.user_id = user_id
+        self.value = None
+        self.selected_for_deletion = None
+        self.name_for_creation = None
+        self.modal = None
+
+    @discord.ui.button(label="Create", style=discord.ButtonStyle.green)
+    async def _create(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.user_id]:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ))
+        # await interaction.response.defer(thinking=False)
+        self.modal = CustomModal(
+            "Create Permission Type",
+            [
+                (
+                    "permission_type_name",
+                    discord.ui.TextInput(
+                        label="Name",
+                        placeholder="Name of Permission Type"
+                    )
+                )
+            ]
+        )
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        if self.modal.permission_type_name.value:
+            self.name_for_creation = self.modal.permission_type_name.value
+        else:
+            return
+        self.value = 'create'
+        self.stop()
+
+    @discord.ui.button(label="Edit", style=discord.ButtonStyle.primary)
+    async def _edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.user_id]:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ))
+        # await interaction.response.defer(thinking=False)
+        self.modal = CustomModal(
+            "Edit Permission Type",
+            [
+                (
+                    "permission_type_name",
+                    discord.ui.TextInput(
+                        label="Name",
+                        placeholder="Name of Permission Type"
+                    )
+                )
+            ]
+        )
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        if self.modal.permission_type_name.value:
+            self.name_for_creation = self.modal.permission_type_name.value
+        else:
+            return
+        
+        self.value = 'edit'
+        self.stop()
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
+    async def _delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in [self.user_id]:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ))
+        self.modal = CustomModal(
+            "Permission Type Deletion",
+            [
+                (
+                    'permission_type',
+                    discord.ui.TextInput(
+                        label="Permission Type Name",
+                        placeholder="Name of the Permission Type"
+                    )
+                )
+            ]
+        )
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        if self.modal.permission_type.value:
+            self.selected_for_deletion = self.modal.permission_type.value
+        else:
+            return
+        self.value = "delete"
+        self.stop()
 
 class RoleQuotaManagement(discord.ui.View):
     def __init__(self, user_id: int):
@@ -7031,6 +7129,333 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             ephemeral=True
     )
 
+    @discord.ui.button(
+        label="ERLC Statics Updates",
+        row=3
+    )
+    async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        
+        view = ERLCStaticsConfiguration(self.bot, interaction.guild.id, interaction)
+        embed = discord.Embed(
+                    title="ERLC Statics",
+                    color=blank_color,
+                    description="> This module allows you to select the channels where your ERLC Server Statics will be displayed and updated in real-time.\n> ERM provides several different statics that can be displayed in your server. These include the following:"
+                ).add_field(
+                    name="Total Player Count",
+                    value="This is the maximum number of players that can join your server at any given time.",
+                    inline=False
+                ).add_field(
+                    name="Current Player Count",
+                    value="This is the number of players that are currently in your server at any given time.",
+                    inline=False
+                ).add_field(
+                    name="In-Game Staff",
+                    value="This is the number of staff members currently in-game.",
+                    inline=False
+                ).add_field(
+                    name="On-Duty Staff",
+                    value="This is the number of staff members currently on-duty in your server.",
+                    inline=False
+                ).add_field(
+                    name="Queue Count",
+                    value="This is the number of players currently in the queue to join your server.",
+                    inline=False
+                ).add_field(
+                    name="Moderator Count",
+                    value="This is the number of moderators in your server present in-game.",
+                    inline=False
+                ).add_field(
+                    name="Admin Count",
+                    value="This is the number of admins in your server present in-game.",
+                    inline=False
+                ).set_footer(
+                    text="Please select Voice Channels for the Statics to be displayed in your server. Otherwise the statics will not be updated due to channels limitations." 
+                )
+        await interaction.response.send_message(
+            embed = embed,
+            view=view,
+            ephemeral=True
+        )
+
+class ERLCStaticsConfiguration(discord.ui.View):
+    def __init__(self, bot, guild_id, interaction):
+        super().__init__(timeout=900.0)
+
+        self.bot = bot
+        self.guild_id = guild_id
+        self.interaction = interaction
+
+        self.total_player_button = discord.ui.Button(
+            label="Total Players",
+            style=discord.ButtonStyle.secondary,
+            row=0
+        )
+
+        self.current_player_button = discord.ui.Button(
+            label="Current Players",
+            style=discord.ButtonStyle.secondary,
+            row=0
+        )
+        
+        self.in_game_staff_button = discord.ui.Button(
+            label="In-Game Staff Count",
+            style = discord.ButtonStyle.secondary,
+            row=0
+        )
+
+        self.on_duty_staff_button = discord.ui.Button(
+            label="On-Duty Staff Count",
+            style = discord.ButtonStyle.secondary,
+            row=0
+        )
+
+        self.queue_channel_button = discord.ui.Button(
+            label="Queue Count",
+            style=discord.ButtonStyle.secondary,
+            row=1
+        )
+
+        self.mod_count_button = discord.ui.Button(
+            label="Moderator Count",
+            style = discord.ButtonStyle.secondary,
+            row=1
+        )
+
+        self.admin_count_button = discord.ui.Button(
+            label="Admin Count",
+            style = discord.ButtonStyle.secondary,
+            row=1
+        )
+                
+        self.add_item(self.total_player_button)
+        self.add_item(self.current_player_button)
+        self.add_item(self.in_game_staff_button)
+        self.add_item(self.on_duty_staff_button)
+        self.add_item(self.queue_channel_button)
+        self.add_item(self.mod_count_button)
+        self.add_item(self.admin_count_button)
+
+        self.total_player_button.callback = self.create_callback(self.total_player_channel, self.total_player_button)
+        self.current_player_button.callback = self.create_callback(self.current_player_channel, self.current_player_button)
+        self.queue_channel_button.callback = self.create_callback(self.queue_channel, self.queue_channel_button)
+        self.in_game_staff_button.callback = self.create_callback(self.in_game_staff, self.in_game_staff_button)
+        self.on_duty_staff_button.callback = self.create_callback(self.on_duty_staff, self.on_duty_staff_button)
+        self.mod_count_button.callback = self.create_callback(self.mod_count, self.mod_count_button)
+        self.admin_count_button.callback = self.create_callback(self.admin_count, self.admin_count_button)
+
+    def create_callback(self, func, component):
+        async def callback(interaction: discord.Interaction):
+            # Call the original function with the correct arguments
+            if isinstance(component, discord.ui.Button):
+                return await func(interaction, component)
+        return callback
+
+    async def total_player_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        statics = sett.get('ERLC', {}).get('statics', {})
+        total_player_channel = statics.get('total_player_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "Total Players Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=total_player_channel)],  # Wrapping in a list
+            "total_player_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def current_player_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        current_player_channel = statics.get('current_players_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "Current Players Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=current_player_channel)],  # Wrapping in a list
+            "current_players_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def queue_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        queue_channel = statics.get('queue_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "Queue Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=queue_channel)],  # Wrapping in a list
+            "queue_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def in_game_staff(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        in_game_staff = statics.get('in_game_staff_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "In-Game Staff Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=in_game_staff)],  # Wrapping in a list
+            "in_game_staff_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def on_duty_staff(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        on_duty_staff = statics.get('on_duty_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "On-Duty Staff Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=on_duty_staff)],  # Wrapping in a list
+            "on_duty_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def mod_count(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        mod_count = statics.get('mod_count_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "Moderator Count Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=mod_count)],  # Wrapping in a list
+            "mod_count_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    async def admin_count(self, interaction: discord.Interaction, button: discord.ui.Button):
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        statics = sett.get('ERLC', {}).get('statics', {})
+        admin_count = statics.get('admin_count_channel', 0)
+        view = ERLC_Channels(
+            self.bot,
+            self.guild_id,
+            "Admin Count Channel",
+            [discord.ChannelType.text],
+            1,
+            0,
+            [discord.Object(id=admin_count)],  # Wrapping in a list
+            "admin_count_channel"
+        )
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+class ERLC_Channels(discord.ui.View):
+    def __init__(self, bot, guild_id, placeholder, channel_types, max_values, min_values, default_values=None, data=None):
+        super().__init__(timeout=900.0)
+        self.bot = bot
+        self.guild_id = guild_id
+        self.placeholder = placeholder
+        self.channel_types = channel_types
+        self.max_values = max_values
+        self.min_values = min_values
+        self.default_values = default_values or []
+        self.data = data
+
+        self.channel_select = discord.ui.ChannelSelect(
+            placeholder=self.placeholder,
+            max_values=self.max_values,
+            min_values=self.min_values,
+            channel_types=self.channel_types,
+            default_values=self.default_values
+        )
+
+        self.add_item(self.channel_select)
+        self.channel_select.callback = self.create_callback(self.channel_select_callback, self.channel_select)
+
+    def create_callback(self, func, component):
+        async def callback(interaction: discord.Interaction):
+            # Call the original function with the correct arguments
+            if isinstance(component, discord.ui.ChannelSelect):
+                return await func(interaction, component)
+        return callback
+
+    async def channel_select_callback(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        value = await self.interaction_check(interaction)
+        if not value:
+            return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'statics': {}
+            }
+        if not sett['ERLC'].get('statics'):
+            sett['ERLC']['statics'] = {}
+
+        statics = sett['ERLC']['statics']
+        statics[self.data] = select.values[0].id if select.values else 0
+
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"{self.data} Set: <#{select.values[0].id}>")
 
 class RoleSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
