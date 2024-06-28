@@ -658,8 +658,8 @@ async def check_whitelisted_car():
         vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
         status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
 
-        whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
-        alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
+        whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
+        alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
         onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
@@ -695,6 +695,10 @@ async def check_whitelisted_car():
         if administrator_channel != 0:
             await administrator_channel.edit(name=f"Server Administrator: {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}")
 
+        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
+        if not enable_vehicle_restrictions:
+            continue
+
         if not whitelisted_vehicle_roles or not alert_channel_id:
             continue
 
@@ -717,8 +721,6 @@ async def check_whitelisted_car():
             continue
 
         logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
-        logging.info(f"Found {len(players)} players in guild {guild_id}")
-
         matched = {}
         for item in vehicles:
             for x in players:
