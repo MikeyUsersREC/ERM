@@ -874,7 +874,8 @@ class ShiftLogging(commands.Cog):
                 break_seconds = 0
 
                 total_seconds += get_elapsed_time(document)
-
+                if "Moderations" in document.keys():
+                    moderations += len(document["Moderations"])
                 if document["UserID"] not in [item["id"] for item in all_staff]:
                     all_staff.append(
                         {
