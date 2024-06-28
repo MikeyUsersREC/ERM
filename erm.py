@@ -691,7 +691,7 @@ async def check_whitelisted_car():
         current_players_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('current_players_channel', 0))
         owner_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('owner_channel', 0))
         moderator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('mod_count_channel', 0))
-        administrator_channel = await fetch_get_channel(guild, items['ERLC']["statics'].get('admin_count_channel', 0))
+        administrator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('admin_count_channel', 0))
 
         if total_player_channel != 0:
             await total_player_channel.edit(name=f"Maximum Players: {status.max_players}")
