@@ -273,7 +273,7 @@ async def AutoDefer(ctx: commands.Context):
                 return await ctx.defer(ephemeral=True)
         if ctx.command.extras.get("ignoreDefer") is True:
             return
-
+        await ctx.defer()
 
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):
@@ -282,6 +282,7 @@ async def loggingCommandExecution(ctx: commands.Context):
         logging.info(("Shard ID ::: " + str(ctx.guild.shard_id)) if ctx.guild is not None else 'Shard ID ::: {}'.format("-1, Direct Messages"))
     else:
         logging.info("Command could not be found in internal context storage. Please report.")
+    del internal_command_storage[ctx]
 
 
 client = roblox.Client()

@@ -246,7 +246,6 @@ class Search(commands.Cog):
     )
     @require_settings()
     async def search(self, ctx, *, query):
-        await ctx.typing()
         if self.bot.punishments_disabled is True:
             return await failure_embed(
                 ctx,
