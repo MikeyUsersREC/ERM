@@ -63,7 +63,6 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
-        await ctx.typing()
         settings = await self.bot.settings.find_by_id(ctx.guild.id) or {}
         if not settings:
             return await ctx.send(
