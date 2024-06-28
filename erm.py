@@ -651,7 +651,6 @@ async def check_whitelisted_car():
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
-            logging.error(f"Guild with ID {guild_id} not found.")
             continue
 
         players: list[Player] = await bot.prc_api.get_server_players(guild_id)
@@ -696,7 +695,6 @@ async def check_whitelisted_car():
             await administrator_channel.edit(name=f"Server Administrator: {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}")
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
-            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
         if isinstance(whitelisted_vehicle_roles, int):
@@ -704,7 +702,6 @@ async def check_whitelisted_car():
         elif isinstance(whitelisted_vehicle_roles, list):
             exotic_roles = [guild.get_role(role_id) for role_id in whitelisted_vehicle_roles if guild.get_role(role_id)]
         else:
-            logging.warning(f"Invalid whitelisted_vehicle_roles data: {whitelisted_vehicle_roles}")
             continue
 
         alert_channel = bot.get_channel(alert_channel_id)
@@ -713,11 +710,9 @@ async def check_whitelisted_car():
                 alert_channel = await bot.fetch_channel(alert_channel_id)
             except discord.HTTPException:
                 alert_channel = None
-                logging.warning(f"Alert channel not found for guild {guild_id}")
                 continue
 
         if not exotic_roles or not alert_channel:
-            logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
             continue
 
         logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
@@ -743,7 +738,6 @@ async def check_whitelisted_car():
                                 break
                         
                         if not has_exotic_role:
-                            logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
                             await run_command(guild_id, player.username, alert_message)
 
                             if player.username not in pm_counter:
@@ -756,6 +750,7 @@ async def check_whitelisted_car():
                             if pm_counter[player.username] >= 4:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
+                                    avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
                                         title="Whitelisted Vehicle Warning",
                                         description=f"""
@@ -764,12 +759,11 @@ async def check_whitelisted_car():
                                         color=discord.Color.red(),
                                         timestamp=datetime.datetime.now(tz=pytz.UTC)
                                     ).set_footer(
-                                        text=f"Guild: {guild.name}",
-                                    )
+                                        text=f"Powered by ERM Systems",
+                                    ).set_thumbnail(url=avatar_url)
                                     await alert_channel.send(embed=embed)
                                 except discord.HTTPException as e:
                                     logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                                logging.info(f"Removing {player.username} from PM counter")
                                 pm_counter.pop(player.username)
                         break
                     elif member_found == False:
@@ -842,6 +836,12 @@ async def get_guild(guild_id):
             return None
     return guild
 
+async def get_player_avatar_url(player_id):
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return data['data'][0]['imageUrl']
 
 async def fetch_logs(guild_id):
     try:
