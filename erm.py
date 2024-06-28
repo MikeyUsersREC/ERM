@@ -654,10 +654,50 @@ async def check_whitelisted_car():
         except discord.errors.NotFound:
             continue
 
-        whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
-        alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
+        players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+        vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
+        status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
+
+        whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
+        alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
+            "Guild": guild_id, "EndEpoch": 0
+        })])
+        queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
+
+        client = roblox.Client()
+
+        total_player_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('total_player_channel', 0))
+        on_duty_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('on_duty_channel', 0))
+        in_game_staff_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('in_game_staff_channel', 0))
+        queue_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('queue_channel', 0))
+        current_players_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('current_players_channel', 0))
+        owner_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('owner_channel', 0))
+        moderator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('mod_count_channel', 0))
+        administrator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('admin_count_channel', 0))
+
+        if total_player_channel != 0:
+            await total_player_channel.edit(name=f"Maximum Players: {status.max_players}")
+        if on_duty_channel != 0:
+            await on_duty_channel.edit(name=f"On Duty: {onduty}")
+        if in_game_staff_channel != 0:
+            await in_game_staff_channel.edit(name=f"In Game Staff: {len(list(filter(lambda x: x.permission != 'Normal', players)))}")
+        if queue_channel != 0:
+            await queue_channel.edit(name=f"Queue: {queue}")
+        if current_players_channel != 0:
+            await current_players_channel.edit(name=f"Current Players: {status.current_players}")
+        if owner_channel != 0:
+            await owner_channel.edit(name=f"Server Owner: {(await client.get_user(status.owner_id)).name}")
+        if moderator_channel != 0:
+            await moderator_channel.edit(name=f"Server Moderator: {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}")
+        if administrator_channel != 0:
+            await administrator_channel.edit(name=f"Server Administrator: {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}")
+
+        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
+        if not enable_vehicle_restrictions:
+            continue
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
             continue
@@ -680,9 +720,7 @@ async def check_whitelisted_car():
         if not exotic_roles or not alert_channel:
             continue
 
-        players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-        vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-
+        #logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
         matched = {}
         for item in vehicles:
             for x in players:
@@ -707,22 +745,22 @@ async def check_whitelisted_car():
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
-                                logging.debug(f"PM Counter for {player.username}: 1")
+                                #logging.debug(f"PM Counter for {player.username}: 1")
                             else:
                                 pm_counter[player.username] += 1
-                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
+                                #logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
                             if pm_counter[player.username] >= 4:
-                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
+                                #logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
                                     avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
                                         title="Whitelisted Vehicle Warning",
                                         description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
+                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                         """,
                                         color=discord.Color.red(),
-                                        timestamp=datetime.utcnow()
+                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
                                     ).set_footer(
                                         text=f"Powered by ERM Systems",
                                     ).set_thumbnail(url=avatar_url)
@@ -731,32 +769,35 @@ async def check_whitelisted_car():
                                     logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
                                 pm_counter.pop(player.username)
                         break
-                if not member_found:
-                    await run_command(guild_id, player.username, alert_message)
+                    elif member_found == False:
+                        logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
+                        await run_command(guild_id, player.username, alert_message)
 
-                    if player.username not in pm_counter:
-                        pm_counter[player.username] = 1
-                        logging.debug(f"PM Counter for {player.username}: 1")
-                    else:
-                        pm_counter[player.username] += 1
+                        if player.username not in pm_counter:
+                            pm_counter[player.username] = 1
+                            #logging.debug(f"PM Counter for {player.username}: 1")
+                        else:
+                            pm_counter[player.username] += 1
+                            #logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
-                    if pm_counter[player.username] >= 4:
-                        try:
-                            avatar_url = await get_player_avatar_url(player.id)
-                            embed = discord.Embed(
-                                title="Whitelisted Vehicle Warning",
-                                description=f"""
-                                > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
-                                """,
-                                color=discord.Color.red(),
-                                timestamp=datetime.datetime.now(tz=pytz.UTC)
-                            ).set_footer(
-                                text="Powered by ERM Systems",
-                            ).set_thumbnail(url=avatar_url)
-                            await alert_channel.send(embed=embed)
-                        except discord.HTTPException as e:
-                            logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                        pm_counter.pop(player.username)
+                        if pm_counter[player.username] >= 4:
+                            #logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
+                            try:
+                                embed = discord.Embed(
+                                    title="Whitelisted Vehicle Warning",
+                                    description=f"""
+                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                    """,
+                                    color=discord.Color.red(),
+                                    timestamp=datetime.datetime.now(tz=pytz.UTC)
+                                ).set_footer(
+                                    text=f"Guild: {guild.name}",
+                                )
+                                await alert_channel.send(embed=embed)
+                            except discord.HTTPException as e:
+                                logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                            #logging.info(f"Removing {player.username} from PM counter")
+                            pm_counter.pop(player.username)
 
     end_time = time.time()
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
@@ -953,7 +994,7 @@ async def handle_guild_logs(item):
     sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
-    current_timestamp = int(datetime.datetime.utcnow().timestamp())
+    current_timestamp = int(datetime.datetime.now().timestamp())
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
     await notify_rdm(guild, players)

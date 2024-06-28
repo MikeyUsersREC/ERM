@@ -211,8 +211,9 @@ class OnMessage(commands.Cog):
                     logging.error('IndexError in remote command usage embed')
                     break
                 #Adding check for the command to see if only admin is using the ban command
+                
+                players: list[Player] = await self.bot.prc_api.get_server_players(message.guild.id)
                 try:
-                    players: list[Player] = await self.bot.prc_api.get_server_players(message.guild.id)
                     actual_players = []
                     key_maps = {}
 
@@ -292,7 +293,8 @@ class OnMessage(commands.Cog):
                 new_message = copy.copy(message)
                 new_message.channel = await user.create_dm()
                 new_message.author = user
-                new_message.content =  ((await get_prefix(bot, message))[-1]) + _cmd.split(':log ')[1].split('`')[0]
+                actual_username = next((player.username for player in actual_players if person in player.username), person)
+                new_message.content = ((await get_prefix(bot, message))[-1]) + _cmd.split(':log ')[1].split('`')[0].replace(person, actual_username)
                 print(new_message)
                 await bot.process_commands(new_message)
 
