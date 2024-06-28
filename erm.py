@@ -720,7 +720,7 @@ async def check_whitelisted_car():
         if not exotic_roles or not alert_channel:
             continue
 
-        logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
+        #logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
         matched = {}
         for item in vehicles:
             for x in players:
@@ -745,13 +745,13 @@ async def check_whitelisted_car():
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
-                                logging.debug(f"PM Counter for {player.username}: 1")
+                                #logging.debug(f"PM Counter for {player.username}: 1")
                             else:
                                 pm_counter[player.username] += 1
-                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
+                                #logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
                             if pm_counter[player.username] >= 4:
-                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
+                                #logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
                                     avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
@@ -775,13 +775,13 @@ async def check_whitelisted_car():
 
                         if player.username not in pm_counter:
                             pm_counter[player.username] = 1
-                            logging.debug(f"PM Counter for {player.username}: 1")
+                            #logging.debug(f"PM Counter for {player.username}: 1")
                         else:
                             pm_counter[player.username] += 1
-                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
+                            #logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
                         if pm_counter[player.username] >= 4:
-                            logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
+                            #logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                             try:
                                 embed = discord.Embed(
                                     title="Whitelisted Vehicle Warning",
@@ -796,7 +796,7 @@ async def check_whitelisted_car():
                                 await alert_channel.send(embed=embed)
                             except discord.HTTPException as e:
                                 logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                            logging.info(f"Removing {player.username} from PM counter")
+                            #logging.info(f"Removing {player.username} from PM counter")
                             pm_counter.pop(player.username)
 
     end_time = time.time()
