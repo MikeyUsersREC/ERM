@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from bson import ObjectId, Int64
+from bson import ObjectId
 from roblox.client import Client
 from datamodels.Warnings import WarningItem
 from utils.constants import BLANK_COLOR
@@ -16,9 +16,12 @@ class OnPunishment(commands.Cog):
         warning: WarningItem = await self.bot.punishments.fetch_warning(objectid)
         guild = self.bot.get_guild(warning.guild_id)
         if guild is None:
+            logging.error(f"Guild with ID {warning.guild_id} not found.")
             return
+        
         guild_settings = await self.bot.settings.find_by_id(guild.id)
         if not guild_settings:
+            logging.error(f"Settings for guild ID {guild.id} not found.")
             return
 
         punishment_types = await self.bot.punishment_types.get_punishment_types(warning.guild_id)
@@ -42,7 +45,7 @@ class OnPunishment(commands.Cog):
             try:
                 channel = await guild.fetch_channel(associations[warning_type.lower().strip()])
             except discord.HTTPException:
-                channel = None
+                channel = await guild.fetch_channel(guild_settings.get('punishments').get('channel', 0))
         else:
             try:
                 channel = await guild.fetch_channel(custom_warning_type.get('channel', 0))
@@ -51,18 +54,20 @@ class OnPunishment(commands.Cog):
                     channel = await guild.fetch_channel(guild_settings.get('punishments').get('channel', 0))
                 except discord.HTTPException:
                     channel = None
-
         try:
             moderator: discord.Member = guild.get_member(warning.moderator_id)
         except discord.NotFound:
+            logging.error(f"Moderator with ID {warning.moderator_id} not found.")
             return
 
         if not moderator:
+            logging.error(f"Moderator with ID {warning.moderator_id} not found in guild {guild.id}.")
             return
         
         roblox_client: Client = Client()
         roblox_user = await roblox_client.get_user(warning.user_id)
-        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
+        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
         thumbnail = thumbnails[0].image_url
 
         async def get_discord_id_by_roblox_id(self, roblox_id):
@@ -76,25 +81,36 @@ class OnPunishment(commands.Cog):
                 shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
                 if shift:
-                    moderations_dict = {entry['type']: entry['count'] for entry in shift['Moderations']}
-                    warning_type = warning.warning_type.lower()
-                    moderations_dict[warning_type] = moderations_dict.get(warning_type, 0) + 1
+                    moderations_dict = {entry['type']: entry['count'] for entry in shift.get('Moderations', [])}
+
+                    # Normalize the warning type to lower case
+                    warning_type_normalized = warning_type.lower()
+
+                    # Increment the count for the given warning type
+                    moderations_dict[warning_type_normalized] = moderations_dict.get(warning_type_normalized, 0) + 1
+
+                    # Convert the dictionary back to the required array format
                     moderations_array = [{'type': key, 'count': value} for key, value in moderations_dict.items()]
+
+                    # Create the updated document
                     doc = {
                         "_id": shift['_id'],
                         "Moderations": moderations_array
                     }
+
+                    # Update the shift in the database
                     await self.bot.shift_management.shifts.update_by_id(doc)
-                    #print(f"Updated {shift['_id']} with {warning_type}")
+                    logging.info(f"Updated shift {shift['_id']} with {warning_type_normalized}")
             except Exception as e:
-                logging.error(e)
+                logging.error(f"Error updating shift: {e}")
+
             try:
-                async for document in self.bot.consent.db.find({"_id": warned_discord_id}):
-                    punishments_enabled = (
-                        document.get("punishments")
-                        if document.get("punishments") is not None
-                        else True
-                    )
+                document = await self.bot.consent.db.find_one({"_id": warned_discord_id})
+                punishments_enabled = (
+                    document.get("punishments")
+                    if document.get("punishments") is not None
+                    else True
+                )
                 if punishments_enabled:
                     user_to_dm = await guild.fetch_member(warned_discord_id)
                     embed = discord.Embed(
@@ -111,10 +127,11 @@ class OnPunishment(commands.Cog):
                         )
                     ).set_thumbnail(url=thumbnail)
                     await user_to_dm.send(embed=embed)
-            except:
-                pass
+                    logging.info(f"Sent DM to user {warned_discord_id} about punishment.")
+            except Exception as e:
+                logging.error(f"Error sending DM to user: {e}")
 
-            return await channel.send(embed=discord.Embed(
+            embed = discord.Embed(
                 title="Punishment Issued",
                 color=BLANK_COLOR
             ).add_field(
@@ -131,18 +148,17 @@ class OnPunishment(commands.Cog):
                 value=(
                     f"> **Username:** {warning.username}\n"
                     f"> **User ID:** `{warning.user_id}`\n"
-                    f"{'>' if warning.until_epoch not in [None, 0] else '>'} **Punishment Type:** {warning.warning_type}\n"
+                    f"> **Punishment Type:** {warning.warning_type}\n"
                     f"{'> **Until:** <t:{}>'.format(int(warning.until_epoch)) if warning.until_epoch not in [None, 0] else ''}"
                 ),
                 inline=False
             ).set_author(
                 name=guild.name,
                 icon_url=guild.icon.url if guild.icon else ''
-            ).set_thumbnail(url=thumbnail))
-            
+            ).set_thumbnail(url=thumbnail)
 
-
-
+            await channel.send(embed=embed)
+            logging.info(f"Sent punishment embed to channel {channel.id}")
 
 async def setup(bot):
     await bot.add_cog(OnPunishment(bot))
