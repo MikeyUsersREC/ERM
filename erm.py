@@ -1032,7 +1032,6 @@ async def handle_guild_logs(item):
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
     current_timestamp = int(datetime.datetime.now().timestamp())
-    current_timestamp = int(datetime.datetime.now().timestamp())
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
     await notify_rdm(guild, players)
@@ -1200,8 +1199,8 @@ async def check_loa():
                         if member:
                             try:
                                 await member.send(embed=discord.Embed(
-                                    title="LOA Expired",
-                                    description=f"Your LOA has expired in **{guild.name}**.",
+                                    title=f"{doc['type']} Expired",
+                                    description=f"Your {doc['type']} has expired in **{guild.name}**.",
                                     color=BLANK_COLOR
                                 ))
                             except discord.Forbidden:
