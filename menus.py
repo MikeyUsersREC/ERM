@@ -7167,7 +7167,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
     )
 
     @discord.ui.button(
-        label="ERLC Statics Updates",
+        label="ERLC Statistics Updates",
         row=3
     )
     async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7205,7 +7205,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
         self.interaction = interaction
 
         self.set_channels = discord.ui.Select(
-            placeholder="Set Channels",
+            placeholder="Select any option",
             options=[
                 discord.SelectOption(
                     label="On-Duty Channel",
