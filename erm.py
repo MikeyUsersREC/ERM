@@ -52,6 +52,7 @@ from menus import CompleteReminder, LOAMenu, RDMActions
 from utils.viewstatemanger import ViewStateManager
 from utils.bloxlink import Bloxlink
 from utils.prc_api import PRCApiClient
+from utils.prc_api import ResponseFailure
 from utils.utils import *
 from utils.constants import *
 import utils.prc_api
@@ -739,6 +740,10 @@ async def check_whitelisted_car():
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
 
+        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
+        if not enable_vehicle_restrictions:
+            continue
+
         if not whitelisted_vehicle_roles or not alert_channel_id:
             continue
 
@@ -1026,6 +1031,7 @@ async def handle_guild_logs(item):
     sorted_kill_logs = sorted(kill_logs, key=lambda x: x.timestamp)
     sorted_player_logs = sorted(player_logs, key=lambda x: x.timestamp)
 
+    current_timestamp = int(datetime.datetime.now().timestamp())
     current_timestamp = int(datetime.datetime.now().timestamp())
 
     players = await process_kill_logs(guild, kill_logs_channel, sorted_kill_logs, current_timestamp)
