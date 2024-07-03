@@ -1120,7 +1120,6 @@ async def iterate_ics():
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
-    start_time = time.time()
     try:
         loas = bot.loas
 
@@ -1193,7 +1192,7 @@ async def check_loa():
                                                 await member.remove_roles(
                                                     role,
                                                     reason="LOA Expired",
-                                                    atomic=True
+                                                    atomic=True,
                                                 )
                                             except discord.HTTPException as e:
                                                 logging.error(f"Failed to remove role {role.id} from {member.id} in {guild.id} due to {e}")
@@ -1209,8 +1208,6 @@ async def check_loa():
                                 pass
     except ValueError:
         pass
-    end_time = time.time()
-    logging.warning(f"Event check_loa took {end_time - start_time} seconds")
 
 
 
