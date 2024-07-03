@@ -1122,7 +1122,6 @@ async def iterate_ics():
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
-    start_time = time.time()
     try:
         loas = bot.loas
 
@@ -1192,7 +1191,7 @@ async def check_loa():
                                                 await member.remove_roles(
                                                     role,
                                                     reason="LOA Expired",
-                                                    atomic=True
+                                                    atomic=True,
                                                 )
                                             except discord.HTTPException:
                                                 pass
