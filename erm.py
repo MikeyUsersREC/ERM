@@ -191,7 +191,9 @@ class Bot(commands.AutoShardedBot):
             if environment == "DEVELOPMENT":
                 await bot.tree.sync(guild=discord.Object(id=987798554972143728))
             else:
-                pass
+                for guild in bot.guilds:
+                    await bot.tree.sync(guild=guild)
+                bot.is_synced = True
                 # Prevent auto syncing
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
@@ -668,8 +670,7 @@ async def statistics_check():
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
             status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
             queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure as e:
-            logging.error(f"Failed to fetch statistics for guild {guild.name}: {e}")
+        except prc_api.ResponseFailure:
             continue
 
 
