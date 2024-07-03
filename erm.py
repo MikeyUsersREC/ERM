@@ -1206,8 +1206,6 @@ async def check_loa():
                                 pass
     except ValueError:
         pass
-    end_time = time.time()
-    logging.warning(f"Event check_loa took {end_time - start_time} seconds")
 
 
 
