@@ -201,6 +201,7 @@ class Bot(commands.AutoShardedBot):
             iterate_ics.start()
             # GDPR.start()
             iterate_prc_logs.start()
+            statistics_check.start()
             tempban_checks.start()
             check_whitelisted_car.start()
             change_status.start()
@@ -643,8 +644,81 @@ async def fetch_get_channel(target, identifier):
             channel = None
     return channel
 
-pm_counter = {}
+@tasks.loop(minutes=5, reconnect=True)
+async def statistics_check():
+    initial_time = time.time()
 
+    guilds = bot.settings.db.find({})
+    async for guild in guilds:
+        guild_id = guild['_id']
+        try:
+            guild = await bot.fetch_guild(guild_id)
+        except discord.errors.NotFound:
+            continue
+
+        settings = await bot.settings.find_by_id(guild_id)
+        if not settings:
+            continue
+        try:
+            statistics = settings["ERLC"]["statistics"]
+        except KeyError:
+            continue
+
+        try:
+            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
+            queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
+        except prc_api.ResponseFailure as e:
+            logging.error(f"Failed to fetch statistics for guild {guild.name}: {e}")
+            continue
+
+
+        on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
+        moderators = {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}
+        admins = {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}
+        staff_ingame = {len(list(filter(lambda x: x.permission != 'Normal', players)))}
+        current_player = {status.current_players}
+        join_code = {status.join_key}
+        max_players = {status.max_players}
+
+        # List of tasks to run concurrently
+        tasks = []
+
+        if statistics.get("onduty"):
+            tasks.append(update_channel(guild, statistics["onduty"], on_duty, "onduty"))
+        if statistics.get("join_code"):
+            tasks.append(update_channel(guild, statistics["join_code"], join_code, "join_code"))
+        if statistics.get("current_players"):
+            tasks.append(update_channel(guild, statistics["current_players"], current_player, "players"))
+        if statistics.get("total_players"):
+            tasks.append(update_channel(guild, statistics["total_players"], max_players, "max_players"))
+        if statistics.get("queue"):
+            tasks.append(update_channel(guild, statistics["queue"], queue, "queue"))
+        if statistics.get("ingame_staff"):
+            tasks.append(update_channel(guild, statistics["ingame_staff"], staff_ingame, "staff"))
+        if statistics.get("ingame_mods"):
+            tasks.append(update_channel(guild, statistics["ingame_mods"], moderators, "mods"))
+        if statistics.get("ingame_admins"):
+            tasks.append(update_channel(guild, statistics["ingame_admins"], admins, "admins"))
+
+        await asyncio.gather(*tasks)
+
+    end_time = time.time()
+    logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
+
+async def update_channel(guild, stat, value, placeholder):
+    try:
+        channel_id = stat["channel"]
+        format_string = stat["format"]
+        channel = await fetch_get_channel(guild, channel_id)
+        if channel:
+            format_string = format_string.replace(f"{{{placeholder}}}", str(value))
+            await channel.edit(name=format_string)
+    except KeyError:
+        pass
+
+
+pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
@@ -655,60 +729,16 @@ async def check_whitelisted_car():
         except discord.errors.NotFound:
             continue
 
-        try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-        except ResponseFailure as e:
-            logging.error(f"Failed to get server players for guild {guild_id}: {e}")
+        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
+        if not enable_vehicle_restrictions:
             continue
 
-        try:
-            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-        except ResponseFailure as e:
-            logging.error(f"Failed to get server vehicles for guild {guild_id}: {e}")
-            continue
-
-        try:
-            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
-        except ResponseFailure as e:
-            logging.error(f"Failed to get server status for guild {guild_id}: {e}")
-            continue
-
+        players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+        vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
         whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
         alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
         alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
-        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
-            "Guild": guild_id, "EndEpoch": 0
-        })])
-        queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-
-        client = roblox.Client()
-
-        total_player_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('total_player_channel', 0))
-        on_duty_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('on_duty_channel', 0))
-        in_game_staff_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('in_game_staff_channel', 0))
-        queue_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('queue_channel', 0))
-        current_players_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('current_players_channel', 0))
-        owner_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('owner_channel', 0))
-        moderator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('mod_count_channel', 0))
-        administrator_channel = await fetch_get_channel(guild, items['ERLC']["statics"].get('admin_count_channel', 0))
-
-        if total_player_channel != 0:
-            await total_player_channel.edit(name=f"Maximum Players: {status.max_players}")
-        if on_duty_channel != 0:
-            await on_duty_channel.edit(name=f"On Duty: {onduty}")
-        if in_game_staff_channel != 0:
-            await in_game_staff_channel.edit(name=f"In Game Staff: {len(list(filter(lambda x: x.permission != 'Normal', players)))}")
-        if queue_channel != 0:
-            await queue_channel.edit(name=f"Queue: {queue}")
-        if current_players_channel != 0:
-            await current_players_channel.edit(name=f"Current Players: {status.current_players}")
-        if owner_channel != 0:
-            await owner_channel.edit(name=f"Server Owner: {(await client.get_user(status.owner_id)).name}")
-        if moderator_channel != 0:
-            await moderator_channel.edit(name=f"Server Moderator: {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}")
-        if administrator_channel != 0:
-            await administrator_channel.edit(name=f"Server Administrator: {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}")
 
         enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
         if not enable_vehicle_restrictions:
@@ -734,7 +764,6 @@ async def check_whitelisted_car():
 
         if not exotic_roles or not alert_channel:
             continue
-
         matched = {}
         for item in vehicles:
             for x in players:
@@ -776,12 +805,11 @@ async def check_whitelisted_car():
                                         text=f"Powered by ERM Systems",
                                     ).set_thumbnail(url=avatar_url)
                                     await alert_channel.send(embed=embed)
-                                except discord.HTTPException as e:
-                                    logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                                except discord.HTTPException:
+                                    pass
                                 pm_counter.pop(player.username)
                         break
                     elif member_found == False:
-                        logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
                         await run_command(guild_id, player.username, alert_message)
 
                         if player.username not in pm_counter:
@@ -802,9 +830,12 @@ async def check_whitelisted_car():
                                     text=f"Guild: {guild.name}",
                                 )
                                 await alert_channel.send(embed=embed)
-                            except discord.HTTPException as e:
-                                logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                            except discord.HTTPException:
+                                pass
                             pm_counter.pop(player.username)
+            else:
+                if player.username in pm_counter.keys():
+                    pm_counter.pop(player.username)
 
     end_time = time.time()
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
@@ -876,7 +907,7 @@ async def process_kill_logs(guild, kill_logs_channel, kill_logs, current_timesta
             else:
                 players[item.killer_username][0] += 1
                 players[item.killer_username][1].append(item)
-                
+
             embed = discord.Embed(
                 title="Kill Log",
                 color=BLANK_COLOR,
@@ -888,8 +919,7 @@ async def process_kill_logs(guild, kill_logs_channel, kill_logs, current_timesta
 
 async def notify_rdm(guild, players):
     settings = await bot.settings.find_by_id(guild.id)
-    channel = await fetch_get_channel(guild, (settings or {}).get('ERLC', {}).get('rdm_channel', 0))
-        
+    channel = await fetch_get_channel(guild, (settings or {}).get('ERLC', {}).get('rdm_channel', 0))    
     if channel:
         for username, value in players.items():
             count, items = value
@@ -1092,6 +1122,7 @@ async def iterate_ics():
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
+    start_time = time.time()
     try:
         loas = bot.loas
 
@@ -1161,29 +1192,10 @@ async def check_loa():
                                                 await member.remove_roles(
                                                     role,
                                                     reason="LOA Expired",
-                                                    atomic=True,
+                                                    atomic=True
                                                 )
                                             except discord.HTTPException:
-                                                channel = settings["staff_management"]["channel"]
-                                                if channel:
-                                                    channel = guild.get_channel(channel)
-                                                    if channel:
-                                                        await channel.send(
-                                                            embed = discord.Embed(
-                                                                title="Failed to Remove Role",
-                                                                description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
-                                                                color=RED_COLOR
-                                                            )
-                                                        )
-                                                else:
-                                                    owner = guild.owner
-                                                    await owner.send(
-                                                        embed = discord.Embed(
-                                                            title="Failed to Remove Role",
-                                                            description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
-                                                            color=RED_COLOR
-                                                        )
-                                                    )
+                                                pass
                         if member:
                             try:
                                 await member.send(embed=discord.Embed(
@@ -1195,6 +1207,8 @@ async def check_loa():
                                 pass
     except ValueError:
         pass
+    end_time = time.time()
+    logging.warning(f"Event check_loa took {end_time - start_time} seconds")
 
 
 
