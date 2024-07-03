@@ -668,7 +668,8 @@ async def statistics_check():
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
             status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
             queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure:
+        except prc_api.ResponseFailure as e:
+            logging.error(f"Failed to fetch statistics for guild {guild.name}: {e}")
             continue
 
 
