@@ -668,8 +668,7 @@ async def statistics_check():
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
             status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
             queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure as e:
-            logging.error(f"Failed to fetch statistics for guild {guild.name}: {e}")
+        except prc_api.ResponseFailure:
             continue
 
 
@@ -681,7 +680,6 @@ async def statistics_check():
         join_code = {status.join_key}
         max_players = {status.max_players}
 
-        # List of tasks to run concurrently
         tasks = []
 
         if statistics.get("onduty"):
@@ -1175,12 +1173,15 @@ async def check_loa():
                             }
                         )
                         should_remove_roles = True
+                        expired_doc = None
+
                         async for doc in docs:
                             if doc["type"] == loaObject["type"]:
                                 if not doc["expired"]:
                                     if not doc == loaObject:
                                         should_remove_roles = False
                                         break
+                                expired_doc = doc
 
                         if should_remove_roles:
                             for role in roles:
@@ -1193,13 +1194,14 @@ async def check_loa():
                                                     reason="LOA Expired",
                                                     atomic=True,
                                                 )
-                                            except discord.HTTPException:
+                                            except discord.HTTPException as e:
+                                                logging.error(f"Failed to remove role {role.id} from {member.id} in {guild.id} due to {e}")
                                                 pass
                         if member:
                             try:
                                 await member.send(embed=discord.Embed(
-                                    title=f"{doc['type']} Expired",
-                                    description=f"Your {doc['type']} has expired in **{guild.name}**.",
+                                    title=f"{expired_doc['type']} Expired",
+                                    description=f"Your {expired_doc['type']} has expired in **{guild.name}**.",
                                     color=BLANK_COLOR
                                 ))
                             except discord.Forbidden:

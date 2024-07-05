@@ -7296,7 +7296,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7331,7 +7331,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7366,7 +7366,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7401,7 +7401,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7436,7 +7436,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7471,7 +7471,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7506,7 +7506,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7541,7 +7541,7 @@ class ERLCStaticsConfiguration(discord.ui.View):
                     "channel": 0,
                     "format": modal.channel.value
                 }
-            view = ChannelSelect(interaction.user.id, limit=1)
+            view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
             selected_channel = view.value[0] if view.value else 0
@@ -7704,6 +7704,51 @@ class UserSelect(discord.ui.View):
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await generalised_interaction_check_failure(interaction.followup)
 
+class VoiceChannelSelect(discord.ui.View):
+    def __init__(self, user_id, **kwargs):
+        super().__init__(timeout=600.0)
+        self.value = None
+        self.user_id = user_id
+        self.limit = 25
+
+        for key, value in kwargs.items():
+            if key == "limit":
+                self.limit = value
+
+        if self.limit > 1:
+            self.placeholder = "Select channels"
+        else:
+            self.placeholder = "Select a channel"
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.voice]
+    )
+    async def channel_select(
+            self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
+        if interaction.user.id == self.user_id:
+            await interaction.response.defer()
+            self.value = select.values
+            self.stop()
+        else:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ), ephemeral=True)
 
 class ChannelSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):

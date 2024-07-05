@@ -821,7 +821,8 @@ class ShiftLogging(commands.Cog):
                         )
                     ],
                 )
-                if not (type or '').lower() in [i["name"].lower() for i in shift_types]:
+                valid_shift_types = [i["name"].lower() for i in shift_types] + ["all"]
+                if not (type or '').lower() in valid_shift_types:
                     msg = await ctx.reply(
                         embed=discord.Embed(
                             title="Incorrect Shift Type",
