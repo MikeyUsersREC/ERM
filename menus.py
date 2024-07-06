@@ -7292,10 +7292,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["onduty"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["onduty"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'onduty' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['onduty'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["onduty"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7327,10 +7330,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["join_code"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["join_code"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if "ERLC" not in sett:
+                    sett["ERLC"] = {}
+                if "statistics" not in sett["ERLC"]:
+                    sett["ERLC"]["statistics"] = {}
+                if "join_code" not in sett["ERLC"]["statistics"]:
+                    sett["ERLC"]["statistics"]["join_code"] = {"channel": 0}
+                sett["ERLC"]["statistics"]["join_code"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7362,10 +7368,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["current_players"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["current_players"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if "ERLC" not in sett:
+                    sett["ERLC"] = {}
+                if "statistics" not in sett["ERLC"]:
+                    sett["ERLC"]["statistics"] = {}
+                if "current_players" not in sett["ERLC"]["statistics"]:
+                    sett["ERLC"]["statistics"]["current_players"] = {"channel": 0}
+                sett["ERLC"]["statistics"]["current_players"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7397,10 +7406,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["total_players"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["total_players"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'total_players' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['total_players'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["total_players"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7432,10 +7444,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["queue"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["queue"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'queue' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['queue'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["queue"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7467,10 +7482,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["ingame_staff"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["ingame_staff"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'ingame_staff' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['ingame_staff'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["ingame_staff"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7502,10 +7520,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["ingame_mods"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["ingame_mods"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'ingame_mods' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['ingame_mods'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["ingame_mods"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()
@@ -7537,10 +7558,13 @@ class ERLCStaticsConfiguration(discord.ui.View):
             try:
                 sett["ERLC"]["statistics"]["ingame_admins"]["format"] = modal.channel.value
             except KeyError:
-                sett["ERLC"]["statistics"]["ingame_admins"] = {
-                    "channel": 0,
-                    "format": modal.channel.value
-                }
+                if 'ERLC' not in sett:
+                    sett['ERLC'] = {}
+                if 'statistics' not in sett['ERLC']:
+                    sett['ERLC']['statistics'] = {}
+                if 'ingame_admins' not in sett['ERLC']['statistics']:
+                    sett['ERLC']['statistics']['ingame_admins'] = {"channel": 0}
+                sett["ERLC"]["statistics"]["ingame_admins"]["format"] = modal.channel.value
             view = VoiceChannelSelect(interaction.user.id, limit=1)
             await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
             await view.wait()

@@ -6,6 +6,7 @@ from discord.ext import commands
 
 import logging
 from erm import is_staff, is_management
+from utils.paginators import CustomPage, SelectPagination
 from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog, ResponseFailure
@@ -623,14 +624,15 @@ class ERLC(commands.Cog):
         description = ""
         for index, (veh, plr) in enumerate(matched.items()):
             description += f'[{plr.username}](https://roblox.com/users/{plr.id}/profile) - {veh.vehicle} **({veh.texture})**\n'
-            if (index + 1) % 20 == 0 or (index + 1) == len(matched):
+            if (index + 1) % 10 == 0 or (index + 1) == len(matched):
                 descriptions.append(description)
                 description = ""
 
         if not descriptions:
             descriptions.append("> There are no active vehicles in your server.")
 
-        for description in descriptions:
+        pages = []
+        for index, description in enumerate(descriptions):
             embed = discord.Embed(
                 title=f"Server Vehicles [{len(vehicles)}/{len(players)}]",
                 color=BLANK_COLOR,
@@ -640,7 +642,19 @@ class ERLC(commands.Cog):
                 name=ctx.guild.name,
                 icon_url=ctx.guild.icon.url
             )
-            await ctx.send(embed=embed)
+            
+            page = CustomPage(embeds=[embed], identifier=embed.title, view=None)
+            pages.append(page)
+
+        paginator = SelectPagination(ctx.author.id, pages)
+        try:
+            await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+        except discord.HTTPException:
+            await ctx.send(embed=discord.Embed(
+                title="Critical Error",
+                description="Configuration error; 827",
+                color=BLANK_COLOR
+            ))
 
     @server.command(
         name="check",
