@@ -671,46 +671,43 @@ async def statistics_check():
         except prc_api.ResponseFailure:
             continue
 
-
         on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
-        moderators = {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}
-        admins = {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}
-        staff_ingame = {len(list(filter(lambda x: x.permission != 'Normal', players)))}
-        current_player = {status.current_players}
-        join_code = {status.join_key}
-        max_players = {status.max_players}
+        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
+        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
+        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        current_player = status.current_players
+        join_code = status.join_key
+        max_players = status.max_players
+
+        placeholders = {
+            "onduty": on_duty,
+            "staff": staff_ingame,
+            "mods": moderators,
+            "admins": admins,
+            "players": current_player,
+            "join_code": join_code,
+            "max_players": max_players,
+            "queue": queue
+        }
 
         tasks = []
 
-        if statistics.get("onduty"):
-            tasks.append(update_channel(guild, statistics["onduty"], on_duty, "onduty"))
-        if statistics.get("join_code"):
-            tasks.append(update_channel(guild, statistics["join_code"], join_code, "join_code"))
-        if statistics.get("current_players"):
-            tasks.append(update_channel(guild, statistics["current_players"], current_player, "players"))
-        if statistics.get("total_players"):
-            tasks.append(update_channel(guild, statistics["total_players"], max_players, "max_players"))
-        if statistics.get("queue"):
-            tasks.append(update_channel(guild, statistics["queue"], queue, "queue"))
-        if statistics.get("ingame_staff"):
-            tasks.append(update_channel(guild, statistics["ingame_staff"], staff_ingame, "staff"))
-        if statistics.get("ingame_mods"):
-            tasks.append(update_channel(guild, statistics["ingame_mods"], moderators, "mods"))
-        if statistics.get("ingame_admins"):
-            tasks.append(update_channel(guild, statistics["ingame_admins"], admins, "admins"))
+        for stat_key, stat_value in statistics.items():
+            tasks.append(update_channel(guild, stat_value, placeholders))
 
         await asyncio.gather(*tasks)
 
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 
-async def update_channel(guild, stat, value, placeholder):
+async def update_channel(guild, stat, placeholders):
     try:
         channel_id = stat["channel"]
         format_string = stat["format"]
         channel = await fetch_get_channel(guild, channel_id)
         if channel:
-            format_string = format_string.replace(f"{{{placeholder}}}", str(value))
+            for key, value in placeholders.items():
+                format_string = format_string.replace(f"{{{key}}}", str(value))
             await channel.edit(name=format_string)
     except KeyError:
         pass
