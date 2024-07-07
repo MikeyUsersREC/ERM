@@ -934,10 +934,12 @@ class LOAMenu(discord.ui.View):
 
         s_loa["accepted"] = True
         guild = self.bot.get_guild(s_loa["guild_id"])
-
-        user = guild.get_member(s_loa["user_id"])
-
-        if not user:
+        user_id = int(s_loa["user_id"])
+        try:
+            user = await guild.fetch_member(user_id)
+        except discord.NotFound:
+            user = None
+        if user is None:
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="Could not find member",
@@ -4082,7 +4084,7 @@ class ActivityNoticeAdministration(discord.ui.View):
         await self.modal.wait()
         self.stored_interaction = self.modal.interaction
         self.value = "extend"
-        self.visual_close(interaction.message)
+        await self.visual_close(interaction.message)
         self.stop()
 
 class MultiSelectMenu(discord.ui.View):
