@@ -672,7 +672,7 @@ class ERLC(commands.Cog):
                 embed=discord.Embed(
                     title="PRC API Error",
                     description="There was an error fetching players from the PRC API.",
-                    color=blank_color
+                    color=BLANK_COLOR
                 )
             )
 
@@ -681,13 +681,13 @@ class ERLC(commands.Cog):
                 embed=discord.Embed(
                     title="No Players Found",
                     description="There are no players in the server to check.",
-                    color=blank_color
+                    color=BLANK_COLOR
                 )
             )
 
         embed = discord.Embed(
             title="Players in ERLC Not in Discord",
-            color=blank_color,
+            color=BLANK_COLOR,
             description=""
         )
 
@@ -712,7 +712,7 @@ class ERLC(commands.Cog):
                         embed=discord.Embed(
                             title="Discord API Error",
                             description="There was an error while accessing the Discord API.",
-                            color=blank_color
+                            color=BLANK_COLOR
                         )
                     )
                 
