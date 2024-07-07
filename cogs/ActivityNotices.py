@@ -179,7 +179,7 @@ class ActivityCoreCommands:
             "type": request_type_object.upper()
         })
 
-        view = ActivityNoticeAdministration(ctx.author.id)
+        view = ActivityNoticeAdministration(self.bot,ctx.author.id,victim=victim.id,guild_id= ctx.guild.id,request_type=request_type_object,current_notice=current_notice)
         embed = discord.Embed(
             title="Activity Notices",
             color=BLANK_COLOR

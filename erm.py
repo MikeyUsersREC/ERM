@@ -648,21 +648,18 @@ async def fetch_get_channel(target, identifier):
 async def statistics_check():
     initial_time = time.time()
 
-    guilds = bot.settings.db.find({})
-    async for guild in guilds:
-        guild_id = guild['_id']
+    async for guild_data in bot.settings.db.find({}):
+        guild_id = guild_data['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
             continue
 
         settings = await bot.settings.find_by_id(guild_id)
-        if not settings:
+        if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
             continue
-        try:
-            statistics = settings["ERLC"]["statistics"]
-        except KeyError:
-            continue
+        
+        statistics = settings["ERLC"]["statistics"]
 
         try:
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
@@ -692,17 +689,17 @@ async def statistics_check():
 
         tasks = []
 
-        for stat_key, stat_value in statistics.items():
-            tasks.append(update_channel(guild, stat_value, placeholders))
+        for channel_id, stat_value in statistics.items():
+            tasks.append(update_channel(guild, channel_id, stat_value, placeholders))
 
         await asyncio.gather(*tasks)
 
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 
-async def update_channel(guild, stat, placeholders):
+
+async def update_channel(guild, channel_id, stat, placeholders):
     try:
-        channel_id = stat["channel"]
         format_string = stat["format"]
         channel = await fetch_get_channel(guild, channel_id)
         if channel:
@@ -711,7 +708,6 @@ async def update_channel(guild, stat, placeholders):
             await channel.edit(name=format_string)
     except KeyError:
         pass
-
 
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
