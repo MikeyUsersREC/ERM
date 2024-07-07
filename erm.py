@@ -723,8 +723,6 @@ async def update_channel(guild, channel_id, stat, placeholders):
         if channel:
             for key, value in placeholders.items():
                 format_string = format_string.replace(f"{{{key}}}", str(value))
-            for key, value in placeholders.items():
-                format_string = format_string.replace(f"{{{key}}}", str(value))
             await channel.edit(name=format_string)
     except KeyError:
         pass
@@ -1134,16 +1132,14 @@ async def iterate_ics():
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
     try:
-        loas = bot.loas.db.find({})
-        async for loaObject in loas:
+        loas = bot.loas
+        async for loaObject in bot.loas.db.find({}):
             if (
                 datetime.datetime.now().timestamp() > loaObject["expiry"]
                 and loaObject["expired"] == False
             ):
                 if loaObject["accepted"] is True:
-                    guild_id = loaObject["guild_id"]
-                    guild_id = int(guild_id)
-                    guild = bot.get_guild(guild_id)
+                    guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
                         user_id = loaObject["user_id"]
                         member = await guild.fetch_member(user_id)

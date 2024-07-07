@@ -702,9 +702,9 @@ class ERLC(commands.Cog):
 
             if member_found == False:
                 try:
-                    discord_id = await get_discord_by_roblox(self.bot, player.username)
-                    if discord_id:
-                        member = ctx.guild.get_member(discord_id)
+                    id = await get_discord_by_roblox(self.bot, player.username)
+                    if id:
+                        member = ctx.guild.get_member(id)
                         if member:
                             member_found = True
                 except discord.HTTPException:
