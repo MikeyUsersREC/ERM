@@ -700,11 +700,11 @@ class ERLC(commands.Cog):
                     member_found = True
                     break
 
-            if member_found == False:
+            if not member_found:
                 try:
-                    id = await get_discord_by_roblox(self.bot, player.username)
-                    if id:
-                        member = ctx.guild.get_member(id)
+                    discord_id = await get_discord_by_roblox(self.bot, player.username)
+                    if discord_id:
+                        member = ctx.guild.get_member(discord_id)
                         if member:
                             member_found = True
                 except discord.HTTPException:
@@ -715,8 +715,8 @@ class ERLC(commands.Cog):
                             color=BLANK_COLOR
                         )
                     )
-                
-            if member_found == False:
+
+            if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
 
         if embed.description == "":
@@ -726,7 +726,6 @@ class ERLC(commands.Cog):
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
-
         await ctx.send(embed=embed)
 
 async def setup(bot):

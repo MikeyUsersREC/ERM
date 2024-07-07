@@ -533,8 +533,8 @@ async def get_discord_by_roblox(bot,username):
     response = requests.post(api_url, json=payload)
     if response.status_code == 200:
         data = response.json()["data"][0]
-        roblox_id = data["id"]
-        linked_account = await bot.oauth2_users.db.find_one({"roblox_id": roblox_id})
+        id = data["id"]
+        linked_account = await bot.oauth2_users.db.find_one({"roblox_id": id})
         if linked_account:
             return linked_account["discord_id"]
         else:

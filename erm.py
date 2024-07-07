@@ -1141,8 +1141,7 @@ async def check_loa():
                 if loaObject["accepted"] is True:
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-                        user_id = loaObject["user_id"]
-                        member = await guild.fetch_member(user_id)
+                        member = await guild.fetch_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
                         if settings is not None:

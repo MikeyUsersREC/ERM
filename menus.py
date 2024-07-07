@@ -934,9 +934,8 @@ class LOAMenu(discord.ui.View):
 
         s_loa["accepted"] = True
         guild = self.bot.get_guild(s_loa["guild_id"])
-        user_id = int(s_loa["user_id"])
         try:
-            user = await guild.fetch_member(user_id)
+            user = await guild.fetch_member(s_loa["user_id"])
         except discord.NotFound:
             user = None
         if user is None:
@@ -4001,7 +4000,7 @@ class ActivityNoticeAdministration(discord.ui.View):
             await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=discord.Color.red()
+                color=BLANK_COLOR
             ), ephemeral=True)
             return False
     
