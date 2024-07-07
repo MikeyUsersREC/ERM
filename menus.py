@@ -4000,10 +4000,10 @@ class ActivityNoticeAdministration(discord.ui.View):
             await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=BLANK_COLOR
+                color=blank_color
             ), ephemeral=True)
             return False
-    
+
     @discord.ui.button(
         label="Create",
         style=discord.ButtonStyle.green
