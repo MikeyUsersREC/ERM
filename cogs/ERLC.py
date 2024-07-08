@@ -692,7 +692,7 @@ class ERLC(commands.Cog):
         )
 
         for player in players:
-            pattern = re.compile(f".*{re.escape(player.username)}.*", re.IGNORECASE)
+            pattern = re.compile(rf"\b.*{re.escape(player.username)}.*\b", re.IGNORECASE)
             member_found = False
 
             for member in ctx.guild.members:
