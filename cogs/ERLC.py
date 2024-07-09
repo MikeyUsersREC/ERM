@@ -605,6 +605,14 @@ class ERLC(commands.Cog):
         guild_id = int(ctx.guild.id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         vehicles: list[prc_api.ActiveVehicle] = await self.bot.prc_api.get_server_vehicles(guild_id)
+        
+        if len(vehicles) <= 0:
+            emb = discord.Embed(title=f"Server Vehicles [{len(vehicles)}/{len(players)}]", description="> There are no active vehicles in your server.", color=BLANK_COLOR)
+            emb.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon.url
+            )
+            return ctx.send(embed=emb)
 
         matched = {}
         for item in vehicles:
