@@ -5,6 +5,7 @@ import roblox
 from discord.ext import commands
 
 import logging
+from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
 from menus import ReloadView

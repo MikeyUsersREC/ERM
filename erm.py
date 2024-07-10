@@ -648,21 +648,18 @@ async def fetch_get_channel(target, identifier):
 async def statistics_check():
     initial_time = time.time()
 
-    guilds = bot.settings.db.find({})
-    async for guild in guilds:
-        guild_id = guild['_id']
+    async for guild_data in bot.settings.db.find({}):
+        guild_id = guild_data['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
             continue
 
         settings = await bot.settings.find_by_id(guild_id)
-        if not settings:
+        if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
             continue
-        try:
-            statistics = settings["ERLC"]["statistics"]
-        except KeyError:
-            continue
+        
+        statistics = settings["ERLC"]["statistics"]
 
         try:
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
@@ -689,20 +686,37 @@ async def statistics_check():
             "max_players": max_players,
             "queue": queue
         }
+        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
+        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
+        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        current_player = status.current_players
+        join_code = status.join_key
+        max_players = status.max_players
+
+        placeholders = {
+            "onduty": on_duty,
+            "staff": staff_ingame,
+            "mods": moderators,
+            "admins": admins,
+            "players": current_player,
+            "join_code": join_code,
+            "max_players": max_players,
+            "queue": queue
+        }
 
         tasks = []
 
-        for stat_key, stat_value in statistics.items():
-            tasks.append(update_channel(guild, stat_value, placeholders))
+        for channel_id, stat_value in statistics.items():
+            tasks.append(update_channel(guild, channel_id, stat_value, placeholders))
 
         await asyncio.gather(*tasks)
 
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 
-async def update_channel(guild, stat, placeholders):
+
+async def update_channel(guild, channel_id, stat, placeholders):
     try:
-        channel_id = stat["channel"]
         format_string = stat["format"]
         channel = await fetch_get_channel(guild, channel_id)
         if channel:
@@ -711,7 +725,6 @@ async def update_channel(guild, stat, placeholders):
             await channel.edit(name=format_string)
     except KeyError:
         pass
-
 
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
@@ -1119,19 +1132,15 @@ async def iterate_ics():
 async def check_loa():
     try:
         loas = bot.loas
-
         async for loaObject in bot.loas.db.find({}):
             if (
                 datetime.datetime.now().timestamp() > loaObject["expiry"]
                 and loaObject["expired"] == False
             ):
                 if loaObject["accepted"] is True:
-                    loaObject["expired"] = True
-                    await bot.loas.update_by_id(loaObject)
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-
-                        member = guild.get_member(loaObject["user_id"])
+                        member = await guild.fetch_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
                         if settings is not None:
@@ -1191,7 +1200,11 @@ async def check_loa():
                                                     reason="LOA Expired",
                                                     atomic=True,
                                                 )
+                                                loaObject["expired"] = True
+                                                await bot.loas.update_by_id(loaObject)
                                             except discord.HTTPException as e:
+                                                loaObject["expired"] = True
+                                                await bot.loas.update_by_id(loaObject)
                                                 logging.error(f"Failed to remove role {role.id} from {member.id} in {guild.id} due to {e}")
                                                 pass
                         if member:
