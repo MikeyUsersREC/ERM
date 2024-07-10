@@ -544,26 +544,17 @@ async def log_command_usage(bot, guild, member, command_name):
     settings = await bot.settings.find_by_id(guild.id)
     if not settings:
         return
-    if not settings.get("erm_log_channel"):
+    if not settings.get('staff_management', {}).get('erm_log_channel'):
         return
-
     try:
-        log_channel_id = int(settings.get("erm_log_channel"))
-        #print(f"Logging channel ID: {log_channel_id}")
-    except (ValueError, TypeError) as e:
-        #print(f"Invalid log channel ID: {e}")
+        log_channel_id = settings.get('staff_management', {}).get('erm_log_channel')
+    except (ValueError, TypeError):
         return
-
     log_channel = guild.get_channel(log_channel_id)
     if log_channel is None:
-        #print("Log channel not found in guild channels.")
-        #print(f"Available channels: {[channel.id for channel in guild.text_channels]}")
         return
-
     if not log_channel.permissions_for(guild.me).send_messages:
-        #print("Bot does not have permission to send messages in the log channel.")
         return
-
     embed = discord.Embed(
         title="ERM Command Log",
         description=f"Command `{command_name}` used by {member.mention}",
@@ -572,17 +563,16 @@ async def log_command_usage(bot, guild, member, command_name):
     embed.set_footer(text=f"User ID: {member.id}")
     embed.set_author(name=member.name, icon_url=member.display_avatar.url)
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
-
     await log_channel.send(embed=embed)
 
 async def config_change_log(bot,guild,member,data):
     setting = await bot.settings.find_by_id(guild.id)
     if not setting:
         return
-    if not setting.get("erm_log_channel"):
+    if not setting.get('staff_management', {}).get('erm_log_channel'):
         return
     try:
-        log_channel_id = int(setting.get("erm_log_channel"))
+        log_channel_id = setting.get('staff_management', {}).get('erm_log_channel')
     except (ValueError,TypeError) as e:
         return
     log_channel = guild.get_channel(log_channel_id)
