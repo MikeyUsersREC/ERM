@@ -451,7 +451,7 @@ class ShiftLogging(commands.Cog):
         shifts = await shift_cursor.to_list(length=None)
 
         if ctx.author.id not in [i['UserID'] for i in shifts]:
-            if on_duty_staff > maximum_staff and maximum_staff != 0:
+            if on_duty_staff == maximum_staff and maximum_staff != 0:
                 await ctx.send(
                     embed=discord.Embed(
                         title="Staff Limit Reached",
