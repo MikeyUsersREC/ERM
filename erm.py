@@ -644,7 +644,7 @@ async def fetch_get_channel(target, identifier):
             channel = None
     return channel
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(seconds=45, reconnect=True)
 async def statistics_check():
     initial_time = time.time()
 
