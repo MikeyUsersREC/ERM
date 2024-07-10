@@ -5615,7 +5615,12 @@ class ERMCommandLog(AssociationConfigurationView):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        sett['erm_log_channel'] = select.values[0].id
+        try:
+            sett['staff_management']['erm_log_channel'] = select.values[0].id
+        except KeyError:
+            sett['staff_management'] = {
+                'erm_log_channel': select.values[0].id
+            }
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"ERM Log Channel Set: <#{select.values[0].id}>")
 
@@ -7233,7 +7238,7 @@ class ERLCStats(discord.ui.View):
     ):
         await interaction.response.defer()
 
-    @discord.ui.button(label="Assign Format To Channel.", style=discord.ButtonStyle.success, row=2)
+    @discord.ui.button(label="Set Format", style=discord.ButtonStyle.secondary, row=2)
     async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             if isinstance(child, discord.ui.ChannelSelect):
@@ -7257,7 +7262,7 @@ class ERLCStats(discord.ui.View):
             await modal.wait()
             if not modal.format.value:
                 return
-            channel_id = str(self.value[0].id)  # Convert channel_id to string
+            channel_id = str(self.value[0].id)
             try:
                 sett = await self.bot.settings.find_by_id(self.guild_id)
             except KeyError:
@@ -7274,6 +7279,43 @@ class ERLCStats(discord.ui.View):
                 sett["ERLC"]["statistics"][channel_id] = {"format": modal.format.value}
             await self.bot.settings.update_by_id(sett)
             await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                        title="Success",
+                        description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+            )
+        
+    @discord.ui.button(label="Remove Channel",style=discord.ButtonStyle.danger,row=2)
+    async def remove_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
+        if interaction.user.id == self.user_id:
+            self.value = select.values
+            channel_id = self.value[0].id
+            try:
+                sett = await self.bot.settings.find_by_id(self.guild_id)
+            except KeyError:
+                sett = {}
+            try:
+                channel_id = str(channel_id)
+                del sett["ERLC"]["statistics"][channel_id]
+            except KeyError:
+                pass
+            await self.bot.settings.update_by_id(sett)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Stats")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="Success",
+                    description=f"<#{channel_id}> has been removed from ERLC Stats",
+                    color=BLANK_COLOR
+                ),
+                view=None
+            )
 
 class RoleSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):

@@ -718,6 +718,7 @@ async def statistics_check():
 async def update_channel(guild, channel_id, stat, placeholders):
     try:
         format_string = stat["format"]
+        channel_id = int(channel_id)
         channel = await fetch_get_channel(guild, channel_id)
         if channel:
             for key, value in placeholders.items():
@@ -740,9 +741,11 @@ async def check_whitelisted_car():
         enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
         if not enable_vehicle_restrictions:
             continue
-
-        players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-        vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
+        try:
+            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
+        except prc_api.ResponseFailure:
+            continue
         whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
         alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
         whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
