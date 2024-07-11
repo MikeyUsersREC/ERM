@@ -7281,14 +7281,14 @@ class ERLCStats(discord.ui.View):
             await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
             await interaction.edit_original_response(
                 embed=discord.Embed(
-                        title="Success",
+                        title="<:success:1163149118366040106> Success",
                         description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
                         color=BLANK_COLOR
                     ),
                     view=None
             )
         
-    @discord.ui.button(label="Remove Channel",style=discord.ButtonStyle.danger,row=2)
+    @discord.ui.button(label="Remove Channel", style=discord.ButtonStyle.danger, row=2)
     async def remove_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             if isinstance(child, discord.ui.ChannelSelect):
@@ -7301,20 +7301,30 @@ class ERLCStats(discord.ui.View):
                 sett = await self.bot.settings.find_by_id(self.guild_id)
             except KeyError:
                 sett = {}
+            
+            channel_id = str(channel_id)
             try:
-                channel_id = str(channel_id)
                 del sett["ERLC"]["statistics"][channel_id]
             except KeyError:
-                pass
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is not set as a statistics channel",
+                        color=discord.Color.red()
+                    ),
+                    ephemeral=True
+                )
+
             await self.bot.settings.update_by_id(sett)
-            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Stats")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="Success",
-                    description=f"<#{channel_id}> has been removed from ERLC Stats",
-                    color=BLANK_COLOR
-                ),
-                view=None
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Statistics")
+            
+            await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Success",
+                        description=f"<#{channel_id}> has been removed from ERLC Statistics",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
             )
 
 class RoleSelect(discord.ui.View):
