@@ -1143,7 +1143,15 @@ async def check_loa():
             if loaObject["accepted"] is True:
                 guild = bot.get_guild(loaObject["guild_id"])
                 if guild:
-                    member = await guild.fetch_member(loaObject["user_id"])
+                    try:
+                        member = await guild.fetch_member(loaObject["user_id"])
+                    except discord.errors.NotFound:
+                        print(f"Member {loaObject['user_id']} not found in guild {guild.id}")
+                        # You might want to handle this case, e.g., by marking the LOA as expired
+                        loaObject["expired"] = True
+                        await bot.loas.update_by_id(loaObject)
+                        continue  # Skip to the next iteration of the loop
+                    
                     settings = await bot.settings.find_by_id(guild.id)
                     roles = [None]
                     if settings is not None:
