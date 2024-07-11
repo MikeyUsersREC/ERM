@@ -7302,8 +7302,8 @@ class ERLCStats(discord.ui.View):
             except KeyError:
                 sett = {}
             
-            channel_id = str(channel_id)
             try:
+                channel_id = str(channel_id)
                 del sett["ERLC"]["statistics"][channel_id]
             except KeyError:
                 return await interaction.response.send_message(
