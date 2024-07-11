@@ -6700,7 +6700,7 @@ class RemoteCommandConfiguration(discord.ui.View):
         await self.bot.settings.update_by_id(sett)
 
 class WhitelistVehiclesManagement(discord.ui.View):
-    def __init__(self, bot, guild_id,enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None,alert_message=None):
+    def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
         self.bot = bot
         self.guild_id = guild_id
@@ -6731,13 +6731,18 @@ class WhitelistVehiclesManagement(discord.ui.View):
             min_values=1,
             default_values=self.whitelisted_vehicles_roles_objs
         )
+
+        channel = self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)
+        default_values = [channel] if channel else []
+
         self.whitelisted_vehicle_alert_channel_select = discord.ui.ChannelSelect(
             placeholder="Whitelisted Vehicle Alert Channel",
             max_values=1,
             min_values=0,
             channel_types=[discord.ChannelType.text],
-            default_values=[self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)]
+            default_values=default_values
         )
+
         self.add_vehicle_button = discord.ui.Button(
             label="Add Vehicle to Role",
             style=discord.ButtonStyle.secondary,
@@ -7281,14 +7286,14 @@ class ERLCStats(discord.ui.View):
             await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
             await interaction.edit_original_response(
                 embed=discord.Embed(
-                        title="Success",
+                        title="<:success:1163149118366040106> Success",
                         description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
                         color=BLANK_COLOR
                     ),
                     view=None
             )
         
-    @discord.ui.button(label="Remove Channel",style=discord.ButtonStyle.danger,row=2)
+    @discord.ui.button(label="Remove Channel", style=discord.ButtonStyle.danger, row=2)
     async def remove_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             if isinstance(child, discord.ui.ChannelSelect):
@@ -7301,20 +7306,30 @@ class ERLCStats(discord.ui.View):
                 sett = await self.bot.settings.find_by_id(self.guild_id)
             except KeyError:
                 sett = {}
+            
             try:
                 channel_id = str(channel_id)
                 del sett["ERLC"]["statistics"][channel_id]
             except KeyError:
-                pass
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is not set as a statistics channel",
+                        color=discord.Color.red()
+                    ),
+                    ephemeral=True
+                )
+
             await self.bot.settings.update_by_id(sett)
-            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Stats")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                    title="Success",
-                    description=f"<#{channel_id}> has been removed from ERLC Stats",
-                    color=BLANK_COLOR
-                ),
-                view=None
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Statistics")
+            
+            await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Success",
+                        description=f"<#{channel_id}> has been removed from ERLC Statistics",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
             )
 
 class RoleSelect(discord.ui.View):
