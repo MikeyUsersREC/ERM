@@ -677,8 +677,8 @@ async def statistics_check():
             players = await bot.prc_api.get_server_players(guild_id)
             status = await bot.prc_api.get_server_status(guild_id)
             queue = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure as e:
-            logging.error(f"Failed to fetch statistics for guild {guild_id}: {e}")
+        except prc_api.ResponseFailure:
+            logging.error(f"PRC ResponseFailure for guild {guild_id}")
             continue
 
         on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
