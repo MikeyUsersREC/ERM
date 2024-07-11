@@ -644,12 +644,24 @@ async def fetch_get_channel(target, identifier):
             channel = None
     return channel
 
+async def update_channel(guild, channel_id, stat, placeholders):
+    try:
+        format_string = stat["format"]
+        channel_id = int(channel_id)
+        channel = discord.utils.get(guild.channels, id=channel_id)
+        if channel:
+            for key, value in placeholders.items():
+                format_string = format_string.replace(f"{{{key}}}", str(value))
+            await channel.edit(name=format_string)
+    except Exception as e:
+        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
+
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check():
     initial_time = time.time()
-
     async for guild_data in bot.settings.db.find({}):
         guild_id = guild_data['_id']
+
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
@@ -662,33 +674,17 @@ async def statistics_check():
         statistics = settings["ERLC"]["statistics"]
 
         try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
-            queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure:
+            players = await bot.prc_api.get_server_players(guild_id)
+            status = await bot.prc_api.get_server_status(guild_id)
+            queue = await bot.prc_api.get_server_queue(guild_id, minimal=True)
+        except prc_api.ResponseFailure as e:
+            logging.error(f"Failed to fetch statistics for guild {guild_id}: {e}")
             continue
 
         on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
-        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
-        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
-        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        current_player = status.current_players
-        join_code = status.join_key
-        max_players = status.max_players
-
-        placeholders = {
-            "onduty": on_duty,
-            "staff": staff_ingame,
-            "mods": moderators,
-            "admins": admins,
-            "players": current_player,
-            "join_code": join_code,
-            "max_players": max_players,
-            "queue": queue
-        }
-        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
-        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
-        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        moderators = len([player for player in players if player.permission == 'Server Moderator'])
+        admins = len([player for player in players if player.permission == 'Server Administrator'])
+        staff_ingame = len([player for player in players if player.permission != 'Normal'])
         current_player = status.current_players
         join_code = status.join_key
         max_players = status.max_players
@@ -704,28 +700,11 @@ async def statistics_check():
             "queue": queue
         }
 
-        tasks = []
-
-        for channel_id, stat_value in statistics.items():
-            tasks.append(update_channel(guild, channel_id, stat_value, placeholders))
-
+        tasks = [update_channel(guild, channel_id, stat_value, placeholders) for channel_id, stat_value in statistics.items()]
         await asyncio.gather(*tasks)
 
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
-
-
-async def update_channel(guild, channel_id, stat, placeholders):
-    try:
-        format_string = stat["format"]
-        channel_id = int(channel_id)
-        channel = await fetch_get_channel(guild, channel_id)
-        if channel:
-            for key, value in placeholders.items():
-                format_string = format_string.replace(f"{{{key}}}", str(value))
-            await channel.edit(name=format_string)
-    except KeyError:
-        pass
 
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
@@ -1203,20 +1182,18 @@ async def check_loa():
                                                 reason="LOA Expired",
                                                 atomic=True,
                                             )
-                                            loaObject["expired"] = True
-                                            await bot.loas.update_by_id(loaObject)
-                                        except discord.HTTPException as e:
-                                            loaObject["expired"] = True
-                                            await bot.loas.update_by_id(loaObject)
-                                            logging.error(f"Failed to remove role {role.id} from {member.id} in {guild.id} due to {e}")
+                                    
+                                        except discord.HTTPException:
                                             pass
-                    if member:
+                    if member != None:
                         try:
                             await member.send(embed=discord.Embed(
                                 title=f"{expired_doc['type']} Expired",
                                 description=f"Your {expired_doc['type']} has expired in **{guild.name}**.",
                                 color=BLANK_COLOR
                             ))
+                            loaObject["expired"] = True
+                            await bot.loas.update_by_id(loaObject)
                         except discord.Forbidden:
                             pass
 

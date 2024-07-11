@@ -666,7 +666,7 @@ class ERLC(commands.Cog):
     async def check(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
-                title="Checking...",
+                title="<:Clock:1035308064305332224> Checking...",
                 description="This may take a while.",
                 color=BLANK_COLOR
             )
@@ -677,7 +677,7 @@ class ERLC(commands.Cog):
         except ResponseFailure:
             return await msg.edit(
                 embed=discord.Embed(
-                    title="PRC API Error",
+                    title="<:WarningIcon:1035258528149033090> PRC API Error",
                     description="There was an error fetching players from the PRC API.",
                     color=BLANK_COLOR
                 )
