@@ -1147,11 +1147,10 @@ async def check_loa():
                         member = await guild.fetch_member(loaObject["user_id"])
                     except discord.errors.NotFound:
                         print(f"Member {loaObject['user_id']} not found in guild {guild.id}")
-                        # You might want to handle this case, e.g., by marking the LOA as expired
                         loaObject["expired"] = True
                         await bot.loas.update_by_id(loaObject)
-                        continue  # Skip to the next iteration of the loop
-                    
+                        continue
+
                     settings = await bot.settings.find_by_id(guild.id)
                     roles = [None]
                     if settings is not None:
@@ -1218,7 +1217,7 @@ async def check_loa():
                                             await bot.loas.update_by_id(loaObject)
                                             logging.error(f"Failed to remove role {role.id} from {member.id} in {guild.id} due to {e}")
                                             pass
-                    if member:
+                    if member and expired_doc:
                         try:
                             await member.send(embed=discord.Embed(
                                 title=f"{expired_doc['type']} Expired",
@@ -1227,6 +1226,8 @@ async def check_loa():
                             ))
                         except discord.Forbidden:
                             pass
+                    elif expired_doc is None:
+                        logging.warning(f"Expired document not found for user {loaObject['user_id']} in guild {guild.id}")
 
 
 intents = discord.Intents.default()
