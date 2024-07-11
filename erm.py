@@ -674,17 +674,17 @@ async def statistics_check():
         statistics = settings["ERLC"]["statistics"]
 
         try:
-            players = await bot.prc_api.get_server_players(guild_id)
-            status = await bot.prc_api.get_server_status(guild_id)
-            queue = await bot.prc_api.get_server_queue(guild_id, minimal=True)
+            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
+            queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
         except prc_api.ResponseFailure:
             logging.error(f"PRC ResponseFailure for guild {guild_id}")
             continue
 
         on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
-        moderators = len([player for player in players if player.permission == 'Server Moderator'])
-        admins = len([player for player in players if player.permission == 'Server Administrator'])
-        staff_ingame = len([player for player in players if player.permission != 'Normal'])
+        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
+        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
+        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
         current_player = status.current_players
         join_code = status.join_key
         max_players = status.max_players
