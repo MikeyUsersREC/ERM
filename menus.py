@@ -6700,7 +6700,7 @@ class RemoteCommandConfiguration(discord.ui.View):
         await self.bot.settings.update_by_id(sett)
 
 class WhitelistVehiclesManagement(discord.ui.View):
-    def __init__(self, bot, guild_id,enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None,alert_message=None):
+    def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
         self.bot = bot
         self.guild_id = guild_id
@@ -6731,13 +6731,18 @@ class WhitelistVehiclesManagement(discord.ui.View):
             min_values=1,
             default_values=self.whitelisted_vehicles_roles_objs
         )
+
+        channel = self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)
+        default_values = [channel] if channel else []
+
         self.whitelisted_vehicle_alert_channel_select = discord.ui.ChannelSelect(
             placeholder="Whitelisted Vehicle Alert Channel",
             max_values=1,
             min_values=0,
             channel_types=[discord.ChannelType.text],
-            default_values=[self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)]
+            default_values=default_values
         )
+
         self.add_vehicle_button = discord.ui.Button(
             label="Add Vehicle to Role",
             style=discord.ButtonStyle.secondary,
