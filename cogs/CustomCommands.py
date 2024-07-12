@@ -13,6 +13,7 @@ from menus import (
     MessageCustomisation,
     RemoveCustomCommand,
     YesNoColourMenu, CustomCommandOptionSelect, CustomCommandModification,
+    CounterButton, ViewVotersButton
 )
 from utils.autocompletes import command_autocomplete
 from utils.utils import (
@@ -316,12 +317,18 @@ class CustomCommands(commands.Cog):
 
         view = discord.ui.View()
         for item in selected.get('buttons', []):
-            view.add_item(discord.ui.Button(
-                label=item['label'],
-                url=item['url'],
-                row=item['row'],
-                style=discord.ButtonStyle.url
-            ))
+            if item['label'] == "0" and 'row' in item:
+                counter_button = CounterButton(row=item['row'])
+                view_voters_button = ViewVotersButton(row=item['row'], counter_button=counter_button)
+                view.add_item(counter_button)
+                view.add_item(view_voters_button)
+            else:
+                view.add_item(discord.ui.Button(
+                    label=item['label'],
+                    url=item['url'],
+                    row=item['row'],
+                    style=discord.ButtonStyle.url
+                ))
 
 
         if ctx.interaction:
