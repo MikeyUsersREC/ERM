@@ -1113,17 +1113,20 @@ async def iterate_ics():
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
     try:
-        print('checking loa')
         loas = bot.loas
+
         async for loaObject in bot.loas.db.find({}):
             if (
                 datetime.datetime.now().timestamp() > loaObject["expiry"]
                 and loaObject["expired"] == False
             ):
                 if loaObject["accepted"] is True:
+                    loaObject["expired"] = True
+                    await bot.loas.update_by_id(loaObject)
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-                        member = await guild.fetch_member(loaObject["user_id"])
+
+                        member = guild.get_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
                         if settings is not None:
@@ -1151,7 +1154,7 @@ async def check_loa():
                                         ]
                                 except KeyError:
                                     pass
-    
+
                         docs = bot.loas.db.find(
                             {
                                 "user_id": loaObject["user_id"],
@@ -1162,16 +1165,13 @@ async def check_loa():
                             }
                         )
                         should_remove_roles = True
-                        expired_doc = None
-    
                         async for doc in docs:
                             if doc["type"] == loaObject["type"]:
                                 if not doc["expired"]:
                                     if not doc == loaObject:
                                         should_remove_roles = False
                                         break
-                                expired_doc = doc
-    
+
                         if should_remove_roles:
                             for role in roles:
                                 if role is not None:
@@ -1183,21 +1183,37 @@ async def check_loa():
                                                     reason="LOA Expired",
                                                     atomic=True,
                                                 )
-                                        
                                             except discord.HTTPException:
-                                                pass
-                        if member != None:
+                                                channel = settings["staff_management"]["channel"]
+                                                if channel:
+                                                    channel = guild.get_channel(channel)
+                                                    if channel:
+                                                        await channel.send(
+                                                            embed = discord.Embed(
+                                                                title="Failed to Remove Role",
+                                                                description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                                color=RED_COLOR
+                                                            )
+                                                        )
+                                                else:
+                                                    owner = guild.owner
+                                                    await owner.send(
+                                                        embed = discord.Embed(
+                                                            title="Failed to Remove Role",
+                                                            description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                            color=RED_COLOR
+                                                        )
+                                                    )
+                        if member:
                             try:
                                 await member.send(embed=discord.Embed(
-                                    title=f"{expired_doc['type']} Expired",
-                                    description=f"Your {expired_doc['type']} has expired in **{guild.name}**.",
+                                    title=f"{doc['type']} Expired",
+                                    description=f"Your {doc['type']} has expired in **{guild.name}**.",
                                     color=BLANK_COLOR
                                 ))
-                                loaObject["expired"] = True
-                                await bot.loas.update_by_id(loaObject)
                             except discord.Forbidden:
                                 pass
-    except Exception as e:
+    except ValueError:
         pass
 
 
