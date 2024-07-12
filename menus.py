@@ -1717,39 +1717,6 @@ class CustomCommandModification(discord.ui.View):
         self.value = True
         self.stop()
 
-class CounterButton(discord.ui.Button):
-    def __init__(self, row):
-        super().__init__(label="0", style=discord.ButtonStyle.primary, row=row)
-        self.voters = set()
-
-    async def callback(self, interaction: discord.Interaction):
-        user = interaction.user
-        if user.id in self.voters:
-            self.voters.remove(user.id)
-            self.label = str(int(self.label) - 1)
-            await interaction.response.send_message(f"Your vote has been removed.", ephemeral=True)
-        else:
-            self.voters.add(user.id)
-            self.label = str(int(self.label) + 1)
-            await interaction.response.send_message(f"Your vote has been added.", ephemeral=True)
-        await interaction.message.edit(view=self.view)
-
-class ViewVotersButton(discord.ui.Button):
-    def __init__(self, row, counter_button):
-        super().__init__(label="🔍View Voters", style=discord.ButtonStyle.secondary, row=row)
-        self.counter_button = counter_button
-
-    async def callback(self, interaction: discord.Interaction):
-        voters = [interaction.guild.get_member(user_id).mention for user_id in self.counter_button.voters]
-        voter_list = "\n".join(voters) if voters else "No votes yet."
-        await interaction.response.send_message(embed=discord.Embed(
-            title="Voters",
-            description=voter_list,
-            color=BLANK_COLOR
-        ),
-        ephemeral=True)
-
-
 class ButtonCustomisation(discord.ui.View):
     def __init__(self, command_data: dict, user_id: int):
         super().__init__(timeout=600)
