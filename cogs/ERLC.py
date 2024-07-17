@@ -261,7 +261,7 @@ class ERLC(commands.Cog):
         embed1.add_field(
             name="Basic Info",
             value=(
-                f"> **Join Code:** `{status.join_key}`\n"
+                f"> **Join Code:** [{status.join_key}](https://policeroleplay.community/join/{status.join_key})\n"
                 f"> **Current Players:** {status.current_players}/{status.max_players}\n"
                 f"> **Queue:** {queue}\n"
             ),
