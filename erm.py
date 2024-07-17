@@ -721,21 +721,12 @@ async def check_whitelisted_car():
         except discord.errors.NotFound:
             continue
 
-        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
-        if not enable_vehicle_restrictions:
-            continue
         try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-        except prc_api.ResponseFailure:
-            continue
-        whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
-        alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
-        whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
-        alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
-
-        enable_vehicle_restrictions = items['ERLC'].get('enable_vehicle_restrictions', False)
-        if not enable_vehicle_restrictions:
+            whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
+            alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
+            whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
+            alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+        except KeyError:
             continue
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
@@ -758,6 +749,12 @@ async def check_whitelisted_car():
 
         if not exotic_roles or not alert_channel:
             continue
+        try:
+            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
+            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
+        except prc_api.ResponseFailure:
+            continue
+
         matched = {}
         for item in vehicles:
             for x in players:
@@ -782,54 +779,56 @@ async def check_whitelisted_car():
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
+                                logging.debug(f"PM Counter for {player.username}: 1")
                             else:
                                 pm_counter[player.username] += 1
+                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
                             if pm_counter[player.username] >= 4:
+                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
                                     avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
                                         title="Whitelisted Vehicle Warning",
                                         description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
                                         """,
                                         color=discord.Color.red(),
-                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
+                                        timestamp=datetime.utcnow()
                                     ).set_footer(
                                         text=f"Powered by ERM Systems",
                                     ).set_thumbnail(url=avatar_url)
                                     await alert_channel.send(embed=embed)
-                                except discord.HTTPException:
-                                    pass
+                                except discord.HTTPException as e:
+                                    logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
                                 pm_counter.pop(player.username)
                         break
-                    elif member_found == False:
+                    elif not member_found:
                         await run_command(guild_id, player.username, alert_message)
 
                         if player.username not in pm_counter:
                             pm_counter[player.username] = 1
+                            logging.debug(f"PM Counter for {player.username}: 1")
                         else:
                             pm_counter[player.username] += 1
 
                         if pm_counter[player.username] >= 4:
                             try:
+                                avatar_url = await get_player_avatar_url(player.id)
                                 embed = discord.Embed(
                                     title="Whitelisted Vehicle Warning",
                                     description=f"""
-                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
+                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
                                     """,
                                     color=discord.Color.red(),
                                     timestamp=datetime.datetime.now(tz=pytz.UTC)
                                 ).set_footer(
-                                    text=f"Guild: {guild.name}",
-                                )
+                                    text="Powered by ERM Systems",
+                                ).set_thumbnail(url=avatar_url)
                                 await alert_channel.send(embed=embed)
-                            except discord.HTTPException:
-                                pass
+                            except discord.HTTPException as e:
+                                logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
                             pm_counter.pop(player.username)
-            else:
-                if player.username in pm_counter.keys():
-                    pm_counter.pop(player.username)
 
     end_time = time.time()
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
@@ -1117,16 +1116,20 @@ async def iterate_ics():
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa():
     try:
-        print('checking loa')
+        loas = bot.loas
+
         async for loaObject in bot.loas.db.find({}):
             if (
                 datetime.datetime.now().timestamp() > loaObject["expiry"]
                 and loaObject["expired"] == False
             ):
                 if loaObject["accepted"] is True:
+                    loaObject["expired"] = True
+                    await bot.loas.update_by_id(loaObject)
                     guild = bot.get_guild(loaObject["guild_id"])
                     if guild:
-                        member = await guild.fetch_member(loaObject["user_id"])
+
+                        member = guild.get_member(loaObject["user_id"])
                         settings = await bot.settings.find_by_id(guild.id)
                         roles = [None]
                         if settings is not None:
@@ -1165,15 +1168,12 @@ async def check_loa():
                             }
                         )
                         should_remove_roles = True
-                        expired_doc = None
-
                         async for doc in docs:
                             if doc["type"] == loaObject["type"]:
                                 if not doc["expired"]:
                                     if not doc == loaObject:
                                         should_remove_roles = False
                                         break
-                                expired_doc = doc
 
                         if should_remove_roles:
                             for role in roles:
@@ -1186,22 +1186,38 @@ async def check_loa():
                                                     reason="LOA Expired",
                                                     atomic=True,
                                                 )
-                                                expired_doc["expired"] = True
-                                                await bot.loas.update_by_id(expired_doc)
                                             except discord.HTTPException:
-                                                expired_doc["expired"] = True
-                                                await bot.loas.update_by_id(expired_doc)
-                        if member != None:
+                                                channel = settings["staff_management"]["channel"]
+                                                if channel:
+                                                    channel = guild.get_channel(channel)
+                                                    if channel:
+                                                        await channel.send(
+                                                            embed = discord.Embed(
+                                                                title="Failed to Remove Role",
+                                                                description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                                color=RED_COLOR
+                                                            )
+                                                        )
+                                                else:
+                                                    owner = guild.owner
+                                                    await owner.send(
+                                                        embed = discord.Embed(
+                                                            title="Failed to Remove Role",
+                                                            description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
+                                                            color=RED_COLOR
+                                                        )
+                                                    )
+                        if member:
                             try:
                                 await member.send(embed=discord.Embed(
-                                    title=f"{expired_doc['type']} Expired",
-                                    description=f"Your {expired_doc['type']} has expired in **{guild.name}**.",
+                                    title=f"{doc['type']} Expired",
+                                    description=f"Your {doc['type']} has expired in **{guild.name}**.",
                                     color=BLANK_COLOR
                                 ))
                             except discord.Forbidden:
                                 pass
-    except Exception as e:
-        logging.error(f"Error in check_loa: {e}")
+    except ValueError:
+        pass
 
 intents = discord.Intents.default()
 intents.message_content = True
