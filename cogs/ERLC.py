@@ -5,6 +5,7 @@ import roblox
 from discord.ext import commands
 
 import logging
+from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
 from menus import ReloadView
@@ -671,20 +672,27 @@ class ERLC(commands.Cog):
     @is_staff()
     @is_server_linked()
     async def check(self, ctx: commands.Context):
+        msg = await ctx.send(
+            embed=discord.Embed(
+                title="<:Clock:1035308064305332224> Checking...",
+                description="This may take a while.",
+                color=BLANK_COLOR
+            )
+        )
         guild_id = ctx.guild.id
         try:
             players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         except ResponseFailure:
-            return await ctx.send(
+            return await msg.edit(
                 embed=discord.Embed(
-                    title="PRC API Error",
+                    title="<:WarningIcon:1035258528149033090> PRC API Error",
                     description="There was an error fetching players from the PRC API.",
                     color=BLANK_COLOR
                 )
             )
 
         if not players:
-            return await ctx.send(
+            return await msg.edit(
                 embed=discord.Embed(
                     title="No Players Found",
                     description="There are no players in the server to check.",
@@ -715,13 +723,7 @@ class ERLC(commands.Cog):
                         if member:
                             member_found = True
                 except discord.HTTPException:
-                    return await ctx.send(
-                        embed=discord.Embed(
-                            title="Discord API Error",
-                            description="There was an error while accessing the Discord API.",
-                            color=BLANK_COLOR
-                        )
-                    )
+                    pass
 
             if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
@@ -733,7 +735,7 @@ class ERLC(commands.Cog):
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
-        await ctx.send(embed=embed)
+        await msg.edit(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(ERLC(bot))

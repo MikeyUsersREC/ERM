@@ -771,7 +771,7 @@ class Configuration(commands.Cog):
                 (
                     'ERM Log Channel',
                     [discord.utils.get(ctx.guild.channels, id=channel) if (
-                        channel := settings.get('erm_log_channel')) else 0]
+                        channel := settings.get('staff_management', {}).get('erm_log_channel')) else 0]
                 )
             ]
         )

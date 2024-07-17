@@ -179,7 +179,7 @@ class ActivityCoreCommands:
             "type": request_type_object.upper()
         })
 
-        view = ActivityNoticeAdministration(ctx.author.id)
+        view = ActivityNoticeAdministration(self.bot,ctx.author.id,victim=victim.id,guild_id= ctx.guild.id,request_type=request_type_object,current_notice=current_notice)
         embed = discord.Embed(
             title="Activity Notices",
             color=BLANK_COLOR
@@ -386,12 +386,12 @@ class ActivityCoreCommands:
             if not current_notice:
                 return await respond(
                     embed=discord.Embed(
-                        title="No Active Notice",
+                        title="<:error:1164666124496019637> No Active Notice",
                         description="This staff member has no active notice."
                     )
                 )
 
-            current_time = int(datetime.datetime.now().timestamp())
+            current_time = datetime.datetime.now().timestamp()
             await self.bot.loas.db.update_one(
                 {"_id": current_notice["_id"]},
                 {"$set": {"expiry": current_time}}
@@ -399,7 +399,7 @@ class ActivityCoreCommands:
 
             return await respond(
                 embed=discord.Embed(
-                    title="Notice Ended Early",
+                    title="<:success:1163149118366040106> Notice Ended Early",
                     description=f"{victim.mention}'s {request_type_object.upper()} has been ended early.",
                     color=GREEN_COLOR
                 )
@@ -421,7 +421,7 @@ class ActivityCoreCommands:
             if not current_notice:
                 return await respond(
                     embed=discord.Embed(
-                        title="No Active Notice",
+                        title="<:error:1164666124496019637> No Active Notice",
                         description="This staff member has no active notice."
                     )
                 )
@@ -430,7 +430,7 @@ class ActivityCoreCommands:
             if duration is None:
                 return await respond(
                     embed=discord.Embed(
-                        title="Cancelled",
+                        title="<:WarningIcon:1035258528149033090> Cancelled",
                         description="You did not provide a duration.",
                         color=BLANK_COLOR
                     )
@@ -441,7 +441,7 @@ class ActivityCoreCommands:
             except ValueError:
                 return await respond(
                     embed=discord.Embed(
-                        title="Invalid Time",
+                        title="<:WarningIcon:1035258528149033090> Invalid Time",
                         description="You did not provide a valid time format.",
                         color=BLANK_COLOR
                     )
@@ -455,7 +455,7 @@ class ActivityCoreCommands:
 
             return await respond(
                 embed=discord.Embed(
-                    title="Notice Extended",
+                    title="<:success:1163149118366040106> Notice Extended",
                     description=f"{victim.mention}'s {request_type_object.upper()} has been extended by {duration}.",
                     color=GREEN_COLOR
                 )

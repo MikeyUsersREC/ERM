@@ -934,10 +934,11 @@ class LOAMenu(discord.ui.View):
 
         s_loa["accepted"] = True
         guild = self.bot.get_guild(s_loa["guild_id"])
-
-        user = guild.get_member(s_loa["user_id"])
-
-        if not user:
+        try:
+            user = await guild.fetch_member(s_loa["user_id"])
+        except discord.NotFound:
+            user = None
+        if user is None:
             return await interaction.followup.send(
                 embed=discord.Embed(
                     title="Could not find member",
@@ -3952,11 +3953,38 @@ class WarningDropdownMenu(discord.ui.View):
         self.add_item(ChangeWarningType(self.user_id, new_options))
 
 class ActivityNoticeAdministration(discord.ui.View):
-    def __init__(self, user_id: int):
+    def __init__(self, bot, user_id: int, victim: int, guild_id: int, request_type: str, current_notice=None):
         super().__init__(timeout=900.0)
         self.user_id = user_id
         self.value = None
         self.stored_interaction = None
+        self.victim = victim
+        self.bot = bot
+        self.guild_id = guild_id
+        self.request_type = request_type
+        self.current_notice = current_notice
+
+        if self.current_notice is not None:
+            self.delete_button = discord.ui.Button(
+                label="Delete",
+                style=discord.ButtonStyle.danger
+            )
+            self.delete_button.callback = self.delete_notice
+            self.add_item(self.delete_button)
+
+            self.end_button = discord.ui.Button(
+                label="End",
+                style=discord.ButtonStyle.secondary
+            )
+            self.end_button.callback = self.end_notice
+            self.add_item(self.end_button)
+            
+            self.extend_button = discord.ui.Button(
+                label="Extend",
+                style=discord.ButtonStyle.primary
+            )
+            self.extend_button.callback = self.extend_notice
+            self.add_item(self.extend_button)
 
     async def visual_close(self, message: discord.Message):
         for item in self.children:
@@ -3965,7 +3993,7 @@ class ActivityNoticeAdministration(discord.ui.View):
         await message.edit(view=self)
         await message.delete()
 
-    async def interaction_check(self, interaction: Interaction, /) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
         if interaction.user.id == self.user_id:
             return True
         else:
@@ -4021,23 +4049,14 @@ class ActivityNoticeAdministration(discord.ui.View):
         await self.visual_close(interaction.message)
         self.stop()
 
-    @discord.ui.button(
-        label="Delete",
-        style=discord.ButtonStyle.danger
-    )
-    async def delete_notice(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def delete_notice(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=False)
         self.stored_interaction = interaction
         self.value = "delete"
-
         await self.visual_close(interaction.message)
         self.stop()
-    
-    @discord.ui.button(
-        label="End",
-        style=discord.ButtonStyle.secondary
-    )
-    async def end(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    async def end_notice(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=False)
         self.stored_interaction = interaction
         self.value = "end"
@@ -4045,11 +4064,7 @@ class ActivityNoticeAdministration(discord.ui.View):
         await self.visual_close(interaction.message)
         self.stop()
 
-    @discord.ui.button(
-        label="Extend",
-        style=discord.ButtonStyle.green
-    )
-    async def extend(self,interaction:discord.Interaction,button:discord.ui.Button):
+    async def extend_notice(self, interaction: discord.Interaction):
         self.modal = CustomModal(
             'Extend Activity Notice',
             [
@@ -4068,9 +4083,8 @@ class ActivityNoticeAdministration(discord.ui.View):
         await self.modal.wait()
         self.stored_interaction = self.modal.interaction
         self.value = "extend"
-        self.visual_close(interaction.message)
+        await self.visual_close(interaction.message)
         self.stop()
-
 
 class MultiSelectMenu(discord.ui.View):
     def __init__(self, user_id, options: list):
@@ -5601,7 +5615,12 @@ class ERMCommandLog(AssociationConfigurationView):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        sett['erm_log_channel'] = select.values[0].id
+        try:
+            sett['staff_management']['erm_log_channel'] = select.values[0].id
+        except KeyError:
+            sett['staff_management'] = {
+                'erm_log_channel': select.values[0].id
+            }
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"ERM Log Channel Set: <#{select.values[0].id}>")
 
@@ -6681,7 +6700,7 @@ class RemoteCommandConfiguration(discord.ui.View):
         await self.bot.settings.update_by_id(sett)
 
 class WhitelistVehiclesManagement(discord.ui.View):
-    def __init__(self, bot, guild_id,enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None,alert_message=None):
+    def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
         self.bot = bot
         self.guild_id = guild_id
@@ -6712,13 +6731,18 @@ class WhitelistVehiclesManagement(discord.ui.View):
             min_values=1,
             default_values=self.whitelisted_vehicles_roles_objs
         )
+
+        channel = self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)
+        default_values = [channel] if channel else []
+
         self.whitelisted_vehicle_alert_channel_select = discord.ui.ChannelSelect(
             placeholder="Whitelisted Vehicle Alert Channel",
             max_values=1,
             min_values=0,
             channel_types=[discord.ChannelType.text],
-            default_values=[self.bot.get_guild(self.guild_id).get_channel(self.whitelisted_vehicle_alert_channel)]
+            default_values=default_values
         )
+
         self.add_vehicle_button = discord.ui.Button(
             label="Add Vehicle to Role",
             style=discord.ButtonStyle.secondary,
@@ -7175,7 +7199,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         if val is False:
             return
         
-        view = ERLCStaticsConfiguration(self.bot, interaction.guild.id, interaction)
+        view = ERLCStats(self.bot,interaction.user.id,interaction.guild.id)
         embed=discord.Embed(
                 description=(
                     "With **ER:LC Integration**, you can use custom variables to adapt to the current circumstances when statistics update.\n"
@@ -7196,385 +7220,117 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             ephemeral=True
         )
 
-class ERLCStaticsConfiguration(discord.ui.View):
-    def __init__(self, bot, guild_id, interaction):
-        super().__init__()  
-
+class ERLCStats(discord.ui.View):
+    def __init__(self, bot, user_id, guild_id):
+        super().__init__(timeout=600.0)
         self.bot = bot
+        self.value = None
+        self.user_id = user_id
+        self.limit = 1
+        self.placeholder = "Select a channel"
         self.guild_id = guild_id
-        self.interaction = interaction
 
-        self.set_channels = discord.ui.Select(
-            placeholder="Select any option",
-            options=[
-                discord.SelectOption(
-                    label="On-Duty Channel",
-                    value="onduty"
-                ),
-                discord.SelectOption(
-                    label="Join Code",
-                    value="join_code"
-                ),
-                discord.SelectOption(
-                    label="Current Players",
-                    value="current_players"
-                ),
-                discord.SelectOption(
-                    label="Total Players",
-                    value="total_players"
-                ),
-                discord.SelectOption(
-                    label="Queue",
-                    value="queue"
-                ),
-                discord.SelectOption(
-                    label="In-Game Staff",
-                    value="ingame_staff"
-                ),
-                discord.SelectOption(
-                    label="In-Game Mods",
-                    value="ingame_mods"
-                ),
-                discord.SelectOption(
-                    label="In-Game Admins",
-                    value="ingame_admins"
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.voice]
+    )
+    async def channel_select(
+            self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Set Format", style=discord.ButtonStyle.secondary, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
+        if interaction.user.id == self.user_id:
+            self.value = select.values
+            modal = CustomModal(
+                "Format",
+                [
+                    (
+                        "format",
+                        discord.ui.TextInput(
+                            label="Format",
+                            placeholder=f"Format With Variables {', '.join([f'`{i}`' for i in ['onduty', 'join_code', 'players', 'etc']])}",
+                        )                            
+                    )
+                ]
+            )
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if not modal.format.value:
+                return
+            channel_id = str(self.value[0].id)
+            try:
+                sett = await self.bot.settings.find_by_id(self.guild_id)
+            except KeyError:
+                sett = {}
+            try:
+                sett["ERLC"]["statistics"][channel_id]["format"] = modal.format.value
+            except KeyError:
+                if "ERLC" not in sett:
+                    sett["ERLC"] = {}
+                if "statistics" not in sett["ERLC"]:
+                    sett["ERLC"]["statistics"] = {}
+                if channel_id not in sett["ERLC"]["statistics"]:
+                    sett["ERLC"]["statistics"][channel_id] = {}
+                sett["ERLC"]["statistics"][channel_id] = {"format": modal.format.value}
+            await self.bot.settings.update_by_id(sett)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                        title="<:success:1163149118366040106> Success",
+                        description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
+                        color=BLANK_COLOR
+                    ),
+                    view=None
+            )
+        
+    @discord.ui.button(label="Remove Channel", style=discord.ButtonStyle.danger, row=2)
+    async def remove_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
+        if interaction.user.id == self.user_id:
+            self.value = select.values
+            channel_id = self.value[0].id
+            try:
+                sett = await self.bot.settings.find_by_id(self.guild_id)
+            except KeyError:
+                sett = {}
+            
+            try:
+                channel_id = str(channel_id)
+                del sett["ERLC"]["statistics"][channel_id]
+            except KeyError:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is not set as a statistics channel",
+                        color=discord.Color.red()
+                    ),
+                    ephemeral=True
                 )
-            ]
-        )
-        self.set_channels.callback = self.create_callback(self.set_channels_callback, self.set_channels)
 
-        self.add_item(self.set_channels)
-
-    async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user.id != self.interaction.user.id:
-            await interaction.response.send_message("You are not allowed to interact with this view.", ephemeral=True)
-            return False
-        return True
-
-    def create_callback(self, func, component):
-        async def callback(interaction: discord.Interaction):
-            if isinstance(component, discord.ui.Select):
-                return await func(interaction, component)
-        return callback
-
-    async def set_channels_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
-        value = await self.interaction_check(interaction)
-        if not value: return
-
-        guild_id = interaction.guild.id
-
-        bot = self.bot
-        sett = await bot.settings.find_by_id(guild_id)
-
-        if not sett.get('ERLC'):
-            sett['ERLC'] = {
-                "statistics" : {}
-            }
-
-        if select.values[0] == "onduty":
-            modal = CustomModal(
-                "On-Duty Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="On Duty I {onduty}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('onduty', {}).get('format', '')
-                        )
-                    )
-                ]
+            await self.bot.settings.update_by_id(sett)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Statistics")
+            
+            await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Success",
+                        description=f"<#{channel_id}> has been removed from ERLC Statistics",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
             )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["onduty"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'onduty' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['onduty'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["onduty"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["onduty"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"On-Duty Statistics Format: {modal.channel.value}\nOn-Duty Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "join_code":
-            modal = CustomModal(
-                "Join Code Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="Join Code I {join_code}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('join_code', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["join_code"]["format"] = modal.channel.value
-            except KeyError:
-                if "ERLC" not in sett:
-                    sett["ERLC"] = {}
-                if "statistics" not in sett["ERLC"]:
-                    sett["ERLC"]["statistics"] = {}
-                if "join_code" not in sett["ERLC"]["statistics"]:
-                    sett["ERLC"]["statistics"]["join_code"] = {"channel": 0}
-                sett["ERLC"]["statistics"]["join_code"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["join_code"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"On-Duty Statistics Format: {modal.channel.value}\nJoin Code Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "current_players":
-            modal = CustomModal(
-                "Current Players Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="Current Players I {players}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('current_players', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["current_players"]["format"] = modal.channel.value
-            except KeyError:
-                if "ERLC" not in sett:
-                    sett["ERLC"] = {}
-                if "statistics" not in sett["ERLC"]:
-                    sett["ERLC"]["statistics"] = {}
-                if "current_players" not in sett["ERLC"]["statistics"]:
-                    sett["ERLC"]["statistics"]["current_players"] = {"channel": 0}
-                sett["ERLC"]["statistics"]["current_players"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["current_players"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"Current Players Statistics Format: {modal.channel.value}\nCurrent Players Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "total_players":
-            modal = CustomModal(
-                "Total Players Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="Total Players I {max_players}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('total_players', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["total_players"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'total_players' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['total_players'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["total_players"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["total_players"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"Total Players Statistics Format: {modal.channel.value}\nTotal Players Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "queue":
-            modal = CustomModal(
-                "Queue Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="Queue I {queue}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('queue', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["queue"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'queue' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['queue'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["queue"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["queue"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"Queue Statistics Format: {modal.channel.value}\nQueue Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "ingame_staff":
-            modal = CustomModal(
-                "In-Game Staff Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="In-Game Staff I {staff}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('ingame_staff', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["ingame_staff"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'ingame_staff' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['ingame_staff'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["ingame_staff"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["ingame_staff"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"In-Game Staff Statistics Format: {modal.channel.value}\nIn-Game Staff Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "ingame_mods":
-            modal = CustomModal(
-                "In-Game Mods Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="In-Game Mods I {mods}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('ingame_mods', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["ingame_mods"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'ingame_mods' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['ingame_mods'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["ingame_mods"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["ingame_mods"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"In-Game Mods Statistics Format: {modal.channel.value}\nIn-Game Mods Statistics Channel: <#{selected_channel.id}>")
-
-        elif select.values[0] == "ingame_admins":
-            modal = CustomModal(
-                "In-Game Admins Format",
-                [
-                    (
-                        "channel",
-                        discord.ui.TextInput(
-                            label="Channel",
-                            placeholder="In-Game Admins I {admins}",
-                            default=sett.get('ERLC', {}).get('statistics', {}).get('ingame_admins', {}).get('format', '')
-                        )
-                    )
-                ]
-            )
-            await interaction.response.send_modal(modal)
-            await modal.wait()
-            if not modal.channel.value:
-                return
-            try:
-                sett["ERLC"]["statistics"]["ingame_admins"]["format"] = modal.channel.value
-            except KeyError:
-                if 'ERLC' not in sett:
-                    sett['ERLC'] = {}
-                if 'statistics' not in sett['ERLC']:
-                    sett['ERLC']['statistics'] = {}
-                if 'ingame_admins' not in sett['ERLC']['statistics']:
-                    sett['ERLC']['statistics']['ingame_admins'] = {"channel": 0}
-                sett["ERLC"]["statistics"]["ingame_admins"]["format"] = modal.channel.value
-            view = VoiceChannelSelect(interaction.user.id, limit=1)
-            await interaction.followup.send("Please select the channel which will be renamed.", view=view, ephemeral=True)
-            await view.wait()
-            selected_channel = view.value[0] if view.value else 0
-            if not selected_channel:
-                return
-            sett["ERLC"]["statistics"]["ingame_admins"]["channel"] = selected_channel.id
-            await bot.settings.update_by_id(sett)
-            await config_change_log(bot, interaction.guild, interaction.user, f"In-Game Admins Statistics Format: {modal.channel.value}\nIn-Game Admins Statistics Channel: <#{selected_channel.id}>")
-
 
 class RoleSelect(discord.ui.View):
     def __init__(self, user_id, **kwargs):
