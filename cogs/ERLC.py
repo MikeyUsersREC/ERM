@@ -261,9 +261,9 @@ class ERLC(commands.Cog):
         embed1.add_field(
             name="Basic Info",
             value=(
-                f"> **Join Code:** {status.join_key}\n"
-                f"> **Current Players:** `{status.current_players}/{status.max_players}`\n"
-                f"> **Queue:** `{queue}`\n"
+                f"> **Join Code:** `{status.join_key}`\n"
+                f"> **Current Players:** {status.current_players}/{status.max_players}\n"
+                f"> **Queue:** {queue}\n"
             ),
             inline=False
         )
@@ -279,10 +279,10 @@ class ERLC(commands.Cog):
         embed1.add_field(
             name="Staff Statistics",
             value=(
-                f"> **Moderators:** `{len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}`\n"
-                f"> **Administrators:** `{len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}`\n"
-                f"> **Staff In-Game:** `{len(list(filter(lambda x: x.permission != 'Normal', players)))}`\n"
-                f"> **Staff Clocked In:** `{await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}`"
+                f"> **Moderators:** {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}\n"
+                f"> **Administrators:** {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}\n"
+                f"> **Staff In-Game:** {len(list(filter(lambda x: x.permission != 'Normal', players)))}\n"
+                f"> **Staff Clocked In:** {await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}"
             ),
             inline=False
         )
