@@ -862,7 +862,15 @@ class ShiftLogging(commands.Cog):
             {"$match": {"Guild": ctx.guild.id, "EndEpoch": {"$ne": 0}}},
             {"$group": {
                 "_id": "$UserID",
-                "total_seconds": {"$sum": {"$subtract": ["$EndEpoch", "$StartEpoch"]}},
+                "total_seconds": {
+                    "$sum": {
+                        "$add": [
+                            {"$subtract": ["$EndEpoch", "$StartEpoch"]},
+                            "$AddedTime",
+                            {"$multiply": ["$RemovedTime", -1]}
+                        ]
+                    }
+                },
                 "moderations": {"$sum": {"$cond": [{"$isArray": "$Moderations"}, {"$size": "$Moderations"}, 0]}},
                 "lowest_time": {"$min": "$StartEpoch"}
             }}
