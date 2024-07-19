@@ -977,9 +977,9 @@ class ShiftLogging(commands.Cog):
                 time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
 
                 if buffer is None:
-                    buffer = f"{member.name} - {time_str}"
+                    buffer = f"{member.name} • {time_str}"
                 else:
-                    buffer += f"\n{member.name} - {time_str}"
+                    buffer += f"\n{member.name} • {time_str}"
 
                 data.append([
                     index + 1,
