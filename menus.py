@@ -6841,7 +6841,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
         self.whitelisted_vehicles_roles_select = discord.ui.RoleSelect(
             placeholder="Whitelisted Vehicles Roles",
             max_values=10,
-            min_values=1,
+            min_values=0,
             default_values=self.whitelisted_vehicles_roles_objs
         )
 
@@ -6998,7 +6998,8 @@ class WhitelistVehiclesManagement(discord.ui.View):
                     discord.ui.TextInput(
                         label="Vehicle",
                         placeholder="e.g. Falcon Fission 2015, Navara Imperium 2020, etc",
-                        default=existing_vehicles_str
+                        default=existing_vehicles_str,
+                        min_length=0,
                     )
                 )
             ], {
@@ -7050,7 +7051,8 @@ class WhitelistVehiclesManagement(discord.ui.View):
                     discord.ui.TextInput(
                         label="Message",
                         placeholder="e.g. You are not allowed to drive this vehicle. Please contact an admin for assistance.",
-                        default=existing_message
+                        default=existing_message,
+                        min_length=0,
                     )
                 )
             ], {
@@ -7329,7 +7331,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
     )
 
     @discord.ui.button(
-        label="ERLC Statistics Updates",
+        label="ER:LC Statistics Updates",
         row=3
     )
     async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7338,10 +7340,115 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             return
         
         view = ERLCStats(self.bot,interaction.user.id,interaction.guild.id)
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        try:
+            statistics = sett.get('ERLC', {}).get('statistics', {})
+        except KeyError:
+            statistics = {}
+
         embed=discord.Embed(
+            title="ER:LC Statistics",
+            description="",
+                color=BLANK_COLOR
+        ).set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        if statistics.items not in [None, {}]:
+            for key, value in statistics.items():
+                embed.description += f"**Channel:** <#{key}>\n> **Format:** `{value.get('format', 'None')}`\n"
+        else:
+            embed.description = "No Statistics Channels Set"
+        await interaction.response.send_message(
+            embed = embed,
+            view=view,
+            ephemeral=True
+        )
+
+class ERLCStats(discord.ui.View):
+    def __init__(self, bot, user_id, guild_id):
+        super().__init__(timeout=600.0)
+        self.bot = bot
+        self.value = None
+        self.user_id = user_id
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Create", style=discord.ButtonStyle.success, row=2)
+    async def create_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        if interaction.user.id == self.user_id:
+            modal = CreateERLCStats(self.bot, self.user_id, self.guild_id)
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Create ER:LC Statistics",
+                    description="Select a voice channel to set as a statistics channel.",
+                    color=BLANK_COLOR
+                ).set_author(
+                    name=interaction.guild.name,
+                    icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                )
+                ,
+                view=modal,
+                ephemeral=True
+            )
+
+    @discord.ui.button(label="Edit", style=discord.ButtonStyle.blurple, row=2)
+    async def edit_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            modal = EditERLCStats(self.bot, self.user_id, self.guild_id)
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Edit ER:LC Statistics",
+                    description="Select a voice channel to edit statistics.",
+                    color=BLANK_COLOR
+                ).set_author(
+                    name=interaction.guild.name,
+                    icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                )
+                ,
+                view=modal,
+                ephemeral=True
+            )
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger, row=2)
+    async def delete_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            msg_embed = interaction.message.embeds[0]
+
+            modal = DeleteERLCStats(self.bot, self.user_id, self.guild_id,embed=msg_embed)
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Delete ER:LC Statistics",
+                    description="Select a voice channel to remove from statistics.",
+                    color=BLANK_COLOR
+                ).set_author(
+                    name=interaction.guild.name,
+                    icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                )
+                ,
+                view=modal,
+                ephemeral=True
+            )
+
+    @discord.ui.button(label="View Variables", style=discord.ButtonStyle.secondary, row=2)
+    async def view_variables(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            embed=discord.Embed(
                 description=(
-                    "With **ER:LC Integration**, you can use custom variables to adapt to the current circumstances when statistics update.\n"
+                    "With **ERM Statistics Check**, you can use custom variables to adapt to the current circumstances when the statistics is updated.\n"
+                    "`{user}` - Mention of the person using the command.\n"
+                    "`{username}` - Name of the person using the command.\n"
+                    "`{display_name}` - Display name of the person using the command.\n"
+                    "`{time}` - Timestamp format of the time of the command execution.\n"
+                    "`{server}` - Name of the server this is being ran in.\n"
+                    "`{channel}` - Mention of the channel the command is being ran in.\n"
+                    "`{prefix}` - The custom prefix of the bot.\n"
                     "`{onduty}` - Number of staff which are on duty within your server.\n"
+                    "\n**PRC Specific Variables**\n"
                     "`{join_code}` - Join Code of the ERLC server\n"
                     "`{players}` - Current players in the ERLC server\n"
                     "`{max_players}` - Maximum players of the ERLC server\n"
@@ -7352,13 +7459,96 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 ),
                 color=BLANK_COLOR
             )
-        await interaction.response.send_message(
-            embed = embed,
-            view=view,
-            ephemeral=True
-        )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
-class ERLCStats(discord.ui.View):
+class CreateERLCStats(discord.ui.View):
+    def __init__(self, bot, user_id, guild_id):
+        super().__init__(timeout=600.0)
+        self.bot = bot
+        self.value = None
+        self.user_id = user_id
+        self.limit = 1
+        self.placeholder = "Select a channel"
+        self.guild_id = guild_id
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.voice]
+    )
+    async def channel_select(
+            self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Set Format", style=discord.ButtonStyle.secondary, row=2)
+    async def done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            if isinstance(child, discord.ui.ChannelSelect):
+                select = child
+
+        if interaction.user.id == self.user_id:
+            self.value = select.values
+            modal = CustomModal(
+                "Format",
+                [
+                    (
+                        "format",
+                        discord.ui.TextInput(
+                            label="Format",
+                            placeholder=f"Format With Variables {', '.join([f'`{i}`' for i in ['onduty', 'join_code', 'players', 'etc']])}",
+                        )                            
+                    )
+                ]
+            )
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if not modal.format.value:
+                return
+            channel_id = str(self.value[0].id)
+            try:
+                sett = await self.bot.settings.find_by_id(self.guild_id)
+            except KeyError:
+                sett = {}
+            
+            if "ERLC" not in sett:
+                sett["ERLC"] = {"statistics": {}}
+            elif "statistics" not in sett["ERLC"]:
+                sett["ERLC"]["statistics"] = {}
+                
+            if channel_id in sett["ERLC"]["statistics"]:
+                return await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is already set as a statistics channel",
+                        color=discord.Color.red()
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                    )
+                    ,
+                    view=None
+                )
+                
+            sett["ERLC"]["statistics"][channel_id] = {
+                "format": modal.format.value
+            }
+
+            await self.bot.settings.update_by_id(sett)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Success",
+                    description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
+                    color=discord.Color.green()
+                ),
+                view=None
+            )
+
+class EditERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
         super().__init__(timeout=600.0)
         self.bot = bot
@@ -7411,27 +7601,63 @@ class ERLCStats(discord.ui.View):
             except KeyError:
                 sett = {}
             try:
-                sett["ERLC"]["statistics"][channel_id]["format"] = modal.format.value
-            except KeyError:
-                if "ERLC" not in sett:
-                    sett["ERLC"] = {}
-                if "statistics" not in sett["ERLC"]:
-                    sett["ERLC"]["statistics"] = {}
                 if channel_id not in sett["ERLC"]["statistics"]:
-                    sett["ERLC"]["statistics"][channel_id] = {}
-                sett["ERLC"]["statistics"][channel_id] = {"format": modal.format.value}
-            await self.bot.settings.update_by_id(sett)
-            await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
-            await interaction.edit_original_response(
-                embed=discord.Embed(
-                        title="<:success:1163149118366040106> Success",
-                        description=f"Statistics format for <#{channel_id}> has been set to `{modal.format.value}`",
-                        color=BLANK_COLOR
+                    return await interaction.edit_original_response(
+                        embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is not set as a statistics channel",
+                        color=RED_COLOR
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
                     ),
                     view=None
-            )
-        
-    @discord.ui.button(label="Remove Channel", style=discord.ButtonStyle.danger, row=2)
+                )
+            except KeyError:
+                return await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description=f"<#{channel_id}> is not set as a statistics channel",
+                        color=RED_COLOR
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                    ),
+                    view=None
+                )
+            sett["ERLC"]["statistics"][channel_id]["format"] = modal.format.value
+            await self.bot.settings.update_by_id(sett)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"ER:LC Statistics Format for <#{channel_id}> has been set to `{modal.format.value}`")
+            msg = interaction.message.embeds[0]
+            msg.title = f"<:check:1163142000271429662> Channel Updated"
+            msg.description = f"**Channel:** <#{channel_id}>\n> **Format:** `{modal.format.value}`"
+            await interaction.edit_original_response(embed=msg, view=None)
+
+
+class DeleteERLCStats(discord.ui.View):
+    def __init__(self, bot, user_id, guild_id,embed):
+        super().__init__(timeout=600.0)
+        self.bot = bot
+        self.value = None
+        self.user_id = user_id
+        self.limit = 1
+        self.placeholder = "Select a channel"
+        self.guild_id = guild_id
+
+        for child in self.children:
+            child.placeholder = self.placeholder
+            child.max_values = self.limit
+            child.min_values = 1
+
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect, channel_types=[discord.ChannelType.voice]
+    )
+    async def channel_select(
+            self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger, row=2)
     async def remove_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         for child in self.children:
             if isinstance(child, discord.ui.ChannelSelect):
@@ -7453,21 +7679,24 @@ class ERLCStats(discord.ui.View):
                     embed=discord.Embed(
                         title="<:error:1164666124496019637> Error",
                         description=f"<#{channel_id}> is not set as a statistics channel",
-                        color=discord.Color.red()
+                        color=RED_COLOR
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
                     ),
+                    view=None,
                     ephemeral=True
                 )
-
             await self.bot.settings.update_by_id(sett)
             await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}> Removed from ERLC Statistics")
-            
             await interaction.response.send_message(
-                    embed=discord.Embed(
-                        title="<:success:1163149118366040106> Success",
-                        description=f"<#{channel_id}> has been removed from ERLC Statistics",
-                        color=BLANK_COLOR
-                    ),
-                    ephemeral=True
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Success",
+                    description=f"<#{channel_id}> has been removed from ERLC Statistics",
+                    color=GREEN_COLOR
+                ),
+                view=None,
+                ephemeral=True
             )
 
 class RoleSelect(discord.ui.View):
