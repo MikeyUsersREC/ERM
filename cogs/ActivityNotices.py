@@ -391,7 +391,7 @@ class ActivityCoreCommands:
                     )
                 )
 
-            current_time = datetime.datetime.now().timestamp()
+            current_time = int(datetime.datetime.now().timestamp())
             await self.bot.loas.db.update_one(
                 {"_id": current_notice["_id"]},
                 {"$set": {"expiry": current_time}}

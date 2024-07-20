@@ -63,7 +63,10 @@ class Player(BaseDataClass):
     callsign: str | None = None
     team: str | None = None
 
-
+class ModCalls(BaseDataClass):
+    Caller: str
+    Moderator: str | None = None
+    Timestamp: int
 
 class ServerStatus(BaseDataClass):
     name: str
@@ -180,6 +183,20 @@ class PRCApiClient:
                 json_data=response_json
             )
         
+    async def get_mod_calls(self, guild_id: int) -> list:
+        status_code, response_json = await self._send_api_request('GET', '/server/modcalls', guild_id)
+        if status_code == 200:
+            return [ModCalls(
+                Caller=call['Caller'],
+                Moderator=call.get('Moderator'),
+                Timestamp=call['Timestamp']
+            ) for call in response_json]
+        else:
+            raise ResponseFailure(
+                status_code=status_code,
+                json_data=response_json
+            )
+
     async def get_server_vehicles(self, guild_id: int) -> list:
         status_code, response_json = await self._send_api_request('GET', '/server/vehicles', guild_id)
         if status_code == 200:
