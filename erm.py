@@ -812,9 +812,11 @@ async def check_whitelisted_car():
                                         > Player [{player.username}](https://roblox.com/users/{player.user_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                         """,
                                         color=RED_COLOR,
-                                        timestamp=datetime.utcnow()
+                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
                                     ).set_footer(
-                                        text=f"Guild: {guild.name}",
+                                        text=f"Guild: {guild.name} | Powered by ERM Systems",
+                                    ).set_thumbnail(
+                                        url=await get_player_avatar_url(player.user_id)
                                     )
                                     await alert_channel.send(embed=embed)
                                 except discord.HTTPException as e:
@@ -842,9 +844,11 @@ async def check_whitelisted_car():
                                     > Player [{player.username}](https://roblox.com/users/{player.user_id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                     """,
                                     color=RED_COLOR,
-                                    timestamp=datetime.utcnow()
+                                    timestamp=datetime.datetime.now(tz=pytz.UTC)
                                 ).set_footer(
-                                    text=f"Guild: {guild.name}",
+                                    text=f"Guild: {guild.name} | Powered by ERM Systems",
+                                ).set_thumbnail(
+                                    url=await get_player_avatar_url(player.user_id)
                                 )
                                 await alert_channel.send(embed=embed)
                             except discord.HTTPException as e:
