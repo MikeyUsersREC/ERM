@@ -635,20 +635,11 @@ async def tempban_checks():
     end_time = time.time()
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
 
-async def fetch_get_channel(target, identifier):
-    channel = target.get_channel(identifier)
-    if not channel:
-        try:
-            channel = await target.fetch_channel(identifier)
-        except discord.HTTPException as e:
-            channel = None
-    return channel
-
 async def update_channel(guild, channel_id, stat, placeholders):
     try:
         format_string = stat["format"]
         channel_id = int(channel_id)
-        channel = discord.utils.get(guild.channels, id=channel_id)
+        channel = await fetch_get_channel(guild, channel_id)
         if channel:
             for key, value in placeholders.items():
                 format_string = format_string.replace(f"{{{key}}}", str(value))
@@ -658,6 +649,15 @@ async def update_channel(guild, channel_id, stat, placeholders):
             logging.error(f"Channel {channel_id} not found in guild {guild.id}")
     except Exception as e:
         logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
+
+async def fetch_get_channel(target, identifier):
+    channel = target.get_channel(identifier)
+    if not channel:
+        try:
+            channel = await target.fetch_channel(identifier)
+        except discord.HTTPException as e:
+            channel = None
+    return channel
 
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check():
