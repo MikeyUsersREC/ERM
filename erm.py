@@ -719,17 +719,24 @@ async def check_whitelisted_car():
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
+            logging.error(f"Guild with ID {guild_id} not found.")
             continue
-
         try:
+            enabled = items['ERLC'].get('enable_vehicle_restrictions', False)
             whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
             alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
             whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
             alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
         except KeyError:
+            logging.error(f"KeyError for guild {guild_id}")
+            continue
+
+        if not enabled:
+            logging.info(f"Skipping guild {guild_id} due to disabled vehicle restrictions.")
             continue
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
+            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
         if isinstance(whitelisted_vehicle_roles, int):
@@ -737,6 +744,7 @@ async def check_whitelisted_car():
         elif isinstance(whitelisted_vehicle_roles, list):
             exotic_roles = [guild.get_role(role_id) for role_id in whitelisted_vehicle_roles if guild.get_role(role_id)]
         else:
+            logging.warning(f"Invalid whitelisted_vehicle_roles data: {whitelisted_vehicle_roles}")
             continue
 
         alert_channel = bot.get_channel(alert_channel_id)
@@ -745,15 +753,21 @@ async def check_whitelisted_car():
                 alert_channel = await bot.fetch_channel(alert_channel_id)
             except discord.HTTPException:
                 alert_channel = None
+                logging.warning(f"Alert channel not found for guild {guild_id}")
                 continue
 
         if not exotic_roles or not alert_channel:
+            logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
             continue
         try:
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
             vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
         except prc_api.ResponseFailure:
+            logging.error(f"PRC ResponseFailure for guild {guild_id}")
             continue
+
+        logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
+        logging.info(f"Found {len(players)} players in guild {guild_id}")
 
         matched = {}
         for item in vehicles:
@@ -762,7 +776,11 @@ async def check_whitelisted_car():
                     matched[item] = x
 
         for vehicle, player in matched.items():
-            if any(is_whitelisted(vehicle.vehicle, whitelisted_vehicle) for whitelisted_vehicle in whitelisted_vehicles):
+            whitelisted = False
+            for whitelisted_vehicle in whitelisted_vehicles:
+                if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
+                    whitelisted = True
+                    break 
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
                 member_found = False
                 for member in guild.members:
@@ -775,6 +793,7 @@ async def check_whitelisted_car():
                                 break
                         
                         if not has_exotic_role:
+                            logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
                             await run_command(guild_id, player.username, alert_message)
 
                             if player.username not in pm_counter:
@@ -787,23 +806,26 @@ async def check_whitelisted_car():
                             if pm_counter[player.username] >= 4:
                                 logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                                 try:
-                                    avatar_url = await get_player_avatar_url(player.id)
                                     embed = discord.Embed(
                                         title="Whitelisted Vehicle Warning",
                                         description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
+                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                         """,
-                                        color=discord.Color.red(),
-                                        timestamp=datetime.utcnow()
+                                        color=RED_COLOR,
+                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
                                     ).set_footer(
-                                        text=f"Powered by ERM Systems",
-                                    ).set_thumbnail(url=avatar_url)
+                                        text=f"Guild: {guild.name} | Powered by ERM Systems",
+                                    ).set_thumbnail(
+                                        url=await get_player_avatar_url(player.id)
+                                    )
                                     await alert_channel.send(embed=embed)
                                 except discord.HTTPException as e:
                                     logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                                logging.info(f"Removing {player.username} from PM counter")
                                 pm_counter.pop(player.username)
                         break
-                    elif not member_found:
+                    elif member_found == False:
+                        logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
                         await run_command(guild_id, player.username, alert_message)
 
                         if player.username not in pm_counter:
@@ -811,24 +833,32 @@ async def check_whitelisted_car():
                             logging.debug(f"PM Counter for {player.username}: 1")
                         else:
                             pm_counter[player.username] += 1
+                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
 
                         if pm_counter[player.username] >= 4:
+                            logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
                             try:
-                                avatar_url = await get_player_avatar_url(player.id)
                                 embed = discord.Embed(
                                     title="Whitelisted Vehicle Warning",
                                     description=f"""
-                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 4 times to obtain the required role for their whitelisted vehicle.
+                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
                                     """,
-                                    color=discord.Color.red(),
+                                    color=RED_COLOR,
                                     timestamp=datetime.datetime.now(tz=pytz.UTC)
                                 ).set_footer(
-                                    text="Powered by ERM Systems",
-                                ).set_thumbnail(url=avatar_url)
+                                    text=f"Guild: {guild.name} | Powered by ERM Systems",
+                                ).set_thumbnail(
+                                    url=await get_player_avatar_url(player.id)
+                                )
                                 await alert_channel.send(embed=embed)
                             except discord.HTTPException as e:
                                 logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
+                            logging.info(f"Removing {player.username} from PM counter")
                             pm_counter.pop(player.username)
+                        break
+                    else:
+                        continue
+        del matched
 
     end_time = time.time()
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
