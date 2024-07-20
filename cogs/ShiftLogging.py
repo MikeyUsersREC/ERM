@@ -862,7 +862,15 @@ class ShiftLogging(commands.Cog):
             {"$match": {"Guild": ctx.guild.id, "EndEpoch": {"$ne": 0}}},
             {"$group": {
                 "_id": "$UserID",
-                "total_seconds": {"$sum": {"$subtract": ["$EndEpoch", "$StartEpoch"]}},
+                "total_seconds": {
+                    "$sum": {
+                        "$add": [
+                            {"$subtract": ["$EndEpoch", "$StartEpoch"]},
+                            "$AddedTime",
+                            {"$multiply": ["$RemovedTime", -1]}
+                        ]
+                    }
+                },
                 "moderations": {"$sum": {"$cond": [{"$isArray": "$Moderations"}, {"$size": "$Moderations"}, 0]}},
                 "lowest_time": {"$min": "$StartEpoch"}
             }}
@@ -969,9 +977,9 @@ class ShiftLogging(commands.Cog):
                 time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
 
                 if buffer is None:
-                    buffer = f"{member.name} - {time_str}"
+                    buffer = f"{member.name} • {time_str}"
                 else:
-                    buffer += f"\n{member.name} - {time_str}"
+                    buffer += f"\n{member.name} • {time_str}"
 
                 data.append([
                     index + 1,
