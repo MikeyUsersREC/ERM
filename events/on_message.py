@@ -270,7 +270,6 @@ class OnMessage(commands.Cog):
                         {"roblox_id": int(profile_link.split('/')[4])}):
                     discord_user = document['discord_id']
 
-                print(f'Discord User: {discord_user}')
                 if discord_user == 0:
                     await message.add_reaction('❌')
                     return await message.add_reaction('6️⃣')
@@ -282,7 +281,6 @@ class OnMessage(commands.Cog):
                         await message.add_reaction('❌')
                         return await message.add_reaction('7️⃣')
 
-                print(invoked_command)
                 command = bot.get_command(invoked_command.lower().strip())
                 if not command:
                     await message.add_reaction('❌')
@@ -295,11 +293,9 @@ class OnMessage(commands.Cog):
                 new_message.author = user
                 actual_username = next((player.username for player in actual_players if person in player.username), person)
                 new_message.content = ((await get_prefix(bot, message))[-1]) + _cmd.split(':log ')[1].split('`')[0].replace(person, actual_username)
-                print(new_message)
                 await bot.process_commands(new_message)
 
         if isinstance(message.author, discord.User):
-            print(message.author)
             return
         
         if message.author.bot:
