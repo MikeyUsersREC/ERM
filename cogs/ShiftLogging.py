@@ -795,7 +795,6 @@ class ShiftLogging(commands.Cog):
                 )
             )
 
-
         shift_type = None
         msg = None
         if configItem.get("shift_types"):
@@ -859,79 +858,49 @@ class ShiftLogging(commands.Cog):
                 else:
                     return
 
-        all_staff = [{"id": None, "total_seconds": 0}]
+        pipeline = [
+            {"$match": {"Guild": ctx.guild.id, "EndEpoch": {"$ne": 0}}},
+            {"$group": {
+                "_id": "$UserID",
+                "total_seconds": {
+                    "$sum": {
+                        "$add": [
+                            {"$subtract": ["$EndEpoch", "$StartEpoch"]},
+                            "$AddedTime",
+                            {"$multiply": ["$RemovedTime", -1]}
+                        ]
+                    }
+                },
+                "moderations": {"$sum": {"$cond": [{"$isArray": "$Moderations"}, {"$size": "$Moderations"}, 0]}},
+                "lowest_time": {"$min": "$StartEpoch"}
+            }}
+        ]
 
         if shift_type != 0 and shift_type is not None:
-            async for document in bot.shift_management.shifts.db.find(
-                {
-                    "Guild": ctx.guild.id,
-                    "Type": shift_type["name"],
-                    "EndEpoch": {"$ne": 0},
-                }
-            ):
-                total_seconds = 0
-                moderations = 0
+            pipeline[0]["$match"]["Type"] = shift_type["name"]
 
-                break_seconds = 0
+        all_staff = {}
+        async for doc in bot.shift_management.shifts.db.aggregate(pipeline):
+            all_staff[doc["_id"]] = {
+                "id": doc["_id"],
+                "total_seconds": doc["total_seconds"],
+                "moderations": doc["moderations"],
+                "lowest_time": doc["lowest_time"]
+            }
 
-                total_seconds += get_elapsed_time(document)
-                if "Moderations" in document.keys():
-                    moderations += len(document["Moderations"])
-                if document["UserID"] not in [item["id"] for item in all_staff]:
-                    all_staff.append(
-                        {
-                            "id": document["UserID"],
-                            "total_seconds": total_seconds,
-                            "moderations": moderations,
-                            "lowest_time": document['StartEpoch']
-                        }
-                    )
-                else:
-                    for item in all_staff:
-                        if item["id"] == document["UserID"]:
-                            if item['lowest_time'] > document['StartEpoch']:
-                                item['lowest_time'] = document['StartEpoch']
-
-                            item["total_seconds"] += total_seconds
-                            item["moderations"] += moderations
-        else:
-            async for document in bot.shift_management.shifts.db.find(
-                {
-                    "Guild": ctx.guild.id,
-                    "EndEpoch": {"$ne": 0},
-                }
-            ):
-                total_seconds = 0
-                moderations = 0
-                break_seconds = 0
-
-                for breaks in document["Breaks"]:
-                    break_seconds += int(breaks["EndEpoch"]) - int(breaks["StartEpoch"])
-
-                if "Moderations" in document.keys():
-                    moderations += len(document["Moderations"])
-                # # print(document)
-                total_seconds += (
-                    get_elapsed_time(document)
-                )
-                # # print(total_seconds)
-                if document["UserID"] not in [item["id"] for item in all_staff]:
-                    all_staff.append(
-                        {
-                            "id": document["UserID"],
-                            "total_seconds": total_seconds,
-                            "moderations": moderations,
-                            "lowest_time": document['StartEpoch']
-                        }
-                    )
-                else:
-                    for item in all_staff:
-                        if item["id"] == document["UserID"]:
-                            if item['lowest_time'] > document['StartEpoch']:
-                                item['lowest_time'] = document['StartEpoch']
-
-                            item["total_seconds"] += total_seconds
-                            item["moderations"] += moderations
+        # Fetch additional moderation data in bulk
+        mod_ids = [staff["id"] for staff in all_staff.values() if staff["moderations"] == 0]
+        if mod_ids:
+            mod_pipeline = [
+                {"$match": {"ModeratorID": {"$in": mod_ids}, "Guild": ctx.guild.id}},
+                {"$group": {
+                    "_id": "$ModeratorID",
+                    "mod_count": {"$sum": 1}
+                }}
+            ]
+            async for doc in bot.punishments.db.aggregate(mod_pipeline):
+                if doc["_id"] in all_staff:
+                    all_staff[doc["_id"]]["moderations"] = doc["mod_count"]
 
         if len(all_staff) == 0:
             return await ctx.send(
@@ -942,18 +911,7 @@ class ShiftLogging(commands.Cog):
                 )
             )
 
-
-        for item in all_staff:
-            if item["id"] is None:
-                all_staff.remove(item)
-
-        for index, item in enumerate(all_staff):
-            if item.get('moderations') == 0:
-                item['moderations'] = await self.bot.punishments.db.count_documents({"ModeratorID": item['id'], "Guild": ctx.guild.id, "Epoch": {"$gt": item['lowest_time']}})
-                all_staff[index] = item
-        
-        
-        sorted_staff = sorted(all_staff, key=lambda x: x["total_seconds"], reverse=True)
+        sorted_staff = sorted(all_staff.values(), key=lambda x: x["total_seconds"], reverse=True)
 
         buffer = None
         embeds = []
@@ -966,10 +924,9 @@ class ShiftLogging(commands.Cog):
             icon_url=ctx.guild.icon,
         )
 
-
         embeds.append(embed)
-        # # print(sorted_staff)
         data = []
+
         if not sorted_staff:
             if shift_type != 0 and shift_type is not None:
                 if not msg:
@@ -1006,81 +963,49 @@ class ShiftLogging(commands.Cog):
                         )
                     )
 
-
         my_data = None
 
+        members = {m.id: m for m in ctx.guild.members}  # Cache guild members
+
         for index, i in enumerate(sorted_staff):
-            try:
-                member = await ctx.guild.fetch_member(i["id"])
-            except discord.NotFound:
-                member = None
-            # # print(index)
-            # # print(i)
-            # # print(member)
+            member = members.get(i["id"])
             if member:
                 if member.id == ctx.author.id:
                     i["index"] = index
                     my_data = i
 
+                time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
+
                 if buffer is None:
-                    # # print("buffer none")
-                    buffer = "%s - %s" % (
-                        f"{member.name}",
-                        td_format(datetime.timedelta(seconds=i["total_seconds"])),
-                    )
-                    data.append(
-                        [
-                            index + 1,
-                            f"{member.name}",
-                            member.top_role.name,
-                            td_format(datetime.timedelta(seconds=i["total_seconds"])),
-                            i["moderations"],
-                        ]
-                    )
+                    buffer = f"{member.name} • {time_str}"
                 else:
-                    # # print("buffer not none")
-                    buffer = buffer + "\n%s - %s" % (
-                        f"{member.name}",
-                        td_format(datetime.timedelta(seconds=i["total_seconds"])),
-                    )
-                    data.append(
-                        [
-                            index + 1,
-                            f"{member.name}",
-                            member.top_role.name,
-                            td_format(datetime.timedelta(seconds=i["total_seconds"])),
-                            i["moderations"],
-                        ]
-                    )
+                    buffer += f"\n{member.name} • {time_str}"
 
-                if len((embeds[-1].description or "").splitlines()) < 16:
-                    if embeds[-1].description is None:
-                        embeds[
-                            -1
-                        ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
-                    else:
-                        embeds[
-                            -1
-                        ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                data.append([
+                    index + 1,
+                    member.name,
+                    member.top_role.name,
+                    time_str,
+                    i["moderations"],
+                ])
 
-                else:
-                    # # print("fields more than 24")
-                    new_embed = discord.Embed(
-                        color=BLANK_COLOR, title="Shift Leaderboard"
-                    )
-
-                    new_embed.set_author(
-                        name=f"{ctx.guild.name}",
-                        icon_url=ctx.guild.icon,
-                    )
-                    new_embed.description = ""
-                    new_embed.description += f"**Total Shifts**\n**{index + 1}.** {member.mention} - {td_format(datetime.timedelta(seconds=i['total_seconds']))}\n"
+                line = f"**{index + 1}.** {member.mention} • {time_str}\n"
+                if len((embeds[-1].description or "")) + len(line) > 4096 or len(
+                        (embeds[-1].description or "").splitlines()) >= 16:
+                    new_embed = discord.Embed(color=BLANK_COLOR, title="Shift Leaderboard")
+                    new_embed.set_author(name=f"{ctx.guild.name}", icon_url=ctx.guild.icon)
+                    new_embed.description = f"**Total Shifts**\n{line}"
                     embeds.append(new_embed)
+                else:
+                    if embeds[-1].description is None:
+                        embeds[-1].description = f"**Total Shifts**\n{line}"
+                    else:
+                        embeds[-1].description += line
 
         staff_roles = []
         ordinal = lambda n: "%d%s" % (
             n,
-            "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4],
+            "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10:: 4],
         )  # NOQA: E731
         ordinal_formatted = None
         quota_seconds = 0
@@ -1154,7 +1079,6 @@ class ShiftLogging(commands.Cog):
                                     ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                             else:
-                                # # print("fields more than 24")
                                 new_embed = discord.Embed(
                                     color=BLANK_COLOR, title="Shift Leaderboard"
                                 )
@@ -1169,10 +1093,10 @@ class ShiftLogging(commands.Cog):
         perm_staff = list(
             filter(
                 lambda m: (
-                    m.guild_permissions.manage_messages
-                    or m.guild_permissions.manage_guild
-                )
-                and not m.bot,
+                                  m.guild_permissions.manage_messages
+                                  or m.guild_permissions.manage_guild
+                          )
+                          and not m.bot,
                 ctx.guild.members,
             )
         )
@@ -1224,7 +1148,6 @@ class ShiftLogging(commands.Cog):
                             ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
 
                     else:
-                        # # print("fields more than 24")
                         new_embed = discord.Embed(
                             color=BLANK_COLOR, title="Shift Leaderboard"
                         )
