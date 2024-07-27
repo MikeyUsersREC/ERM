@@ -486,13 +486,6 @@ class APIRoutes:
             else {"status": "failed"}
         )
 
-    async def GET_check_bot_presence(self, guild_id: int):
-        guild: discord.Guild = self.bot.get_guild(guild_id)
-        if guild and guild.get_member(self.bot.user.id):
-            return {"status": 1}
-        else:
-            return {"status": 0}
-
     async def POST_duty_on_actions(
             self, authorization: Annotated[str | None, Header()],
             request: Request
@@ -758,7 +751,7 @@ class ServerAPI(commands.Cog):
 
     async def start_server(self):
         api.include_router(APIRoutes(self.bot).router)
-        self.config = uvicorn.Config("utils.api:api", port=2000, log_level="debug", host="0.0.0.0")
+        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="debug", host="0.0.0.0")
         self.server = uvicorn.Server(self.config)
         await self.server.serve()
 
