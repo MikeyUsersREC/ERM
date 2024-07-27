@@ -6176,13 +6176,13 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
-        
-        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
+        roblox_id = ''.join(filter(str.isdigit, user_id))
+        print(roblox_id)
         await interaction.response.defer(ephemeral=True, thinking=False)
 
-        command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
+        command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {roblox_id}")
         await asyncio.sleep(6)
-        cr_2 = await bot.prc_api.run_command(interaction.guild.id, f":unmod {user_id}")
+        cr_2 = await bot.prc_api.run_command(interaction.guild.id, f":unmod {roblox_id}")
 
         for item in self.children:
             item.disabled = False

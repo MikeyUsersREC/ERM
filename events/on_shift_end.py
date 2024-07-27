@@ -97,6 +97,15 @@ class OnShiftEnd(commands.Cog):
                     f"> **Nickname:** `{shift.nickname}`\n"
                 ),
                 inline=False
+            ).add_field(
+                name="Total Moderations:",
+                value=(
+                    "\n".join([
+                        f"> **{moderation_type.capitalize()}s:** {count}" 
+                        for moderation_type, count in moderation_counts.items()
+                    ]) if moderation_counts else "> No Moderations Found"
+                ),
+                inline=False
             ).set_author(
                 name=guild.name,
                 icon_url=guild.icon.url if guild.icon else ''
