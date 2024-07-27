@@ -98,7 +98,7 @@ class OnShiftEnd(commands.Cog):
                 ),
                 inline=False
             ).add_field(
-                name="Total Moderations:",
+                name="Moderation Details:",
                 value=(
                     "\n".join([
                         f"> **{moderation_type.capitalize()}s:** {count}" 
