@@ -731,11 +731,9 @@ async def check_whitelisted_car():
             continue
 
         if not enabled:
-            logging.info(f"Skipping guild {guild_id} due to disabled vehicle restrictions.")
             continue
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
-            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
         if isinstance(whitelisted_vehicle_roles, int):
