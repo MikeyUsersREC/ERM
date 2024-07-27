@@ -571,6 +571,15 @@ class APIRoutes:
         self.bot.dispatch('shift_void', staff_member, ObjectId(data))
         return 200
 
+
+    async def GET_bot_in_guild(self, guild_id: Annotated[str | None, Header()]):
+        if not guild_id:
+            raise HTTPException(status_code=400, detail="No guild id provided in the header")
+
+        guild = self.bot.get_guild(int(guild_id))
+
+        return {"status": int(bool(guild))}
+
     async def POST_punishment_logged(self, authorization: Annotated[str | None, Header()], request: Request):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
