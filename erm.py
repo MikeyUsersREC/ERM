@@ -719,7 +719,6 @@ async def check_whitelisted_car():
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
-            logging.error(f"Guild with ID {guild_id} not found.")
             continue
         try:
             enabled = items['ERLC'].get('enable_vehicle_restrictions', False)
