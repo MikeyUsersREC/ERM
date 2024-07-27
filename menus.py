@@ -6177,7 +6177,6 @@ class GameSecurityActions(discord.ui.View):
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
         roblox_id = ''.join(filter(str.isdigit, user_id))
-        print(roblox_id)
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {roblox_id}")
