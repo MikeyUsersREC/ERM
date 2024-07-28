@@ -7272,7 +7272,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                     description=" "
                 ).add_field(
                     name="Enable/Disable Vehicle Restrictions",
-                    value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\nCurrent Status: {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
+                    value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
                 ).add_field(
                     name="Whitelisted Vehicles Roles",
                     value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.",

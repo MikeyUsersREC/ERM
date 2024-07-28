@@ -725,7 +725,7 @@ async def run_command(guild_id, username, message):
             logging.error(f"Failed to send PM to {username} in guild {guild_id}")
             break
 
-async def is_whitelisted(vehicle_name, whitelisted_vehicle):
+def is_whitelisted(vehicle_name, whitelisted_vehicle):
     vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
     whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
     if vehicle_year_match and whitelisted_year_match:
@@ -739,7 +739,7 @@ async def is_whitelisted(vehicle_name, whitelisted_vehicle):
     return False
 
 pm_counter = {}
-@tasks.loop(seconds=10, reconnect=True)
+@tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
     async for items in bot.settings.db.find(
@@ -804,8 +804,7 @@ async def check_whitelisted_car():
         for vehicle, player in matched.items():
             whitelisted = False
             for whitelisted_vehicle in whitelisted_vehicles:
-                whitelisted = await is_whitelisted(vehicle.vehicle, whitelisted_vehicle)
-                if whitelisted:
+                if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
                     whitelisted = True
                     break 
                 pattern = re.compile(re.escape(player.username), re.IGNORECASE)
