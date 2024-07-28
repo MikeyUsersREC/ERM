@@ -750,6 +750,7 @@ async def check_whitelisted_car():
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
+            logging.error(f"Guild with ID {guild_id} not found.")
             continue
         try:
             whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
@@ -760,10 +761,8 @@ async def check_whitelisted_car():
             logging.error(f"KeyError for guild {guild_id}")
             continue
 
-        if not enabled:
-            continue
-
         if not whitelisted_vehicle_roles or not alert_channel_id:
+            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
         if isinstance(whitelisted_vehicle_roles, int):
