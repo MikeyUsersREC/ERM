@@ -739,28 +739,26 @@ async def is_whitelisted(vehicle_name, whitelisted_vehicle):
     return False
 
 pm_counter = {}
-@tasks.loop(minutes=2, reconnect=True)
+@tasks.loop(seconds=10, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
-    async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
+    async for items in bot.settings.db.find(
+        {"ERLC.vehicle_restrictions.enabled": {"$exists": True, "$eq": True}}
+    ):
         guild_id = items['_id']
+        logging.info(f"Checking whitelisted vehicles for guild {guild_id}")
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
             logging.error(f"Guild with ID {guild_id} not found.")
             continue
         try:
-            enabled = items['ERLC'].get('enable_vehicle_restrictions', False)
-            whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
-            alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
-            whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
-            alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+            whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
+            alert_channel_id = items['ERLC'].get('vehicle_restrictions').get('channel')
+            whitelisted_vehicles = items['ERLC'].get('vehicle_restrictions').get('cars', [])
+            alert_message = items["ERLC"].get("vehicle_restrictions").get('message', "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
         except KeyError:
             logging.error(f"KeyError for guild {guild_id}")
-            continue
-
-        if not enabled:
-            logging.info(f"Skipping guild {guild_id} due to disabled vehicle restrictions.")
             continue
 
         if not whitelisted_vehicle_roles or not alert_channel_id:
