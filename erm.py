@@ -893,7 +893,7 @@ async def check_whitelisted_car():
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
 
 
-@tasks.loop(seconds=120, reconnect=True)
+@tasks.loop(seconds=60, reconnect=True)
 async def iterate_prc_logs():
     # This will aim to constantly update the PRC Logs
     # and the relevant storage data.
@@ -925,7 +925,7 @@ async def iterate_prc_logs():
 
         if kill_logs_channel is not None:
             for item in sorted_kill_logs:
-                if (current_timestamp - item.timestamp) > 120:
+                if (current_timestamp - item.timestamp) > 60:
                     continue
                 if not players.get(item.killer_username):
                         players[item.killer_username] = [1, [item]]
