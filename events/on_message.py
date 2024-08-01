@@ -88,11 +88,14 @@ class OnMessage(commands.Cog):
         webhook_channel = None
         remote_commands = False
         remote_command_channel = None
+        auto_kick_ban_channel = None
 
         if dataset.get('ERLC', {}).get('remote_commands'):
             remote_commands = True
             remote_command_channel = dataset["ERLC"]["remote_commands"]["webhook_channel"] if dataset["ERLC"]["remote_commands"].get("webhook_channel", None) else None
-            print(f"Remote commands: {remote_command_channel}")
+
+        if dataset.get('ERLC',{}).get('auto_kick_ban_log'):
+            auto_kick_ban_channel = dataset["ERLC"]["auto_kick_ban_log"] if dataset["ERLC"]["auto_kick_ban_log"] else None
 
         if "game_security" in dataset.keys():
             if "enabled" in dataset["game_security"].keys():
@@ -193,7 +196,7 @@ class OnMessage(commands.Cog):
                                                         ),
                                                         view=view
                                                     )
-        if remote_commands and remote_command_channel is not None and message.channel.id in [remote_command_channel]:
+        if auto_kick_ban_channel is not None and message.channel.id == auto_kick_ban_channel:
             for embed in message.embeds:
                 if not embed.description or not embed.title:
                     continue

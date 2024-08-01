@@ -7302,6 +7302,33 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
     )
 
     @discord.ui.button(
+        label="More Features",
+        row=3
+    )
+    async def more_features(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        view = MoreOptions(self.bot, interaction.guild.id)
+        await interaction.response.send_message(
+            embed = discord.Embed(
+                title="More Options",
+                description="",
+                color=BLANK_COLOR
+            ),
+            view=view,
+            ephemeral=True
+        )
+
+
+class MoreOptions(discord.ui.View):
+    def __init__(self, bot, guild_id):
+        super().__init__(timeout=900.0)
+        self.bot = bot
+        self.guild_id = guild_id
+
+    @discord.ui.button(
         label="ER:LC Statistics Updates",
         row=3
     )
@@ -7339,6 +7366,79 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             view=view,
             ephemeral=True
         )
+
+    @discord.ui.button(
+        label="Auto Kick/Ban Logging",
+        row=3
+    )
+    async def auto_kick_ban(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'auto_kick_ban_log': 0
+            }
+        view = AutoLogging(self.bot,sett)
+        embed=discord.Embed(
+            title="Auto Kick/Ban Logging",
+            description="This channel is where the bot will read the webhooks from the game server.",
+            color=BLANK_COLOR
+        ).set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await interaction.response.send_message(
+            embed = embed,
+            view=view,
+            ephemeral=True
+        )
+
+class AutoLogging(discord.ui.View):
+    def __init__(self,bot,sett):
+        super().__init__(timeout=600.0)
+        self.bot = bot
+        self.sett = sett
+        try:
+            channel = self.bot.get_channel(self.sett.get('ERLC', {}).get('auto_kick_ban_log', 0))
+        except AttributeError:
+            channel = 0
+
+
+        self.select = discord.ui.ChannelSelect(
+            placeholder="Auto Kick/Ban Log Channel",
+            max_values=1,
+            min_values=0,
+            channel_types=[discord.ChannelType.text],
+            default_values=[channel] if channel else []
+        )
+        self.add_item(self.select)
+        self.select.callback = self.select_callback
+
+    async def select_callback(self, interaction: discord.Interaction):
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'auto_kick_ban_log': 0
+            }
+
+        selected_channel_id = self.select.values[0].id if self.select.values else 0
+        sett['ERLC']['auto_kick_ban_log'] = selected_channel_id
+        embed = discord.Embed(
+            title="<:check:1163142000271429662> Channel Saved",
+            description=f"Auto Kick/Ban Log Channel set to <#{selected_channel_id}>",
+            color=GREEN_COLOR
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"ERLC Kick/Ban Webhook Channel changed to: <#{selected_channel_id}>")
+
 
 class ERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
