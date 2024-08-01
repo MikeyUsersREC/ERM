@@ -246,6 +246,9 @@ class OnMessage(commands.Cog):
                 new_message.author = user
                 prefix = (await get_prefix(bot, message))[-1]
                 violator_user, reason = command_info.split('`')[1].split(' ')
+                #If reason is not provided, then make it as 'No reason provided'
+                if not reason:
+                    reason = 'No reason provided'
                 new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
                 await bot.process_commands(new_message)
 
