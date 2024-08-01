@@ -129,7 +129,7 @@ class OnPunishment(commands.Cog):
                     await user_to_dm.send(embed=embed)
                     logging.info(f"Sent DM to user {warned_discord_id} about punishment.")
             except Exception as e:
-                logging.error(f"Error sending DM to user: {e}")
+                pass
 
             embed = discord.Embed(
                 title="Punishment Issued",

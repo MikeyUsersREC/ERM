@@ -87,6 +87,7 @@ class OnMessage(commands.Cog):
         if dataset.get('ERLC', {}).get('remote_commands'):
             remote_commands = True
             remote_command_channel = dataset["ERLC"]["remote_commands"]["webhook_channel"] if dataset["ERLC"]["remote_commands"].get("webhook_channel", None) else None
+            print(f"Remote commands: {remote_command_channel}")
 
         if "game_security" in dataset.keys():
             if "enabled" in dataset["game_security"].keys():
@@ -187,7 +188,67 @@ class OnMessage(commands.Cog):
                                                         ),
                                                         view=view
                                                     )
-    
+        if remote_commands and remote_command_channel is not None and message.channel.id in [remote_command_channel]:
+            for embed in message.embeds:
+                if not embed.description or not embed.title:
+                    continue
+
+                if 'Player Kicked' in embed.title:
+                    action_type = 'Kick'
+                elif 'Player Banned' in embed.title:
+                    action_type = 'Ban'
+                else:
+                    continue
+
+                raw_content = embed.description
+
+                if ('kicked' not in raw_content and action_type == 'Kick') or ('banned' not in raw_content and action_type == 'Ban'):
+                    continue
+
+                try:
+                    if action_type == 'Kick':
+                        user_info, command_info = raw_content.split('kicked ', 1)
+                    else:
+                        user_info, command_info = raw_content.split('banned ', 1)
+                        
+                    user_info = user_info.strip()
+                    command_info = command_info.strip()
+                    roblox_user = user_info.split(':')[0].replace('[', '').replace(']', '').strip()
+                    profile_link = user_info.split('(')[1].split(')')[0].strip()
+                    roblox_id_str = profile_link.split('/')[-2]
+
+                    if not roblox_id_str.isdigit():
+                        raise ValueError(f"Extracted Roblox ID is not a number: {roblox_id_str}")
+                    
+                    roblox_id = int(roblox_id_str)
+
+                    reason = command_info.split('`')[1].strip()
+                except (IndexError, ValueError):
+                    continue
+
+                discord_user = 0
+                async for document in bot.oauth2_users.db.find({"roblox_id": roblox_id}):
+                    discord_user = document['discord_id']
+
+                if discord_user == 0:
+                    await message.add_reaction('❌')
+                    return await message.add_reaction('6️⃣')
+
+                user = discord.utils.get(message.guild.members, id=discord_user)
+                if not user:
+                    try:
+                        user = await message.guild.fetch_member(discord_user)
+                    except Exception as e:
+                        await message.add_reaction('❌')
+                        return await message.add_reaction('7️⃣')
+
+                new_message = copy.copy(message)
+                new_message.author = user
+                prefix = (await get_prefix(bot, message))[-1]
+                violator_user, reason = command_info.split('`')[1].split(' ')
+                new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
+                await bot.process_commands(new_message)
+
     
         if remote_commands and remote_command_channel is not None and message.channel.id in [remote_command_channel]:
             for embed in message.embeds:
