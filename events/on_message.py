@@ -245,7 +245,16 @@ class OnMessage(commands.Cog):
                 new_message = copy.copy(message)
                 new_message.author = user
                 prefix = (await get_prefix(bot, message))[-1]
-                violator_user, reason = command_info.split('`')[1].split(' ')
+                reason_info = command_info.split('`')[1].strip()
+                split_index = reason_info.find(' ')
+                if split_index != -1:
+                    violator_user = reason_info[:split_index].strip()
+                    reason = reason_info[split_index:].strip()
+                else:
+                    violator_user = reason_info
+                    reason = 'No reason provided'
+                if reason.endswith('- Player Not In Game'):
+                    reason = reason[:-len('- Player Not In Game')]
                 if not reason:
                     reason = 'No reason provided'
                 new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
