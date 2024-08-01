@@ -285,7 +285,6 @@ class OnMessage(commands.Cog):
                         actual_types.append(item)
                     else:
                         actual_types.append(item['name'])
-                #If action type in lowercase not in actual type lovercase, then return
                 if action_type.lower() not in [item.lower() for item in actual_types]:
                     await message.add_reaction('❌')
                     return await ctx.send(embed=discord.Embed(
