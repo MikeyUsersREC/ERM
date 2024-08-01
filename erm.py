@@ -567,11 +567,9 @@ async def check_reminders():
                                                    replied_user=True, everyone=True, roles=True, users=True
                                                ))
                 except Exception as e:
-                    # print(e)
-                    pass
+                    raise e
     except Exception as e:
-        # print(e)
-        pass
+        raise e
 
 @tasks.loop(minutes=1, reconnect=True)
 async def tempban_checks():
@@ -611,7 +609,7 @@ async def tempban_checks():
             try:
                 cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans(punishment_item['Guild'])
             except:
-                continue
+                raise Exception("Failed to fetch bans from PRC API")
 
 
         punishment_item['CheckExecuted'] = True
