@@ -6177,7 +6177,7 @@ class GameSecurityActions(discord.ui.View):
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
         
-        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
+        user_id = ''.join(filter(str.isdigit, user_id))
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
@@ -6218,7 +6218,7 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
-        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
+        user_id = ''.join(filter(str.isdigit, user_id))
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":kick {user_id}")
@@ -6253,7 +6253,7 @@ class GameSecurityActions(discord.ui.View):
         guild = interaction.guild
         field1 = interaction.message.embeds[0].fields[0]
         user_id = field1.value.split('**User ID:** ')[1].split('\n')
-        user_id = ''.join([i if i in '1234567890' else '' for i in user_id])
+        user_id = ''.join(filter(str.isdigit, user_id))
         await interaction.response.defer(ephemeral=True, thinking=False)
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":ban {user_id}")
 
@@ -6868,14 +6868,12 @@ class WhitelistVehiclesManagement(discord.ui.View):
             row=2
         )
 
-        # Add components to the view
         self.add_item(self.whitelisted_vehicles_roles_select)
         self.add_item(self.whitelisted_vehicle_alert_channel_select)
         self.add_item(self.add_vehicle_button)
         self.add_item(self.add_message_button)
         self.add_item(self.enable_vehicle_restrictions_button)
 
-        # Set the callback for the select menus and button
         self.whitelisted_vehicles_roles_select.callback = self.create_callback(self.whitelisted_vehicles_roles_callback, self.whitelisted_vehicles_roles_select)
         self.whitelisted_vehicle_alert_channel_select.callback = self.create_callback(self.whitelisted_vehicle_alert_channel_callback, self.whitelisted_vehicle_alert_channel_select)
         self.add_vehicle_button.callback = self.create_callback(self.add_vehicle_to_role, self.add_vehicle_button)
@@ -6884,7 +6882,6 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
     def create_callback(self, func, component):
         async def callback(interaction: discord.Interaction):
-            # Call the original function with the correct arguments
             if isinstance(component, discord.ui.RoleSelect):
                 return await func(interaction, component)
             elif isinstance(component, discord.ui.Button):
@@ -6905,20 +6902,14 @@ class WhitelistVehiclesManagement(discord.ui.View):
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
-            sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-                'whitelisted_vehicle_alert_channel': 0,
-                'whitelisted_vehicles': []
-            }
-        try:
-            sett['ERLC']['enable_vehicle_restrictions'] = not sett['ERLC'].get('enable_vehicle_restrictions', False)
-        except KeyError:
-            sett['ERLC'] = {
-                'enable_vehicle_restrictions': True,
-            }
+            sett['ERLC'] = {"vehicle_restrictions": {}}
+
+        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
+        vehicle_restrictions["enabled"] = not vehicle_restrictions.get("enabled", False)
+        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
-        embed.set_field_at(0, name="Vehicle Restrictions", value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\nCurrent Status: {'Enabled' if sett['ERLC'].get('enable_vehicle_restrictions', False) else 'Disabled'}")
+        embed.set_field_at(0, name="Enable/Disable Vehicle Restrictions", value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if vehicle_restrictions['enabled'] else 'Disabled'}")
         await interaction.edit_original_response(embed=embed)
 
     async def whitelisted_vehicles_roles_callback(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
@@ -6932,18 +6923,11 @@ class WhitelistVehiclesManagement(discord.ui.View):
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
-            sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-                'whitelisted_vehicle_alert_channel': 0,
-                'whitelisted_vehicles': []
-            }
-        try:
-            sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
-        except KeyError:
-            sett['ERLC'] = {
-                'whitelisted_vehicle_alert_channel': 0,
-            }
-            sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
+            sett['ERLC'] = {"vehicle_restrictions": {}}
+
+        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
+        vehicle_restrictions["roles"] = [i.id for i in select.values]
+        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(5, name="Current Roles", value=", ".join([f"<@&{i.id}>" for i in select.values]) if select.values else "None")
@@ -6961,18 +6945,11 @@ class WhitelistVehiclesManagement(discord.ui.View):
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
-            sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-                'whitelisted_vehicle_alert_channel': 0,
-                'whitelisted_vehicles': []
-            }
-        try:
-            sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
-        except KeyError:
-            sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-            }
-            sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id if select.values else 0
+            sett['ERLC'] = {"vehicle_restrictions": {}}
+        
+        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
+        vehicle_restrictions["channel"] = select.values[0].id
+        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(6, name="Current Channel", value=f"<#{select.values[0].id}>")
@@ -6983,11 +6960,9 @@ class WhitelistVehiclesManagement(discord.ui.View):
         guild_id = interaction.guild.id
         bot = self.bot
 
-        # Retrieve existing whitelisted vehicles
         sett = await bot.settings.find_by_id(guild_id)
-        existing_vehicles = sett.get('ERLC', {}).get('whitelisted_vehicles', [])
+        existing_vehicles = sett.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
 
-        # Pre-fill the modal text input with existing vehicles, separated by commas
         existing_vehicles_str = ', '.join(existing_vehicles)
 
         modal = CustomModal(
@@ -7018,17 +6993,16 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-                'whitelisted_vehicle_alert_channel': 0,
-                'whitelisted_vehicles': []
+                "vehicle_restrictions" : {}
             }
         try:
-            sett['ERLC']['whitelisted_vehicles'] = vehicles
+            sett['ERLC']['vehicle_restrictions']['cars'] = vehicles
         except KeyError:
             sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
+                'vehicle_restrictions': {
+                    'cars': vehicles
+                }
             }
-            sett['ERLC']['whitelisted_vehicles'] = vehicles
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(7, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
@@ -7039,9 +7013,8 @@ class WhitelistVehiclesManagement(discord.ui.View):
         guild_id = interaction.guild.id
         bot = self.bot
 
-        # Retrieve existing message if any
         sett = await bot.settings.find_by_id(guild_id)
-        existing_message = sett.get('ERLC', {}).get('alert_message', "")
+        existing_message = sett.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
 
         modal = CustomModal(
             "Add Alert Message",
@@ -7067,18 +7040,16 @@ class WhitelistVehiclesManagement(discord.ui.View):
         
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'whitelisted_vehicles_roles': [],
-                'whitelisted_vehicle_alert_channel': 0,
-                'whitelisted_vehicles': [],
-                'alert_message': ""
+                "vehicle_restrictions" : {}
             }
         try:
-            sett['ERLC']['alert_message'] = modal.message.value
+            sett['ERLC']['vehicle_restrictions']['message'] = modal.message.value
         except KeyError:
             sett['ERLC'] = {
-                'alert_message': ""
+                'vehicle_restrictions': {
+                    'message': modal.message.value
+                }
             }
-            sett['ERLC']['alert_message'] = modal.message.value
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(8, name="Alert Message", value=modal.message.value)
@@ -7273,11 +7244,11 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             return
         
         settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        enable_vehicle_restrictions = settings.get('ERLC', {}).get('enable_vehicle_restrictions', False)
-        vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
-        vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
-        vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
-        alert_message = settings.get('ERLC', {}).get('alert_message', "")
+        enable_vehicle_restrictions = settings.get('ERLC', {}).get('vehicle_restrictions',{}).get('enabled', False)
+        vehicle_restrictions_roles = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('roles', [])
+        vehicle_restrictions_channel = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('channel', 0)
+        vehicle_restrictions_cars = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
+        alert_message = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
         
         view = WhitelistVehiclesManagement(
             self.bot,
@@ -7294,7 +7265,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                     description=" "
                 ).add_field(
                     name="Enable/Disable Vehicle Restrictions",
-                    value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\nCurrent Status: {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
+                    value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
                 ).add_field(
                     name="Whitelisted Vehicles Roles",
                     value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.",

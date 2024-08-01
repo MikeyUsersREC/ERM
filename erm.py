@@ -151,7 +151,7 @@ class Bot(commands.AutoShardedBot):
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
+            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
@@ -710,30 +710,57 @@ async def statistics_check():
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 
+async def run_command(guild_id, username, message):
+    while True:
+        command = f":pm {username} {message}"
+        command_response = await bot.prc_api.run_command(guild_id, command)
+        if command_response[0] == 200:
+            logging.info(f"Sent PM to {username} in guild {guild_id}")
+            break
+        elif command_response[0] == 429:
+            retry_after = int(command_response[1].get('Retry-After', 5))
+            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
+            break
+
+def is_whitelisted(vehicle_name, whitelisted_vehicle):
+    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
+    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
+    if vehicle_year_match and whitelisted_year_match:
+        vehicle_year = vehicle_year_match.group()
+        whitelisted_year = whitelisted_year_match.group()
+        if vehicle_year != whitelisted_year:
+            return False
+        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
+        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
+        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+    return False
+
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
-    async for items in bot.settings.db.find({'ERLC': {'$exists': True}}):
+    async for items in bot.settings.db.find(
+        {"ERLC.vehicle_restrictions.enabled": {"$exists": True, "$eq": True}}
+    ):
         guild_id = items['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
             continue
         try:
-            enabled = items['ERLC'].get('enable_vehicle_restrictions', False)
-            whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles')
-            alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel')
-            whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
-            alert_message = items["ERLC"].get("alert_message", "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
+            whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
+            alert_channel_id = items['ERLC'].get('vehicle_restrictions').get('channel')
+            whitelisted_vehicles = items['ERLC'].get('vehicle_restrictions').get('cars', [])
+            alert_message = items["ERLC"].get("vehicle_restrictions").get('message', "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
         except KeyError:
             logging.error(f"KeyError for guild {guild_id}")
             continue
 
-        if not enabled:
-            continue
-
         if not whitelisted_vehicle_roles or not alert_channel_id:
+            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
             continue
 
         if isinstance(whitelisted_vehicle_roles, int):
@@ -859,34 +886,6 @@ async def check_whitelisted_car():
 
     end_time = time.time()
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
-    
-async def run_command(guild_id, username, message):
-    while True:
-        command = f":pm {username} {message}"
-        command_response = await bot.prc_api.run_command(guild_id, command)
-        if command_response[0] == 200:
-            logging.info(f"Sent PM to {username} in guild {guild_id}")
-            break
-        elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
-            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
-            break
-
-def is_whitelisted(vehicle_name, whitelisted_vehicle):
-    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
-    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    if vehicle_year_match and whitelisted_year_match:
-        vehicle_year = vehicle_year_match.group()
-        whitelisted_year = whitelisted_year_match.group()
-        if vehicle_year != whitelisted_year:
-            return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    return False
 
 async def get_guild(guild_id):
     guild = bot.get_guild(guild_id)
