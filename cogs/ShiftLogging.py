@@ -239,7 +239,8 @@ class ShiftLogging(commands.Cog):
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
-            "EndEpoch": {'$ne': 0}
+            "EndEpoch": {'$ne': 0},
+            "Type": type
         })]
         embed = discord.Embed(
             color=BLANK_COLOR
@@ -468,7 +469,8 @@ class ShiftLogging(commands.Cog):
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": ctx.author.id,
             "Guild": ctx.guild.id,
-            "EndEpoch": {'$ne': 0}
+            "EndEpoch": {'$ne': 0},
+            "Type": type
         })]
         embed = discord.Embed(
             color=BLANK_COLOR

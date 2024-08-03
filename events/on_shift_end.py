@@ -78,6 +78,12 @@ class OnShiftEnd(commands.Cog):
                 pass
 
         if channel is not None:
+            moderation_counts = {}
+            for entry in shift.moderations:
+                if entry['type'] in moderation_counts:
+                    moderation_counts[entry['type']] += entry['count']
+                else:
+                    moderation_counts[entry['type']] = entry['count']
             await channel.send(embed=discord.Embed(
                 title="Shift Ended",
                 color=BLANK_COLOR
@@ -120,12 +126,6 @@ class OnShiftEnd(commands.Cog):
                     else True
                 )
         if shift_reports_enabled:
-            moderation_counts = {}
-            for entry in shift.moderations:
-                if entry['type'] in moderation_counts:
-                    moderation_counts[entry['type']] += entry['count']
-                else:
-                    moderation_counts[entry['type']] = entry['count']
             
             embed = discord.Embed(
                 title="Shift Report",
