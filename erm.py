@@ -68,7 +68,7 @@ except decouple.UndefinedValueError:
     sentry_url = ""
     bloxlink_api_key = ""
 
-discord.utils.setup_logging(level=logging.DEBUG)
+discord.utils.setup_logging(level=logging.INFO)
 
 intents = discord.Intents.default()
 intents.message_content = True
