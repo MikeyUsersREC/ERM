@@ -93,6 +93,7 @@ class OnMessage(commands.Cog):
         if dataset.get('ERLC', {}).get('remote_commands'):
             remote_commands = True
             remote_command_channel = dataset["ERLC"]["remote_commands"]["webhook_channel"] if dataset["ERLC"]["remote_commands"].get("webhook_channel", None) else None
+            # print(f"Remote commands: {remote_command_channel}")
 
         if dataset.get('ERLC',{}).get('auto_kick_ban').get('channel'):
             kick_ban_webhook_channel = dataset["ERLC"]["auto_kick_ban"]["channel"]

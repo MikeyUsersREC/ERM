@@ -68,7 +68,7 @@ except decouple.UndefinedValueError:
     sentry_url = ""
     bloxlink_api_key = ""
 
-discord.utils.setup_logging(level=logging.DEBUG)
+discord.utils.setup_logging(level=logging.INFO)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -545,7 +545,7 @@ async def check_reminders():
                                     status = await bot.prc_api.get_server_status(channel.guild.id)
                                 except prc_api.ResponseFailure as e:
                                     do_not_complete = True
-                                print(status)
+                                #print(status)
                                 
                                 if not do_not_complete:
                                     resp = await bot.prc_api.run_command(channel.guild.id, total)
