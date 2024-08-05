@@ -7379,7 +7379,7 @@ class MoreOptions(discord.ui.View):
             icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
         )
         if not statistics.items():
-            embed.description += "No Statistics Channels Set"
+            embed.description += "> No Statistics Channels Set"
         else:
             for key, value in statistics.items():
                 embed.description += f"**Channel:** <#{key}>\n> **Format:** `{value.get('format', 'None')}`\n"
