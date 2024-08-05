@@ -87,7 +87,7 @@ class OnMessage(commands.Cog):
         if dataset.get('ERLC', {}).get('remote_commands'):
             remote_commands = True
             remote_command_channel = dataset["ERLC"]["remote_commands"]["webhook_channel"] if dataset["ERLC"]["remote_commands"].get("webhook_channel", None) else None
-            print(f"Remote commands: {remote_command_channel}")
+            # print(f"Remote commands: {remote_command_channel}")
 
         if "game_security" in dataset.keys():
             if "enabled" in dataset["game_security"].keys():
