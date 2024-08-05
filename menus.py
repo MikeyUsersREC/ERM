@@ -6384,7 +6384,7 @@ class AntipingConfiguration(AssociationConfigurationView):
         for i in select.options:
             i.default = False
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Affected Roles", row=1, max_values=5, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Affected Roles", row=1, max_values=25, min_values=0)
     async def affected_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -6406,7 +6406,7 @@ class AntipingConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti Ping Affected Roles: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Bypass Roles", row=2, max_values=5, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Bypass Roles", row=2, max_values=25, min_values=0)
     async def bypass_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
