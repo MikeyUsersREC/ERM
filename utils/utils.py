@@ -621,3 +621,34 @@ def is_whitelisted(vehicle_name, whitelisted_vehicle):
         whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
         return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
     return False
+
+
+async def fetch_get_channel(target, identifier):
+    channel = target.get_channel(identifier)
+    if not channel:
+        try:
+            channel = await target.fetch_channel(identifier)
+        except discord.HTTPException as e:
+            channel = None
+    return channel
+async def update_channel(guild, channel_id, stat, placeholders):
+    try:
+        format_string = stat["format"]
+        channel_id = int(channel_id)
+        channel = await fetch_get_channel(guild, channel_id)
+        if channel:
+            for key, value in placeholders.items():
+                format_string = format_string.replace(f"{{{key}}}", str(value))
+            await channel.edit(name=format_string)
+            logging.info(f"Updated channel {channel_id} in guild {guild.id}")
+        else:
+            logging.error(f"Channel {channel_id} not found in guild {guild.id}")
+    except Exception as e:
+        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
+
+async def get_player_avatar_url(player_id):
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return data['data'][0]['imageUrl']
