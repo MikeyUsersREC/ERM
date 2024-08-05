@@ -7313,7 +7313,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         view = MoreOptions(self.bot, interaction.guild.id)
         await interaction.response.send_message(
             embed = discord.Embed(
-                title="More Options",
+                title="More Features",
                 description="",
                 color=BLANK_COLOR
             ),
@@ -7351,16 +7351,16 @@ class MoreOptions(discord.ui.View):
         embed=discord.Embed(
             title="ER:LC Statistics",
             description="",
-                color=BLANK_COLOR
+            color=BLANK_COLOR
         ).set_author(
             name=interaction.guild.name,
             icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
         )
-        if statistics.items not in [None, {}]:
+        if not statistics.items():
+            embed.description += "No Statistics Channels Set"
+        else:
             for key, value in statistics.items():
                 embed.description += f"**Channel:** <#{key}>\n> **Format:** `{value.get('format', 'None')}`\n"
-        else:
-            embed.description = "No Statistics Channels Set"
         await interaction.response.send_message(
             embed = embed,
             view=view,
@@ -7368,7 +7368,7 @@ class MoreOptions(discord.ui.View):
         )
 
     @discord.ui.button(
-        label="Auto Kick/Ban Logging",
+        label="Auto Kick/Ban",
         row=3
     )
     async def auto_kick_ban(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7380,13 +7380,18 @@ class MoreOptions(discord.ui.View):
             return
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'auto_kick_ban_log': 0
+                'auto_kick_ban': {
+                    'channel': 0
+                }
             }
         view = AutoLogging(self.bot,sett)
         embed=discord.Embed(
-            title="Auto Kick/Ban Logging",
-            description="This channel is where the bot will read the webhooks from the game server.",
+            title="Auto Kick/Ban",
+            description=" ",
             color=BLANK_COLOR
+        ).add_field(
+            name="Kick/Ban Webhook Channel",
+            value="This is the channel where all automatic kick/ban logs are sent to via ERLC."
         ).set_author(
             name=interaction.guild.name,
             icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
@@ -7403,9 +7408,9 @@ class AutoLogging(discord.ui.View):
         self.bot = bot
         self.sett = sett
         try:
-            channel = self.bot.get_channel(self.sett.get('ERLC', {}).get('auto_kick_ban_log', 0))
-        except AttributeError:
-            channel = 0
+            channel = self.bot.get_channel(self.sett.get('ERLC', {}).get('auto_kick_ban', {}).get('channel'))
+        except KeyError:
+            channel = None
 
 
         self.select = discord.ui.ChannelSelect(
@@ -7425,11 +7430,25 @@ class AutoLogging(discord.ui.View):
         sett = await bot.settings.find_by_id(guild_id)
         if not sett.get('ERLC'):
             sett['ERLC'] = {
-                'auto_kick_ban_log': 0
+                'auto_kick_ban': {
+                    'channel': 0
+                }
             }
 
         selected_channel_id = self.select.values[0].id if self.select.values else 0
-        sett['ERLC']['auto_kick_ban_log'] = selected_channel_id
+        try:
+            sett['ERLC']['auto_kick_ban']['channel'] = selected_channel_id
+        except KeyError:
+            try:
+                sett['ERLC']['auto_kick_ban'] = {
+                    'channel': selected_channel_id
+                }
+            except KeyError:
+                sett['ERLC'] = {
+                    'auto_kick_ban': {
+                        'channel': selected_channel_id
+                    }
+                }
         embed = discord.Embed(
             title="<:check:1163142000271429662> Channel Saved",
             description=f"Auto Kick/Ban Log Channel set to <#{selected_channel_id}>",
