@@ -77,6 +77,13 @@ class OnShiftEnd(commands.Cog):
             except discord.HTTPException:
                 pass
 
+        moderation_counts = {}
+        for entry in shift.moderations:
+            if entry['type'] in moderation_counts:
+                moderation_counts[entry['type']] += entry['count']
+            else:
+                moderation_counts[entry['type']] = entry['count']
+        
         if channel is not None:
             await channel.send(embed=discord.Embed(
                 title="Shift Ended",
@@ -119,14 +126,7 @@ class OnShiftEnd(commands.Cog):
                     if document.get("shift_reports") is not None
                     else True
                 )
-        if shift_reports_enabled:
-            moderation_counts = {}
-            for entry in shift.moderations:
-                if entry['type'] in moderation_counts:
-                    moderation_counts[entry['type']] += entry['count']
-                else:
-                    moderation_counts[entry['type']] = entry['count']
-            
+        if shift_reports_enabled:          
             embed = discord.Embed(
                 title="Shift Report",
                 color=BLANK_COLOR
