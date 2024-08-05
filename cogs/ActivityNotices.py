@@ -465,7 +465,7 @@ class ActivityCoreCommands:
     async def core_command_request(self, ctx: commands.Context, request_type_object: str, duration: str, reason: str, return_bypass = None, override_victim = None):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings.get('staff_management') or not settings.get('staff_management', {}).get(
-                f'{request_type_object.lower()}_role', None) or not settings.get('staff_management', {}).get('enabled'):
+                f'{request_type_object.lower()}_role', None) or not settings.get('staff_management', {}).get('channel'):
             await ctx.send(
                 embed=discord.Embed(
                     title="Not Enabled",

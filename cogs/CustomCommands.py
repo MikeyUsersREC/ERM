@@ -322,11 +322,8 @@ class CustomCommands(commands.Cog):
                     else ctx.channel
                 )
         embeds = []
-        if selected["message"]["embeds"] is not None:
-            for embed in selected["message"]["embeds"]:
-                embeds.append(await interpret_embed(bot, ctx, channel, embed, selected['id']))
-        elif selected["message"]["embeds"] is None:
-            pass
+        for embed in selected["message"]["embeds"]:
+            embeds.append(await interpret_embed(bot, ctx, channel, embed, selected['id']))
 
         view = discord.ui.View()
         for item in selected.get('buttons', []):
