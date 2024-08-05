@@ -874,7 +874,8 @@ class ShiftLogging(commands.Cog):
                     }
                 },
                 "moderations": {"$sum": {"$cond": [{"$isArray": "$Moderations"}, {"$size": "$Moderations"}, 0]}},
-                "lowest_time": {"$min": "$StartEpoch"}
+                "lowest_time": {"$min": "$StartEpoch"},
+                "breaks": {"$push": "$Breaks"}
             }}
         ]
 
@@ -883,9 +884,23 @@ class ShiftLogging(commands.Cog):
 
         all_staff = {}
         async for doc in bot.shift_management.shifts.db.aggregate(pipeline):
+            total_seconds = doc["total_seconds"]
+
+            # Calculate total break time for the shift
+            total_break_time = 0
+            for break_periods in doc["breaks"]:
+                for break_period in break_periods:
+                    break_start = break_period.get("StartEpoch", 0)
+                    break_end = break_period.get("EndEpoch", 0)
+                    if break_start and break_end:
+                        total_break_time += break_end - break_start
+
+            # Adjust total_seconds by subtracting the break time
+            adjusted_total_seconds = max(total_seconds - total_break_time, 0)
+
             all_staff[doc["_id"]] = {
                 "id": doc["_id"],
-                "total_seconds": doc["total_seconds"],
+                "total_seconds": adjusted_total_seconds,
                 "moderations": doc["moderations"],
                 "lowest_time": doc["lowest_time"]
             }
