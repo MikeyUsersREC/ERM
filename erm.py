@@ -268,7 +268,7 @@ async def loggingCommandExecution(ctx: commands.Context):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    'https://events.ermbot.xyz/',
+                    'https://events.ermbot.xyz/', 
                     json={"EventType": "CommandRun", "CommandName": command_name}
                 ) as response:
                     if response.status != 200:
