@@ -264,7 +264,7 @@ async def AutoDefer(ctx: commands.Context):
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):
     if ctx in internal_command_storage:
-        command_name = ctx.command.name
+        command_name = ctx.command.qualified_name
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
