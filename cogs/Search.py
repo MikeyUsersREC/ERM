@@ -425,73 +425,69 @@ class Search(commands.Cog):
             view=paginator
         )
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(
+        name="userid",
+        aliases=["u"],
+        description="Returns the User Id of a searched user.",
+        extras={"category": "Search"},
+        usage="<user>",
+        with_app_command=True,
+    )
+    @app_commands.autocomplete(query=user_autocomplete)
+    @app_commands.describe(
+        query="What is the user you want to search for? This can be a Discord mention or a ROBLOX username."
+    )
     async def userid(self, ctx, *, query):
         bot = self.bot
         user = query
-        try:
-            roblox_user = await get_roblox_by_username(user, bot, ctx)
-            if roblox_user.get('errors'):
-                return await ctx.send(embed=discord.Embed(
-                    title="Could not find player",
-                    description="I could not find a ROBLOX player with that corresponding username.",
-                    color=BLANK_COLOR
-                ))
-            
-            client = RobloxClient()
-            roblox_player = await client.get_user_by_username(roblox_user['name'])
-            thumbnails = await client.thumbnails.get_user_avatar_thumbnails([roblox_player], type=client.thumbnails.AvatarThumbnailType.headshot)
-            thumbnail = thumbnails[0].image_url
-            
-            embed = discord.Embed(title=roblox_player.name, color=BLANK_COLOR)
-            embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url
-            )
-            
-            # Player Information
-            player_info = f"> **Username:** {roblox_player.name}\n" \
-                          f"> **Display Name:** {roblox_player.display_name}\n" \
-                          f"> **User ID:** `{roblox_player.id}`\n"
-            
-            try:
-                presence = await roblox_player.get_presence()
-                presence_str = {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if presence else 'Offline'
-            except TooManyRequests:
-                presence_str = "Unable to fetch (Rate limited)"
-            
-            player_info += f"> **Presence:** {presence_str}\n"
-            player_info += f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
-            
-            embed.add_field(name="Player Information", value=player_info, inline=False)
-            
-            try:
-                friend_count = await roblox_player.get_friend_count()
-                follower_count = await roblox_player.get_follower_count()
-                following_count = await roblox_player.get_following_count()
-                group_roles = await roblox_player.get_group_roles()
-                
-                player_counts = f"> **Friends:** {friend_count}\n" \
-                                f"> **Followers:** {follower_count}\n" \
-                                f"> **Following:** {following_count}\n" \
-                                f"> **Groups:** {len(group_roles)}"
-                
-                embed.add_field(name="Player Counts", value=player_counts)
-            except TooManyRequests:
-                embed.add_field(name="Player Counts", value="Unable to fetch counts (Rate limited)")
-            
-            embed.set_thumbnail(url=thumbnail)
-            embed.set_footer(text="Search Module")
-            
-            await ctx.send(embed=embed)
-        
-        except TooManyRequests:
-            error_embed = discord.Embed(
-                title="Rate Limit Exceeded",
-                description="We have been ratelimited by a Roblox API. It is likely we were ratelimited from the friends API. Try again later.",
+
+        user = query
+        roblox_user = await get_roblox_by_username(user, bot, ctx)
+        if roblox_user.get('errors'):
+            return await ctx.send(embed=discord.Embed(
+                title="Could not find player",
+                description="I could not find a ROBLOX player with that corresponding username.",
                 color=BLANK_COLOR
+            ))
+
+        client = roblox.Client()
+        roblox_player = await client.get_user_by_username(roblox_user['name'])
+        thumbnails = await client.thumbnails.get_user_avatar_thumbnails([roblox_player], type=rbx_api.thumbnails.AvatarThumbnailType.headshot)
+        thumbnail = thumbnails[0].image_url
+        embed = discord.Embed(title=roblox_player.name, color=BLANK_COLOR)
+
+        embed.set_author(
+            name=ctx.author.name,
+            icon_url=ctx.author.display_avatar.url
+        )
+
+        embed.add_field(
+            name="Player Information",
+            value=(
+                f"> **Username:** {roblox_player.name}\n"
+                f"> **Display Name:** {roblox_player.display_name}\n"
+                f"> **User ID:** `{roblox_player.id}`\n"
+                f"> **Presence:** { {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if (presence := await roblox_player.get_presence()) is not None else 'Offline'}\n"
+                f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Player Counts",
+            value=(
+                f"> **Friends:** {await roblox_player.get_friend_count()}\n"
+                f"> **Followers:** {await roblox_player.get_follower_count()}\n"
+                f"> **Following:** {await roblox_player.get_following_count()}\n"
+                f"> **Groups:** {len(await roblox_player.get_group_roles())}\n"
             )
-            await ctx.send(embed=error_embed)
+        )
+        
+        embed.set_thumbnail(url=thumbnail)
+        embed.set_footer(text="Search Module")
+        await ctx.send(
+            embed=embed
+        )
 
 
 
