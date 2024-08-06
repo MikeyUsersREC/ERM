@@ -550,11 +550,11 @@ async def check_reminders():
                                 if not do_not_complete:
                                     resp = await bot.prc_api.run_command(channel.guild.id, total)
                                     if resp[0] != 200:
-                                        print('Failed reaching PRC due to {} status code'.format(resp))
+                                        logging.info('Failed reaching PRC due to {} status code'.format(resp))
                                     else:
-                                        print('Integration success with 200 status code')
+                                        logging.info('Integration success with 200 status code')
                                 else:
-                                    print(f'Cancelled execution of reminder for {channel.guild.id} - {e.status_code}')
+                                    logging.info(f'Cancelled execution of reminder for {channel.guild.id} - {e.status_code}')
 
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
