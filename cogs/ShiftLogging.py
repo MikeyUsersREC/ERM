@@ -1263,6 +1263,7 @@ class ShiftLogging(commands.Cog):
         name="history",
         description="Show all past shifts of user by shift type",
         extras={"category": "Shift Management"},
+        aliases=["h"],
     )
     @require_settings()
     @app_commands.autocomplete(
