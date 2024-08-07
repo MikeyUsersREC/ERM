@@ -609,7 +609,7 @@ async def tempban_checks():
             try:
                 cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans(punishment_item['Guild'])
             except:
-                raise Exception("Failed to fetch bans from PRC API")
+                continue
 
 
         punishment_item['CheckExecuted'] = True
