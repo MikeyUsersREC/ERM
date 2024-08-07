@@ -565,9 +565,9 @@ async def check_reminders():
                                                    replied_user=True, everyone=True, roles=True, users=True
                                                ))
                 except Exception as e:
-                    raise e
+                    pass
     except Exception as e:
-        raise e
+        pass
 
 @tasks.loop(minutes=1, reconnect=True)
 async def tempban_checks():
