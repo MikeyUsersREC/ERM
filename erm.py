@@ -250,24 +250,8 @@ def running():
     else:
         return -1
 
-
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
-    analytics = await bot.analytics.find_by_id(
-        ctx.command.full_parent_name + f" {ctx.command.name}"
-    )
-    if not analytics:
-        await bot.analytics.insert(
-            {"_id": ctx.command.full_parent_name + f" {ctx.command.name}", "uses": 1}
-        )
-    else:
-        await bot.analytics.update_by_id(
-            {
-                "_id": ctx.command.full_parent_name + f" {ctx.command.name}",
-                "uses": analytics["uses"] + 1,
-            }
-        )
-
     internal_command_storage[ctx] = datetime.datetime.now(tz=pytz.UTC).timestamp()
     if ctx.command:
         if ctx.command.extras.get("ephemeral") is True:
@@ -279,9 +263,23 @@ async def AutoDefer(ctx: commands.Context):
 
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):
-    if ctx in internal_command_storage.keys():
-        logging.info("Command " + ctx.command.name + " was run by " + ctx.author.name + " (" + str(ctx.author.id) + ")" + " and lasted {} seconds".format(str(float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx]))))
-        logging.info(("Shard ID ::: " + str(ctx.guild.shard_id)) if ctx.guild is not None else 'Shard ID ::: {}'.format("-1, Direct Messages"))
+    if ctx in internal_command_storage:
+        command_name = ctx.command.qualified_name
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    'https://events.ermbot.xyz/',
+                    json={"EventType": "CommandRun", "CommandName": command_name}
+                ) as response:
+                    if response.status != 200:
+                        logging.error(f"Failed to send event: {response.status}")
+        except Exception as e:
+            logging.error(f"Error during POST request: {e}")
+
+        duration = float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx])
+        logging.info(f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds")
+        shard_info = f"Shard ID ::: {ctx.guild.shard_id}" if ctx.guild else "Shard ID ::: -1, Direct Messages"
+        logging.info(shard_info)
     else:
         logging.info("Command could not be found in internal context storage. Please report.")
     del internal_command_storage[ctx]
