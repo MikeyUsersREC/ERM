@@ -1260,7 +1260,7 @@ class ShiftLogging(commands.Cog):
 
     @commands.guild_only()
     @duty.command(
-        name="shifts",
+        name="history",
         description="Show all past shifts of user by shift type",
         extras={"category": "Shift Management"},
     )
