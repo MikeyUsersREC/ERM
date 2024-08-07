@@ -6772,7 +6772,8 @@ class RemoteCommandConfiguration(discord.ui.View):
         cls=discord.ui.ChannelSelect,
         placeholder="Webhook Channel",
         max_values=1,
-        min_values=0    
+        min_values=0,
+        channel_types=[discord.ChannelType.text]
     )
     async def webhook_channel(self, interaction: discord.Interaction, select: discord.ui.Select):
         if len(select.values) == 0:
@@ -6782,7 +6783,7 @@ class RemoteCommandConfiguration(discord.ui.View):
         print(self.auto_data)
         embed = discord.Embed(
             title="Remote Commands",
-            description="",
+            description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
             color=BLANK_COLOR
         )
         for key, value in self.auto_data.items():
@@ -7152,7 +7153,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Kill Logs Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.button(
-        label='More Options',
+        label='RDM Alerts',
         row=3
     )
     async def more_options(self, interaction: discord.Interaction, button: discord.Button):
@@ -7227,7 +7228,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
 
         embed = discord.Embed(
             title="Remote Commands",
-            description="",
+            description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
             color=BLANK_COLOR
         )
         for key, value in auto_shift_data.items():
@@ -7247,7 +7248,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         )
 
     @discord.ui.button(
-        label="Add Vehicle Restriction",
+        label="Vehicle Restrictions",
         row=3
     )
     async def add_vehicle_restriction(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7338,6 +7339,13 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 title="More Features",
                 description="",
                 color=BLANK_COLOR
+            ).add_field(
+                name="ER:LC Statistics Updates",
+                value="This is where you can configure the statistics updates for ER:LC.",
+                inline=False
+            ).add_field(
+                name="Auto Kick/Ban Logging",
+                value="This is where you can configure the auto kick/ban feature for ER:LC.",
             ),
             view=view,
             ephemeral=True
@@ -7390,7 +7398,7 @@ class MoreOptions(discord.ui.View):
         )
 
     @discord.ui.button(
-        label="Auto Kick/Ban",
+        label="Auto Kick/Ban Logging",
         row=3
     )
     async def auto_kick_ban(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7413,7 +7421,7 @@ class MoreOptions(discord.ui.View):
             color=BLANK_COLOR
         ).add_field(
             name="Kick/Ban Webhook Channel",
-            value="This is the channel where all automatic kick/ban logs are sent to via ERLC."
+            value="This is the channel where all automatic kick/ban logs are sent to via ERLC and ERM automatically logs punishment.",
         ).set_author(
             name=interaction.guild.name,
             icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
@@ -7573,6 +7581,52 @@ class ERLCStats(discord.ui.View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @discord.ui.button(label="Help", style=discord.ButtonStyle.secondary, row=2)
+    async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        embed = discord.Embed(
+            title="ER:LC Statistics Management Guide",
+            description=(
+                "Manage your ER:LC (Emergency Response: Liberty County) statistics with ease. "
+                "Follow the steps below to create, edit, or delete your statistics. "
+                "Ensure to use `{}` around variables to incorporate dynamic data in your statistics."
+            ),
+            color=BLANK_COLOR
+        ).add_field(
+            name="Creating ER:LC Statistics",
+            value=(
+                "1. Click on the **Create** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to set as a statistics channel.\n"
+                "3. Follow the prompts to complete the setup."
+            ),
+            inline=False
+        ).add_field(
+            name="Editing ER:LC Statistics",
+            value=(
+                "1. Click on the **Edit** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to edit statistics.\n"
+                "3. Follow the prompts to complete the changes."
+            ),
+            inline=False
+        ).add_field(
+            name="Deleting ER:LC Statistics",
+            value=(
+                "1. Click on the **Delete** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to remove from statistics.\n"
+                "3. Follow the prompts to complete the deletion."
+            ),
+            inline=False
+        ).add_field(
+            name="Formatting Tips",
+            value=(
+                "When adding variables to your statistics format, ensure they are enclosed in `{}`.\n"
+                "Example: `OnDuty Staff {onduty}`"
+            ),
+            inline=False
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 class CreateERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
         super().__init__(timeout=600.0)
@@ -7621,6 +7675,19 @@ class CreateERLCStats(discord.ui.View):
             if not modal.format.value:
                 return
             channel_id = str(self.value[0].id)
+            if not channel_id:
+                return await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description="No channel selected",
+                        color=RED_COLOR
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                    )
+                    ,
+                    view=None
+                )
             try:
                 sett = await self.bot.settings.find_by_id(self.guild_id)
             except KeyError:
@@ -7636,7 +7703,7 @@ class CreateERLCStats(discord.ui.View):
                     embed=discord.Embed(
                         title="<:error:1164666124496019637> Error",
                         description=f"<#{channel_id}> is already set as a statistics channel",
-                        color=discord.Color.red()
+                        color=RED_COLOR
                     ).set_author(
                         name=interaction.guild.name,
                         icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
