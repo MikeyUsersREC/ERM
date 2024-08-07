@@ -261,9 +261,9 @@ class ERLC(commands.Cog):
         embed1.add_field(
             name="Basic Info",
             value=(
-                f"> **Join Code:** {status.join_key}\n"
-                f"> **Current Players:** `{status.current_players}/{status.max_players}`\n"
-                f"> **Queue:** `{queue}`\n"
+                f"> **Join Code:** [{status.join_key}](https://policeroleplay.community/join/{status.join_key})\n"
+                f"> **Current Players:** {status.current_players}/{status.max_players}\n"
+                f"> **Queue:** {queue}\n"
             ),
             inline=False
         )
@@ -279,10 +279,10 @@ class ERLC(commands.Cog):
         embed1.add_field(
             name="Staff Statistics",
             value=(
-                f"> **Moderators:** `{len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}`\n"
-                f"> **Administrators:** `{len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}`\n"
-                f"> **Staff In-Game:** `{len(list(filter(lambda x: x.permission != 'Normal', players)))}`\n"
-                f"> **Staff Clocked In:** `{await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}`"
+                f"> **Moderators:** {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}\n"
+                f"> **Administrators:** {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}\n"
+                f"> **Staff In-Game:** {len(list(filter(lambda x: x.permission != 'Normal', players)))}\n"
+                f"> **Staff Clocked In:** {await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}"
             ),
             inline=False
         )
@@ -458,8 +458,9 @@ class ERLC(commands.Cog):
             for log in sorted_logs:
                 if len(embed.description) > 3800:
                     break
-                cleaned_command = log.command.replace('`', '')
-                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{cleaned_command}` • <t:{int(log.timestamp)}:R>\n"
+
+                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command.replace("`", "")}` • <t:{int(log.timestamp)}:R>\n"
+
 
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
@@ -607,6 +608,14 @@ class ERLC(commands.Cog):
         guild_id = int(ctx.guild.id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         vehicles: list[prc_api.ActiveVehicle] = await self.bot.prc_api.get_server_vehicles(guild_id)
+        
+        if len(vehicles) <= 0:
+            emb = discord.Embed(title=f"Server Vehicles [{len(vehicles)}/{len(players)}]", description="> There are no active vehicles in your server.", color=BLANK_COLOR)
+            emb.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon.url
+            )
+            return ctx.send(embed=emb)
 
         matched = {}
         for item in vehicles:
