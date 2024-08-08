@@ -6384,7 +6384,7 @@ class AntipingConfiguration(AssociationConfigurationView):
         for i in select.options:
             i.default = False
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Affected Roles", row=1, max_values=5, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Affected Roles", row=1, max_values=25, min_values=0)
     async def affected_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -6406,7 +6406,7 @@ class AntipingConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Anti Ping Affected Roles: {', '.join([f'<@&{i.id}>' for i in select.values])}.")
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Bypass Roles", row=2, max_values=5, min_values=0)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="Bypass Roles", row=2, max_values=25, min_values=0)
     async def bypass_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
@@ -6772,7 +6772,8 @@ class RemoteCommandConfiguration(discord.ui.View):
         cls=discord.ui.ChannelSelect,
         placeholder="Webhook Channel",
         max_values=1,
-        min_values=0    
+        min_values=0,
+        channel_types=[discord.ChannelType.text]
     )
     async def webhook_channel(self, interaction: discord.Interaction, select: discord.ui.Select):
         if len(select.values) == 0:
@@ -6782,7 +6783,7 @@ class RemoteCommandConfiguration(discord.ui.View):
         print(self.auto_data)
         embed = discord.Embed(
             title="Remote Commands",
-            description="",
+            description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
             color=BLANK_COLOR
         )
         for key, value in self.auto_data.items():
@@ -6901,12 +6902,14 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if not sett.get('ERLC'):
+        if 'ERLC' not in sett:
             sett['ERLC'] = {"vehicle_restrictions": {}}
-
-        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
-        vehicle_restrictions["enabled"] = not vehicle_restrictions.get("enabled", False)
-        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
+        try:
+            sett['ERLC']['enable_vehicle_restrictions'] = not sett['ERLC']['enable_vehicle_restrictions']
+        except KeyError:
+            vehicle_restrictions = sett['ERLC'].get('vehicle_restrictions', {})
+            vehicle_restrictions['enabled'] = not vehicle_restrictions.get('enabled', False)
+            sett['ERLC']['vehicle_restrictions'] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(0, name="Enable/Disable Vehicle Restrictions", value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if vehicle_restrictions['enabled'] else 'Disabled'}")
@@ -6922,12 +6925,14 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if not sett.get('ERLC'):
+        if 'ERLC' not in sett:
             sett['ERLC'] = {"vehicle_restrictions": {}}
-
-        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
-        vehicle_restrictions["roles"] = [i.id for i in select.values]
-        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
+        try:
+            sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
+        except KeyError:
+            vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
+            vehicle_restrictions["roles"] = [i.id for i in select.values]
+            sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(5, name="Current Roles", value=", ".join([f"<@&{i.id}>" for i in select.values]) if select.values else "None")
@@ -6944,12 +6949,14 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if not sett.get('ERLC'):
+        if 'ERLC' not in sett:
             sett['ERLC'] = {"vehicle_restrictions": {}}
-        
-        vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
-        vehicle_restrictions["channel"] = select.values[0].id
-        sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
+        try:
+            sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id
+        except KeyError:
+            vehicle_restrictions = sett['ERLC'].get("vehicle_restrictions", {})
+            vehicle_restrictions["channel"] = select.values[0].id
+            sett['ERLC']["vehicle_restrictions"] = vehicle_restrictions
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(6, name="Current Channel", value=f"<#{select.values[0].id}>")
@@ -6962,6 +6969,9 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         sett = await bot.settings.find_by_id(guild_id)
         existing_vehicles = sett.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
+
+        if not existing_vehicles:
+            existing_vehicles = sett.get('ERLC', {}).get('whitelisted_vehicles', [])
 
         existing_vehicles_str = ', '.join(existing_vehicles)
 
@@ -6991,18 +7001,18 @@ class WhitelistVehiclesManagement(discord.ui.View):
         if not vehicles:
             return
 
-        if not sett.get('ERLC'):
+        if 'ERLC' not in sett:
             sett['ERLC'] = {
                 "vehicle_restrictions" : {}
             }
         try:
-            sett['ERLC']['vehicle_restrictions']['cars'] = vehicles
+            sett['ERLC']['whitelisted_vehicles'] = vehicles
         except KeyError:
-            sett['ERLC'] = {
-                'vehicle_restrictions': {
-                    'cars': vehicles
-                }
-            }
+            if 'ERLC' not in sett:
+                sett['ERLC'] = {}
+            if 'vehicle_restrictions' not in sett['ERLC']:
+                sett['ERLC']['vehicle_restrictions'] = {}
+            sett['ERLC']['vehicle_restrictions']['cars'] = vehicles
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(7, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
@@ -7015,6 +7025,9 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         sett = await bot.settings.find_by_id(guild_id)
         existing_message = sett.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
+
+        if not existing_message:
+            existing_message = sett.get('ERLC', {}).get('alert_message', "")
 
         modal = CustomModal(
             "Add Alert Message",
@@ -7038,18 +7051,18 @@ class WhitelistVehiclesManagement(discord.ui.View):
         if not modal.message.value:
             return
         
-        if not sett.get('ERLC'):
+        if 'ERLC' not in sett:
             sett['ERLC'] = {
                 "vehicle_restrictions" : {}
             }
         try:
-            sett['ERLC']['vehicle_restrictions']['message'] = modal.message.value
+            sett["ERLC"]["alert_message"] = modal.message.value
         except KeyError:
-            sett['ERLC'] = {
-                'vehicle_restrictions': {
-                    'message': modal.message.value
-                }
-            }
+            if 'ERLC' not in sett:
+                sett['ERLC'] = {}
+            if 'vehicle_restrictions' not in sett['ERLC']:
+                sett['ERLC']['vehicle_restrictions'] = {}
+            sett['ERLC']['vehicle_restrictions']['message'] = modal.message.value
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(8, name="Alert Message", value=modal.message.value)
@@ -7140,7 +7153,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Kill Logs Channel Set: <#{select.values[0].id}>")
 
     @discord.ui.button(
-        label='More Options',
+        label='RDM Alerts',
         row=3
     )
     async def more_options(self, interaction: discord.Interaction, button: discord.Button):
@@ -7215,7 +7228,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
 
         embed = discord.Embed(
             title="Remote Commands",
-            description="",
+            description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
             color=BLANK_COLOR
         )
         for key, value in auto_shift_data.items():
@@ -7235,7 +7248,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         )
 
     @discord.ui.button(
-        label="Add Vehicle Restriction",
+        label="Vehicle Restrictions",
         row=3
     )
     async def add_vehicle_restriction(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -7245,10 +7258,20 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         
         settings = await self.bot.settings.find_by_id(interaction.guild.id)
         enable_vehicle_restrictions = settings.get('ERLC', {}).get('vehicle_restrictions',{}).get('enabled', False)
+        if not enable_vehicle_restrictions:
+            enable_vehicle_restrictions =  settings.get('ERLC', {}).get('enable_vehicle_restrictions', False)
         vehicle_restrictions_roles = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('roles', [])
+        if not vehicle_restrictions_roles:
+            vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
         vehicle_restrictions_channel = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('channel', 0)
+        if not vehicle_restrictions_channel:
+            vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
         vehicle_restrictions_cars = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
+        if not vehicle_restrictions_cars:
+            vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
         alert_message = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
+        if not alert_message:
+            alert_message = settings.get('ERLC', {}).get('alert_message', "")
         
         view = WhitelistVehiclesManagement(
             self.bot,
@@ -7302,6 +7325,40 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
     )
 
     @discord.ui.button(
+        label="More Features",
+        row=3
+    )
+    async def more_features(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        view = MoreOptions(self.bot, interaction.guild.id)
+        await interaction.response.send_message(
+            embed = discord.Embed(
+                title="More Features",
+                description="",
+                color=BLANK_COLOR
+            ).add_field(
+                name="ER:LC Statistics Updates",
+                value="This is where you can configure the statistics updates for ER:LC.",
+                inline=False
+            ).add_field(
+                name="Auto Kick/Ban Logging",
+                value="This is where you can configure the auto kick/ban feature for ER:LC.",
+            ),
+            view=view,
+            ephemeral=True
+        )
+
+
+class MoreOptions(discord.ui.View):
+    def __init__(self, bot, guild_id):
+        super().__init__(timeout=900.0)
+        self.bot = bot
+        self.guild_id = guild_id
+
+    @discord.ui.button(
         label="ER:LC Statistics Updates",
         row=3
     )
@@ -7324,21 +7381,113 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         embed=discord.Embed(
             title="ER:LC Statistics",
             description="",
-                color=BLANK_COLOR
+            color=BLANK_COLOR
         ).set_author(
             name=interaction.guild.name,
             icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
         )
-        if statistics.items not in [None, {}]:
+        if not statistics.items():
+            embed.description += "> No Statistics Channels Set"
+        else:
             for key, value in statistics.items():
                 embed.description += f"**Channel:** <#{key}>\n> **Format:** `{value.get('format', 'None')}`\n"
-        else:
-            embed.description = "No Statistics Channels Set"
         await interaction.response.send_message(
             embed = embed,
             view=view,
             ephemeral=True
         )
+
+    @discord.ui.button(
+        label="Auto Kick/Ban Logging",
+        row=3
+    )
+    async def auto_kick_ban(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'auto_kick_ban': {
+                    'channel': 0
+                }
+            }
+        view = AutoLogging(self.bot,sett)
+        embed=discord.Embed(
+            title="Auto Kick/Ban",
+            description=" ",
+            color=BLANK_COLOR
+        ).add_field(
+            name="Kick/Ban Webhook Channel",
+            value="This is the channel where all automatic kick/ban logs are sent to via ERLC and ERM automatically logs punishment.",
+        ).set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await interaction.response.send_message(
+            embed = embed,
+            view=view,
+            ephemeral=True
+        )
+
+class AutoLogging(discord.ui.View):
+    def __init__(self,bot,sett):
+        super().__init__(timeout=600.0)
+        self.bot = bot
+        self.sett = sett
+        try:
+            channel = self.bot.get_channel(self.sett.get('ERLC', {}).get('auto_kick_ban', {}).get('channel'))
+        except KeyError:
+            channel = None
+
+
+        self.select = discord.ui.ChannelSelect(
+            placeholder="Auto Kick/Ban Log Channel",
+            max_values=1,
+            min_values=0,
+            channel_types=[discord.ChannelType.text],
+            default_values=[channel] if channel else []
+        )
+        self.add_item(self.select)
+        self.select.callback = self.select_callback
+
+    async def select_callback(self, interaction: discord.Interaction):
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {
+                'auto_kick_ban': {
+                    'channel': 0
+                }
+            }
+
+        selected_channel_id = self.select.values[0].id if self.select.values else 0
+        try:
+            sett['ERLC']['auto_kick_ban']['channel'] = selected_channel_id
+        except KeyError:
+            try:
+                sett['ERLC']['auto_kick_ban'] = {
+                    'channel': selected_channel_id
+                }
+            except KeyError:
+                sett['ERLC'] = {
+                    'auto_kick_ban': {
+                        'channel': selected_channel_id
+                    }
+                }
+        embed = discord.Embed(
+            title="<:check:1163142000271429662> Channel Saved",
+            description=f"Auto Kick/Ban Log Channel set to <#{selected_channel_id}>",
+            color=GREEN_COLOR
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"ERLC Kick/Ban Webhook Channel changed to: <#{selected_channel_id}>")
+
 
 class ERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
@@ -7432,6 +7581,52 @@ class ERLCStats(discord.ui.View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @discord.ui.button(label="Help", style=discord.ButtonStyle.secondary, row=2)
+    async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        embed = discord.Embed(
+            title="ER:LC Statistics Management Guide",
+            description=(
+                "Manage your ER:LC (Emergency Response: Liberty County) statistics with ease. "
+                "Follow the steps below to create, edit, or delete your statistics. "
+                "Ensure to use `{}` around variables to incorporate dynamic data in your statistics."
+            ),
+            color=BLANK_COLOR
+        ).add_field(
+            name="Creating ER:LC Statistics",
+            value=(
+                "1. Click on the **Create** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to set as a statistics channel.\n"
+                "3. Follow the prompts to complete the setup."
+            ),
+            inline=False
+        ).add_field(
+            name="Editing ER:LC Statistics",
+            value=(
+                "1. Click on the **Edit** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to edit statistics.\n"
+                "3. Follow the prompts to complete the changes."
+            ),
+            inline=False
+        ).add_field(
+            name="Deleting ER:LC Statistics",
+            value=(
+                "1. Click on the **Delete** button.\n"
+                "2. A Channel select dropdown will appear asking you to select a voice channel to remove from statistics.\n"
+                "3. Follow the prompts to complete the deletion."
+            ),
+            inline=False
+        ).add_field(
+            name="Formatting Tips",
+            value=(
+                "When adding variables to your statistics format, ensure they are enclosed in `{}`.\n"
+                "Example: `OnDuty Staff {onduty}`"
+            ),
+            inline=False
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 class CreateERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
         super().__init__(timeout=600.0)
@@ -7480,6 +7675,19 @@ class CreateERLCStats(discord.ui.View):
             if not modal.format.value:
                 return
             channel_id = str(self.value[0].id)
+            if not channel_id:
+                return await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="<:error:1164666124496019637> Error",
+                        description="No channel selected",
+                        color=RED_COLOR
+                    ).set_author(
+                        name=interaction.guild.name,
+                        icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+                    )
+                    ,
+                    view=None
+                )
             try:
                 sett = await self.bot.settings.find_by_id(self.guild_id)
             except KeyError:
@@ -7495,7 +7703,7 @@ class CreateERLCStats(discord.ui.View):
                     embed=discord.Embed(
                         title="<:error:1164666124496019637> Error",
                         description=f"<#{channel_id}> is already set as a statistics channel",
-                        color=discord.Color.red()
+                        color=RED_COLOR
                     ).set_author(
                         name=interaction.guild.name,
                         icon_url=interaction.guild.icon.url if interaction.guild.icon else ''

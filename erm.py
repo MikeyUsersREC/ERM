@@ -151,7 +151,7 @@ class Bot(commands.AutoShardedBot):
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
+            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL'), api_key=config('PRC_API_KEY'))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
@@ -565,10 +565,8 @@ async def check_reminders():
                                                    replied_user=True, everyone=True, roles=True, users=True
                                                ))
                 except Exception as e:
-                    # print(e)
                     pass
     except Exception as e:
-        # print(e)
         pass
 
 @tasks.loop(minutes=1, reconnect=True)
@@ -633,30 +631,6 @@ async def tempban_checks():
     end_time = time.time()
     logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
 
-async def update_channel(guild, channel_id, stat, placeholders):
-    try:
-        format_string = stat["format"]
-        channel_id = int(channel_id)
-        channel = await fetch_get_channel(guild, channel_id)
-        if channel:
-            for key, value in placeholders.items():
-                format_string = format_string.replace(f"{{{key}}}", str(value))
-            await channel.edit(name=format_string)
-            logging.info(f"Updated channel {channel_id} in guild {guild.id}")
-        else:
-            logging.error(f"Channel {channel_id} not found in guild {guild.id}")
-    except Exception as e:
-        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
-
-async def fetch_get_channel(target, identifier):
-    channel = target.get_channel(identifier)
-    if not channel:
-        try:
-            channel = await target.fetch_channel(identifier)
-        except discord.HTTPException as e:
-            channel = None
-    return channel
-
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check():
     initial_time = time.time()
@@ -708,41 +682,6 @@ async def statistics_check():
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 
-async def run_command(guild_id, username, message):
-    while True:
-        command = f":pm {username} {message}"
-        command_response = await bot.prc_api.run_command(guild_id, command)
-        if command_response[0] == 200:
-            logging.info(f"Sent PM to {username} in guild {guild_id}")
-            break
-        elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
-            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
-            break
-
-def is_whitelisted(vehicle_name, whitelisted_vehicle):
-    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
-    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    if vehicle_year_match and whitelisted_year_match:
-        vehicle_year = vehicle_year_match.group()
-        whitelisted_year = whitelisted_year_match.group()
-        if vehicle_year != whitelisted_year:
-            return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    return False
-
-async def get_player_avatar_url(player_id):
-    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-            return data['data'][0]['imageUrl']
-
 pm_counter = {}
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
@@ -757,8 +696,14 @@ async def check_whitelisted_car():
             continue
         try:
             whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
+            if not whitelisted_vehicle_roles:
+                whitelisted_vehicle_roles = items['ERLC'].get('whitelisted_vehicles_roles', [])
             alert_channel_id = items['ERLC'].get('vehicle_restrictions').get('channel')
+            if not alert_channel_id:
+                alert_channel_id = items['ERLC'].get('whitelisted_vehicle_alert_channel', 0)
             whitelisted_vehicles = items['ERLC'].get('vehicle_restrictions').get('cars', [])
+            if not whitelisted_vehicles:
+                whitelisted_vehicles = items['ERLC'].get('whitelisted_vehicles', [])
             alert_message = items["ERLC"].get("vehicle_restrictions").get('message', "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
         except KeyError:
             logging.error(f"KeyError for guild {guild_id}")
@@ -823,7 +768,7 @@ async def check_whitelisted_car():
                         
                         if not has_exotic_role:
                             logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
-                            await run_command(guild_id, player.username, alert_message)
+                            await run_pm_command(guild_id, player.username, alert_message,bot)
 
                             if player.username not in pm_counter:
                                 pm_counter[player.username] = 1
@@ -855,7 +800,7 @@ async def check_whitelisted_car():
                         break
                     elif member_found == False:
                         logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
-                        await run_command(guild_id, player.username, alert_message)
+                        await run_pm_command(guild_id, player.username, alert_message,bot)
 
                         if player.username not in pm_counter:
                             pm_counter[player.username] = 1
@@ -893,7 +838,7 @@ async def check_whitelisted_car():
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
 
 
-@tasks.loop(seconds=120, reconnect=True)
+@tasks.loop(seconds=60, reconnect=True)
 async def iterate_prc_logs():
     # This will aim to constantly update the PRC Logs
     # and the relevant storage data.
@@ -925,7 +870,7 @@ async def iterate_prc_logs():
 
         if kill_logs_channel is not None:
             for item in sorted_kill_logs:
-                if (current_timestamp - item.timestamp) > 120:
+                if (current_timestamp - item.timestamp) > 60:
                     continue
                 if not players.get(item.killer_username):
                         players[item.killer_username] = [1, [item]]

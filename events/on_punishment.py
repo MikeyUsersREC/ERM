@@ -60,10 +60,6 @@ class OnPunishment(commands.Cog):
             logging.error(f"Moderator with ID {warning.moderator_id} not found.")
             return
 
-        if not moderator:
-            logging.error(f"Moderator with ID {warning.moderator_id} not found in guild {guild.id}.")
-            return
-        
         roblox_client: Client = Client()
         roblox_user = await roblox_client.get_user(warning.user_id)
         thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails(
