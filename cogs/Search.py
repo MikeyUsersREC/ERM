@@ -15,6 +15,7 @@ from datamodels.StaffConnections import StaffConnection
 from datamodels.Warnings import WarningItem
 from erm import check_privacy, is_staff, staff_field, staff_predicate
 from utils.autocompletes import user_autocomplete
+from copy import copy
 from utils.constants import BLANK_COLOR
 from utils.utils import invis_embed, failure_embed, get_roblox_by_username, require_settings
 from utils.paginators import SelectPagination, CustomPage
@@ -35,7 +36,7 @@ class Search(commands.Cog):
         with_app_command=True,
     )
     @require_settings()
-    async def mywarnings(self, ctx: commands.Context, user: discord.User = None):
+    async def mywarnings(self, ctx: commands.Context, user: discord.Member = None): # changing this to discord.Member, change back to discord.User in the event of error
         if user is None:
            user = ctx.author 
         guild_id = ctx.guild.id
@@ -142,7 +143,10 @@ class Search(commands.Cog):
                 inline=False,
             )
 
-        if await staff_predicate(ctx):
+        new_ctx = copy(ctx)
+        new_ctx.author = user or ctx.author
+
+        if await staff_predicate(new_ctx):
 
             moderator_id = user.id if user else ctx.author.id
 
