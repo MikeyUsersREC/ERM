@@ -459,8 +459,7 @@ class ERLC(commands.Cog):
                 if len(embed.description) > 3800:
                     break
 
-                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command.replace("`", "")}` • <t:{int(log.timestamp)}:R>\n"
-
+                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command}` • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
