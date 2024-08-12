@@ -77,28 +77,25 @@ class OnPunishment(commands.Cog):
                 shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
                 if shift:
-                    moderations_dict = {entry['type']: entry['count'] for entry in shift.get('Moderations', [])}
-
-                    # Normalize the warning type to lower case
-                    warning_type_normalized = warning_type.lower()
-
-                    # Increment the count for the given warning type
-                    moderations_dict[warning_type_normalized] = moderations_dict.get(warning_type_normalized, 0) + 1
-
+                    # Moderations dictionary with ObjectId as keys to fix Database Schema
+                    moderations_dict = {
+                        ObjectId(entry['type']): entry['count'] for entry in shift.get('Moderations', [])
+                    }
+                    # Convert the warning type to ObjectID 
+                    warning_type_id = ObjectId(warning_type)
+                    # Increasing count for warning type with ObjectID
+                    moderations_dict[warning_type_id] = moderations_dict.get(warning_type_id, 0) + 1
                     # Convert the dictionary back to the required array format
-                    moderations_array = [{'type': key, 'count': value} for key, value in moderations_dict.items()]
-
-                    # Create the updated document
+                    moderations_array = [{'type': str(key), 'count': value} for key, value in moderations_dict.items()]
                     doc = {
                         "_id": shift['_id'],
                         "Moderations": moderations_array
                     }
-
-                    # Update the shift in the database
                     await self.bot.shift_management.shifts.update_by_id(doc)
-                    logging.info(f"Updated shift {shift['_id']} with {warning_type_normalized}")
+                    logging.info(f"Updated shift {shift['_id']} with {warning_type_id}")
+
             except Exception as e:
-                logging.error(f"Error updating shift: {e}")
+                logging.error(f"Failed to update shift: {e}")
 
             try:
                 document = await self.bot.consent.db.find_one({"_id": warned_discord_id})
