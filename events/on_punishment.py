@@ -74,24 +74,9 @@ class OnPunishment(commands.Cog):
                 
         if channel is not None:
             try:
-                shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
-                if shift:
-                    moderations_dict = {
-                        ObjectId(entry['type']): entry['count'] for entry in shift.get('Moderations', [])
-                    }
-                    warning_type_id = ObjectId(warning_type)
-                    moderations_dict[warning_type_id] = moderations_dict.get(warning_type_id, 0) + 1
-                    moderations_array = [{'type': str(key), 'count': value} for key, value in moderations_dict.items()]
-                    doc = {
-                        "_id": shift['_id'],
-                        "Moderations": moderations_array
-                    }
-                    await self.bot.shift_management.shifts.update_by_id(doc)
-                    logging.info(f"Updated shift {shift['_id']} with {warning_type_id}")
-
             except Exception as e:
-                logging.error(f"Failed to update shift: {e}")
+                logging.error(f"Error getting warned discord ID: {e}")
 
             try:
                 document = await self.bot.consent.db.find_one({"_id": warned_discord_id})
