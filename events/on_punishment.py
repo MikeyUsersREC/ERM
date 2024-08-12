@@ -77,15 +77,11 @@ class OnPunishment(commands.Cog):
                 shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
                 if shift:
-                    # Moderations dictionary with ObjectId as keys to fix Database Schema
                     moderations_dict = {
                         ObjectId(entry['type']): entry['count'] for entry in shift.get('Moderations', [])
                     }
-                    # Convert the warning type to ObjectID 
                     warning_type_id = ObjectId(warning_type)
-                    # Increasing count for warning type with ObjectID
                     moderations_dict[warning_type_id] = moderations_dict.get(warning_type_id, 0) + 1
-                    # Convert the dictionary back to the required array format
                     moderations_array = [{'type': str(key), 'count': value} for key, value in moderations_dict.items()]
                     doc = {
                         "_id": shift['_id'],
