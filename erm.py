@@ -634,17 +634,28 @@ async def tempban_checks():
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check():
     initial_time = time.time()
-    async for guild_data in bot.settings.db.find({}):
-        guild_id = guild_data['_id']
+    async for items in bot.settings.db.find(
+        {"ERLC.statistics": {"$exists": True}}
+        ):
+        guild_id = items['_id']
 
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
+            #logging.error(f"Guild {guild_id} not found")
             continue
 
         settings = await bot.settings.find_by_id(guild_id)
-        if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
+        #print("ERLC keys:", settings['ERLC'].keys())
+
+        if 'ERLC' not in settings:
+            #logging.warning(f"Skipping guild {guild_id} due to missing ERLC section")
             continue
+        if 'statistics' not in settings['ERLC']:
+            #logging.warning(f"Statistics key missing in guild {guild_id}")
+            continue
+
+        #print("ERLC structure:", settings['ERLC'])
         
         statistics = settings["ERLC"]["statistics"]
 
@@ -678,7 +689,7 @@ async def statistics_check():
 
         tasks = [update_channel(guild, channel_id, stat_value, placeholders) for channel_id, stat_value in statistics.items()]
         await asyncio.gather(*tasks)
-
+                
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
 

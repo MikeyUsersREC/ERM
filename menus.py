@@ -7712,9 +7712,25 @@ class CreateERLCStats(discord.ui.View):
                     view=None
                 )
                 
-            sett["ERLC"]["statistics"][channel_id] = {
-                "format": modal.format.value
-            }
+            try:
+                sett["ERLC"]["statistics"][channel_id] = {
+                    "format": modal.format.value
+                }
+            except KeyError:
+                try:
+                    sett["ERLC"]["statistics"] = {
+                        channel_id: {
+                            "format": modal.format.value
+                        }
+                    }
+                except KeyError:
+                    sett["ERLC"] = {
+                        "statistics": {
+                            channel_id: {
+                                "format": modal.format.value
+                            }
+                        }
+                    }
 
             await self.bot.settings.update_by_id(sett)
             await config_change_log(self.bot, interaction.guild, interaction.user, f"<#{channel_id}>: {modal.format.value}")
