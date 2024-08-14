@@ -268,7 +268,6 @@ class OnMessage(commands.Cog):
                     reason = 'No reason provided'
                 new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
                 await bot.process_commands(new_message)
-                await message.add_reaction('✅')
 
     
         if remote_commands and remote_command_channel is not None and message.channel.id in [remote_command_channel]:
