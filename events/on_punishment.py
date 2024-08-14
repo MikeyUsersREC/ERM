@@ -74,7 +74,17 @@ class OnPunishment(commands.Cog):
                 
         if channel is not None:
             try:
+                shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
+                
+                if shift is not None:
+                    moderations = shift.get('Moderations', [])
+                    moderations.append(objectid)
+                    doc = {
+                        "_id": shift['_id'],
+                        "Moderations": moderations
+                    }
+                    await self.bot.shift_management.shifts.update_by_id(doc)
             except Exception as e:
                 logging.error(f"Error getting warned discord ID: {e}")
 
