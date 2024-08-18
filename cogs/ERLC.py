@@ -73,6 +73,10 @@ class ERLC(commands.Cog):
     async def erlc_message(self, ctx: commands.Context, *, message: str):
         guild_id = ctx.guild.id
         
+        try:
+            message = message.replace("`", "'")
+        except Exception:
+            pass
 
         command_response = await self.bot.prc_api.run_command(guild_id, f":m {message}")
         if command_response[0] == 200:
@@ -105,6 +109,11 @@ class ERLC(commands.Cog):
     @is_server_linked()
     async def erlc_hint(self, ctx: commands.Context, *, hint: str):
         guild_id = ctx.guild.id
+
+        try:
+            hint = hint.replace("`", "'")
+        except Exception:
+            pass
 
         await self.secure_logging(guild_id, ctx.author.id, 'Hint', hint)
 
@@ -181,6 +190,11 @@ class ERLC(commands.Cog):
     async def server_send_command(self, ctx: commands.Context, *, command: str):
         if command[0] != ':':
             command = ':' + command
+        
+        try:
+            command = command.replace("`", "'")
+        except Exception:
+            pass
         elevated_privileges = None
         status: ServerStatus = await self.bot.prc_api.get_server_status(ctx.guild.id)
         for item in (status.co_owner_ids + [status.owner_id]):
