@@ -458,7 +458,9 @@ class ERLC(commands.Cog):
             for log in sorted_logs:
                 if len(embed.description) > 3800:
                     break
-                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command}` • <t:{int(log.timestamp)}:R>\n"
+                #Just trying to fix the log.command multi line issue here
+                command_text = " ".join(log.command.split())
+                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{command_text}` • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
