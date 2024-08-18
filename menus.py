@@ -7360,7 +7360,7 @@ class MoreOptions(discord.ui.View):
 
     @discord.ui.button(
         label="ER:LC Statistics Updates",
-        row=3
+        row=0
     )
     async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
@@ -7399,7 +7399,7 @@ class MoreOptions(discord.ui.View):
 
     @discord.ui.button(
         label="Auto Kick/Ban Logging",
-        row=3
+        row=0
     )
     async def auto_kick_ban(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
@@ -7431,6 +7431,66 @@ class MoreOptions(discord.ui.View):
             view=view,
             ephemeral=True
         )
+
+    @discord.ui.button(
+        label="Discord Check Message",
+        row=0
+    )
+    async def discord_check(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        
+        guild_id = interaction.guild.id
+        bot = self.bot
+
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett:
+            return
+        try:
+            default_message = sett['ERLC']['discord_checks']["message"]
+        except KeyError:
+            default_message = "You were not found in our discord server. Please contact any mod/admin."
+        modal = CustomModal(
+            "Discord Check Message",
+            [
+                (
+                    "message",
+                    discord.ui.TextInput(
+                        label="Message",
+                        placeholder="e.g. You were not found in our discord server. Please contact any mod/admin.",
+                        default=default_message,
+                        min_length=0,
+                    )
+                )
+            ], {
+                "ephemeral": True
+            }
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        if not modal.message.value:
+            return
+        
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        try:
+            sett['ERLC']['discord_checks']["message"] = modal.message.value
+        except KeyError:
+            try:
+                sett['ERLC']['discord_checks'] = {
+                    "message": modal.message.value
+                }
+            except KeyError:
+                sett['ERLC'] = {
+                    'discord_checks': {
+                        'message': modal.message.value
+                    }
+                }
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Check Message Set: {modal.message.value}")
 
 class AutoLogging(discord.ui.View):
     def __init__(self,bot,sett):

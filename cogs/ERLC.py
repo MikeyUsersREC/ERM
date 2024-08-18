@@ -673,6 +673,7 @@ class ERLC(commands.Cog):
     )
     @is_staff()
     @is_server_linked()
+    @commands.cooldown(1, 60, commands.BucketType.guild)
     async def check(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
@@ -708,6 +709,8 @@ class ERLC(commands.Cog):
             description=""
         )
 
+        all_users = []
+
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
             member_found = False
@@ -729,6 +732,7 @@ class ERLC(commands.Cog):
 
             if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
+                all_users.append(player.username)
 
         if embed.description == "":
             embed.description = "> All players are in the Discord server."
@@ -737,6 +741,21 @@ class ERLC(commands.Cog):
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
+        sett = self.bot.settings.find_by_id(guild_id)
+        if all_users and len(all_users) > 0:
+            try:
+                message = sett['ERLC']['discord_checks']["message"]
+                command = f":pm {','.join(all_users)} {message}"
+                await self.bot.prc_api.run_command(guild_id, command)
+                embed.set_footer(
+                    text="A message has been sent to the players who are not in the Discord server."
+                )
+            except KeyError:
+                pass
+        else:
+            embed.set_footer(
+                text="No-one needs to be messaged."
+            )
         await msg.edit(embed=embed)
 
 async def setup(bot):
