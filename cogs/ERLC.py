@@ -458,8 +458,8 @@ class ERLC(commands.Cog):
             for log in sorted_logs:
                 if len(embed.description) > 3800:
                     break
-                #Just trying to fix the log.command multi line issue here
-                command_text = " ".join(log.command.split())
+                #Replacing ` with " " to prevent markdown issues
+                command_text = log.command.replace("`", " ")
                 embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{command_text}` • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
