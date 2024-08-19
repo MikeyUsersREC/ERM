@@ -127,7 +127,11 @@ class PRCApiClient:
             #         "ProhibitedUntil": 9999999999
             #     })
             #     response.status = 423
-                
+            if response.status == 429:
+                retry_after = int(response.headers.get('retry-after'+1, 5))
+                await asyncio.sleep(retry_after)
+                return await self._send_api_request(method, endpoint, guild_id, data, key)
+
             return response.status, (await response.json() if response.content_type != "text/html" else {})
 
 
@@ -256,9 +260,6 @@ class PRCApiClient:
                 killed_username=log_item['Killed'].split(':')[0],
                 killed_user_id=log_item['Killed'].split(':')[1]
             ) for log_item in response_json]
-        elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
-            await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
                 status_code=status_code,
@@ -290,9 +291,6 @@ class PRCApiClient:
                 timestamp=log_item['Timestamp'],
                 type='join' if log_item['Join'] is True else 'leave'
             ) for log_item in response_json]
-        elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
-            await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
                 status_code=status_code,

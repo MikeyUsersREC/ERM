@@ -687,7 +687,6 @@ class ERLC(commands.Cog):
     )
     @is_staff()
     @is_server_linked()
-    @commands.cooldown(1, 60, commands.BucketType.guild)
     async def check(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
