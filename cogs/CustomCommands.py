@@ -12,7 +12,7 @@ from menus import (
     EmbedCustomisation,
     MessageCustomisation,
     RemoveCustomCommand,
-    YesNoColourMenu, CustomCommandOptionSelect, CustomCommandModification,
+    YesNoColourMenu, CustomCommandOptionSelect, CustomCommandModification, CustomCommandModificationEdit,
     CounterButton, ViewVotersButton
 )
 from utils.autocompletes import command_autocomplete
@@ -206,7 +206,7 @@ class CustomCommands(commands.Cog):
                     )
                 )
                 status = False
-            view = CustomCommandModification(ctx.author.id, data)
+            view = CustomCommandModificationEdit(ctx.author.id, data)
             if status == True:
                 await new_msg.edit(view=view,
                     embed=discord.Embed(

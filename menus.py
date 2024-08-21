@@ -1457,6 +1457,264 @@ class CustomisePunishmentType(discord.ui.View):
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await generalised_interaction_check_failure(interaction.followup)
 
+class CustomCommandModificationEdit(discord.ui.View):
+    def __init__(self, user_id: int, command_data: dict):
+        super().__init__(timeout=600)
+        self.user_id = user_id
+        self.value = None
+        self.command_data = command_data
+
+    async def check_ability(self, message):
+        if self.command_data.get('message', None) and self.command_data.get('name', None):
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = False
+
+            await message.edit(view=self)
+        else:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = True
+            await message.edit(view=self)
+
+    async def interaction_check(self, interaction: Interaction, /) -> bool:
+        if interaction.user.id == self.user_id:
+            return True
+        else:
+            await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=BLANK_COLOR
+            ), ephemeral=True)
+            return False
+
+    async def refresh_ui(self, message: discord.Message):
+        embed = discord.Embed(
+            title="Custom Commands",
+            description=(
+                "**Command Information**\n"
+                f"> **Command ID:** `{self.command_data['id']}`\n"
+                f"> **Command Name:** {self.command_data['name']}\n"
+                f"> **Creator:** <@{self.command_data['author']}>\n"
+                f"\n**Message:**\n"
+                f"View the message below by clicking 'View Message'."
+            ),
+            color=BLANK_COLOR
+        )
+        await message.edit(embed=embed)
+
+    @discord.ui.button(
+        label="View Variables",
+        row=0
+    )
+    async def view_variables(self, interaction: discord.Interaction, button: discord.ui.Button):
+        return await interaction.response.send_message(
+            embed=discord.Embed(
+                description=(
+                    "With **ERM Custom Commands**, you can use custom variables to adapt to the current circumstances when the command is ran.\n"
+                    "`{user}` - Mention of the person using the command.\n"
+                    "`{username}` - Name of the person using the command.\n"
+                    "`{display_name}` - Display name of the person using the command.\n"
+                    "`{time}` - Timestamp format of the time of the command execution.\n"
+                    "`{server}` - Name of the server this is being ran in.\n"
+                    "`{channel}` - Mention of the channel the command is being ran in.\n"
+                    "`{prefix}` - The custom prefix of the bot.\n"
+                    "`{onduty}` - Number of staff which are on duty within your server.\n"
+                    "\n**PRC Specific Variables**\n"
+                    "`{join_code}` - Join Code of the ERLC server\n"
+                    "`{players}` - Current players in the ERLC server\n"
+                    "`{max_players}` - Maximum players of the ERLC server\n"
+                    "`{queue}` - Number of players in the queue\n"
+                    "`{staff}` - Number of staff members in-game\n"
+                    "`{mods}` - Number of mods in-game\n"
+                    "`{admins}` - Number of admins in-game\n"
+                ),
+                color=BLANK_COLOR
+            ),
+            ephemeral=True
+        )
+
+
+    @discord.ui.button(
+        label="Edit Name",
+        row=0
+    )
+    async def edit_custom_command_name(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = CustomModal(
+            "Edit Custom Command Name",
+            [
+                (
+                    "name",
+                    discord.ui.TextInput(
+                        label="Custom Command Name",
+                        max_length=50
+                    )
+                )
+            ]
+        )
+
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        try:
+            chosen_identifier = modal.name.value
+        except ValueError:
+            return
+
+        if not chosen_identifier:
+            return
+
+        self.command_data['name'] = chosen_identifier
+        await self.check_ability(interaction.message)
+        await self.refresh_ui(interaction.message)
+
+    @discord.ui.button(
+        label="View Message",
+        row=0
+    )
+    async def view_custom_command_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+        async def _return_failure():
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="No Message Found",
+                    description="There is currently no message associated with this Custom Command.\nYou can add one using 'Edit Message'.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+
+        view = discord.ui.View()
+        for item in self.command_data.get('buttons') or []:
+            view.add_item(
+                discord.ui.Button(
+                    label=item['label'],
+                    url=item['url'],
+                    row=item['row'],
+                    style=discord.ButtonStyle.url
+                )
+            )
+
+        if not self.command_data.get('message', None):
+            return await _return_failure()
+
+        if not self.command_data.get('message', {}).get('content', None) and not len(
+                self.command_data.get('message', {}).get('embeds', [])) > 0:
+            return await _return_failure()
+
+        converted = []
+        for item in self.command_data.get('message').get('embeds', []):
+            converted.append(discord.Embed.from_dict(item))
+
+        await interaction.followup.send(
+            embeds=converted,
+            content=self.command_data['message'].get('content', None),
+            ephemeral=True,
+            view=view
+        )
+
+    @discord.ui.button(
+        label="Edit Message",
+        row=0
+    )
+    async def edit_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = MessageCustomisationEdit(interaction.user.id, self.command_data.get('message', None), external=False,
+                                    persist=False)
+        view.sustained_interaction = interaction
+
+        if not self.command_data.get('message', None):
+            await interaction.response.send_message(
+                view=view,
+                ephemeral=True
+            )
+        else:
+            converted = []
+            for item in self.command_data.get('message', {}).get('embeds', []):
+                converted.append(discord.Embed.from_dict(item))
+
+            await interaction.response.send_message(
+                content=self.command_data.get('message', {}).get('content', None),
+                embeds=converted,
+                view=view,
+                ephemeral=True
+            )
+
+        await view.wait()
+        if view.newView:
+            await view.newView.wait()
+            chosen_message = view.newView.msg
+        else:
+            chosen_message = view.msg
+
+        new_content = chosen_message.content
+        new_embeds = []
+        for item in chosen_message.embeds or []:
+            new_embeds.append(item.to_dict())
+
+        self.command_data['message'] = {
+            "content": new_content,
+            "embeds": new_embeds
+        }
+        await self.check_ability(interaction.message)
+        await self.refresh_ui(interaction.message)
+        await (await interaction.original_response()).delete()
+
+    @discord.ui.button(
+        label="Edit Buttons",
+        row=0
+    )
+    async def edit_buttons(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view = ButtonCustomisation(self.command_data, interaction.user.id)
+        view.sustained_interaction = interaction
+
+        if not self.command_data.get('message', None):
+            await interaction.response.send_message(
+                view=view,
+                ephemeral=True
+            )
+        else:
+            converted = []
+            for item in self.command_data.get('message', {}).get('embeds', []):
+                converted.append(discord.Embed.from_dict(item))
+
+            await interaction.response.send_message(
+                content=self.command_data.get('message', {}).get('content', None),
+                embeds=converted,
+                view=view,
+                ephemeral=True
+            )
+
+        timeout = await view.wait()
+        if timeout or not view.value:
+            return
+
+        # # print(t(t(t(t(view.command_data)
+        self.command_data['buttons'] = view.command_data.get('buttons', [])
+        await self.check_ability(interaction.message)
+        await self.refresh_ui(interaction.message)
+        await (await interaction.original_response()).delete()
+
+    @discord.ui.button(
+        label="Cancel",
+        style=discord.ButtonStyle.danger,
+        row=1
+    )
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.value = False
+        pass
+
+    @discord.ui.button(
+        label="Finish",
+        style=discord.ButtonStyle.green,
+        row=1,
+        disabled=True
+    )
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.value = True
+        self.stop()
 
 class CustomCommandModification(discord.ui.View):
     def __init__(self, user_id: int, command_data: dict):
@@ -2072,6 +2330,114 @@ class ButtonCustomisation(discord.ui.View):
 
 
 
+class MessageCustomisationEdit(discord.ui.View):
+    def __init__(self, user_id, data=None, persist=False, external=False):
+        super().__init__(timeout=600.0)
+        if data is None:
+            data = {}
+        self.persist = persist
+        self.value: typing.Union[str, None] = None
+        self.modal: typing.Union[discord.ui.Modal, None] = None
+        self.newView: typing.Union[EmbedCustomisation, None] = None
+        self.msg = None
+        self.has_embeds = False
+        self.sustained_interaction = None
+        self.external = external
+        if data != {}:
+            msg = data.get('message', data)
+            content = msg["content"]
+            embeds = msg.get("embeds")
+            if embeds != []:
+                self.has_embeds = True
+        self.user_id = user_id
+
+    async def check_ability(self, message):
+        if message.content or message.embeds is not None:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = False
+
+            await message.edit(view=self)
+        else:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = True
+            await message.edit(view=self)
+
+    @discord.ui.button(
+        label="Set Message",
+        style=discord.ButtonStyle.secondary,
+    )
+    async def content(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetContent()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            if self.sustained_interaction:
+                await self.check_ability(await self.sustained_interaction.original_response())
+                return await (await self.sustained_interaction.original_response()).edit(
+                    content=modal.name.value
+                )
+            await interaction.message.edit(content=modal.name.value)
+            await self.check_ability(interaction.message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Edit Embed",
+        style=discord.ButtonStyle.secondary,
+    )
+    async def addembed(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            if len(interaction.message.embeds) > 0:
+                
+                existing_embed = interaction.message.embeds[0]
+
+                newView = EmbedCustomisationEdit(interaction.user.id, self)
+                newView.sustained_interaction = self.sustained_interaction
+                self.newView = newView
+
+                if self.sustained_interaction:
+                    chosen_interaction_message = await self.sustained_interaction.original_response()
+                else:
+                    chosen_interaction_message = interaction.message
+
+                await chosen_interaction_message.edit(
+                    view=newView, embed=existing_embed)
+                
+                await interaction.response.defer(thinking=False)
+                # await self.check_ability(chosen_interaction_message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, disabled=True)
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            self.msg = interaction.message
+            self.newView = self
+            self.value = "finish"
+            if not self.external:
+                await interaction.response.defer(thinking=False)
+            else:
+                await int_invis_embed(
+                    interaction,
+                    "your custom message has been saved. You can now continue with your configuration."
+                )
+            if not self.persist and not self.sustained_interaction:
+                await interaction.message.delete()
+            self.stop()
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
 
 class MessageCustomisation(discord.ui.View):
     def __init__(self, user_id, data=None, persist=False, external=False):
@@ -2188,6 +2554,385 @@ class MessageCustomisation(discord.ui.View):
             await interaction.response.defer(ephemeral=True, thinking=True)
             return await generalised_interaction_check_failure(interaction.followup)
 
+class EmbedCustomisationEdit(discord.ui.View):
+    def __init__(self, user_id, view=None, external=False):
+        super().__init__(timeout=600.0)
+        self.value: typing.Union[str, None] = None
+        self.modal: typing.Union[discord.ui.Modal, None] = None
+        self.msg = None
+        self.user_id = user_id
+        self.external = external
+        self.sustained_interaction = None
+        if view is not None:
+            self.parent_view = view
+        else:
+            self.parent_view = None
+
+    async def check_ability(self, message):
+        if message.content or message.embeds is not None:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = False
+
+            await message.edit(view=self)
+        else:
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    if item.label == "Finish":
+                        item.disabled = True
+            await message.edit(view=self)
+
+    @discord.ui.button(
+        label="Set Message",
+        style=discord.ButtonStyle.secondary,
+    )
+    async def content(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetContent()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            await chosen_interaction_message.edit(content=modal.name.value)
+            await self.check_ability(chosen_interaction_message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Remove Embed",
+        style=discord.ButtonStyle.secondary,
+    )
+    async def remove_embed(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            if len(interaction.message.embeds) > 0:
+                if self.parent_view is not None:
+                    if self.sustained_interaction:
+                        chosen_interaction_message = await self.sustained_interaction.original_response()
+                    else:
+                        chosen_interaction_message = interaction.message
+                    await chosen_interaction_message.edit(view=self.parent_view, embed=None)
+                    await int_invis_embed(interaction, "embed removed.", ephemeral=True)
+                else:
+                    newView = MessageCustomisation(interaction.user.id)
+                    self.parent_view = newView
+                    await interaction.message.edit(view=newView, embed=None)
+                    return await int_invis_embed(
+                        interaction, "embed removed.", ephemeral=True
+                    )
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.success, disabled=True)
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user_id:
+            for item in self.children:
+                item.disabled = True
+            self.msg = interaction.message
+            self.value = "finish"
+            if not self.external:
+                await interaction.response.defer(thinking=False)
+            else:
+                await int_invis_embed(
+                    interaction,
+                    "your custom message has been created. You can now continue with your configuration."
+                )
+            if not self.sustained_interaction:
+                await interaction.message.edit(view=None)
+            if self.parent_view is not None:
+                self.parent_view.stop()
+            self.stop()
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Title",
+        row=1,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_title(
+            self, interaction: discord.Interaction, _: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetTitle()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.title = modal.name.value
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            await chosen_interaction_message.edit(embed=embed)
+            await self.check_ability(chosen_interaction_message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Description",
+        row=1,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_description(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetDescription()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.description = modal.name.value
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            await chosen_interaction_message.edit(embed=embed)
+            await self.check_ability(chosen_interaction_message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Embed Colour",
+        row=1,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_color(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetColour()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            try:
+                embed.colour = modal.name.value
+            except TypeError:
+                try:
+                    embed.colour = int(modal.name.value.replace("#", ""), 16)
+                except TypeError:
+                    return await interaction.response.send_message(
+                        embed=discord.Embed(
+                            title="Invalid Colour",
+                            description="This colour is invalid.",
+                            color=BLANK_COLOR
+                        ),
+                        ephemeral=True
+                    )
+            await chosen_interaction_message.edit(embed=embed)
+            await self.check_ability(chosen_interaction_message)
+
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Thumbnail",
+        row=2,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_thumbnail(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetThumbnail()
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.set_thumbnail(url=modal.thumbnail.value)
+
+            try:
+                await chosen_interaction_message.edit(embed=embed)
+            except discord.HTTPException:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Unavailable URL",
+                        description="This URL is invalid or unavailable.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            await self.check_ability(chosen_interaction_message)
+
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Image",
+        row=2,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_image(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetImage()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            embed = interaction.message.embeds[0]
+            embed.set_image(url=modal.image.value)
+            try:
+                await chosen_interaction_message.edit(embed=embed)
+            except discord.HTTPException:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Unavailable URL",
+                        description="This URL is invalid or unavailable.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            await self.check_ability(chosen_interaction_message)
+
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Add Field",
+        row=3,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def add_field(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = AddField()
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+
+            await interaction.response.send_modal(modal)
+            timeout = await modal.wait()
+            if timeout: return
+            self.modal = modal
+            if len(interaction.message.embeds) == 0:
+                return
+            embed = interaction.message.embeds[0]
+            try:
+                inline = modal.inline.value
+                if inline.lower() in ["yes", "y", "true"]:
+                    inline = True
+                elif inline.lower() in ["no", "n", "false"]:
+                    inline = False
+                else:
+                    inline = False
+                embed.add_field(
+                    name=modal.name.value, value=modal.value.value, inline=inline
+                )
+            except AttributeError:
+                return
+            await chosen_interaction_message.edit(embed=embed)
+            await self.check_ability(chosen_interaction_message)
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Footer",
+        row=3,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_footer(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            modal = SetFooter()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            embed = interaction.message.embeds[0]
+            embed.set_footer(text=modal.name.value, icon_url=modal.icon.value)
+            try:
+                await chosen_interaction_message.edit(embed=embed)
+            except discord.HTTPException:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Unavailable URL",
+                        description="This URL is invalid or unavailable.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            await self.check_ability(chosen_interaction_message)
+
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+
+    @discord.ui.button(
+        label="Set Author",
+        row=3,
+        style=discord.ButtonStyle.secondary,
+    )
+    async def set_author(
+            self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id == self.user_id:
+            modal = SetAuthor()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.modal = modal
+            if self.sustained_interaction:
+                chosen_interaction_message = await self.sustained_interaction.original_response()
+            else:
+                chosen_interaction_message = interaction.message
+            embed = interaction.message.embeds[0]
+            embed.set_author(
+                name=modal.name.value,
+                url=modal.url.value,
+                icon_url=modal.icon.value,
+            )
+            try:
+                await chosen_interaction_message.edit(embed=embed)
+            except discord.HTTPException:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Unavailable URL",
+                        description="This URL is invalid or unavailable.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            await self.check_ability(chosen_interaction_message)
+
+        else:
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
 
 class EmbedCustomisation(discord.ui.View):
     def __init__(self, user_id, view=None, external=False):
