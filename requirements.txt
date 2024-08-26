@@ -1,7 +1,7 @@
 ﻿num2words~=0.5.12
 git+https://github.com/Rapptz/discord.py
 dnspython~=2.4.1
-motor~=3.2.0
+motor~=3.5.1
 python-dateutil~=2.8.2
 pytz~=2023.3
 python-decouple
@@ -21,7 +21,7 @@ sentry_sdk[pymongo]
 uvicorn~=0.23.2
 fastapi~=0.100.1
 aiohttp-cors
-pymongo~=4.4.1
+pymongo~=4.8.0
 pydantic~=2.1.1
 gspread_asyncio
 fuzzywuzzy
