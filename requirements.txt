@@ -7,7 +7,7 @@ pytz~=2023.3
 python-decouple
 snowflake-id
 requests
-aiohttp~=3.8.5
+aiohttp~=3.10.5
 sentry_sdk
 roblox~=2.0.0
 zuid~=0.1.1
