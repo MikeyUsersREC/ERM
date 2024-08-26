@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-aiohttp = "==3.8.3"
+aiohttp = "==3.10.5"
 dnspython = "==2.2.1"
 hikari = "==2.0.0.dev111"
 motor = "==3.1.1"
