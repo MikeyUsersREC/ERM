@@ -1,9 +1,9 @@
-﻿num2words~=0.5.13
+num2words~=0.5.12
 git+https://github.com/Rapptz/discord.py
-dnspython~=2.6.1
+dnspython~=2.4.1
 motor~=3.5.1
 python-dateutil~=2.8.2
-pytz~=2024.1
+pytz~=2023.3
 python-decouple
 snowflake-id
 requests
@@ -18,11 +18,11 @@ jishaku~=2.5.1
 oauth2client~=4.1.3
 gspread~=5.10.0
 sentry_sdk[pymongo]
-uvicorn~=0.30.6
-fastapi~=0.112.2
+uvicorn~=0.23.2
+fastapi~=0.100.1
 aiohttp-cors
 pymongo~=4.8.0
-pydantic~=2.8.2
+pydantic~=2.1.1
 gspread_asyncio
 fuzzywuzzy
 python-Levenshtein
