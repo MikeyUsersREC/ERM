@@ -1,3 +1,3 @@
-import subprocess
+from erm import run
 
-subprocess.run("python -m scalene --profile-all erm.py", shell=True)
+run()
