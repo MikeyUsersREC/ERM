@@ -10,7 +10,6 @@ try:
     from fuzzywuzzy import fuzz, process
 except ImportError:
     from fuzzywuzzy import fuzz, process
-from scalene import scalene_profiler
 import aiohttp
 import decouple
 import discord.mentions
@@ -106,9 +105,7 @@ class Bot(commands.AutoShardedBot):
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
         self.view_state_manager: ViewStateManager = ViewStateManager()
-        scalene_profiler.start()
-        self.scalene_profiler = scalene_profiler
-        
+
         global setup
         if not setup:
             # await bot.load_extension('utils.routes')
