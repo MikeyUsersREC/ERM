@@ -7647,8 +7647,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if 'ERLC' not in sett:
-            sett['ERLC'] = {"vehicle_restrictions": {}}
+        sett.setdefault('ERLC', {"vehicle_restrictions": {}})
         try:
             sett['ERLC']['enable_vehicle_restrictions'] = not sett['ERLC']['enable_vehicle_restrictions']
         except KeyError:
@@ -7670,8 +7669,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if 'ERLC' not in sett:
-            sett['ERLC'] = {"vehicle_restrictions": {}}
+        sett.setdefault('ERLC', {"vehicle_restrictions": {}})
         try:
             sett['ERLC']['whitelisted_vehicles_roles'] = [i.id for i in select.values]
         except KeyError:
@@ -7694,8 +7692,7 @@ class WhitelistVehiclesManagement(discord.ui.View):
 
         bot = self.bot
         sett = await bot.settings.find_by_id(guild_id)
-        if 'ERLC' not in sett:
-            sett['ERLC'] = {"vehicle_restrictions": {}}
+        sett.setdefault('ERLC', {"vehicle_restrictions": {}})
         try:
             sett['ERLC']['whitelisted_vehicle_alert_channel'] = select.values[0].id
         except KeyError:
@@ -7746,18 +7743,11 @@ class WhitelistVehiclesManagement(discord.ui.View):
         if not vehicles:
             return
 
-        if 'ERLC' not in sett:
-            sett['ERLC'] = {
-                "vehicle_restrictions" : {}
-            }
+        sett.setdefault('ERLC', {"vehicle_restrictions": {}})
         try:
             sett['ERLC']['whitelisted_vehicles'] = vehicles
         except KeyError:
-            if 'ERLC' not in sett:
-                sett['ERLC'] = {}
-            if 'vehicle_restrictions' not in sett['ERLC']:
-                sett['ERLC']['vehicle_restrictions'] = {}
-            sett['ERLC']['vehicle_restrictions']['cars'] = vehicles
+            sett['ERLC'].setdefault('vehicle_restrictions', {})['cars'] = vehicles
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(7, name="Current Whitelisted Vehicles", value=", ".join(vehicles) if vehicles else "None")
@@ -7796,18 +7786,11 @@ class WhitelistVehiclesManagement(discord.ui.View):
         if not modal.message.value:
             return
         
-        if 'ERLC' not in sett:
-            sett['ERLC'] = {
-                "vehicle_restrictions" : {}
-            }
+        sett.setdefault('ERLC', {"vehicle_restrictions": {}})
         try:
             sett["ERLC"]["alert_message"] = modal.message.value
         except KeyError:
-            if 'ERLC' not in sett:
-                sett['ERLC'] = {}
-            if 'vehicle_restrictions' not in sett['ERLC']:
-                sett['ERLC']['vehicle_restrictions'] = {}
-            sett['ERLC']['vehicle_restrictions']['message'] = modal.message.value
+            sett['ERLC'].setdefault('vehicle_restrictions', {})['message'] = modal.message.value
         await bot.settings.update_by_id(sett)
         embed = interaction.message.embeds[0]
         embed.set_field_at(8, name="Alert Message", value=modal.message.value)

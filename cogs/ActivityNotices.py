@@ -762,8 +762,9 @@ class StaffManagement(commands.Cog):
     @is_staff()
     @app_commands.describe(time="How long are you going to be on RA for? (s/m/h/d)")
     @app_commands.describe(reason="What is your reason for going on RA?")
-    async def ra_request(self, ctx, time, *, reason):
-        await self.core_commands.core_command_request(ctx, 'ra', time, reason)
+    @app_commands.describe(starting="When would you like to start your RA? (s/m/h/d)")
+    async def ra_request(self, ctx, time, *, reason,starting: str = None):
+        await self.core_commands.core_command_request(ctx, 'ra', time, reason, starting=starting)
 
     @commands.guild_only()
     @ra.command(
