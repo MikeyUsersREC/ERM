@@ -128,7 +128,8 @@ class PRCApiClient:
             #     })
             #     response.status = 423
             if response.status == 429:
-                retry_after = int(response.headers.get('X_RateLimit_Reset'+1, 5))
+                X_RateLimit_Reset = int(response.headers.get('X-RateLimit-Reset', 0))
+                retry_after = X_RateLimit_Reset - int(datetime.datetime.now().timestamp())
                 await asyncio.sleep(retry_after)
                 return await self._send_api_request(method, endpoint, guild_id, data, key)
 
