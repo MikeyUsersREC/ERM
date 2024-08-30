@@ -279,7 +279,7 @@ class Punishments(commands.Cog):
     @is_staff()
     async def punishment_manage(self, ctx: commands.Context):
         embed = discord.Embed(
-            title="Staff Options",
+            title="Management Options",
             description="Using this menu, you can **Manage Punishment Types** as well as **Modify Punishment**.",
             color=BLANK_COLOR
         )

@@ -77,13 +77,40 @@ class OnShiftEnd(commands.Cog):
             except discord.HTTPException:
                 pass
 
-        moderation_counts = {}
-        for entry in shift.moderations:
-            if entry['type'] in moderation_counts:
-                moderation_counts[entry['type']] += entry['count']
-            else:
-                moderation_counts[entry['type']] = entry['count']
-        
+        mods = shift.moderations if shift.moderations else []
+        all_moderation_items = [
+            await self.bot.punishments.find_warning_by_spec(
+                guild.id, identifier=moderation
+            )
+            for moderation in mods
+        ]
+        moderations = len(all_moderation_items)
+        warnings = 0
+        kicks = 0
+        bans = 0
+        bolos = 0
+        custom = 0
+
+        for moderation in all_moderation_items:
+            if moderation is None:
+                continue
+            if moderation["Type"] == "Warning":
+                warnings += 1
+            elif moderation["Type"] == "Kick":
+                kicks += 1
+            elif moderation["Type"] == "Ban":
+                bans += 1
+            elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
+                bolos += 1
+            elif moderation["Type"] not in [
+                "Warning",
+                "Kick",
+                "Ban",
+                "BOLO",
+                "Bolo",
+            ]:
+                custom += 1
+
         if channel is not None:
             await channel.send(embed=discord.Embed(
                 title="Shift Ended",
@@ -106,12 +133,7 @@ class OnShiftEnd(commands.Cog):
                 inline=False
             ).add_field(
                 name="Moderation Details:",
-                value=(
-                    "\n".join([
-                        f"> **{moderation_type.capitalize()}s:** {count}" 
-                        for moderation_type, count in moderation_counts.items()
-                    ]) if moderation_counts else "> No Moderations Found"
-                ),
+                value=f"> **Warnings:** {warnings}\n> **Kicks:** {kicks}\n> **Bans:** {bans}\n> **BOLO:** {bolos}\n> **Custom:** {custom}",
                 inline=False
             ).set_author(
                 name=guild.name,
@@ -141,12 +163,7 @@ class OnShiftEnd(commands.Cog):
                 inline=False
             ).add_field(
                 name="Total Moderations:",
-                value=(
-                    "\n".join([
-                        f"> **{moderation_type.capitalize()}s:** {count}" 
-                        for moderation_type, count in moderation_counts.items()
-                    ]) if moderation_counts else "> No Moderations Found"
-                ),
+                value=f"> **Warnings:** {warnings}\n> **Kicks:** {kicks}\n> **Bans:** {bans}\n> **BOLO:** {bolos}\n> **Custom:** {custom}",
                 inline=False
             ).add_field(    
                 name="Elapsed Time",
@@ -159,5 +176,4 @@ class OnShiftEnd(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(OnShiftEnd(bot))
-
 

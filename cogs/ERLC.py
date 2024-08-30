@@ -73,6 +73,10 @@ class ERLC(commands.Cog):
     async def erlc_message(self, ctx: commands.Context, *, message: str):
         guild_id = ctx.guild.id
         
+        try:
+            message = message.replace("`", "'")
+        except Exception:
+            pass
 
         command_response = await self.bot.prc_api.run_command(guild_id, f":m {message}")
         if command_response[0] == 200:
@@ -105,6 +109,11 @@ class ERLC(commands.Cog):
     @is_server_linked()
     async def erlc_hint(self, ctx: commands.Context, *, hint: str):
         guild_id = ctx.guild.id
+
+        try:
+            hint = hint.replace("`", "'")
+        except Exception:
+            pass
 
         await self.secure_logging(guild_id, ctx.author.id, 'Hint', hint)
 
@@ -181,6 +190,11 @@ class ERLC(commands.Cog):
     async def server_send_command(self, ctx: commands.Context, *, command: str):
         if command[0] != ':':
             command = ':' + command
+        
+        try:
+            command = command.replace("`", "'")
+        except Exception:
+            pass
         elevated_privileges = None
         status: ServerStatus = await self.bot.prc_api.get_server_status(ctx.guild.id)
         for item in (status.co_owner_ids + [status.owner_id]):
@@ -458,7 +472,9 @@ class ERLC(commands.Cog):
             for log in sorted_logs:
                 if len(embed.description) > 3800:
                     break
-                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{log.command}` • <t:{int(log.timestamp)}:R>\n"
+                #Replacing ` with " " to prevent markdown issues
+                command_text = log.command.replace("`", " ")
+                embed.description += f"> [{log.username}](https://roblox.com/users/{log.user_id}/profile) ran the command `{command_text}` • <t:{int(log.timestamp)}:R>\n"
 
             if embed.description in ['', '\n']:
                 embed.description = "> No player logs found."
@@ -706,6 +722,8 @@ class ERLC(commands.Cog):
             description=""
         )
 
+        all_users = []
+
         for player in players:
             pattern = re.compile(re.escape(player.username), re.IGNORECASE)
             member_found = False
@@ -727,6 +745,7 @@ class ERLC(commands.Cog):
 
             if not member_found:
                 embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
+                all_users.append(player.username)
 
         if embed.description == "":
             embed.description = "> All players are in the Discord server."
@@ -735,6 +754,21 @@ class ERLC(commands.Cog):
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
+        sett = self.bot.settings.find_by_id(guild_id)
+        if all_users and len(all_users) > 0:
+            try:
+                message = sett['ERLC']['discord_checks']["message"]
+                command = f":pm {','.join(all_users)} {message}"
+                await self.bot.prc_api.run_command(guild_id, command)
+                embed.set_footer(
+                    text="A message has been sent to the players who are not in the Discord server."
+                )
+            except KeyError:
+                pass
+        else:
+            embed.set_footer(
+                text="No-one needs to be messaged."
+            )
         await msg.edit(embed=embed)
 
 async def setup(bot):

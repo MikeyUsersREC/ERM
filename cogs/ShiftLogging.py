@@ -239,7 +239,8 @@ class ShiftLogging(commands.Cog):
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
-            "EndEpoch": {'$ne': 0}
+            "EndEpoch": {'$ne': 0},
+            "Type": type
         })]
         embed = discord.Embed(
             color=BLANK_COLOR
@@ -468,7 +469,8 @@ class ShiftLogging(commands.Cog):
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": ctx.author.id,
             "Guild": ctx.guild.id,
-            "EndEpoch": {'$ne': 0}
+            "EndEpoch": {'$ne': 0},
+            "Type": type
         })]
         embed = discord.Embed(
             color=BLANK_COLOR
@@ -992,9 +994,9 @@ class ShiftLogging(commands.Cog):
                 time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
 
                 if buffer is None:
-                    buffer = f"{member.name} • {time_str}"
+                    buffer = f"{member.name} • {time_str} • {i['moderations']} Moderations"
                 else:
-                    buffer += f"\n{member.name} • {time_str}"
+                    buffer += f"\n{member.name} • {time_str} • {i['moderations']} Moderations"
 
                 data.append([
                     index + 1,
@@ -1256,7 +1258,117 @@ class ShiftLogging(commands.Cog):
                     view=view_page
                 )
 
+    @commands.guild_only()
+    @duty.command(
+        name="history",
+        description="Show all past shifts of user by shift type",
+        extras={"category": "Shift Management"},
+        aliases=["h"],
+    )
+    @require_settings()
+    @app_commands.autocomplete(
+        type=shift_type_autocomplete
+    )
+    @is_management()
+    async def duty_shifts(self, ctx: commands.Context, user: discord.User,type: str = 'Default'):
+        if self.bot.shift_management_disabled is True:
+            return await new_failure_embed(
+                ctx,
+                "Maintenance",
+                "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
+            )
 
+        bot = self.bot
+        configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if not configItem.get('shift_management', {}).get('enabled', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Shift Logging is not enabled on this server."
+                )
+            )
 
+        shift_types = configItem.get('shift_types', {}).get('types', [])
+        msg = None
+        shift_type_item = None
+        if shift_types:
+            if type.lower() not in [t['name'].lower() for t in shift_types]:
+                msg = await ctx.send(
+                    embed=discord.Embed(
+                        title="Incorrect Shift Type",
+                        description="The shift type provided is not valid.",
+                        color=BLANK_COLOR
+                    ),
+                    view=(view := CustomSelectMenu(
+                        ctx.author.id,
+                        [
+                            discord.SelectOption(
+                                label=i["name"],
+                                value=i["name"],
+                                description=i["name"],
+                            )
+                            for i in shift_types
+                        ]
+                    ))
+                )
+                timeout = await view.wait()
+                if timeout:
+                    return
+
+                if view.value:
+                    type = view.value
+
+            for item in shift_types:
+                if item['name'].lower() == type.lower():
+                    shift_type_item = item
+                    
+        if not shift_type_item:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Incorrect Shift Type",
+                    description="The shift type provided is not valid.",
+                    color=BLANK_COLOR
+                )
+            )
+        
+        shift_cursor = self.bot.shift_management.shifts.db.find({"UserID": user.id, "Guild": ctx.guild.id, "Type": shift_type_item["name"]})
+        shifts = await shift_cursor.to_list(length=None)
+        if not shifts:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Shifts",
+                    description="No shifts have been found for this user.",
+                    color=BLANK_COLOR
+                )
+            )
+        
+        embeds = []
+        for shift in shifts:
+            embed = discord.Embed(
+                title=f"{user.name}'s Shifts",
+                color=BLANK_COLOR
+            )
+            embed.add_field(
+                name="Shift Information",
+                value=(
+                    f"> **Started:** <t:{int(shift['StartEpoch'])}:R>\n"
+                    f"> **Ended:** <t:{int(shift['EndEpoch'])}:R>\n"
+                    f"> **Total Time:** {td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}\n"
+                    f"> **Moderations:** {len(shift.get('Moderations', []))}\n"
+                    f"> **Breaks:** {len(shift.get('Breaks', []))}"
+                ),
+                inline=False
+            ).set_author(
+                name=f"{ctx.guild.name}",
+                icon_url=ctx.guild.icon,
+            ).set_footer(
+                text=f"Shift Type: {shift_type_item['name']}"
+            ).set_thumbnail(
+                url=user.avatar.url if user.avatar else user.default_avatar.url
+            )
+            embeds.append(embed)
+
+        paginator = SelectPagination(ctx.author.id, [CustomPage(embeds=[embed], identifier=str(index+1)) for index, embed in enumerate(embeds)])
+        await ctx.reply(embed=embeds[0], view=paginator.get_current_view())
 async def setup(bot):
     await bot.add_cog(ShiftLogging(bot))
