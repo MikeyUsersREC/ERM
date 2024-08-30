@@ -1,8 +1,8 @@
 # .github/workflows/app.yaml
 name: PyTest
 on: 
-push:
-pull-request:
+  push:
+  pull-request:
 
 jobs:
   test:
