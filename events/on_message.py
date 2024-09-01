@@ -22,7 +22,7 @@ from utils.utils import (
     interpret_content,
     interpret_embed
 )
-from menus import CustomSelectMenu, GameSecurityActions
+from menus import CustomSelectMenu, GameSecurityActions, CustomModal
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
 
@@ -265,7 +265,7 @@ class OnMessage(commands.Cog):
                 if reason.endswith('- Player Not In Game'):
                     reason = reason[:-len('- Player Not In Game')]
                 if not reason:
-                    reason = 'No reason provided'
+                    return await message.channel.send(f"{user.mention} Punishment not logged due to missing reason.")
                 new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
                 await bot.process_commands(new_message)
 
