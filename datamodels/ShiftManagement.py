@@ -161,7 +161,7 @@ class ShiftManagement:
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except ValueError:
+        except:
             pass
 
         await self.shifts.update_by_id(document)
