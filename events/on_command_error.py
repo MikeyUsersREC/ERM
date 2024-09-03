@@ -52,9 +52,6 @@ class OnCommandError(commands.Cog):
                 color=BLANK_COLOR
             ))
 
-        if isinstance(error, ClientConnectorSSLError):
-            continue
-
         if isinstance(error, ResponseFailure):
             await ctx.reply(
                 embed=discord.Embed(
