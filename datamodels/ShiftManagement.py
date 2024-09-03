@@ -111,7 +111,7 @@ class ShiftManagement:
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except ValueError:
+        except:
             pass
 
         return data["_id"]
