@@ -6,6 +6,7 @@ import discord
 import httpcore
 import pytz
 import roblox
+from aiohttp import ClientConnectorSSLError  # Import from aiohttp if using aiohttp
 from discord.ext import commands
 from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
@@ -51,6 +52,13 @@ class OnCommandError(commands.Cog):
                 color=BLANK_COLOR
             ))
 
+        if isinstance(error, ClientConnectorSSLError):
+            return await ctx.reply(embed=discord.Embed(
+                title="SSL Error",
+                description="There was a problem with the SSL connection when trying to reach the server. Please try again later.",
+                color=BLANK_COLOR
+            ))
+
         if isinstance(error, ResponseFailure):
             await ctx.reply(
                 embed=discord.Embed(
@@ -82,7 +90,6 @@ class OnCommandError(commands.Cog):
             await channel.send(f'`{error_id}` {str(error)}')
             return
 
-
         if isinstance(error, commands.BadArgument):
             return await ctx.reply(
                 embed=discord.Embed(
@@ -98,7 +105,6 @@ class OnCommandError(commands.Cog):
                 description="I could not find a ROBLOX player with that corresponding username.",
                 color=BLANK_COLOR
             ))
-
 
         if isinstance(error, roblox.UserNotFound):
             return await ctx.reply(embed=discord.Embed(
@@ -120,7 +126,6 @@ class OnCommandError(commands.Cog):
             )
             await ctx.send(embed=embed)
             return
-
 
         if isinstance(error, GuildCheckFailure):
             return await ctx.send(
