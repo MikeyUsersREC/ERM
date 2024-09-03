@@ -6,10 +6,10 @@ import discord
 import httpcore
 import pytz
 import roblox
-from aiohttp import ClientConnectorSSLError  # Import from aiohttp if using aiohttp
 from discord.ext import commands
 from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
+from aiohttp import ClientConnectorSSLError
 
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
@@ -52,12 +52,9 @@ class OnCommandError(commands.Cog):
                 color=BLANK_COLOR
             ))
 
+        # Handle ClientConnectorSSLError but ignore it
         if isinstance(error, ClientConnectorSSLError):
-            return await ctx.reply(embed=discord.Embed(
-                title="SSL Error",
-                description="There was a problem with the SSL connection when trying to reach the server. Please try again later.",
-                color=BLANK_COLOR
-            ))
+            return
 
         if isinstance(error, ResponseFailure):
             await ctx.reply(
