@@ -52,9 +52,8 @@ class OnCommandError(commands.Cog):
                 color=BLANK_COLOR
             ))
 
-        # Handle ClientConnectorSSLError but ignore it
         if isinstance(error, ClientConnectorSSLError):
-            return
+            continue
 
         if isinstance(error, ResponseFailure):
             await ctx.reply(
