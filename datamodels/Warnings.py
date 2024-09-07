@@ -200,7 +200,7 @@ class Warnings(Document):
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except ValueError:
+        except:
             pass
 
         return identifier

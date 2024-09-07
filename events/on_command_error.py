@@ -9,6 +9,7 @@ import roblox
 from discord.ext import commands
 from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
+from aiohttp import ClientConnectorSSLError
 
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
@@ -82,7 +83,6 @@ class OnCommandError(commands.Cog):
             await channel.send(f'`{error_id}` {str(error)}')
             return
 
-
         if isinstance(error, commands.BadArgument):
             return await ctx.reply(
                 embed=discord.Embed(
@@ -98,7 +98,6 @@ class OnCommandError(commands.Cog):
                 description="I could not find a ROBLOX player with that corresponding username.",
                 color=BLANK_COLOR
             ))
-
 
         if isinstance(error, roblox.UserNotFound):
             return await ctx.reply(embed=discord.Embed(
@@ -120,7 +119,6 @@ class OnCommandError(commands.Cog):
             )
             await ctx.send(embed=embed)
             return
-
 
         if isinstance(error, GuildCheckFailure):
             return await ctx.send(

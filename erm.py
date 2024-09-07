@@ -10,7 +10,6 @@ try:
     from fuzzywuzzy import fuzz, process
 except ImportError:
     from fuzzywuzzy import fuzz, process
-
 import aiohttp
 import decouple
 import discord.mentions
