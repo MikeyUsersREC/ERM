@@ -40,10 +40,12 @@ class OnMemberUpdate(commands.Cog):
                         }):
                             pass
 
-                        async with session.post(f"{panel_url_var}/Internal/UpdatePermissionsCache/{before.guild.id}/{before.id}/{after_permission}", headers={
-                            "Authorization": config('INTERNAL_API_AUTH')
-                        }):
+                        url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{before.guild.id}/{before.id}/{after_permission}"
+                        print(f"Sending request to: {url}")
+                        
+                        async with session.post(url):
                             pass
+
                 except:
                     pass
 
