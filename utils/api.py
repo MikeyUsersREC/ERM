@@ -136,32 +136,42 @@ class APIRoutes:
         return guilds
 
     async def POST_check_staff_level(self, request: Request):
-        json_data = await request.json()
-        guild_id = json_data.get("guild")
-        user_id = json_data.get("user")
-        
-        if not guild_id or not user_id:
-            raise HTTPException(status_code=400, detail="Invalid guild or user")
-        
         try:
-            guild, user = await asyncio.gather(
-                self.bot.fetch_guild(guild_id),
-                self.bot.fetch_user(user_id)
-            )
-        except (discord.Forbidden, discord.HTTPException):
-            raise HTTPException(status_code=400, detail="Invalid guild or user")
-        
-        management_task = management_check(self.bot, guild, user)
-        staff_task = staff_check(self.bot, guild, user)
+            logging.info("Received request body: %s", await request.body())
     
-        is_manager, is_staff = await asyncio.gather(management_task, staff_task)
+            json_data = await request.json()
+            guild_id = json_data.get("guild")
+            user_id = json_data.get("user")
     
-        if is_manager:
-            return {"permission_level": 2}
-        elif is_staff:
-            return {"permission_level": 1}
-        else:
-            return {"permission_level": 0}
+            if not guild_id or not user_id:
+                logging.error("Invalid guild or user ID")
+                raise HTTPException(status_code=400, detail="Invalid guild or user")
+    
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+                user = await guild.fetch_member(user_id)
+            except (discord.Forbidden, discord.HTTPException) as e:
+                logging.error(f"Error fetching guild or user: {e}")
+                raise HTTPException(status_code=400, detail="Invalid guild or user")
+    
+            management_task = management_check(self.bot, guild, user)
+            staff_task = staff_check(self.bot, guild, user)
+    
+            is_manager, is_staff = await asyncio.gather(management_task, staff_task)
+    
+            if is_manager:
+                permission_level = 2
+            elif is_staff:
+                permission_level = 1
+            else:
+                permission_level = 0
+    
+            logging.info("Returning permission level: %d", permission_level)
+            return {"permission_level": permission_level}
+    
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
 
     async def POST_get_guild_settings(self, request: Request):
         json_data = await request.json()
