@@ -93,44 +93,46 @@ class APIRoutes:
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
+    
         if not guild_ids:
-            return HTTPException(status_code=400, detail="No guilds specified")
-
-        guilds = []
-        for i in guild_ids:
-            guild: discord.Guild = self.bot.get_guild(int(i))
-            if not guild:
-                continue
-            if guild.get_member(self.bot.user.id):
-                try:
-                    icon = guild.icon.with_size(512)
-                    icon = icon.with_format("png")
-                    icon = str(icon)
-                except AttributeError:
-
-                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-
-                try:
-                    user = await guild.fetch_member(user_id)
-                except discord.NotFound:
-                    continue
-
-                permission_level = 0
-                if await management_check(self.bot, guild, user):
-                    permission_level = 2
-                elif await staff_check(self.bot, guild, user):
-                    permission_level = 1
-                if permission_level > 0:
-                    guilds.append(
-                        {
-                            "id": str(guild.id),
-                            "name": str(guild.name),
-                            "icon_url": icon,
-                            "member_count": str(guild.member_count),
-                            "permission_level": permission_level,
-                        }
-                    )
-
+            raise HTTPException(status_code=400, detail="No guilds specified")
+    
+        async def process_guild(guild_id):
+            guild: discord.Guild = self.bot.get_guild(int(guild_id))
+            if not guild or not guild.get_member(self.bot.user.id):
+                return None
+    
+            try:
+                icon = guild.icon.with_size(512).with_format("png")
+                icon = str(icon)
+            except AttributeError:
+                icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
+    
+            try:
+                user = await guild.fetch_member(user_id)
+            except discord.NotFound:
+                return None
+    
+            permission_level = 0
+            if await management_check(self.bot, guild, user):
+                permission_level = 2
+            elif await staff_check(self.bot, guild, user):
+                permission_level = 1
+    
+            if permission_level > 0:
+                return {
+                    "id": str(guild.id),
+                    "name": str(guild.name),
+                    "icon_url": icon,
+                    "permission_level": permission_level,
+                }
+            return None
+    
+        guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
+    
+        # Filter out None results (failed guilds)
+        guilds = [guild for guild in guild_results if guild is not None]
+    
         return guilds
 
     async def POST_check_staff_level(self, request: Request):
