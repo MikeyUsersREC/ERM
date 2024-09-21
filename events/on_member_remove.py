@@ -9,45 +9,30 @@ class OnMemberRawRemove(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener("on_member_raw_remove")
-    async def on_member_raw_remove(self, payload):
-        # Member left the server
-        old_permission = 0
-        new_perm = 0
-        guild = await self.bot.fetch_guild(payload.guild_id)
-        user = payload.user
+    async def on_member_raw_remove(self, payload: discord.RawMemberRemoveEvent):
+        try:
+            url_var = config("BASE_API_URL")
+            if url_var in ["", None]:
+                return
 
-        if not isinstance(payload.user, discord.User) and not payload.user:            
-            if await management_check(self.bot, guild, user):
-                old_permission = 2
-            elif await staff_check(self.bot, guild, user):
-                old_permission = 1
-        else:
-            old_permission = -1
+            panel_url_var = config("PANEL_API_URL")
+            if url_var in ["", None]:
+                return
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{payload.user.id}/{payload.guild_id}/0", headers={
+                    "Authorization": config('INTERNAL_API_AUTH')
+                }):
+                    pass
 
-        if new_perm != old_permission:
-            try:
-                url_var = config("BASE_API_URL")
-                if url_var in ["", None]:
-                    return
-
-                panel_url_var = config("PANEL_API_URL")
-                if url_var in ["", None]:
-                    return
+                url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{payload.guild_id}/{payload.user.id}/0"
+                print(f"Sending request to: {url}")
                 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{user.id}/{guild.id}/{new_perm}", headers={
-                        "Authorization": config('INTERNAL_API_AUTH')
-                    }):
-                        pass
+                async with session.post(url):
+                    pass
 
-                    url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{user.id}/{guild.id}/{new_perm}"
-                    print(f"Sending request to: {url}")
-                    
-                    async with session.post(url):
-                        pass
-
-            except:
-                pass
+        except Exception as e:
+            print(f"l35, on_member_remove: {e}")
 
 async def setup(bot):
     await bot.add_cog(OnMemberRawRemove(bot))
