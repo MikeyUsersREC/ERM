@@ -1277,7 +1277,7 @@ def run():
     try:
         bot.run(bot_token)
     except Exception as e:
-        with push_scope() as scope:
+        with sentry_sdk.isolation_scope() as scope:
             scope.level = "error"
             capture_exception(e)
 
