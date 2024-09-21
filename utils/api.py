@@ -98,43 +98,46 @@ class APIRoutes:
         if not guild_ids:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
+        semaphore = asyncio.Semaphore(5)
+    
         async def process_guild(guild_id):
-            guild: discord.Guild = self.bot.get_guild(int(guild_id))
-            if not guild or not guild.get_member(self.bot.user.id):
+            async with semaphore:
+                guild: discord.Guild = self.bot.get_guild(int(guild_id))
+                if not guild or not guild.get_member(self.bot.user.id):
+                    return None
+    
+                try:
+                    icon = guild.icon.with_size(512).with_format("png")
+                    icon = str(icon)
+                except AttributeError:
+                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
+    
+                try:
+                    user = await asyncio.wait_for(guild.fetch_member(user_id), timeout=5.0)
+                except (discord.NotFound, asyncio.TimeoutError):
+                    return None
+    
+                permission_level = 0
+                if await management_check(self.bot, guild, user):
+                    permission_level = 2
+                elif await staff_check(self.bot, guild, user):
+                    permission_level = 1
+    
+                if permission_level > 0:
+                    return {
+                        "id": str(guild.id),
+                        "name": str(guild.name),
+                        "icon_url": icon,
+                        "permission_level": permission_level,
+                    }
                 return None
-    
-            try:
-                icon = guild.icon.with_size(512).with_format("png")
-                icon = str(icon)
-            except AttributeError:
-                icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-    
-            try:
-                user = await guild.fetch_member(user_id)
-            except discord.NotFound:
-                return None
-    
-            permission_level = 0
-            if await management_check(self.bot, guild, user):
-                permission_level = 2
-            elif await staff_check(self.bot, guild, user):
-                permission_level = 1
-    
-            if permission_level > 0:
-                return {
-                    "id": str(guild.id),
-                    "name": str(guild.name),
-                    "icon_url": icon,
-                    "permission_level": permission_level,
-                }
-            return None
     
         guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
     
-        # Filter out None results (failed guilds)
         guilds = [guild for guild in guild_results if guild is not None]
     
         return guilds
+
 
     async def POST_check_staff_level(self, request: Request):
         try:
