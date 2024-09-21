@@ -99,26 +99,11 @@ class APIRoutes:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
         semaphore = asyncio.Semaphore(5)
-        user_cache = {}
-    
-        async def fetch_user(guild):
-            if user_id in user_cache:
-                return user_cache[user_id]
-            try:
-                user = await asyncio.wait_for(guild.fetch_member(user_id), timeout=5.0)
-                user_cache[user_id] = user
-                return user
-            except (discord.NotFound, asyncio.TimeoutError):
-                return None
     
         async def process_guild(guild_id):
             async with semaphore:
-                guild = self.bot.get_guild(int(guild_id))
+                guild: discord.Guild = self.bot.get_guild(int(guild_id))
                 if not guild or not guild.get_member(self.bot.user.id):
-                    return None
-    
-                user = await fetch_user(guild)
-                if not user:
                     return None
     
                 try:
@@ -126,6 +111,11 @@ class APIRoutes:
                     icon = str(icon)
                 except AttributeError:
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
+    
+                try:
+                    user = await asyncio.wait_for(guild.fetch_member(user_id), timeout=5.0)
+                except (discord.NotFound, asyncio.TimeoutError):
+                    return None
     
                 permission_level = 0
                 if await management_check(self.bot, guild, user):
@@ -142,28 +132,12 @@ class APIRoutes:
                     }
                 return None
     
-        async def handle_rate_limit(func, *args, **kwargs):
-            retries = 5
-            for attempt in range(retries):
-                try:
-                    return await func(*args, **kwargs)
-                except discord.HTTPException as e:
-                    if e.status == 429:
-                        retry_after = e.retry_after if e.retry_after else 1
-                        await asyncio.sleep(retry_after) 
-                    else:
-                        raise 
-    
-        tasks = []
-        for i in range(0, len(guild_ids), 10):  # Batch size
-            batch = guild_ids[i:i + 10]
-            tasks.extend(handle_rate_limit(process_guild, guild_id) for guild_id in batch)
-    
-        guild_results = await asyncio.gather(*tasks)
+        guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
     
         guilds = [guild for guild in guild_results if guild is not None]
     
         return guilds
+
 
     async def POST_check_staff_level(self, request: Request):
         try:
