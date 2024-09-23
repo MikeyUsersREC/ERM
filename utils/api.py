@@ -93,39 +93,39 @@ class APIRoutes:
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
-    
         if not guild_ids:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
         semaphore = asyncio.Semaphore(5)
-    
+
         async def get_or_fetch(guild: discord.Guild, member_id: int):
-            member = guild.get_member(member_id)
-            if member:
-                return member
+            m = guild.get_member(member_id)
+            if m:
+                return m
             try:
-                member = await guild.fetch_member(member_id)
-            except (discord.NotFound, discord.HTTPException):
-                member = None
-            return member
+                m = await guild.fetch_member(member_id)
+            except:
+                m = None
+            return m
     
         async def process_guild(guild_id):
             async with semaphore:
                 guild: discord.Guild = self.bot.get_guild(int(guild_id))
                 if not guild:
                     return None
-    
                 try:
-                    icon = guild.icon.with_size(512).with_format("png")
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
                     icon = str(icon)
                 except AttributeError:
+
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-    
+
                 try:
                     user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
                 except (discord.NotFound, asyncio.TimeoutError):
                     return None
-    
+
                 if user is None:
                     return None
     
@@ -134,12 +134,11 @@ class APIRoutes:
                     permission_level = 2
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
-    
                 if permission_level > 0:
                     return {
                         "id": str(guild.id),
-                        "name": guild.name,
-                        "member_count": guild.member_count,
+                        "name": str(guild.name),
+                        "member_count": str(guild.member_count),
                         "icon_url": icon,
                         "permission_level": permission_level,
                     }
