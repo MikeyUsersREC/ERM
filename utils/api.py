@@ -2,7 +2,6 @@ import asyncio
 import copy
 import datetime
 import typing
-import logging
 
 import aiohttp
 import pytz
@@ -94,7 +93,6 @@ class APIRoutes:
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
-    
         if not guild_ids:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
@@ -115,13 +113,14 @@ class APIRoutes:
                 guild: discord.Guild = self.bot.get_guild(int(guild_id))
                 if not guild:
                     return None
-    
                 try:
-                    icon = guild.icon.with_size(512).with_format("png")
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
                     icon = str(icon)
                 except AttributeError:
+
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-    
+
                 try:
                     user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
                 except (discord.NotFound, asyncio.TimeoutError):
@@ -135,7 +134,6 @@ class APIRoutes:
                     permission_level = 2
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
-    
                 if permission_level > 0:
                     return {
                         "id": str(guild.id),
@@ -152,44 +150,31 @@ class APIRoutes:
     
         return guilds
 
-
     async def POST_check_staff_level(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        user_id = json_data.get("user")
+        if not guild_id or not user_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
         try:
-            logging.info("Received request body: %s", await request.body())
-    
-            json_data = await request.json()
-            guild_id = json_data.get("guild")
-            user_id = json_data.get("user")
-    
-            if not guild_id or not user_id:
-                logging.error("Invalid guild or user ID")
-                raise HTTPException(status_code=400, detail="Invalid guild or user")
-    
-            try:
-                guild = await self.bot.fetch_guild(guild_id)
-                user = await guild.fetch_member(user_id)
-            except (discord.Forbidden, discord.HTTPException) as e:
-                logging.error(f"Error fetching guild or user: {e}")
-                raise HTTPException(status_code=400, detail="Invalid guild or user")
-    
-            management_task = management_check(self.bot, guild, user)
-            staff_task = staff_check(self.bot, guild, user)
-    
-            is_manager, is_staff = await asyncio.gather(management_task, staff_task)
-    
-            if is_manager:
-                permission_level = 2
-            elif is_staff:
-                permission_level = 1
-            else:
-                permission_level = 0
-    
-            logging.info("Returning permission level: %d", permission_level)
-            return {"permission_level": permission_level}
-    
-        except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            user = await guild.fetch_member(user_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return {"permission_level": 0}
+
+        permission_level = 0
+        if await management_check(self.bot, guild, user):
+            permission_level = 2
+        elif await staff_check(self.bot, guild, user):
+            permission_level = 1
+
+
+        return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):
         json_data = await request.json()
