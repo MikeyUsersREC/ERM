@@ -65,27 +65,25 @@ class APIRoutes:
     async def POST_get_mutual_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
+    
         if not guild_ids:
-            return HTTPException(status_code=400, detail="No guild ids given")
-
+            raise HTTPException(status_code=400, detail="No guild ids given")
+    
         guilds = []
-        for i in guild_ids:
-            guild: discord.Guild = self.bot.get_guild(int(i))
-            if not guild:
-                continue
-            if guild.get_member(self.bot.user.id):
-                try:
-                    icon = guild.icon.with_size(512)
-                    icon = icon.with_format("png")
-                    icon = str(icon)
-                except Exception as e:
-                   # # # print(e)
-                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-
-                guilds.append(
-                    {"id": str(guild.id), "name": str(guild.name), "icon_url": icon}
+        for guild_id in guild_ids:
+            guild = self.bot.get_guild(int(guild_id))
+            if guild and guild.get_member(self.bot.user.id):
+                icon_url = (
+                    str(guild.icon.with_size(512).with_format("png")) 
+                    if guild.icon 
+                    else "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
                 )
-
+                guilds.append({
+                    "id": str(guild.id),
+                    "name": str(guild.name),
+                    "icon_url": icon_url
+                })
+    
         return {"guilds": guilds}
 
 
