@@ -99,11 +99,21 @@ class APIRoutes:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
         semaphore = asyncio.Semaphore(5)
+
+        async def get_or_fetch(guild: discord.Guild, member_id: int):
+            m = guild.get_member(member_id)
+            if m:
+                return m
+            try:
+                m = await guild.fetch_member(member_id)
+            except:
+                m = None
+            return m
     
         async def process_guild(guild_id):
             async with semaphore:
                 guild: discord.Guild = self.bot.get_guild(int(guild_id))
-                if not guild or not guild.get_member(self.bot.user.id):
+                if not guild:
                     return None
     
                 try:
@@ -113,8 +123,11 @@ class APIRoutes:
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
     
                 try:
-                    user = await asyncio.wait_for(guild.fetch_member(user_id), timeout=5.0)
+                    user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
                 except (discord.NotFound, asyncio.TimeoutError):
+                    return None
+
+                if user is None:
                     return None
     
                 permission_level = 0
@@ -127,6 +140,7 @@ class APIRoutes:
                     return {
                         "id": str(guild.id),
                         "name": str(guild.name),
+                        "member_count": str(guild.member_count),
                         "icon_url": icon,
                         "permission_level": permission_level,
                     }
@@ -134,7 +148,7 @@ class APIRoutes:
     
         guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
     
-        guilds = [guild for guild in guild_results if guild is not None]
+        guilds = list(filter(lambda x: x is not None, guild_results))
     
         return guilds
 
