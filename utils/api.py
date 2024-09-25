@@ -88,6 +88,36 @@ class APIRoutes:
 
         return {"guilds": guilds}
 
+    async def GET_shard_pings(self, authorization: Annotated[str | None, Header()]):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        shard_pings = {}
+        for shard_id, shard in self.bot.shards.items():
+            shard_pings[shard_id] = round(shard.latency * 1000, 2)
+
+        return {"shard_pings": shard_pings}
+
+    async def GET_guild_shard(self, authorization: Annotated[str | None, Header()], guild_id: int):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        try:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            shard_id = guild.shard_id
+            return {"guild_id": guild_id, "shard_id": shard_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
