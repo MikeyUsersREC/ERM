@@ -2,7 +2,6 @@ import asyncio
 import copy
 import datetime
 import typing
-import logging
 
 import aiohttp
 import pytz
@@ -89,32 +88,75 @@ class APIRoutes:
 
         return {"guilds": guilds}
 
+    async def GET_shard_pings(self, authorization: Annotated[str | None, Header()]):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        shard_pings = {}
+        for shard_id, shard in self.bot.shards.items():
+            shard_pings[shard_id] = round(shard.latency * 1000, 2)
+
+        return {"shard_pings": shard_pings}
+
+    async def GET_guild_shard(self, authorization: Annotated[str | None, Header()], guild_id: int):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        try:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            shard_id = guild.shard_id
+            return {"guild_id": guild_id, "shard_id": shard_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
-    
         if not guild_ids:
             raise HTTPException(status_code=400, detail="No guilds specified")
     
         semaphore = asyncio.Semaphore(5)
+
+        async def get_or_fetch(guild: discord.Guild, member_id: int):
+            m = guild.get_member(member_id)
+            if m:
+                return m
+            try:
+                m = await guild.fetch_member(member_id)
+            except:
+                m = None
+            return m
     
         async def process_guild(guild_id):
             async with semaphore:
                 guild: discord.Guild = self.bot.get_guild(int(guild_id))
-                if not guild or not guild.get_member(self.bot.user.id):
+                if not guild:
                     return None
-    
                 try:
-                    icon = guild.icon.with_size(512).with_format("png")
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
                     icon = str(icon)
                 except AttributeError:
+
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
-    
+
                 try:
-                    user = await asyncio.wait_for(guild.fetch_member(user_id), timeout=5.0)
+                    user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
                 except (discord.NotFound, asyncio.TimeoutError):
+                    return None
+
+                if user is None:
                     return None
     
                 permission_level = 0
@@ -122,11 +164,11 @@ class APIRoutes:
                     permission_level = 2
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
-    
                 if permission_level > 0:
                     return {
                         "id": str(guild.id),
                         "name": str(guild.name),
+                        "member_count": str(guild.member_count),
                         "icon_url": icon,
                         "permission_level": permission_level,
                     }
@@ -134,48 +176,35 @@ class APIRoutes:
     
         guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
     
-        guilds = [guild for guild in guild_results if guild is not None]
+        guilds = list(filter(lambda x: x is not None, guild_results))
     
         return guilds
 
-
     async def POST_check_staff_level(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        user_id = json_data.get("user")
+        if not guild_id or not user_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
         try:
-            logging.info("Received request body: %s", await request.body())
-    
-            json_data = await request.json()
-            guild_id = json_data.get("guild")
-            user_id = json_data.get("user")
-    
-            if not guild_id or not user_id:
-                logging.error("Invalid guild or user ID")
-                raise HTTPException(status_code=400, detail="Invalid guild or user")
-    
-            try:
-                guild = await self.bot.fetch_guild(guild_id)
-                user = await guild.fetch_member(user_id)
-            except (discord.Forbidden, discord.HTTPException) as e:
-                logging.error(f"Error fetching guild or user: {e}")
-                raise HTTPException(status_code=400, detail="Invalid guild or user")
-    
-            management_task = management_check(self.bot, guild, user)
-            staff_task = staff_check(self.bot, guild, user)
-    
-            is_manager, is_staff = await asyncio.gather(management_task, staff_task)
-    
-            if is_manager:
-                permission_level = 2
-            elif is_staff:
-                permission_level = 1
-            else:
-                permission_level = 0
-    
-            logging.info("Returning permission level: %d", permission_level)
-            return {"permission_level": permission_level}
-    
-        except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            user = await guild.fetch_member(user_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return {"permission_level": 0}
+
+        permission_level = 0
+        if await management_check(self.bot, guild, user):
+            permission_level = 2
+        elif await staff_check(self.bot, guild, user):
+            permission_level = 1
+
+
+        return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):
         json_data = await request.json()
