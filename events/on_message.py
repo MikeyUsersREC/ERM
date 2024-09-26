@@ -260,12 +260,13 @@ class OnMessage(commands.Cog):
                     violator_user = reason_info[:split_index].strip()
                     reason = reason_info[split_index:].strip()
                 else:
-                    violator_user = reason_info
-                    reason = 'No reason provided'
+                    await message.add_reaction('❌')
+                    return await message.add_reaction('🚫')# return since no reason was
                 if reason.endswith('- Player Not In Game'):
                     reason = reason[:-len('- Player Not In Game')]
                 if not reason:
-                    return await message.channel.send(f"{user.mention} Punishment not logged due to missing reason.")
+                    await message.add_reaction('❌')
+                    return await message.add_reaction('🚫') # return since no reason was provided
                 new_message.content = f"{prefix}punish {violator_user} {action_type} {reason}"
                 await bot.process_commands(new_message)
 
