@@ -643,7 +643,7 @@ class ActivityCoreCommands:
             await ctx.send(
                 embed=embeds[0]
             )
-    ''' 
+     
     async def core_command_view(self, ctx: commands.Context, request_type_object: str):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings.get('staff_management') or not settings.get('staff_management', {}).get(f'{request_type_object.lower()}_role', None):
@@ -655,65 +655,58 @@ class ActivityCoreCommands:
             )
             )
             return
-
+    
         request_upper = request_type_object.upper()
-        request_lower = request_type_object.lower()
-
-        active_requests = []
+    
+        all_requests = []
         async for item in self.bot.loas.db.find({
             "guild_id": ctx.guild.id,
             "user_id": ctx.author.id,
-            "accepted": True,
-            "denied": False,
-            "expired": False,
             "type": request_upper
         }):
-            item['started_at'] = int(item['_id'].split('_')[2])
-            active_requests.append(item)
+            all_requests.append(item)
 
         def setup_embed() -> discord.Embed:
             embed = discord.Embed(
-            title="Activity Notices",
-            color=BLANK_COLOR
+                title="Activity Notices",
+                color=BLANK_COLOR
             )
             embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
             )
             return embed
-
+        
         embeds = []
-        for item in active_requests:
+        for item in all_requests:
             if len(embeds) == 0:
                 embeds.append(setup_embed())
-
             if len(embeds[-1].fields) > 4:
                 embeds.append(setup_embed())
             embeds[-1].add_field(
-            name=f"Active {item['type']}",
-            value=(
-                    f"> **Staff:** <@{item['user_id']}>\n"
+                name=f"{item['type']}",
+                value=(
                     f"> **Reason:** {item['reason']}\n"
                     f"> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
                     f"> **Ended At:** <t:{int(item['expiry'])}>"
-            ),
-            inline=False
+                ),
+                inline=False
             )
         pages = [
-                CustomPage(
+            CustomPage(
                 embeds=[embed],
                 identifier=str(index + 1)
-                ) for index, embed in enumerate(embeds)
-            ]
+            ) for index, embed in enumerate(embeds)
+        ]
         if len(pages) == 0:
-              return await ctx.send(
+            return await ctx.send(
                 embed=discord.Embed(
-                     title="No Activity Notices",
-                     description="There were no active Activity Notices found.",
-                     color=BLANK_COLOR
+                    title="No Activity Notices",
+                    description="There were no active Activity Notices found.",
+                    color=BLANK_COLOR
                 )
-              )
-       
+            )
+        
         if len(pages) != 1:
             paginator = SelectPagination(ctx.author.id, pages=pages)
             await ctx.send(
@@ -725,7 +718,7 @@ class ActivityCoreCommands:
             await ctx.send(
                 embed=embeds[0]
             )
-    '''
+
 
 class StaffManagement(commands.Cog):
     def __init__(self, bot):
@@ -784,6 +777,17 @@ class StaffManagement(commands.Cog):
             await log_command_usage(self.bot,ctx.guild, ctx.user, f"RA Admin: {member}")
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
+    @commands.guild_only()
+    @ra.command(
+        name="view",
+        description="View your active RA",
+        extras={"category": "Staff Management"},
+        with_app_command=True,
+    )
+    @is_staff()
+    async def ra_view(self, ctx):
+        await self.core_commands.core_command_view(ctx, 'ra')
+
     @commands.hybrid_group(
         name="loa",
         description="File a Leave of Absence request",
@@ -795,6 +799,16 @@ class StaffManagement(commands.Cog):
     async def loa(self, ctx, time, *, reason):
         await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
 
+    @commands.guild_only()
+    @loa.command(
+        name="view",
+        description="View your active LOA",
+        extras={"category": "Staff Management"},
+        with_app_command=True,
+    )
+    @is_staff()
+    async def loa_view(self, ctx):
+        await self.core_commands.core_command_view(ctx, 'loa')
 
     @loa.command(
         name="active",
