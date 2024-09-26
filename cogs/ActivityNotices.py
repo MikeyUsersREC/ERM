@@ -786,7 +786,7 @@ class StaffManagement(commands.Cog):
     )
     @is_staff()
     async def ra_view(self, ctx):
-        await self.core_commands.core_command_view(ctx, 'ra')
+        await self.core_commands.core_command_view(ctx, 'loa')
 
     @commands.hybrid_group(
         name="loa",
