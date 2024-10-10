@@ -385,11 +385,12 @@ class Warnings(Document):
         """
         Removes a warning from the database by its snowflake.
         """
-
+    
         selected_item = await self.db.find_one({"Snowflake": identifier})
         if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
             try:
                 url_var = config("BASE_API_URL")
+                panel_url_var = config("PANEL_API_URL")
                 if url_var not in ["", None]:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
@@ -397,7 +398,17 @@ class Warnings(Document):
                                     "Authorization": config('INTERNAL_API_AUTH')
                                 }):
                             pass
-            except ValueError:
+                if panel_url_var not in ["", None]:
+                    final_url = f"{panel_url_var}/{guild_id}/SyncDeletePunishment?ID={selected_item['_id']}"
+                    print(f"Final Panel URL: {final_url}")
+                    
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(
+                                final_url, headers={
+                                    "X-Static-Token": config('PANEL_STATIC_AUTH')
+                                }):
+                            pass
+            except:
                 pass
             return await self.db.delete_one({"Snowflake": identifier})
         else:
