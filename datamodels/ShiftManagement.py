@@ -104,7 +104,7 @@ class ShiftManagement:
 
         try:
             url_var = config("BASE_API_URL")
-            panel_url_var = config("PANEL_API_URL)
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
