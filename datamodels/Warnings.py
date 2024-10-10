@@ -187,15 +187,20 @@ class Warnings(Document):
                             }):
                         pass
             if panel_url_var not in ["", None]:
+                # Print the final URL to the panel API
+                final_url = f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}"
+                print(f"Final Panel URL: {final_url}")
+                
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
-                            f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}", headers={
+                            final_url, headers={
                                 "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
                         pass
+        
         except:
             pass
-
+        
         return identifier
 
     async def find_warning_by_spec(
