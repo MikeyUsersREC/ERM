@@ -119,6 +119,53 @@ class APIRoutes:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
+    async def GET_all_members(
+        self,
+        authorization: Annotated[str | None, Header()],
+        guild_id: int
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+    
+        if not guild.chunked:
+            try:
+                await guild.chunk(cache=True)
+            except DiscordHTTPException as e:
+                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
+    
+        member_data = [
+            {
+                "id": member.id,
+                "name": member.name,
+                "discriminator": member.discriminator,
+                "nick": member.nick,
+                "roles": [role.id for role in member.roles[1:]],  # Exclude @everyone role
+                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+                "premium_since": member.premium_since.isoformat() if member.premium_since else None,
+                "bot": member.bot,
+                "pending": member.pending,
+                "status": str(member.status),
+                "activity": str(member.activity.type) + ": " + member.activity.name if member.activity else None,
+                "avatar_url": str(member.avatar.url) if member.avatar else None,
+            }
+            for member in guild.members
+        ]
+    
+        response = {
+            "members": member_data,
+            "total_members": len(member_data)
+        }
+    
+        return response
+
+
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
