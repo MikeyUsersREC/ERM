@@ -115,7 +115,7 @@ class ShiftManagement:
             if panel_url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                            f"{panel_url_var}/{guild_id}/SyncStartShift/{data['_id']}", headers={
+                            f"{panel_url_var}/{guild_id}/SyncStartShift?ID={data['_id']}", headers={
                                 "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
                         pass
@@ -176,7 +176,7 @@ class ShiftManagement:
             if panel_url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.delete(
-                            f"{panel_url_var}/{guild_id}/SyncEndShift/{document['_id']}", headers={
+                            f"{panel_url_var}/{guild_id}/SyncEndShift?ID={document['_id']}", headers={
                                 "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
                         pass
