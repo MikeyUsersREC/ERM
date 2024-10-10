@@ -190,7 +190,7 @@ class Warnings(Document):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                             f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}", headers={
-                                "Authorization": config('INTERNAL_API_AUTH')
+                                "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
                         pass
         except:
