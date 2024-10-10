@@ -192,7 +192,7 @@ class Warnings(Document):
                 print(f"Final Panel URL: {final_url}")
                 
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(
+                    async with session.post(
                             final_url, headers={
                                 "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
