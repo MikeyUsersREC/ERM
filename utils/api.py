@@ -119,7 +119,7 @@ class APIRoutes:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
-    async def GET_all_members(
+    async def POST_all_members(
         self,
         authorization: Annotated[str | None, Header()],
         guild_id: int
