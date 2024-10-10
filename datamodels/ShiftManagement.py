@@ -113,12 +113,14 @@ class ShiftManagement:
                             }):
                         pass
             if panel_url_var not in ["", None]:
+                url = f"{panel_url_var}/{guild_id}/SyncStartShift?ID={data['_id']}"
+                print(f"Contacting URL: {url}")  # Print the URL
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                            f"{panel_url_var}/{guild_id}/SyncStartShift?ID={data['_id']}", headers={
-                                "X-Static-Token": config('PANEL_STATIC_AUTH')
-                            }):
-                        pass
+                    async with session.post(url, headers={
+                        "X-Static-Token": config('PANEL_STATIC_AUTH')
+                    }):
+                pass
+
         except:
             pass
 
@@ -174,12 +176,13 @@ class ShiftManagement:
                             }):
                         pass
             if panel_url_var not in ["", None]:
-                async with aiohttp.ClientSession() as session:
-                    async with session.delete(
-                            f"{panel_url_var}/{guild_id}/SyncEndShift?ID={document['_id']}", headers={
-                                "X-Static-Token": config('PANEL_STATIC_AUTH')
-                            }):
-                        pass
+                 url = f"{panel_url_var}/{guild_id}/SyncEndShift?ID={data['_id']}"
+                 print(f"Contacting URL: {url}")  # Print the URL
+                 async with aiohttp.ClientSession() as session:
+                     async with session.delete(url, headers={
+                         "X-Static-Token": config('PANEL_STATIC_AUTH')
+                     }):
+                 pass
         except:
             pass
             
