@@ -114,7 +114,7 @@ class Bot(commands.AutoShardedBot):
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                self.db = self.mongo["erm"]
+                self.db = self.mongo["beta"]
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
