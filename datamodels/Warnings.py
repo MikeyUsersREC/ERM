@@ -141,21 +141,6 @@ class Warnings(Document):
             time_epoch: int,
             until_epoch: int | None = None,
     ) -> ObjectId | ValueError:
-        """
-        Inserts a warning into the database.
-        {
-          "_id": 123456789012345678,
-          "Username": "1friendlydoge",
-          "UserID": 123456789012345678,
-          "Type": "Warning",
-          "Reason": "Nerd",
-          "Moderator": "Noah",
-          "ModeratorID": 123456789012345678,
-          "Guild": 12345678910111213,
-          "Epoch": 706969420,
-          "UntilEpoch": 706969420
-        }
-        """
         if all([until_epoch is None, moderation_type == "Temporary Ban"]):
             return ValueError("Epoch must be provided for temporary bans.")
 
@@ -193,10 +178,18 @@ class Warnings(Document):
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                             f"{url_var}/Internal/SyncCreatePunishment/{identifier}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
+                        pass
+            if panel_url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                            f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}", headers={
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
