@@ -399,7 +399,8 @@ class Warnings(Document):
                                 }):
                             pass
                 if panel_url_var not in ["", None]:
-                    final_url = f"{panel_url_var}/{guild_id}/SyncDeletePunishment?ID={selected_item['_id']}"
+                    final_guild_id = guild_id or selected_item["Guild"]
+                    final_url = f"{panel_url_var}/{final_guild_id}/SyncDeletePunishment?ID={selected_item['_id']}"
                     print(f"Final Panel URL: {final_url}")
     
                     async with aiohttp.ClientSession() as session:
