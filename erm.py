@@ -13,7 +13,6 @@ except ImportError:
 import aiohttp
 import decouple
 import discord.mentions
-import dns.resolver
 import motor.motor_asyncio
 import asyncio
 import pytz
@@ -56,8 +55,7 @@ from utils.utils import *
 from utils.constants import *
 import utils.prc_api
 
-dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
-dns.resolver.default_resolver.nameservers = ["8.8.8.8"]
+
 setup = False
 
 try:
@@ -116,7 +114,7 @@ class Bot(commands.AutoShardedBot):
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                self.db = self.mongo["beta"]
+                self.db = self.mongo["erm"]
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
