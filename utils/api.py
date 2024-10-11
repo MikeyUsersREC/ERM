@@ -10,7 +10,7 @@ from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
-from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check
+from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
 
