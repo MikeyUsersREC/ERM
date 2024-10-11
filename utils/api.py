@@ -224,10 +224,10 @@ class APIRoutes:
                     return None
     
                 permission_level = 0
-                if await admin_check(self.bot, guild, user):
-                    permission_level = 3
-                elif await management_check(self.bot, guild, user):
+                if await management_check(self.bot, guild, user):
                     permission_level = 2
+                elif await admin_check(self.bot, guild, user):
+                    permission_level = 3
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
                 if permission_level > 0:
@@ -264,10 +264,10 @@ class APIRoutes:
             return {"permission_level": 0}
 
         permission_level = 0
-        if await admin_check(self.bot, guild, user):
-            permission_level = 3
-        elif await management_check(self.bot, guild, user):
+        if await management_check(self.bot, guild, user):
             permission_level = 2
+        elif await admin_check(self.bot, guild, user):
+            permission_level = 3
         elif await staff_check(self.bot, guild, user):
             permission_level = 1
 
