@@ -13,7 +13,7 @@ import discord
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
-
+from utils.utils import secure_logging
 from pydantic import BaseModel
 
 from utils.timestamp import td_format
@@ -137,7 +137,7 @@ class APIRoutes:
         if not guild.chunked:
             try:
                 await guild.chunk(cache=True)
-            except DiscordHTTPException as e:
+            except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
     
         member_data = []
@@ -181,7 +181,23 @@ class APIRoutes:
         }
     
         return response
-
+    
+    async def POST_send_logging(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        await secure_logging(self.bot, json_data["guild_id"], json_data["author_id"], json_data["interpret_type"], json_data["command_string"], json_data["attempted"])
+        return {
+            "message": "Successfully logged!"
+        }
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
@@ -854,6 +870,7 @@ class APIRoutes:
         await self.bot.shift_management.remove_shift_by_user(
             member, {"guild": guild, "shift": associated_shift}
         )
+
 
 
 
