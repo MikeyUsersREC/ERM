@@ -141,21 +141,6 @@ class Warnings(Document):
             time_epoch: int,
             until_epoch: int | None = None,
     ) -> ObjectId | ValueError:
-        """
-        Inserts a warning into the database.
-        {
-          "_id": 123456789012345678,
-          "Username": "1friendlydoge",
-          "UserID": 123456789012345678,
-          "Type": "Warning",
-          "Reason": "Nerd",
-          "Moderator": "Noah",
-          "ModeratorID": 123456789012345678,
-          "Guild": 12345678910111213,
-          "Epoch": 706969420,
-          "UntilEpoch": 706969420
-        }
-        """
         if all([until_epoch is None, moderation_type == "Temporary Ban"]):
             return ValueError("Epoch must be provided for temporary bans.")
 
@@ -193,6 +178,7 @@ class Warnings(Document):
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
@@ -200,9 +186,21 @@ class Warnings(Document):
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
+            if panel_url_var not in ["", None]:
+                # Print the final URL to the panel API
+                final_url = f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}"
+                print(f"Final Panel URL: {final_url}")
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                            final_url, headers={
+                                "X-Static-Token": config('PANEL_STATIC_AUTH')
+                            }):
+                        pass
+        
         except:
             pass
-
+        
         return identifier
 
     async def find_warning_by_spec(
@@ -387,11 +385,12 @@ class Warnings(Document):
         """
         Removes a warning from the database by its snowflake.
         """
-
+    
         selected_item = await self.db.find_one({"Snowflake": identifier})
-        if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
+        if selected_item and selected_item["Guild"] == (guild_id or selected_item["Guild"]):
             try:
                 url_var = config("BASE_API_URL")
+                panel_url_var = config("PANEL_API_URL")
                 if url_var not in ["", None]:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
@@ -399,8 +398,19 @@ class Warnings(Document):
                                     "Authorization": config('INTERNAL_API_AUTH')
                                 }):
                             pass
-            except ValueError:
-                pass
+                if panel_url_var not in ["", None]:
+                    final_guild_id = guild_id or selected_item["Guild"]
+                    final_url = f"{panel_url_var}/{final_guild_id}/SyncDeletePunishment?ID={selected_item['_id']}"
+                    print(f"Final Panel URL: {final_url}")
+    
+                    async with aiohttp.ClientSession() as session:
+                        async with session.delete(
+                                final_url, headers={
+                                    "X-Static-Token": config('PANEL_STATIC_AUTH')
+                                }):
+                            pass
+            except Exception as e:
+                print(f"Error during API requests: {e}")
             return await self.db.delete_one({"Snowflake": identifier})
         else:
             return ValueError("Warning does not exist.")

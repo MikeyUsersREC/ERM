@@ -283,7 +283,7 @@ class OnMessage(commands.Cog):
                     break
                                 
                 raw_content = embed.description
-                user, command = raw_content.split('used the command: ')
+                user, command = raw_content.split('used the command ')
 
                 profile_link = user.split('(')[1].split(')')[0]
                 user = user.split('(')[0].replace('[', '').replace(']', '')

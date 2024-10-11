@@ -10,7 +10,7 @@ from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
-from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check
+from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
 
@@ -119,6 +119,70 @@ class APIRoutes:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
+    async def POST_all_members(
+        self,
+        authorization: Annotated[str | None, Header()],
+        guild_id: int
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+    
+        if not guild.chunked:
+            try:
+                await guild.chunk(cache=True)
+            except DiscordHTTPException as e:
+                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
+    
+        member_data = []
+        for member in guild.members:
+            voice_state = member.voice
+            member_info = {
+                "id": member.id,
+                "name": member.name,
+                "discriminator": member.discriminator,
+                "nick": member.nick,
+                "roles": [role.id for role in member.roles[1:]],
+                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+                "premium_since": member.premium_since.isoformat() if member.premium_since else None,
+                "bot": member.bot,
+                "pending": member.pending,
+                "status": str(member.status),
+                "activity": str(member.activity.type) + ": " + member.activity.name if member.activity else None,
+                "avatar_url": str(member.avatar.url) if member.avatar else None,
+                "voice_state": None
+            }
+            
+            if voice_state:
+                member_info["voice_state"] = {
+                    "channel_id": voice_state.channel.id if voice_state.channel else None,
+                    "channel_name": voice_state.channel.name if voice_state.channel else None,
+                    "self_mute": voice_state.self_mute,
+                    "self_deaf": voice_state.self_deaf,
+                    "self_stream": voice_state.self_stream,
+                    "self_video": voice_state.self_video,
+                    "mute": voice_state.mute,
+                    "deaf": voice_state.deaf,
+                    "afk": voice_state.afk,
+                    "suppress": voice_state.suppress
+                }
+            
+            member_data.append(member_info)
+    
+        response = {
+            "members": member_data,
+            "total_members": len(member_data)
+        }
+    
+        return response
+
+
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
@@ -160,7 +224,9 @@ class APIRoutes:
                     return None
     
                 permission_level = 0
-                if await management_check(self.bot, guild, user):
+                if await admin_check(self.bot, guild, user):
+                    permission_level = 3
+                elif await management_check(self.bot, guild, user):
                     permission_level = 2
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
@@ -198,7 +264,9 @@ class APIRoutes:
             return {"permission_level": 0}
 
         permission_level = 0
-        if await management_check(self.bot, guild, user):
+        if await admin_check(self.bot, guild, user):
+            permission_level = 3
+        elif await management_check(self.bot, guild, user):
             permission_level = 2
         elif await staff_check(self.bot, guild, user):
             permission_level = 1

@@ -1,14 +1,11 @@
 import datetime
-
 import aiohttp
 from bson import ObjectId
 from discord.ext import commands
 import discord
 from utils.mongo import Document
 from decouple import config
-
 from utils.basedataclass import BaseDataClass
-
 
 class BreakItem(BaseDataClass):
     start_epoch: int
@@ -58,34 +55,6 @@ class ShiftManagement:
     async def add_shift_by_user(
         self, member: discord.Member, shift_type: str, breaks: list, guild: int, timestamp: int = 0
     ):
-        """
-        Adds a shift for the specified user to the database, with the provided
-        extras data.
-
-        The shift is recorded as a document in the 'shifts' collection, and the
-        user's ID is used as the document ID. If a document with that ID already
-        exists in the collection, the new shift data is added to the existing
-        'data' array.
-
-        {
-          "Username": "1FriendlyDoge",
-          "Nickname": "NoobyNoob",
-          "UserID": 123456789012345678,
-          "Type": "Ingame Shift",
-          "StartEpoch": 706969420,
-          "Breaks": [
-            {
-              "StartEpoch": 706969430,
-              "EndEpoch": 706969550
-            }
-          ],
-          "Moderations": [
-                ObjectId("123456789012345678901234")
-          ],
-          "EndEpoch": 706969420,
-          "Guild": 12345678910111213
-        }
-        """
         data = {
             "_id": ObjectId(),
             "Username": member.name,
@@ -104,6 +73,7 @@ class ShiftManagement:
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
@@ -111,42 +81,43 @@ class ShiftManagement:
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except:
-            pass
+            if panel_url_var not in ["", None]:
+                url = f"{panel_url_var}/{guild}/SyncStartShift?ID={data['_id']}"
+                print(f"Contacting URL: {url}")
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, headers={
+                        "X-Static-Token": config('PANEL_STATIC_AUTH')
+                    }):
+                        pass
+
+        except Exception as e:
+            print(f"Error in add_shift_by_user: {e}")
 
         return data["_id"]
 
     async def add_time_to_shift(self, identifier: str, seconds: int):
-        """
-        Adds time to the specified user's shift.
-        """
         document = await self.shifts.db.find_one({"_id": ObjectId(identifier)})
         document["AddedTime"] += int(seconds)
         await self.shifts.update_by_id(document)
         return document
 
     async def remove_time_from_shift(self, identifier: str, seconds: int):
-        """
-        Removes time from the specified user's shift.
-        """
         document = await self.shifts.db.find_one({"_id": ObjectId(identifier)})
         document["RemovedTime"] += int(seconds)
         await self.shifts.update_by_id(document)
         return document
 
     async def end_shift(self, identifier: str, guild_id: int | None = None, timestamp: int | None = None):
-        """
-        Ends the specified user's shift.
-        """
-
         document = await self.shifts.db.find_one({"_id": ObjectId(identifier)})
         if not document:
             raise ValueError("Shift not found.")
 
-        if document["Guild"] != (guild_id if guild_id else document["Guild"]):
+        guild_id = guild_id if guild_id else document["Guild"]
+
+        if document["Guild"] != guild_id:
             raise ValueError("Shift not found.")
 
-        document["EndEpoch"] = datetime.datetime.now().timestamp()
+        document["EndEpoch"] = datetime.datetime.now().timestamp() if timestamp in [None, 0] else timestamp
 
         for breaks in document["Breaks"]:
             if breaks["EndEpoch"] == 0:
@@ -154,6 +125,7 @@ class ShiftManagement:
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
@@ -161,16 +133,21 @@ class ShiftManagement:
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
-        except:
-            pass
+            if panel_url_var not in ["", None]:
+                url = f"{panel_url_var}/{guild_id}/SyncEndShift?ID={document['_id']}"
+                print(f"Contacting URL: {url}")
+                async with aiohttp.ClientSession() as session:
+                    async with session.delete(url, headers={
+                        "X-Static-Token": config('PANEL_STATIC_AUTH')
+                    }):
+                        pass
+        except Exception as e:
+            print(f"Error in end_shift: {e}")
 
         await self.shifts.update_by_id(document)
         return document
 
     async def get_current_shift(self, member: discord.Member, guild_id: int):
-        """
-        Gets the current shift for the specified user.
-        """
         return await self.shifts.db.find_one(
             {"UserID": member.id, "EndEpoch": 0, "Guild": guild_id}
         )
