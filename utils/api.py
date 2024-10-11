@@ -146,16 +146,8 @@ class APIRoutes:
             member_info = {
                 "id": member.id,
                 "name": member.name,
-                "discriminator": member.discriminator,
                 "nick": member.nick,
                 "roles": [role.id for role in member.roles[1:]],
-                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
-                "premium_since": member.premium_since.isoformat() if member.premium_since else None,
-                "bot": member.bot,
-                "pending": member.pending,
-                "status": str(member.status),
-                "activity": str(member.activity.type) + ": " + member.activity.name if member.activity else None,
-                "avatar_url": str(member.avatar.url) if member.avatar else None,
                 "voice_state": None
             }
             
@@ -163,14 +155,6 @@ class APIRoutes:
                 member_info["voice_state"] = {
                     "channel_id": voice_state.channel.id if voice_state.channel else None,
                     "channel_name": voice_state.channel.name if voice_state.channel else None,
-                    "self_mute": voice_state.self_mute,
-                    "self_deaf": voice_state.self_deaf,
-                    "self_stream": voice_state.self_stream,
-                    "self_video": voice_state.self_video,
-                    "mute": voice_state.mute,
-                    "deaf": voice_state.deaf,
-                    "afk": voice_state.afk,
-                    "suppress": voice_state.suppress
                 }
             
             member_data.append(member_info)
