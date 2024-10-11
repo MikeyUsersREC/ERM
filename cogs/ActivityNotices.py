@@ -707,17 +707,35 @@ class ActivityCoreCommands:
                 )
             )
         
+        if ctx.interaction:
+            interaction = ctx.interaction
+        else:
+            interaction = ctx
+
         if len(pages) != 1:
             paginator = SelectPagination(ctx.author.id, pages=pages)
-            await ctx.send(
-                embed=embeds[0],
-                view=paginator
-            )
+            try:
+                await interaction.response.send_message(
+                    embed=embeds[0],
+                    view=paginator,
+                    ephemeral=True
+                )
+            except:
+                await interaction.channel.send(
+                    embed=embeds[0],
+                    view=paginator
+                )
 
         else:
-            await ctx.send(
-                embed=embeds[0]
-            )
+            try:
+                await interaction.response.send_message(
+                    embed=embeds[0],
+                    ephemeral=True
+                )
+            except:
+                await interaction.channel.send(
+                    embed=embeds[0],
+                )
 
 
 class StaffManagement(commands.Cog):
