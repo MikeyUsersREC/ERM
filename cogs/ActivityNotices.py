@@ -45,8 +45,8 @@ class ActivityCoreCommands:
     async def send_activity_request(self, guild: discord.Guild, staff_channel: discord.TextChannel, author: discord.Member, schema) -> dict:
         request_type = schema['type']
         settings = await self.bot.settings.find_by_id(guild.id)
-        management_roles = settings.get('staff_management').get('management_role')
-        loa_roles = settings.get('staff_management').get(f'{request_type.lower()}_role')
+        admin_roles = settings.get('staff_admin,staff_management').get('admin_role,management_role')
+        loa_roles = settings.get('staff_admin,staff_management').get(f'{request_type.lower()}_role')
 
         embed = discord.Embed(
             title=f"{request_type} Request",
@@ -103,9 +103,9 @@ class ActivityCoreCommands:
 
         view = LOAMenu(
             self.bot,
-            management_roles,
+            admin_roles,
             loa_roles,
-            schema,
+            schema, 
             author.id,
             (code := system_code_gen())
         )
@@ -119,7 +119,7 @@ class ActivityCoreCommands:
             code,
             msg.id,
             'SELF',
-            management_roles,
+           admin_roles,
             loa_roles,
             schema,
             author.id,
@@ -150,7 +150,7 @@ class ActivityCoreCommands:
             return
 
         try:
-            staff_channel = await ctx.guild.fetch_channel(settings['staff_management']['channel'])
+            staff_channel = await ctx.guild.fetch_channel(settings['staff_admin']['channel'])
         except Exception as _:
             return await ctx.send(
                 embed=discord.Embed(
@@ -481,7 +481,7 @@ class ActivityCoreCommands:
             member = ctx.author
 
         try:
-            staff_channel = await ctx.guild.fetch_channel(settings['staff_management']['channel'])
+            staff_channel = await ctx.guild.fetch_channel(settings['staff_admin']['channel'])
         except discord.NotFound:
             return await ctx.send(
                 embed=discord.Embed(
@@ -496,8 +496,8 @@ class ActivityCoreCommands:
         except ValueError:
             return await ctx.send(
                 embed=discord.Embed(
-                    title="Incorrect Time",
-                    description=f"The time you provided was incorrect.",
+                    title="Incorrect Time Variable",
+                    description=f"The time you provided was incorrect (1s = 1 second, 1m = 1 minute, 1h = 1 hour, 1d = 1 day ).",
                     color=BLANK_COLOR
                 )
             )
@@ -516,7 +516,7 @@ class ActivityCoreCommands:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Already Active",
-                    description=f"You already have a {request_type_object.upper()} request.",
+                    description=f"You already have a {request_type_object.upper()} request active.",
                     color=BLANK_COLOR
                 )
             )
@@ -641,7 +641,7 @@ class ActivityCoreCommands:
                 embed=embeds[0]
             )
 
-class StaffManagement(commands.Cog):
+class StaffAdmin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.core_commands = ActivityCoreCommands(bot)
@@ -649,7 +649,7 @@ class StaffManagement(commands.Cog):
     @commands.hybrid_group(
         name="ra",
         description="File a Reduced Activity request",
-        extras={"category": "Staff Management"},
+        extras={"category": "Staff admin"},
         with_app_command=True,
     )
     async def ra(self, ctx, time, *, reason):
@@ -659,7 +659,7 @@ class StaffManagement(commands.Cog):
     @ra.command(
         name="active",
         description="View all active RAs",
-        extras={"category": "Staff Management"},
+        extras={"category": "Staff admin"},
     )
     @is_admin()
     @require_settings()
@@ -670,7 +670,7 @@ class StaffManagement(commands.Cog):
     @ra.command(
         name="request",
         description="File a Reduced Activity request",
-        extras={"category": "Staff Management", "ephemeral": True},
+        extras={"category": "Staff admint", "ephemeral": True},
         with_app_command=True,
     )
     @is_staff()
