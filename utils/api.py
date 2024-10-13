@@ -119,52 +119,52 @@ class APIRoutes:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
-    async def POST_all_members(
-        self,
-        authorization: Annotated[str | None, Header()],
-        guild_id: int
-    ):
-        if not authorization:
-            raise HTTPException(status_code=401, detail="Invalid authorization")
+    # async def POST_all_members(
+    #     self,
+    #     authorization: Annotated[str | None, Header()],
+    #     guild_id: int
+    # ):
+    #     if not authorization:
+    #         raise HTTPException(status_code=401, detail="Invalid authorization")
     
-        if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    #     if not await validate_authorization(self.bot, authorization):
+    #         raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
-        guild = self.bot.get_guild(guild_id)
-        if not guild:
-            raise HTTPException(status_code=404, detail="Guild not found")
+    #     guild = self.bot.get_guild(guild_id)
+    #     if not guild:
+    #         raise HTTPException(status_code=404, detail="Guild not found")
     
-        if not guild.chunked:
-            try:
-                await guild.chunk(cache=True)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
+    #     if not guild.chunked:
+    #         try:
+    #             await guild.chunk(cache=True)
+    #         except Exception as e:
+    #             raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
     
-        member_data = []
-        for member in guild.members:
-            voice_state = member.voice
-            member_info = {
-                "id": member.id,
-                "name": member.name,
-                "nick": member.nick,
-                "roles": [role.id for role in member.roles[1:]],
-                "voice_state": None
-            }
+    #     member_data = []
+    #     for member in guild.members:
+    #         voice_state = member.voice
+    #         member_info = {
+    #             "id": member.id,
+    #             "name": member.name,
+    #             "nick": member.nick,
+    #             "roles": [role.id for role in member.roles[1:]],
+    #             "voice_state": None
+    #         }
             
-            if voice_state:
-                member_info["voice_state"] = {
-                    "channel_id": voice_state.channel.id if voice_state.channel else None,
-                    "channel_name": voice_state.channel.name if voice_state.channel else None,
-                }
+    #         if voice_state:
+    #             member_info["voice_state"] = {
+    #                 "channel_id": voice_state.channel.id if voice_state.channel else None,
+    #                 "channel_name": voice_state.channel.name if voice_state.channel else None,
+    #             }
             
-            member_data.append(member_info)
+    #         member_data.append(member_info)
     
-        response = {
-            "members": member_data,
-            "total_members": len(member_data)
-        }
+    #     response = {
+    #         "members": member_data,
+    #         "total_members": len(member_data)
+    #     }
     
-        return response
+    #     return response
     
     async def POST_send_logging(
         self,
