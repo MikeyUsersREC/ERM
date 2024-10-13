@@ -210,9 +210,13 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
         )
     except AttributeError:
         pass
-    for i in embed.fields:
-        i.name = await sub_vars(bot, ctx, channel, i.name)
-        i.value = await sub_vars(bot, ctx, channel, i.value)
+    new_fields = []
+    for field in embed.fields:
+        new_field = discord.EmbedField(name=await sub_vars(bot, ctx, channel, field.name), value=await sub_vars(bot, ctx, channel, field.value), inline=field.inline)
+        new_fields.append(new_field)
+    embed.clear_fields()
+    for field in new_fields:
+        embed.add_field(field)
 
     if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
         return embed # end here no point
