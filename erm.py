@@ -262,16 +262,6 @@ async def AutoDefer(ctx: commands.Context):
 async def loggingCommandExecution(ctx: commands.Context):
     if ctx in internal_command_storage:
         command_name = ctx.command.qualified_name
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    'https://events.ermbot.xyz/',
-                    json={"EventType": "CommandRun", "CommandName": command_name}
-                ) as response:
-                    if response.status != 200:
-                        logging.error(f"Failed to send event: {response.status}")
-        except Exception as e:
-            logging.error(f"Error during POST request: {e}")
 
         duration = float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx])
         logging.info(f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds")
