@@ -12,7 +12,7 @@ from menus import ReloadView
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog, ResponseFailure
 import utils.prc_api as prc_api
-from utils.utils import get_discord_by_roblox, log_command_usage
+from utils.utils import get_discord_by_roblox, log_command_usage, secure_logging
 from discord import app_commands
 import typing
 
@@ -34,29 +34,7 @@ class ERLC(commands.Cog):
         return commands.check(predicate)
 
     async def secure_logging(self, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str, attempted: bool = False):
-        settings = await self.bot.settings.find_by_id(guild_id)
-        channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
-        try:
-            channel = await (await self.bot.fetch_guild(guild_id)).fetch_channel(channel)
-        except discord.HTTPException:
-            channel = None
-        bloxlink_user = await self.bot.bloxlink.find_roblox(author_id)
-        # # print(bloxlink_user)
-        server_status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
-        if channel is not None:
-            if not attempted:
-                await channel.send(embed=discord.Embed(
-                    title="Remote Server Logs",
-                    description=f"[{(await self.bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                    color=RED_COLOR
-                ).set_footer(text=f"Private Server: {server_status.join_key}"))
-            else:
-                await channel.send(embed=discord.Embed(
-                        title="Attempted Command Execution",
-                        description=f"[{(await self.bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                        color=RED_COLOR
-                    ).set_footer(text=f"Private Server: {server_status.join_key}")
-                )   
+        await secure_logging(self.bot, guild_id, author_id, interpret_type, command_string, attempted)
 
     @commands.hybrid_group(
         name="erlc"

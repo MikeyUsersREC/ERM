@@ -4,28 +4,28 @@ from erm import management_predicate, staff_predicate, management_check, staff_c
 import aiohttp
 from decouple import config
 
-class OnMemberRawRemove(commands.Cog):
+class OnMemberRemove(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener("on_member_raw_remove")
-    async def on_member_raw_remove(self, payload: discord.RawMemberRemoveEvent):
+    @commands.Cog.listener("on_member_remove")
+    async def on_member_remove(self, member: discord.Member):
         try:
             url_var = config("BASE_API_URL")
             if url_var in ["", None]:
                 return
 
             panel_url_var = config("PANEL_API_URL")
-            if url_var in ["", None]:
+            if panel_url_var in ["", None]:
                 return
             
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{payload.user.id}/{payload.guild_id}/0", headers={
+                async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{member.id}/{member.guild.id}/0", headers={
                     "Authorization": config('INTERNAL_API_AUTH')
                 }):
                     pass
 
-                url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{payload.guild_id}/{payload.user.id}/0"
+                url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{member.guild.id}/{member.id}/0"
                 print(f"Sending request to: {url}")
                 
                 async with session.post(url):
@@ -35,4 +35,4 @@ class OnMemberRawRemove(commands.Cog):
             print(f"l35, on_member_remove: {e}")
 
 async def setup(bot):
-    await bot.add_cog(OnMemberRawRemove(bot))
+    await bot.add_cog(OnMemberRemove(bot))

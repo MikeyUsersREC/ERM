@@ -10,7 +10,7 @@ from discord import Embed, InteractionResponse, Webhook
 from discord.ext import commands
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
-from utils.constants import BLANK_COLOR
+from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
 import requests
@@ -631,6 +631,7 @@ async def fetch_get_channel(target, identifier):
         except discord.HTTPException as e:
             channel = None
     return channel
+
 async def update_channel(guild, channel_id, stat, placeholders):
     try:
         format_string = stat["format"]
@@ -652,3 +653,29 @@ async def get_player_avatar_url(player_id):
         async with session.get(url) as response:
             data = await response.json()
             return data['data'][0]['imageUrl']
+
+
+async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str, attempted: bool = False):
+        settings = await bot.settings.find_by_id(guild_id)
+        channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
+        try:
+            channel = await (await bot.fetch_guild(guild_id)).fetch_channel(channel)
+        except discord.HTTPException:
+            channel = None
+        bloxlink_user = await bot.bloxlink.find_roblox(author_id)
+        # # print(bloxlink_user)
+        server_status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
+        if channel is not None:
+            if not attempted:
+                await channel.send(embed=discord.Embed(
+                    title="Remote Server Logs",
+                    description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                    color=RED_COLOR
+                ).set_footer(text=f"Private Server: {server_status.join_key}"))
+            else:
+                await channel.send(embed=discord.Embed(
+                        title="Attempted Command Execution",
+                        description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                        color=RED_COLOR
+                    ).set_footer(text=f"Private Server: {server_status.join_key}")
+                )   

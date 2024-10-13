@@ -13,7 +13,7 @@ import discord
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
-
+from utils.utils import secure_logging
 from pydantic import BaseModel
 
 from utils.timestamp import td_format
@@ -137,7 +137,7 @@ class APIRoutes:
         if not guild.chunked:
             try:
                 await guild.chunk(cache=True)
-            except DiscordHTTPException as e:
+            except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
     
         member_data = []
@@ -146,16 +146,8 @@ class APIRoutes:
             member_info = {
                 "id": member.id,
                 "name": member.name,
-                "discriminator": member.discriminator,
                 "nick": member.nick,
                 "roles": [role.id for role in member.roles[1:]],
-                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
-                "premium_since": member.premium_since.isoformat() if member.premium_since else None,
-                "bot": member.bot,
-                "pending": member.pending,
-                "status": str(member.status),
-                "activity": str(member.activity.type) + ": " + member.activity.name if member.activity else None,
-                "avatar_url": str(member.avatar.url) if member.avatar else None,
                 "voice_state": None
             }
             
@@ -163,14 +155,6 @@ class APIRoutes:
                 member_info["voice_state"] = {
                     "channel_id": voice_state.channel.id if voice_state.channel else None,
                     "channel_name": voice_state.channel.name if voice_state.channel else None,
-                    "self_mute": voice_state.self_mute,
-                    "self_deaf": voice_state.self_deaf,
-                    "self_stream": voice_state.self_stream,
-                    "self_video": voice_state.self_video,
-                    "mute": voice_state.mute,
-                    "deaf": voice_state.deaf,
-                    "afk": voice_state.afk,
-                    "suppress": voice_state.suppress
                 }
             
             member_data.append(member_info)
@@ -181,7 +165,23 @@ class APIRoutes:
         }
     
         return response
-
+    
+    async def POST_send_logging(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        await secure_logging(self.bot, json_data["guild_id"], json_data["author_id"], json_data["interpret_type"], json_data["command_string"], json_data["attempted"])
+        return {
+            "message": "Successfully logged!"
+        }
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
@@ -854,6 +854,7 @@ class APIRoutes:
         await self.bot.shift_management.remove_shift_by_user(
             member, {"guild": guild, "shift": associated_shift}
         )
+
 
 
 

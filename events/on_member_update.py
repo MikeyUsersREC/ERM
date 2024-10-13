@@ -31,7 +31,7 @@ class OnMemberUpdate(commands.Cog):
                         return
 
                     panel_url_var = config("PANEL_API_URL")
-                    if url_var in ["", None]:
+                    if panel_url_var in ["", None]:
                         return
                     
                     async with aiohttp.ClientSession() as session:
