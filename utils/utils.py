@@ -212,11 +212,15 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
         pass
     new_fields = []
     for field in embed.fields:
-        new_field = discord.EmbedField(name=await sub_vars(bot, ctx, channel, field.name), value=await sub_vars(bot, ctx, channel, field.value), inline=field.inline)
-        new_fields.append(new_field)
+        new_fields.append(
+            {
+                "name": await sub_vars(bot, ctx, channel, field.name),
+                "value": await sub_vars(bot, ctx, channel, field.value),
+            }
+        )
     embed.clear_fields()
     for field in new_fields:
-        embed.add_field(field)
+        embed.add_field(name=field["name"], value=field["value"])
 
     if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
         return embed # end here no point
