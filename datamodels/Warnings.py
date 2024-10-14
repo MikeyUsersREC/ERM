@@ -165,84 +165,78 @@ class Warnings(Document):
             return []
 
     async def insert_warning(
-            self,
-            staff_id: int,
-            staff_name: str,
-            user_id: int,
-            user_name: str,
-            guild_id: int,
-            reason: str,
-            moderation_type: str,
-            time_epoch: int,
-            until_epoch: int | None = None,
-    ) -> ObjectId | ValueError:
+        self,
+        staff_id: int,
+        staff_name: str,
+        user_id: int,
+        user_name: str,
+        guild_id: int,
+        reason: str,
+        moderation_type: str,
+        time_epoch: int,
+        until_epoch: int | None = None,
+) -> ObjectId | ValueError:
+    try:
+        if moderation_type == "Temporary Ban" and until_epoch is None:
+            return ValueError("Epoch must be provided for temporary bans.")
+
+        if not all([staff_id, staff_name, user_id, user_name, guild_id, reason, moderation_type]):
+            return ValueError("All arguments must be provided.")
+
+        identifier = ObjectId()
+        snowflake = await self.bot.loop.run_in_executor(None, next, generator)
+
+        warning_data = {
+            "_id": identifier,
+            "Snowflake": snowflake,
+            "Username": user_name,
+            "UserID": user_id,
+            "Type": moderation_type,
+            "Reason": reason,
+            "Moderator": staff_name,
+            "ModeratorID": staff_id,
+            "Guild": guild_id,
+            "Epoch": int(time_epoch),
+            "UntilEpoch": int(until_epoch if until_epoch is not None else 0),
+        }
+
+        await self.db.insert_one(warning_data)
+
+        # Run API requests concurrently
+        tasks = []
+        url_var = config("BASE_API_URL")
+        panel_url_var = config("PANEL_API_URL")
+
+        if url_var:
+            tasks.append(self.make_api_request(
+                f"{url_var}/Internal/SyncCreatePunishment/{identifier}",
+                headers={"Authorization": config('INTERNAL_API_AUTH')}
+            ))
+
+        if panel_url_var:
+            final_url = f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}"
+            print(f"Final Panel URL: {final_url}")
+            tasks.append(self.make_api_request(
+                final_url,
+                method="POST",
+                headers={"X-Static-Token": config('PANEL_STATIC_AUTH')}
+            ))
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        return identifier
+    except Exception as e:
+        print(f"Error in insert_warning: {str(e)}")
+        traceback.print_exc()
+        return ValueError("An error occurred while inserting the warning.")
+
+    async def make_api_request(self, url, method="GET", **kwargs):
         try:
-            if all([until_epoch is None, moderation_type == "Temporary Ban"]):
-                return ValueError("Epoch must be provided for temporary bans.")
-
-            if any(
-                    not i
-                    for i in [
-                        staff_id,
-                        staff_name,
-                        user_id,
-                        user_name,
-                        guild_id,
-                        reason,
-                        moderation_type,
-                    ]
-            ):
-                return ValueError("All arguments must be provided.")
-
-            identifier = ObjectId()
-
-            await self.db.insert_one(
-                {
-                    "_id": identifier,
-                    "Snowflake": next(generator),
-                    "Username": user_name,
-                    "UserID": user_id,
-                    "Type": moderation_type,
-                    "Reason": reason,
-                    "Moderator": staff_name,
-                    "ModeratorID": staff_id,
-                    "Guild": guild_id,
-                    "Epoch": int(time_epoch),
-                    "UntilEpoch": int(until_epoch if until_epoch is not None else 0),
-                }
-            )
-
-            try:
-                url_var = config("BASE_API_URL")
-                panel_url_var = config("PANEL_API_URL")
-                if url_var not in ["", None]:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(
-                                f"{url_var}/Internal/SyncCreatePunishment/{identifier}", headers={
-                                    "Authorization": config('INTERNAL_API_AUTH')
-                                }):
-                            pass
-                if panel_url_var not in ["", None]:
-                    # Print the final URL to the panel API
-                    final_url = f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}"
-                    print(f"Final Panel URL: {final_url}")
-                    
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(
-                                final_url, headers={
-                                    "X-Static-Token": config('PANEL_STATIC_AUTH')
-                                }):
-                            pass
-            
-            except Exception as e:
-                print(f"Error in API requests: {str(e)}")
-                traceback.print_exc()
-            
-            return identifier
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, url, **kwargs) as response:
+                    return await response.text()
         except Exception as e:
-            print(f"Error in insert_warning: {str(e)}")
-            traceback.print_exc()
-            return ValueError("An error occurred while inserting the warning.")
+            print(f"API request failed: {str(e)}")
 
     async def find_warning_by_spec(
             self,
