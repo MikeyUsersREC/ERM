@@ -14,7 +14,7 @@ from reactionmenu.abc import _PageController
 import pytz
 from datamodels.Settings import Settings
 from datamodels.Warnings import WarningItem
-from erm import generator, is_management, is_staff, management_predicate
+from erm import admin_predicate, generator, is_management, is_staff, management_predicate
 from menus import (
     ChannelSelect,
     CustomisePunishmentType,
@@ -317,7 +317,7 @@ class Punishments(commands.Cog):
                     view=None
                 )
             
-            if punishment['ModeratorID'] != ctx.author.id and not await management_predicate(ctx):
+            if punishment['ModeratorID'] != ctx.author.id and not await management_predicate(ctx) and not await admin_predicate(ctx):
                 return await msg.edit(
                     embed=discord.Embed(
                         title="Access Denied",
