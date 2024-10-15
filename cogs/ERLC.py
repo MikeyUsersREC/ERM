@@ -700,32 +700,35 @@ class ERLC(commands.Cog):
             description=""
         )
 
+        guild_members_dict = {}
+        for member in ctx.guild.members:
+            guild_members_dict[member.name.lower()] = member
+            guild_members_dict[member.display_name.lower()] = member
+            if hasattr(member, 'global_name') and member.global_name:
+                guild_members_dict[member.global_name.lower()] = member
+
+        guild_member_keys = set(guild_members_dict.keys())
         all_users = []
 
         for player in players:
-            pattern = re.compile(re.escape(player.username), re.IGNORECASE)
-            member_found = False
+            player_username_lower = player.username.lower()
 
-            for member in ctx.guild.members:
-                if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
-                    member_found = True
-                    break
+            if player_username_lower in guild_member_keys:
+                continue
 
-            if not member_found:
-                try:
-                    discord_id = await get_discord_by_roblox(self.bot, player.username)
-                    if discord_id:
-                        member = ctx.guild.get_member(discord_id)
-                        if member:
-                            member_found = True
-                except discord.HTTPException:
-                    pass
+            try:
+                discord_id = await get_discord_by_roblox(self.bot, player.username)
+                if discord_id:
+                    member = ctx.guild.get_member(discord_id)
+                    if member:
+                        continue
+            except discord.HTTPException:
+                pass
 
-            if not member_found:
-                embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
-                all_users.append(player.username)
+            embed.description += f"> [{player.username}](https://roblox.com/users/{player.id}/profile)\n"
+            all_users.append(player.username)
 
-        if embed.description == "":
+        if not all_users:
             embed.description = "> All players are in the Discord server."
 
         embed.set_author(
