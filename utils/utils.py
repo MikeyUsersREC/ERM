@@ -15,6 +15,10 @@ from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
 import requests
 import json
+import re
+from fuzzywuzzy import fuzz
+from discord.ext.commands import Context
+import logging
 
 class ArgumentMockingInstance:
     def __init__(self, **kwargs):
@@ -206,9 +210,17 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
         )
     except AttributeError:
         pass
-    for i in embed.fields:
-        i.name = await sub_vars(bot, ctx, channel, i.name)
-        i.value = await sub_vars(bot, ctx, channel, i.value)
+    new_fields = []
+    for field in embed.fields:
+        new_fields.append(
+            {
+                "name": await sub_vars(bot, ctx, channel, field.name),
+                "value": await sub_vars(bot, ctx, channel, field.value),
+            }
+        )
+    embed.clear_fields()
+    for field in new_fields:
+        embed.add_field(name=field["name"], value=field["value"])
 
     if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
         return embed # end here no point
@@ -589,6 +601,66 @@ async def config_change_log(bot,guild,member,data):
     embed.set_author(name=member.name, icon_url=member.display_avatar.url)
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
     await log_channel.send(embed=embed)
+
+async def run_pm_command(guild_id, username, message, bot):
+    while True:
+        command = f":pm {username} {message}"
+        command_response = await bot.prc_api.run_command(guild_id, command)
+        if command_response[0] == 200:
+            logging.info(f"Sent PM to {username} in guild {guild_id}")
+            break
+        elif command_response[0] == 429:
+            retry_after = int(command_response[1].get('Retry-After', 5))
+            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
+            break
+
+def is_whitelisted(vehicle_name, whitelisted_vehicle):
+    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
+    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
+    if vehicle_year_match and whitelisted_year_match:
+        vehicle_year = vehicle_year_match.group()
+        whitelisted_year = whitelisted_year_match.group()
+        if vehicle_year != whitelisted_year:
+            return False
+        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
+        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
+        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+    return False
+
+
+async def fetch_get_channel(target, identifier):
+    channel = target.get_channel(identifier)
+    if not channel:
+        try:
+            channel = await target.fetch_channel(identifier)
+        except discord.HTTPException as e:
+            channel = None
+    return channel
+
+async def update_channel(guild, channel_id, stat, placeholders):
+    try:
+        format_string = stat["format"]
+        channel_id = int(channel_id)
+        channel = await fetch_get_channel(guild, channel_id)
+        if channel:
+            for key, value in placeholders.items():
+                format_string = format_string.replace(f"{{{key}}}", str(value))
+            await channel.edit(name=format_string)
+            logging.info(f"Updated channel {channel_id} in guild {guild.id}")
+        else:
+            logging.error(f"Channel {channel_id} not found in guild {guild.id}")
+    except Exception as e:
+        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
+
+async def get_player_avatar_url(player_id):
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return data['data'][0]['imageUrl']
 
 
 async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str, attempted: bool = False):
