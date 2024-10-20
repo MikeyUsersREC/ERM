@@ -330,7 +330,10 @@ class ActivityCoreCommands:
                 )
 
             if len(pages) != 1:
-                paginator = SelectPagination(ctx.author.id, pages=pages)
+                if view.stored_interaction:
+                    paginator = SelectPagination(ctx.author.id, pages=pages, edit_method=view.stored_interaction.edit_original_response)
+                else:
+                    paginator = SelectPagination(ctx.author.id, pages=pages)
                 await respond(
                     embed=embeds[0],
                     custom_view=paginator

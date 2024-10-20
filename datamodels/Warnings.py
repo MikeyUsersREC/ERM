@@ -368,17 +368,19 @@ class Warnings(Document):
                 del map[i]
 
         storage = []
-        async for i in self.db.aggregate([
-            {"$match": map},
-            {"$project": {"_id": {"$ifNull": ["$_id", None]}}}
-        ]):
+        async for i in self.db.find(map):
             storage.append(i)
             await self.db.delete_one({"_id": i["_id"]})
 
 
-        await self.recovery.db.bulk_write([
-            pymongo.operations.UpdateOne({"_id": i["_id"]}, {"$set": i}, upsert=True) for i in storage
-        ])
+        
+        bulk_writes = []
+        for i in storage:
+            l = copy(i)
+            del l["_id"]
+            bulk_writes.append(pymongo.operations.UpdateOne({"_id": i["_id"]}, {"$set": l}, upsert=True))
+
+        await self.recovery.db.bulk_write(bulk_writes)
         # await self.recovery.db.insert_many(storage)
 
     async def remove_warning_by_snowflake(

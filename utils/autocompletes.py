@@ -186,21 +186,25 @@ async def user_autocomplete(
     if current in [None, ""]:
         return await fallback_completion()
 
+
+
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            f'https://www.roblox.com/search/users/results?keyword={current}&maxRows=12&startIndex=0') as resp:
+            f'https://apis.roblox.com/search-api/omni-search?verticalType=user&searchQuery={current}&pageToken=&globalSessionId=8fefd242-5667-42e3-9735-e2044c15b567&sessionId=8fefd242-5667-42e3-9735-e2044c15b567') as resp:
                 data_json = await resp.json()
                 if data_json:
-                    # print(data_json)
-                    if isinstance(data_json.get('UserSearchResults'), list):
-                        items = [item for item in data_json['UserSearchResults'][:25]]
-                    else:
+                    if not data_json.get("searchResults"):
                         items = []
+                    else:
+                        if isinstance(data_json.get('searchResults')[0]["contents"], list):
+                            items = [item for item in data_json['searchResults'][0]["contents"][:25]]
+                        else:
+                            items = []
                 else:
                     items = []
     choices = []
     for item in items:
         choices.append(
-            discord.app_commands.Choice(name=item["Name"], value=item["Name"])
+            discord.app_commands.Choice(name=f"{item['displayName']} (@{item['username']})", value=item["username"])
         )
     return choices
