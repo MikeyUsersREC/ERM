@@ -334,8 +334,6 @@ class OnMessage(commands.Cog):
                             combined += word + " "
 
                 invoked_command = ' '.join(combined.replace('`', '').split(' ')[:-1])
-                args = [i.replace('"', '') for i in command.split(' ')][[i.replace('"', '') for i in command.split(' ')].index(invoked_command.split(' ')[-1]) + 1:]
-
                 _cmd = command
 
                 discord_user = 0
