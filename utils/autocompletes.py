@@ -162,11 +162,15 @@ async def punishment_autocomplete(
             for item in ["Warning", "Kick", "Ban", "BOLO"]
         ]
     else:
+        ndt = []
+        for item in Data["types"]:
+            if item not in ["Warning", "Kick", "Ban", "BOLO"]:
+                ndt.append(item)
         return [
             app_commands.Choice(
                 name=(item_identifier := item if isinstance(item, str) else item['name']),
                 value=item_identifier
-            ) for item in Data['types'] + ["Warning", "Kick", "Ban", "BOLO"]
+            ) for item in ndt + ["Warning", "Kick", "Ban", "BOLO"]
         ]
 
 async def user_autocomplete(
