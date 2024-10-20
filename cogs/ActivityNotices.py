@@ -331,7 +331,7 @@ class ActivityCoreCommands:
 
             if len(pages) != 1:
                 if view.stored_interaction:
-                    paginator = SelectPagination(ctx.author.id, pages=pages, edit_method=view.stored_interaction.edit_original_response)
+                    paginator = SelectPagination(ctx.author.id, pages=pages, edit_method=view.stored_interaction.message.edit)
                 else:
                     paginator = SelectPagination(ctx.author.id, pages=pages)
                 await respond(
