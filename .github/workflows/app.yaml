@@ -41,7 +41,7 @@ jobs:
 
       - name: Install later dependencies
         run: |
-          pip3 install --upgrade reactionmenu jishaku oauth2client gspread_asyncio sentry_sdk[pymongo]
+          pip3 install --upgrade reactionmenu jishaku oauth2client gspread sentry_sdk[pymongo]
 
       - name: Run test suite
         run: |
