@@ -20,7 +20,7 @@ sentry_sdk[pymongo]
 uvicorn~=0.30.6
 fastapi~=0.112.2
 aiohttp-cors
-pymongo~=4.10.1
+pymongo~=4.9.0
 pydantic~=2.8.2
 gspread_asyncio
 fuzzywuzzy
