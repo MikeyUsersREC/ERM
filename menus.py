@@ -3246,9 +3246,7 @@ class GoogleSpreadsheetModification(discord.ui.View):
 
         email = modal.email.value
 
-        client = gspread.Client(
-            lambda: ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes)
-        )
+        client = gspread.service_account_from_dict(self.config)
         sheet = client.open_by_url(self.url)
         client.insert_permission(
             sheet.id, value=email, perm_type="user", role="writer"
@@ -3713,9 +3711,7 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             )
         )
 
-        client = gspread.Client(
-            lambda: ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes)
-        )
+        client = gspread.service_account_from_dict(self.config)
         
         sheet: gspread.Spreadsheet = client.copy(
             self.template, interaction.guild.name, copy_permissions=True
