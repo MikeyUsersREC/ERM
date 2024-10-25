@@ -3723,27 +3723,27 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             pass
 
         if self.type == "lb":
-            cell_list = await new_sheet.range("D13:H999")
+            cell_list = new_sheet.range("D13:H999")
         elif self.type == "ar":
-            cell_list = await new_sheet.range("D13:I999")
+            cell_list = new_sheet.range("D13:I999")
 
         for c, n_v in zip(cell_list, self.data):
             c.value = str(n_v)
 
-        await new_sheet.update_cells(cell_list, "USER_ENTERED")
+        new_sheet.update_cells(cell_list, "USER_ENTERED")
         if self.type == "ar":
-            LoAs = await sheet.get_worksheet(1)
-            await LoAs.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
-            cell_list = await LoAs.range("D13:H999")
+            LoAs = sheet.get_worksheet(1)
+            LoAs.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
+            cell_list = LoAs.range("D13:H999")
 
             for cell, new_value in zip(cell_list, self.additional_data):
                 if isinstance(new_value, int):
                     cell.value = f"=({new_value}/ 86400 + DATE(1970, 1, 1))"
                 else:
                     cell.value = str(new_value)
-            await LoAs.update_cells(cell_list, "USER_ENTERED")
+            LoAs.update_cells(cell_list, "USER_ENTERED")
 
-        await client.insert_permission(
+        client.insert_permission(
             sheet.id, value=None, perm_type="anyone", role="writer"
         )
 
