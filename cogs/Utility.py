@@ -9,8 +9,8 @@ from discord.ext import commands
 from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu
 from utils.constants import BLANK_COLOR
 from utils.timestamp import td_format
-from utils.utils import invis_embed, failure_embed
-
+from utils.utils import invis_embed, failure_embed, require_settings
+from erm import is_staff
 
 class Utility(commands.Cog):
     def __init__(self, bot):
@@ -102,6 +102,8 @@ class Utility(commands.Cog):
                 "category": "Website shit"
             }
     )
+    @is_staff()
+    @require_settings()
     async def ERMSystemsIsVerySwag(self, ctx: commands.Context):
         await ctx.send(
             embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel panel using the button below.")
