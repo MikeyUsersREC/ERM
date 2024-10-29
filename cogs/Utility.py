@@ -104,7 +104,7 @@ class Utility(commands.Cog):
     )
     async def ERMSystemsIsVerySwag(self, ctx: commands.Context):
         await ctx.send(
-            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel panel using the button below.")
+            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's moderation panel using the button below.")
             .set_author(
                 name=ctx.guild.name, icon_url=ctx.guild.icon
             ),
