@@ -13,7 +13,6 @@ except ImportError:
 import aiohttp
 import decouple
 import discord.mentions
-import dns.resolver
 import motor.motor_asyncio
 import asyncio
 import pytz
@@ -56,8 +55,7 @@ from utils.utils import *
 from utils.constants import *
 import utils.prc_api
 
-dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
-dns.resolver.default_resolver.nameservers = ["8.8.8.8"]
+
 setup = False
 
 try:
@@ -116,7 +114,7 @@ class Bot(commands.AutoShardedBot):
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                self.db = self.mongo["beta"]
+                self.db = self.mongo["erm"]
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
@@ -264,16 +262,6 @@ async def AutoDefer(ctx: commands.Context):
 async def loggingCommandExecution(ctx: commands.Context):
     if ctx in internal_command_storage:
         command_name = ctx.command.qualified_name
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    'https://events.ermbot.xyz/',
-                    json={"EventType": "CommandRun", "CommandName": command_name}
-                ) as response:
-                    if response.status != 200:
-                        logging.error(f"Failed to send event: {response.status}")
-        except Exception as e:
-            logging.error(f"Error during POST request: {e}")
 
         duration = float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx])
         logging.info(f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds")
@@ -476,7 +464,7 @@ except decouple.UndefinedValueError:
 async def change_status():
     await bot.wait_until_ready()
     logging.info("Changing status")
-    status = "⚡️ /about | ermbot.xyz"
+    status = "🎃 /about | ermbot.xyz"
     await bot.change_presence(
         activity=discord.CustomActivity(name=status)
     )
@@ -1277,7 +1265,7 @@ def run():
     try:
         bot.run(bot_token)
     except Exception as e:
-        with push_scope() as scope:
+        with sentry_sdk.isolation_scope() as scope:
             scope.level = "error"
             capture_exception(e)
 

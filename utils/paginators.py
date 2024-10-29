@@ -20,7 +20,7 @@ class CustomPage:
 
 
 class SelectPagination(discord.ui.View):
-    def __init__(self, user_id: int, pages: list[CustomPage], start_at=0):
+    def __init__(self, user_id: int, pages: list[CustomPage], start_at=0, edit_method=None):
         super().__init__(timeout=None)
         self.pages = pages
         self.user_id = user_id
@@ -28,6 +28,7 @@ class SelectPagination(discord.ui.View):
         self.view = self
         self.preset_children = copy(self.children)
         self.page_children = []
+        self.edit_method = edit_method
 
         starting_page = self.pages[self.current_index]
         if starting_page.identifier:
@@ -126,10 +127,16 @@ class SelectPagination(discord.ui.View):
                 view.add_item(item)
                 self.page_children.append(item)
 
-        await interaction.message.edit(
-            embeds=new_page.embeds,
-            view=view
-        )
+        if self.edit_method:
+            await self.edit_method(
+                embeds=new_page.embeds,
+                view=view
+            )
+        else:
+            await interaction.message.edit(
+                embeds=new_page.embeds,
+                view=view
+            )
 
     @discord.ui.button(
         emoji="<:l_arrow:1169754353326903407>",

@@ -271,13 +271,14 @@ class ActivityCoreCommands:
                     if custom_view:
                         await view.stored_interaction.followup.send(
                             embed=embed,
-                            view=custom_view,
-                            ephemeral=True
+                            view=custom_view
+                            # cant do ephemeral followup here.
+                            # since you cant edit an ephemeral followup of an interaction, since its both a followup (so edit_original_response doesnt work) 
+                            # and ephemeral (message.edit doesnt work)
                         )
                     else:
                         await view.stored_interaction.followup.send(
-                            embed=embed,
-                            ephemeral=True
+                            embed=embed
                         )
                 else:
                     await msg.edit(
@@ -410,7 +411,6 @@ class ActivityCoreCommands:
                 if view.stored_interaction is not None:
                     await view.stored_interaction.followup.send(
                         embed=embed,
-                        ephemeral=True
                     )
                 else:
                     await msg.edit(

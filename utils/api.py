@@ -10,16 +10,18 @@ from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
-from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check
+from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
-
+from utils.utils import secure_logging
 from pydantic import BaseModel
 
 from utils.timestamp import td_format
 # from helpers import MockContext
 from utils.utils import tokenGenerator
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Identification(BaseModel):
     license: typing.Optional[typing.Any]
@@ -88,20 +90,125 @@ class APIRoutes:
 
         return {"guilds": guilds}
 
+    async def GET_shard_pings(self, authorization: Annotated[str | None, Header()]):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        shard_pings = {}
+        for shard_id, shard in self.bot.shards.items():
+            shard_pings[shard_id] = round(shard.latency * 1000, 2)
+
+        return {"shard_pings": shard_pings}
+
+    async def GET_guild_shard(self, authorization: Annotated[str | None, Header()], guild_id: int):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        try:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            shard_id = guild.shard_id
+            return {"guild_id": guild_id, "shard_id": shard_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+    async def POST_all_members(
+        self,
+        authorization: Annotated[str | None, Header()],
+        guild_id: int
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+    
+        if not guild.chunked:
+            try:
+                await guild.chunk(cache=True)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
+    
+        member_data = []
+        for member in guild.members:
+            voice_state = member.voice
+            member_info = {
+                "id": member.id,
+                "name": member.name,
+                "nick": member.nick,
+                "roles": [role.id for role in member.roles[1:]],
+                "voice_state": None
+            }
+            
+            if voice_state:
+                member_info["voice_state"] = {
+                    "channel_id": voice_state.channel.id if voice_state.channel else None,
+                    "channel_name": voice_state.channel.name if voice_state.channel else None,
+                }
+            
+            member_data.append(member_info)
+    
+        response = {
+            "members": member_data,
+            "total_members": len(member_data)
+        }
+    
+        return response
+    
+    async def POST_send_logging(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        await secure_logging(self.bot, json_data["guild_id"], json_data["author_id"], json_data["interpret_type"], json_data["command_string"], json_data["attempted"])
+        return {
+            "message": "Successfully logged!"
+        }
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
         guild_ids = json_data.get("guilds")
         user_id = json_data.get("user")
         if not guild_ids:
-            return HTTPException(status_code=400, detail="No guilds specified")
+            raise HTTPException(status_code=400, detail="No guilds specified")
+    
+        semaphore = asyncio.Semaphore(5)
 
-        guilds = []
-        for i in guild_ids:
-            guild: discord.Guild = self.bot.get_guild(int(i))
-            if not guild:
-                continue
-            if guild.get_member(self.bot.user.id):
+        async def get_or_fetch(guild: discord.Guild, member_id: int):
+            m = guild.get_member(member_id)
+            if m:
+                return m
+            try:
+                m = await guild.fetch_member(member_id)
+            except:
+                m = None
+            return m
+    
+        async def process_guild(guild_id):
+            async with semaphore:
+                guild: discord.Guild = self.bot.get_guild(int(guild_id))
+                if not guild:
+                    return None
                 try:
                     icon = guild.icon.with_size(512)
                     icon = icon.with_format("png")
@@ -111,26 +218,34 @@ class APIRoutes:
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 try:
-                    user = await guild.fetch_member(user_id)
-                except discord.NotFound:
-                    continue
+                    user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
+                except (discord.NotFound, asyncio.TimeoutError):
+                    return None
 
+                if user is None:
+                    return None
+    
                 permission_level = 0
                 if await management_check(self.bot, guild, user):
                     permission_level = 2
+                elif await admin_check(self.bot, guild, user):
+                    permission_level = 3
                 elif await staff_check(self.bot, guild, user):
                     permission_level = 1
                 if permission_level > 0:
-                    guilds.append(
-                        {
-                            "id": str(guild.id),
-                            "name": str(guild.name),
-                            "icon_url": icon,
-                            "member_count": str(guild.member_count),
-                            "permission_level": permission_level,
-                        }
-                    )
-
+                    return {
+                        "id": str(guild.id),
+                        "name": str(guild.name),
+                        "member_count": str(guild.member_count),
+                        "icon_url": icon,
+                        "permission_level": permission_level,
+                    }
+                return None
+    
+        guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
+    
+        guilds = list(filter(lambda x: x is not None, guild_results))
+    
         return guilds
 
     async def POST_check_staff_level(self, request: Request):
@@ -153,6 +268,8 @@ class APIRoutes:
         permission_level = 0
         if await management_check(self.bot, guild, user):
             permission_level = 2
+        elif await admin_check(self.bot, guild, user):
+            permission_level = 3
         elif await staff_check(self.bot, guild, user):
             permission_level = 1
 
@@ -742,33 +859,59 @@ class APIRoutes:
 
 
 
+
 api = FastAPI()
 
 
 class ServerAPI(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.server = None
+        self.server_task = None
 
     async def start_server(self):
-        api.include_router(APIRoutes(self.bot).router)
-        self.config = uvicorn.Config("utils.api:api", port=5000, log_level="debug", host="0.0.0.0")
-        self.server = uvicorn.Server(self.config)
-        await self.server.serve()
+        try:
+            api.include_router(APIRoutes(self.bot).router)
+            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
+            self.server = uvicorn.Server(self.config)
+            await self.server.serve()
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+            await asyncio.sleep(5)
+            self.server_task = asyncio.create_task(self.start_server())
 
     async def stop_server(self):
-        await self.server.shutdown()
-
-    def _run_and_discard(self, coro):
-        asyncio.ensure_future(coro, loop=self.bot.loop)
-
+        try:
+            if self.server:
+                await self.server.shutdown()
+            else:
+                logger.info("Server was not running")
+        except Exception as e:
+            logger.error(f"Error stopping server: {e}")
 
     async def cog_load(self) -> None:
-        # asyncio.run_coroutine_threadsafe(self.start_server(), self.bot.loop)
-        self._run_and_discard(self.start_server())
+        self.server_task = asyncio.create_task(self.start_server())
+        self.server_task.add_done_callback(self.server_error_handler)
+
+    def server_error_handler(self, future: asyncio.Future):
+        try:
+            future.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Unhandled server error: {e}")
+            self.server_task = asyncio.create_task(self.start_server())
 
     async def cog_unload(self) -> None:
-        await self.stop_server()
-
+        try:
+            if self.server_task:
+                self.server_task.cancel()
+            await self.stop_server()
+        except Exception as e:
+            logger.error(f"Error during cog unload: {e}")
 
 async def setup(bot):
-    await bot.add_cog(ServerAPI(bot))
+    try:
+        await bot.add_cog(ServerAPI(bot))
+    except Exception as e:
+        logger.error(f"Error setting up ServerAPI cog: {e}")
