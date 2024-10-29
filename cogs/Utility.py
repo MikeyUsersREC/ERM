@@ -95,10 +95,10 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(
-            name="modpanel",
-            aliases=['bugsy'],
-            description="Get the link to this server's mod panel.",
-            extras={
+      name="modpanel",
+      aliases=['bugsy'],
+      description="Get the link to this server's mod panel.",
+      extras={
                 "category": "Website shit"
             }
     )
@@ -167,3 +167,4 @@ class Utility(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
+
