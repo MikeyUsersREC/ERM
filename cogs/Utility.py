@@ -95,6 +95,24 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(
+            name="modpanel",
+            aliases=['bugsy'],
+            description="Get the link to this server's mod panel.",
+            extras={
+                "category": "Website shit"
+            }
+    )
+    async def ERMSystemsIsVerySwag(self, ctx: commands.Context):
+        await ctx.send(
+            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel panel using the button below.")
+            .set_author(
+                name=ctx.guild.name, icon_url=ctx.guild.icon
+            ),
+            view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/panel")
+        )
+
+
+    @commands.hybrid_command(
         name="support",
         aliases=["support-server"],
         description="Information about the ERM Support Server",
