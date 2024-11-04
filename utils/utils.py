@@ -105,7 +105,7 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
 
 def time_converter(parameter: str) -> int:
     conversions = {
-        ("s", "minutes", "seconds", " seconds"): 1,
+        ("s", "seconds", " seconds"): 1,
         ("m", "minute", "minutes", " minutes"): 60,
         ("h", "hour", "hours", " hours"): 60 * 60,
         ("d", "day", "days", " days"): 24 * 60 * 60,

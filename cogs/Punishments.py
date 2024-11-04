@@ -262,9 +262,10 @@ class Punishments(commands.Cog):
         name="punishment",
         description="Punishment commands",
         extras={"category": "Punishments"},
+        aliases=["pm"]
     )
-    async def punishments(self, ctx):
-        pass
+    async def punishments(self, ctx: commands.Context):
+        await ctx.invoke(self.bot.get_command("punishment manage"))
 
     # Punishment Manage command, containing `types`, `void` and `modify`
     @commands.guild_only()
@@ -272,7 +273,6 @@ class Punishments(commands.Cog):
         name="manage",
         description="Manage punishments",
         extras={"category": "Punishments"},
-        aliases=["m"],
     )
     @require_settings()
     # @is_management()

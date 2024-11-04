@@ -283,7 +283,7 @@ class OnMessage(commands.Cog):
                     break
                                 
                 raw_content = embed.description
-                user, command = raw_content.split('used the command ')
+                user, command = raw_content.split('used the command: ')
 
                 profile_link = user.split('(')[1].split(')')[0]
                 user = user.split('(')[0].replace('[', '').replace(']', '')
@@ -343,8 +343,6 @@ class OnMessage(commands.Cog):
                             combined += word + " "
 
                 invoked_command = ' '.join(combined.replace('`', '').split(' ')[:-1])
-                args = [i.replace('"', '') for i in command.split(' ')][[i.replace('"', '') for i in command.split(' ')].index(invoked_command.split(' ')[-1]) + 1:]
-
                 _cmd = command
 
                 discord_user = 0

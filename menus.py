@@ -14,7 +14,7 @@ from utils.constants import blank_color, BLANK_COLOR, GREEN_COLOR, ORANGE_COLOR,
 from utils.timestamp import td_format
 from utils.utils import int_invis_embed, int_failure_embed, int_pending_embed, time_converter, get_elapsed_time, \
     generalised_interaction_check_failure, generator, ArgumentMockingInstance, config_change_log
-import gspread_asyncio
+import gspread
 import random
 
 REQUIREMENTS = ["gspread", "oauth2client"]
@@ -3991,19 +3991,13 @@ class GoogleSpreadsheetModification(discord.ui.View):
 
         email = modal.email.value
 
-        authorization_client = gspread_asyncio.AsyncioGspreadClientManager(
-            lambda: ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes)
-        )
-        client = await authorization_client.authorize()
-
-        sheet = await client.open_by_url(self.url)
-        await client.insert_permission(
+        client = gspread.service_account_from_dict(self.config)
+        sheet = client.open_by_url(self.url)
+        client.insert_permission(
             sheet.id, value=email, perm_type="user", role="writer"
         )
-
-        permission_id = (await sheet.list_permissions())[0]["id"]
-
-        await sheet.transfer_ownership(permission_id)
+        permission_id = (sheet.list_permissions())[0]["id"]
+        sheet.transfer_ownership(permission_id)
 
         self.remove_item(button)
 
@@ -4419,12 +4413,10 @@ class RequestGoogleSpreadsheet(discord.ui.View):
             additional_data=None,
             label="Google Spreadsheet",
     ):
-        # # # print(t(t(t(t(type)
         if type:
             self.type = type
         else:
             self.type = "lb"
-        # # # print(t(t(t(t(additional_data)
         if additional_data:
             self.additional_data = additional_data
         else:
@@ -4463,42 +4455,40 @@ class RequestGoogleSpreadsheet(discord.ui.View):
                 color=BLANK_COLOR
             )
         )
-        authorization_client = gspread_asyncio.AsyncioGspreadClientManager(
-            lambda: ServiceAccountCredentials.from_json_keyfile_dict(self.config, self.scopes)
-        )
-        client = await authorization_client.authorize()
 
-        sheet: gspread_asyncio.AsyncioGspreadSpreadsheet = await client.copy(
+        client = gspread.service_account_from_dict(self.config)
+        
+        sheet: gspread.Spreadsheet = client.copy(
             self.template, interaction.guild.name, copy_permissions=True
         )
-        new_sheet = await sheet.get_worksheet(0)
+        new_sheet = sheet.get_worksheet(0)
         try:
-            await new_sheet.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
+            new_sheet.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
         except AttributeError:
             pass
 
         if self.type == "lb":
-            cell_list = await new_sheet.range("D13:H999")
+            cell_list = new_sheet.range("D13:H999")
         elif self.type == "ar":
-            cell_list = await new_sheet.range("D13:I999")
+            cell_list = new_sheet.range("D13:I999")
 
         for c, n_v in zip(cell_list, self.data):
             c.value = str(n_v)
 
-        await new_sheet.update_cells(cell_list, "USER_ENTERED")
+        new_sheet.update_cells(cell_list, "USER_ENTERED")
         if self.type == "ar":
-            LoAs = await sheet.get_worksheet(1)
-            await LoAs.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
-            cell_list = await LoAs.range("D13:H999")
+            LoAs = sheet.get_worksheet(1)
+            LoAs.update_cell(4, 2, f'=IMAGE("{interaction.guild.icon.url}")')
+            cell_list = LoAs.range("D13:H999")
 
             for cell, new_value in zip(cell_list, self.additional_data):
                 if isinstance(new_value, int):
                     cell.value = f"=({new_value}/ 86400 + DATE(1970, 1, 1))"
                 else:
                     cell.value = str(new_value)
-            await LoAs.update_cells(cell_list, "USER_ENTERED")
+            LoAs.update_cells(cell_list, "USER_ENTERED")
 
-        await client.insert_permission(
+        client.insert_permission(
             sheet.id, value=None, perm_type="anyone", role="writer"
         )
 
