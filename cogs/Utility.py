@@ -95,24 +95,49 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(
-            name="modpanel",
-            aliases=['bugsy'],
-            description="Get the link to this server's mod panel.",
-            extras={
-                "category": "Website"
-            }
+        name="modpanel",
+        aliases=['panel'],
+        description="Get the link to this server's mod panel.",
+        extras={
+            "category": "Website"
+        }
     )
     @is_staff()
     @require_settings()
-    async def MoDPaNeL(self, ctx: commands.Context):
+    async def mod_panel(self, ctx: commands.Context):
+        guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
+        
         await ctx.send(
-            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel panel using the button below.")
+            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel using the button below.")
             .set_author(
-                name=ctx.guild.name, icon_url=ctx.guild.icon
+                name=ctx.guild.name, icon_url=guild_icon
             ),
             view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/panel")
         )
 
+    # todo - make the dashboard link be valid
+
+    # @commands.hybrid_command(
+    #     name="dashboard",
+    #     aliases=['dash', 'applications'],
+    #     description="Get the link to manage your server through the dashboard.",
+    #     extras={
+    #         "category": "Website"
+    #     }
+    # )
+    # @is_staff()
+    # @require_settings()
+    # async def mod_panel(self, ctx: commands.Context):
+    #     guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
+        
+    #     await ctx.send(
+    #         embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel using the button below.")
+    #         .set_author(
+    #             name=ctx.guild.name, icon_url=guild_icon
+    #         ),
+    #         view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/dashboard")
+    #     )
+        
 
     @commands.hybrid_command(
         name="support",
