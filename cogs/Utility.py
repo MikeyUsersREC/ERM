@@ -10,7 +10,7 @@ from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu
 from utils.constants import BLANK_COLOR
 from utils.timestamp import td_format
 from utils.utils import invis_embed, failure_embed, require_settings
-from erm import is_staff
+from erm import is_staff, is_management
 
 class Utility(commands.Cog):
     def __init__(self, bot):
@@ -115,28 +115,25 @@ class Utility(commands.Cog):
             view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/panel")
         )
 
-    # todo - make the dashboard link be valid
-
-    # @commands.hybrid_command(
-    #     name="dashboard",
-    #     aliases=['dash', 'applications'],
-    #     description="Get the link to manage your server through the dashboard.",
-    #     extras={
-    #         "category": "Website"
-    #     }
-    # )
-    # @is_staff()
-    # @require_settings()
-    # async def mod_panel(self, ctx: commands.Context):
-    #     guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
+    @commands.hybrid_command(
+        name="dashboard",
+        aliases=['dash', 'applications'],
+        description="Get the link to manage your server through the dashboard.",
+        extras={
+            "category": "Website"
+        }
+    )
+    @is_management()
+    async def dashboard(self, ctx: commands.Context):
+        guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
         
-    #     await ctx.send(
-    #         embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel using the button below.")
-    #         .set_author(
-    #             name=ctx.guild.name, icon_url=guild_icon
-    #         ),
-    #         view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/dashboard")
-    #     )
+        await ctx.send(
+            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Dashboard using the button below.")
+            .set_author(
+                name=ctx.guild.name, icon_url=guild_icon
+            ),
+            view=LinkView(label="Dashboard", url=f"https://ermbot.xyz/{ctx.guild.id}/dashboard")
+        )
         
 
     @commands.hybrid_command(
