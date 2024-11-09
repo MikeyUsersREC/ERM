@@ -221,52 +221,60 @@ class ERLC(commands.Cog):
     @is_staff()
     @is_server_linked()
     async def server_info(self, ctx: commands.Context):
-        guild_id = int(ctx.guild.id)
-        status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
-        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id) 
-        queue: int = await self.bot.prc_api.get_server_queue(guild_id, minimal=True) # this only returns the count
-        client = roblox.Client()
+        guild_id = ctx.guild.id
+        async def operate_and_reload_serverinfo(msg: discord.Message | None, guild_id: str):
+            guild_id = int(guild_id) 
+            status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
+            players: list[Player] = await self.bot.prc_api.get_server_players(guild_id) 
+            queue: int = await self.bot.prc_api.get_server_queue(guild_id, minimal=True) # this only returns the count
+            client = roblox.Client()
 
-        embeds = []
-        embed1 = discord.Embed(
-            title=f"{status.name}",
-            color=BLANK_COLOR
-        )
-        embed1.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        )
-        embed1.add_field(
-            name="Basic Info",
-            value=(
-                f"> **Join Code:** [{status.join_key}](https://policeroleplay.community/join/{status.join_key})\n"
-                f"> **Current Players:** {status.current_players}/{status.max_players}\n"
-                f"> **Queue:** {queue}\n"
-            ),
-            inline=False
-        )
-        embed1.add_field(
-            name="Server Ownership",
-            value=(
-                f"> **Owner:** [{(await client.get_user(status.owner_id)).name}](https://roblox.com/users/{status.owner_id}/profile)\n"
-                f"> **Co-Owners:** {f', '.join([f'[{user.name}](https://roblox.com/users/{user.id}/profile)' for user in await client.get_users(status.co_owner_ids, expand=False)])}"
-            ),
-            inline=False
-        )
+            embed1 = discord.Embed(
+                title=f"{status.name}",
+                color=BLANK_COLOR
+            )
+            embed1.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
+            embed1.add_field(
+                name="Basic Info",
+                value=(
+                    f"> **Join Code:** [{status.join_key}](https://policeroleplay.community/join/{status.join_key})\n"
+                    f"> **Current Players:** {status.current_players}/{status.max_players}\n"
+                    f"> **Queue:** {queue}\n"
+                ),
+                inline=False
+            )
+            embed1.add_field(
+                name="Server Ownership",
+                value=(
+                    f"> **Owner:** [{(await client.get_user(status.owner_id)).name}](https://roblox.com/users/{status.owner_id}/profile)\n"
+                    f"> **Co-Owners:** {f', '.join([f'[{user.name}](https://roblox.com/users/{user.id}/profile)' for user in await client.get_users(status.co_owner_ids, expand=False)])}"
+                ),
+                inline=False
+            )
 
-        embed1.add_field(
-            name="Staff Statistics",
-            value=(
-                f"> **Moderators:** {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}\n"
-                f"> **Administrators:** {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}\n"
-                f"> **Staff In-Game:** {len(list(filter(lambda x: x.permission != 'Normal', players)))}\n"
-                f"> **Staff Clocked In:** {await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}"
-            ),
-            inline=False
-        )
+            embed1.add_field(
+                name="Staff Statistics",
+                value=(
+                    f"> **Moderators:** {len(list(filter(lambda x: x.permission == 'Server Moderator', players)))}\n"
+                    f"> **Administrators:** {len(list(filter(lambda x: x.permission == 'Server Administrator', players)))}\n"
+                    f"> **Staff In-Game:** {len(list(filter(lambda x: x.permission != 'Normal', players)))}\n"
+                    f"> **Staff Clocked In:** {await self.bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})}"
+                ),
+                inline=False
+            )
 
-        await ctx.send(embed=embed1)
+            if msg is None:
+                view = ReloadView(ctx.author.id, operate_and_reload_serverinfo, [None, guild_id])
+                msg = await ctx.send(embed=embed1, view=view)
+                view.message = msg
+                view.callback_args[0] = msg
+            else:
+                await msg.edit(embed=embed1)
 
+        await operate_and_reload_serverinfo(None, guild_id)
 
     @server.command(
         name="staff",
