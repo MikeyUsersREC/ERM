@@ -13,6 +13,7 @@ import discord
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
+from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import secure_logging
 from pydantic import BaseModel
 
@@ -120,6 +121,190 @@ class APIRoutes:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
+    async def POST_approve_application(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        user_id = json_data.get("user")
+        role_ids = json_data.get("roles", []) 
+        guild_id = json_data.get("guild")
+        remove_roles = json_data.get("remove_roles", False)
+        submitted_on = json_data.get("submitted", 1)
+        note = json_data.get("note", "Not provided.")
+        application_name = json_data.get("application_name")
+
+        guild_id = int(guild_id)
+        user_id = int(user_id)
+
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return HTTPException(status_code=400, detail="Invalid Guild ID")
+        try:
+            user = await guild.fetch_member(user_id)
+        except:
+            return HTTPException(status_code=400, detail="Invalid Guild ID")
+
+        embed = discord.Embed(
+            title="<:success:1163149118366040106> Application Accepted",
+            description=f"Your application in **{guild.name}** has been accepted. Congratulations!\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+            color=GREEN_COLOR
+        )
+
+        try:
+            await user.send(embed=embed)
+        except:
+            pass
+
+        fetched_roles = await guild.fetch_roles()
+
+        new_roles = []
+        for item in role_ids:
+            new_roles.append(discord.utils.get(fetched_roles, id=int(item)))
+        
+        new_roles = list(filter(lambda x: x is not None, new_roles))
+        func = user.add_roles if not remove_roles else user.remove_roles
+        
+        try:
+            await func(new_roles)
+        except:
+            pass
+
+        return 200
+
+
+    async def POST_deny_application(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        user_id = json_data.get("user")
+        role_ids = json_data.get("roles", []) 
+        guild_id = json_data.get("guild")
+        remove_roles = json_data.get("remove_roles", False)
+        submitted_on = json_data.get("submitted", 1)
+        note = json_data.get("note", "Not provided.")
+        application_name = json_data.get("application_name")
+
+        guild_id = int(guild_id)
+        user_id = int(user_id)
+
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return HTTPException(status_code=400, detail="Invalid Guild ID")
+        try:
+            user = await guild.fetch_member(user_id)
+        except:
+            return HTTPException(status_code=400, detail="Invalid Guild ID")
+
+        embed = discord.Embed(
+            title="Application Denied",
+            description=f"Your application in **{guild.name}** has been denied.\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+            color=BLANK_COLOR
+        )
+
+        try:
+            await user.send(embed=embed)
+        except:
+            pass
+
+        fetched_roles = await guild.fetch_roles()
+
+        new_roles = []
+        for item in role_ids:
+            new_roles.append(discord.utils.get(fetched_roles, id=int(item)))
+        
+        new_roles = list(filter(lambda x: x is not None, new_roles))
+        func = user.add_roles if not remove_roles else user.remove_roles
+        
+        try:
+            await func(new_roles)
+        except:
+            pass
+
+        return 200
+
+    async def POST_accept_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa") # dict { loa spec }
+        roles = json_data.get("roles") # list[int]
+
+        self.bot.dispatch("loa_accept", s_loa=s_loa, role_ids=roles)
+
+        return 200
+    
+    async def POST_deny_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa") # dict { loa spec }
+        self.bot.dispatch("loa_deny", s_loa=s_loa)
+
+        return 200
+
+
+    async def POST_send_application_wave(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        if not json_data.get("Channel"):
+            return HTTPException(status_code=400, detail="Bad Format")
+        channel = await self.bot.fetch_channel(json_data["Channel"])
+        embed = discord.Embed(
+            title="Application Results Released",
+            description=f"The applications for **{json_data['ApplicationName']}** have been released!\n\n",
+            color=BLANK_COLOR
+        )
+        embed_temp = discord.Embed(
+            color=BLANK_COLOR
+        )
+        embeds = [embed]
+        for item in json_data["Applicants"]:
+            if (embeds[-1].description) + len(item["Reason"]) + 100 > 4000:
+                embeds.append(embed_temp)
+            embeds[-1].description += f"<@{item['DiscordID']}>\n> Status: **{item['Status']}**\n> Reason: **{item['Reason']}**\n> Submission Time: <t:{int(item['SubmissionTime'])}>\n\n"
+
+        await channel.send(embeds=embeds)
 
     async def POST_all_members(
         self,

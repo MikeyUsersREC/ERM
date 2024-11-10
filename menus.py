@@ -950,13 +950,16 @@ class LOAMenu(discord.ui.View):
 
         settings = await self.bot.settings.find_by_id(interaction.guild.id)
         mentionable = ""
-        await user.send(
-            embed=discord.Embed(
-                title="<:success:1163149118366040106> Activity Notice Accepted",
-                description=f"Your {s_loa['type']} request in **{interaction.guild.name}** was accepted!",
-                color=GREEN_COLOR
+        try:
+            await user.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Activity Notice Accepted",
+                    description=f"Your {s_loa['type']} request in **{interaction.guild.name}** was accepted!",
+                    color=GREEN_COLOR
+                )
             )
-        )
+        except:
+            pass
 
         try:
             await self.bot.loas.update_by_id(s_loa)
@@ -1075,13 +1078,16 @@ class LOAMenu(discord.ui.View):
                 ephemeral=True,
             )
 
-        await user.send(
-            embed=discord.Embed(
-                title="Activity Notice Denied",
-                description=f"Your {s_loa['type']} request in **{interaction.guild.name}** was denied.\n**Reason:** {reason}",
-                color=BLANK_COLOR
+        try:
+            await user.send(
+                embed=discord.Embed(
+                    title="Activity Notice Denied",
+                    description=f"Your {s_loa['type']} request in **{interaction.guild.name}** was denied.\n**Reason:** {reason}",
+                    color=BLANK_COLOR
+                )
             )
-        )
+        except:
+            pass
         await self.bot.loas.update_by_id(s_loa)
 
         embed = interaction.message.embeds[0]
