@@ -218,52 +218,79 @@ class APIRoutes:
         if not await validate_authorization(self.bot, authorization):
             raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
-        json_data = await request.json()
-        user_id = json_data.get("user")
-        role_ids = json_data.get("roles", []) 
-        guild_id = json_data.get("guild")
-        remove_roles = json_data.get("remove_roles", False)
-        submitted_on = json_data.get("submitted", 1)
-        note = json_data.get("note", "Not provided.")
-        application_name = json_data.get("application_name")
-
-        guild_id = int(guild_id)
-        user_id = int(user_id)
-
-        guild = self.bot.get_guild(guild_id)
-        if not guild:
-            return HTTPException(status_code=400, detail="Invalid Guild ID")
         try:
-            user = await guild.fetch_member(user_id)
-        except:
-            return HTTPException(status_code=400, detail="Invalid Guild ID")
+            json_data = await request.json()
+            user_id = int(json_data["user"])
+            add_role_ids = json_data.get("roles", [])
+            remove_role_ids = json_data.get("remove_roles", [])
+            guild_id = int(json_data["guild"])
+            submitted_on = json_data.get("submitted", 1)
+            note = json_data.get("note", "Not provided.")
+            application_name = json_data.get("application_name")
 
-        embed = discord.Embed(
-            title="Application Denied",
-            description=f"Your application in **{guild.name}** has been denied.\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
-            color=BLANK_COLOR
-        )
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=400, detail="Invalid Guild ID")
 
-        try:
-            await user.send(embed=embed)
-        except:
-            pass
+            try:
+                user = await guild.fetch_member(user_id)
+            except discord.NotFound:
+                raise HTTPException(status_code=400, detail="User not found in guild")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
 
-        fetched_roles = await guild.fetch_roles()
+            embed = discord.Embed(
+                title="Application Denied",
+                description=f"Your application in **{guild.name}** has been denied.\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+                color=BLANK_COLOR
+            )
+            
+            try:
+                await user.send(embed=embed)
+            except discord.Forbidden:
+                print(f"Could not send DM to user {user_id}")
+            
+            # Fetch and validate roles
+            fetched_roles = await guild.fetch_roles()
+            roles_to_add = []
+            roles_to_remove = []
+            
+            # Process roles to add
+            for role_id in add_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_add.append(role)
+            
+            # Process roles to remove
+            for role_id in remove_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_remove.append(role)
 
-        new_roles = []
-        for item in role_ids:
-            new_roles.append(discord.utils.get(fetched_roles, id=int(item)))
-        
-        new_roles = list(filter(lambda x: x is not None, new_roles))
-        func = user.add_roles if not remove_roles else user.remove_roles
-        
-        try:
-            await func(new_roles)
-        except:
-            pass
+            # Add roles
+            if roles_to_add:
+                try:
+                    await user.add_roles(*roles_to_add, reason="Application denied - roles added")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
 
-        return 200
+            # Remove roles
+            if roles_to_remove:
+                try:
+                    await user.remove_roles(*roles_to_remove, reason="Application denied - roles removed")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+
+            return 200
+                
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def POST_accept_loa(
         self,
