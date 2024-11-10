@@ -132,52 +132,80 @@ class APIRoutes:
         if not await validate_authorization(self.bot, authorization):
             raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
-        json_data = await request.json()
-        user_id = json_data.get("user")
-        role_ids = json_data.get("roles", []) 
-        guild_id = json_data.get("guild")
-        remove_roles = json_data.get("remove_roles", False)
-        submitted_on = json_data.get("submitted", 1)
-        note = json_data.get("note", "Not provided.")
-        application_name = json_data.get("application_name")
-
-        guild_id = int(guild_id)
-        user_id = int(user_id)
-
-        guild = self.bot.get_guild(guild_id)
-        if not guild:
-            return HTTPException(status_code=400, detail="Invalid Guild ID")
         try:
-            user = await guild.fetch_member(user_id)
-        except:
-            return HTTPException(status_code=400, detail="Invalid Guild ID")
+            json_data = await request.json()
+            user_id = int(json_data["user"])
+            role_ids = json_data.get("roles", [])
+            guild_id = int(json_data["guild"])
+            remove_roles = json_data.get("remove_roles", False)
+            submitted_on = json_data.get("submitted", 1)
+            note = json_data.get("note", "Not provided.")
+            application_name = json_data.get("application_name")
 
-        embed = discord.Embed(
-            title="<:success:1163149118366040106> Application Accepted",
-            description=f"Your application in **{guild.name}** has been accepted. Congratulations!\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
-            color=GREEN_COLOR
-        )
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=400, detail="Invalid Guild ID")
 
-        try:
-            await user.send(embed=embed)
-        except:
-            pass
+            try:
+                user = await guild.fetch_member(user_id)
+            except discord.NotFound:
+                raise HTTPException(status_code=400, detail="User not found in guild")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
 
-        fetched_roles = await guild.fetch_roles()
+            embed = discord.Embed(
+                title="<:success:1163149118366040106> Application Accepted",
+                description=f"Your application in **{guild.name}** has been accepted. Congratulations!\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+                color=GREEN_COLOR
+            )
+            
+            try:
+                await user.send(embed=embed)
+            except discord.Forbidden:
+                print(f"Could not send DM to user {user_id}")
+            
+            # Fetch and validate roles
+            fetched_roles = await guild.fetch_roles()
+            new_roles = []
+            invalid_roles = []
+            
+            for role_id in role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    new_roles.append(role)
+                else:
+                    invalid_roles.append(role_id)
+            
+            if not new_roles:
+                return JSONResponse(
+                    status_code=200,
+                    content={"message": "Message sent, but no valid roles found to add", "invalid_roles": invalid_roles}
+                )
 
-        new_roles = []
-        for item in role_ids:
-            new_roles.append(discord.utils.get(fetched_roles, id=int(item)))
-        
-        new_roles = list(filter(lambda x: x is not None, new_roles))
-        func = user.add_roles if not remove_roles else user.remove_roles
-        
-        try:
-            await func(new_roles)
-        except:
-            pass
+            # Add or remove roles
+            try:
+                if remove_roles:
+                    await user.remove_roles(*new_roles, reason="Application approved - roles removed")
+                else:
+                    await user.add_roles(*new_roles, reason="Application approved - roles added")
+            except discord.Forbidden:
+                raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error managing roles: {str(e)}")
 
-        return 200
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": "Success",
+                    "roles_modified": [r.id for r in new_roles],
+                    "invalid_roles": invalid_roles
+                }
+            )
+                
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
     async def POST_deny_application(
