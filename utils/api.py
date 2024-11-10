@@ -135,9 +135,9 @@ class APIRoutes:
         try:
             json_data = await request.json()
             user_id = int(json_data["user"])
-            role_ids = json_data.get("roles", [])
+            add_role_ids = json_data.get("roles", [])
+            remove_role_ids = json_data.get("remove_roles", [])
             guild_id = int(json_data["guild"])
-            remove_roles = json_data.get("remove_roles", False)
             submitted_on = json_data.get("submitted", 1)
             note = json_data.get("note", "Not provided.")
             application_name = json_data.get("application_name")
@@ -166,41 +166,40 @@ class APIRoutes:
             
             # Fetch and validate roles
             fetched_roles = await guild.fetch_roles()
-            new_roles = []
-            invalid_roles = []
+            roles_to_add = []
+            roles_to_remove = []
             
-            for role_id in role_ids:
+            # Process roles to add
+            for role_id in add_role_ids:
                 role = discord.utils.get(fetched_roles, id=int(role_id))
                 if role:
-                    new_roles.append(role)
-                else:
-                    invalid_roles.append(role_id)
+                    roles_to_add.append(role)
             
-            if not new_roles:
-                return JSONResponse(
-                    status_code=200,
-                    content={"message": "Message sent, but no valid roles found to add", "invalid_roles": invalid_roles}
-                )
+            # Process roles to remove
+            for role_id in remove_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_remove.append(role)
 
-            # Add or remove roles
-            try:
-                if remove_roles:
-                    await user.remove_roles(*new_roles, reason="Application approved - roles removed")
-                else:
-                    await user.add_roles(*new_roles, reason="Application approved - roles added")
-            except discord.Forbidden:
-                raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Error managing roles: {str(e)}")
+            # Add roles
+            if roles_to_add:
+                try:
+                    await user.add_roles(*roles_to_add, reason="Application approved - roles added")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
 
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "message": "Success",
-                    "roles_modified": [r.id for r in new_roles],
-                    "invalid_roles": invalid_roles
-                }
-            )
+            # Remove roles
+            if roles_to_remove:
+                try:
+                    await user.remove_roles(*roles_to_remove, reason="Application approved - roles removed")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+
+            return 200
                 
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
