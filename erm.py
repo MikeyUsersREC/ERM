@@ -211,6 +211,7 @@ class Bot(commands.AutoShardedBot):
 
     async def on_ready(self):
         """Start tasks when bot is ready"""
+        logging.info("Enter on_ready")
         check_reminders.start()
         check_loa.start()
         iterate_ics.start()
