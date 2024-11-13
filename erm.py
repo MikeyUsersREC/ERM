@@ -882,12 +882,15 @@ async def check_whitelisted_car():
 
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
+    logging.warning("[ITERATE] Iterate Started")
     initial_time = time.time()
     try:
         all_settings = await bot.settings.db.find({'ERLC': {'$exists': True}}).to_list(None)
+        logging.warning("[ITERATE] ERLC Settings Found")
         
         for item in all_settings:
             try:
+                logging.warning("[ITERATE] Iterate Started")
                 guild = bot.get_guild(item['_id'])
                 if guild is None:
                     guild = await bot.fetch_guild(item['_id'])
@@ -1032,6 +1035,7 @@ async def iterate_prc_logs():
         print(f"Error in iterate_prc_logs: {e}")
 
     end_time = time.time()
+    logging.warning("[ITERATE] Iterate Ended")
     logging.warning(f"Event iterate_prc_logs took {end_time - initial_time} seconds")
 
 @iterate_prc_logs.before_loop
@@ -1041,6 +1045,8 @@ async def anti_fetch_measure():
     # deadlock the main setup_hook as this
     # loop is called on startup.
     await bot.wait_until_ready()
+    logging.warning("[ITERATE] Bot Ready!")
+
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
