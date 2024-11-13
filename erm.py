@@ -1044,6 +1044,7 @@ async def anti_fetch_measure():
     # (as discord.py taught me) since it'll
     # deadlock the main setup_hook as this
     # loop is called on startup.
+    logging.warning("[ITERATE] Checking if Bot Ready")
     await bot.wait_until_ready()
     logging.warning("[ITERATE] Bot Ready!")
 
