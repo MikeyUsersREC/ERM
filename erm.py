@@ -882,6 +882,7 @@ async def check_whitelisted_car():
 
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
+    initial_time = time.time()
     try:
         all_settings = await bot.settings.db.find({'ERLC': {'$exists': True}}).to_list(None)
         
@@ -1029,6 +1030,9 @@ async def iterate_prc_logs():
 
     except Exception as e:
         print(f"Error in iterate_prc_logs: {e}")
+
+    end_time = time.time()
+    logging.warning(f"Event iterate_prc_logs took {end_time - initial_time} seconds")
 
 @iterate_prc_logs.before_loop
 async def anti_fetch_measure():
