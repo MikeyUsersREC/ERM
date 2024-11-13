@@ -201,7 +201,6 @@ class Bot(commands.AutoShardedBot):
             statistics_check.start()
             tempban_checks.start()
             check_whitelisted_car.start()
-            change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):
@@ -221,7 +220,9 @@ class Bot(commands.AutoShardedBot):
             setup = True
 
 
-bot = Bot(
+status_message = "⚡ /about | ermbot.xyz"
+
+bot = commands.Bot(
     command_prefix=get_prefix,
     case_insensitive=True,
     intents=intents,
@@ -229,7 +230,10 @@ bot = Bot(
     allowed_mentions=discord.AllowedMentions(
         replied_user=False, everyone=False, roles=False
     ),
+    activity=discord.CustomActivity(name=status_message),
+    status=discord.Status.online
 )
+
 bot.debug_servers = [987798554972143728]
 bot.is_synced = False
 bot.shift_management_disabled = False
@@ -457,17 +461,6 @@ except decouple.UndefinedValueError:
     mongo_url = ""
 
 
-# status change discord.ext.tasks
-
-
-@tasks.loop(hours=1)
-async def change_status():
-    await bot.wait_until_ready()
-    logging.info("Changing status")
-    status = "⚡ /about | ermbot.xyz"
-    await bot.change_presence(
-        activity=discord.CustomActivity(name=status)
-    )
 
 @tasks.loop(minutes=1)
 async def check_reminders():
