@@ -82,7 +82,6 @@ scope = [
 
 
 class Bot(commands.AutoShardedBot):
-
     async def close(self):
         for session in self.external_http_sessions:
             if session is not None and session.closed is False:
@@ -90,23 +89,17 @@ class Bot(commands.AutoShardedBot):
         await super().close()
 
     async def is_owner(self, user: discord.User):
-        # Only developers of the bot on the team should have
-        # full access to Jishaku commands. Hard-coded
-        # IDs are a security vulnerability.
-
-        # Else fall back to the original
         if user.id == 1165311055728226444:
             return True
-        
         return await super().is_owner(user)
 
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
         self.view_state_manager: ViewStateManager = ViewStateManager()
+        self._tasks_started = False
 
         global setup
         if not setup:
-            # await bot.load_extension('utils.routes')
             logging.info(
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!".format(
                     self.user.name
@@ -157,7 +150,6 @@ class Bot(commands.AutoShardedBot):
             EXTERNAL_EXT = ["utils.api"]
             [Extensions.append(i) for i in EXTERNAL_EXT]
 
-
             for extension in Extensions:
                 try:
                     if extension not in BETA_EXT:
@@ -179,30 +171,13 @@ class Bot(commands.AutoShardedBot):
             bot.error_list = []
             logging.info("Connected to MongoDB!")
 
-            # await bot.load_extension("jishaku")
             await bot.load_extension("utils.hot_reload")
-            # await bot.load_extension('utils.server')
 
-            if not bot.is_synced:  # check if slash commands have been synced
+            if not bot.is_synced:
                 bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
             if environment == "DEVELOPMENT":
                 await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-            else:
-                pass
-                # Prevent auto syncing
-                # await bot.tree.sync()
-                # guild specific: leave blank if global (global registration can take 1-24 hours)
             bot.is_synced = True
-            check_reminders.start()
-            check_loa.start()
-            iterate_ics.start()
-            # GDPR.start()
-            iterate_prc_logs.start()
-            statistics_check.start()
-            tempban_checks.start()
-            check_whitelisted_car.start()
-            change_status.start()
-            logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):
                 if document["view_type"] == "LOAMenu":
@@ -219,6 +194,32 @@ class Bot(commands.AutoShardedBot):
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
             setup = True
+
+    # async def start_tasks(self):
+    #     """Start all background tasks safely"""
+    #     if not self._tasks_started:
+    #         self._tasks_started = True
+    #         check_reminders.start()
+    #         check_loa.start()
+    #         iterate_ics.start()
+    #         iterate_prc_logs.start()
+    #         statistics_check.start()
+    #         tempban_checks.start()
+    #         check_whitelisted_car.start()
+    #         change_status.start()
+    #         logging.info("All background tasks started successfully!")
+
+    async def on_ready(self):
+        """Start tasks when bot is ready"""
+        check_reminders.start()
+        check_loa.start()
+        iterate_ics.start()
+        iterate_prc_logs.start()
+        statistics_check.start()
+        tempban_checks.start()
+        check_whitelisted_car.start()
+        change_status.start()
+        logging.info(f"{self.user} is ready and online!")
 
 
 bot = Bot(
@@ -462,7 +463,6 @@ except decouple.UndefinedValueError:
 
 @tasks.loop(hours=1)
 async def change_status():
-    await bot.wait_until_ready()
     logging.info("Changing status")
     status = "⚡ /about | ermbot.xyz"
     await bot.change_presence(
@@ -1037,17 +1037,6 @@ async def iterate_prc_logs():
     end_time = time.time()
     logging.warning("[ITERATE] Iterate Ended")
     logging.warning(f"Event iterate_prc_logs took {end_time - initial_time} seconds")
-
-@iterate_prc_logs.before_loop
-async def anti_fetch_measure():
-    # This CANNOT be called in the main loop
-    # (as discord.py taught me) since it'll
-    # deadlock the main setup_hook as this
-    # loop is called on startup.
-    logging.warning("[ITERATE] Checking if Bot Ready")
-    await bot.wait_until_ready()
-    logging.warning("[ITERATE] Bot Ready!")
-
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
