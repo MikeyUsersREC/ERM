@@ -343,21 +343,29 @@ class APIRoutes:
         json_data = await request.json()
         if not json_data.get("Channel"):
             return HTTPException(status_code=400, detail="Bad Format")
+            
         channel = await self.bot.fetch_channel(json_data["Channel"])
         embed = discord.Embed(
-            title="Application Results Released",
+            title="Application Results",
             description=f"The applications for **{json_data['ApplicationName']}** have been released!\n\n",
             color=BLANK_COLOR
         )
         embed_temp = discord.Embed(
+            description="",
             color=BLANK_COLOR
         )
         embeds = [embed]
+        
         for item in json_data["Applicants"]:
-            if (embeds[-1].description) + len(item["Reason"]) + 100 > 4000:
-                embeds.append(embed_temp)
-            embeds[-1].description += f"<@{item['DiscordID']}>\n> Status: **{item['Status']}**\n> Reason: **{item['Reason']}**\n> Submission Time: <t:{int(item['SubmissionTime'])}>\n\n"
-
+            new_content = f"<@{item['DiscordID']}>\n> Status: **{item['Status']}**\n> Reason: **{item['Reason']}**\n> Submission Time: <t:{int(item['SubmissionTime'])}>\n\n"
+            
+            current_desc = embeds[-1].description or ""
+            if len(current_desc) + len(new_content) > 4000:
+                new_embed = discord.Embed(description="", color=BLANK_COLOR)
+                embeds.append(new_embed)
+            
+            embeds[-1].description = (embeds[-1].description or "") + new_content
+            
         await channel.send(embeds=embeds)
 
     async def POST_all_members(
