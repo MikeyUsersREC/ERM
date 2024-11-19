@@ -882,10 +882,6 @@ async def check_whitelisted_car():
 
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
-    if not bot.is_ready():
-        logging.warning("[ITERATE] Bot not ready, skipping iteration")
-        return
-    
     try:
         logging.warning("[ITERATE] Iteration Started")
         async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
