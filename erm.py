@@ -885,7 +885,6 @@ async def iterate_prc_logs():
     try:
         logging.warning("[ITERATE] Iteration Started")
         async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
-            logging.warning("[ITERATE] Servers Found")
             try:
                 guild = await bot.fetch_guild(item['_id'])
             except discord.HTTPException:
