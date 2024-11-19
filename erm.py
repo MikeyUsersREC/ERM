@@ -883,7 +883,6 @@ async def check_whitelisted_car():
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
     try:
-        # Get total count of servers to process
         server_count = await bot.settings.db.count_documents({
             'ERLC': {'$exists': True},
             '$or': [
@@ -990,6 +989,9 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
 
 def process_kill_logs(kill_logs, channel, current_timestamp, guild):
     """Helper function to create tasks for processing kill logs"""
+    if not channel:
+        return []
+        
     tasks = []
     for log in kill_logs:
         if (current_timestamp - log.timestamp) > 120:
@@ -1005,6 +1007,9 @@ def process_kill_logs(kill_logs, channel, current_timestamp, guild):
 
 def process_player_logs(player_logs, channel, current_timestamp, guild, settings):
     """Helper function to create tasks for processing player logs"""
+    if not channel:
+        return []
+        
     tasks = []
     for log in player_logs:
         if (current_timestamp - log.timestamp) > 120:
