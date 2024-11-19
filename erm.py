@@ -897,14 +897,33 @@ async def iterate_prc_logs():
         start_time = time.time()
 
         batch_size = 5
-        async for items in bot.settings.db.find({
-            'ERLC': {'$exists': True},
-            '$or': [
+        pipeline = [
+            {
+            '$match': {
+                'ERLC': {'$exists': True},
+                '$or': [
                 {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
                 {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
                 {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
-            ]
-        }).batch_size(batch_size):
+                ]
+            }
+            },
+            {
+            '$lookup': {
+                'from': 'server_keys',
+                'localField': '_id', 
+                'foreignField': '_id',
+                'as': 'server_key'
+            }
+            },
+            {
+            '$match': {
+                'server_key': {'$ne': []}
+            }
+            }
+        ]
+
+        async for items in bot.settings.db.aggregate(pipeline).batch_size(batch_size):
             processed += 1
             
             try:
