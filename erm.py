@@ -197,6 +197,7 @@ class Bot(commands.AutoShardedBot):
             check_loa.start()
             iterate_ics.start()
             # GDPR.start()
+            iterate_prc_logs.before_loop(before_prc_logs)
             iterate_prc_logs.start()
             statistics_check.start()
             tempban_checks.start()
@@ -882,8 +883,9 @@ async def check_whitelisted_car():
 
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
-    # This will aim to constantly update the PRC Logs
-    # and the relevant storage data.
+    if not bot.is_ready():
+        return
+    
     logging.warning("[ITERATE] Iteration Started")
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
         logging.warning("[ITERATE] Servers Found")
@@ -1051,13 +1053,9 @@ async def iterate_prc_logs():
     logging.warning("[ITERATE] Completed task!")
 
 
-@iterate_prc_logs.before_loop
-async def anti_fetch_measure():
-    # This CANNOT be called in the main loop
-    # (as discord.py taught me) since it'll
-    # deadlock the main setup_hook as this
-    # loop is called on startup.
+async def before_prc_logs():
     await bot.wait_until_ready()
+    logging.info("PRC Logs task is ready to start")
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
