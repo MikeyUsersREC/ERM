@@ -108,7 +108,7 @@ class Bot(commands.AutoShardedBot):
         if not setup:
             # await bot.load_extension('utils.routes')
             logging.info(
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{} is online!".format(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━\n\n{} is online!".format(
                     self.user.name
                 )
             )
@@ -197,7 +197,6 @@ class Bot(commands.AutoShardedBot):
             check_loa.start()
             iterate_ics.start()
             # GDPR.start()
-            iterate_prc_logs.before_loop(before_prc_logs)
             iterate_prc_logs.start()
             statistics_check.start()
             tempban_checks.start()
@@ -1055,10 +1054,6 @@ async def iterate_prc_logs():
         logging.warning("[ITERATE] Completed task!")
     except Exception as e:
         logging.error(f"[ITERATE] Error in iteration: {str(e)}", exc_info=True)
-
-async def before_prc_logs():
-    await bot.wait_until_ready()
-    logging.info("[ITERATE] PRC Logs task is ready to start")
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
