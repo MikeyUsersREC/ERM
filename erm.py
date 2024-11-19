@@ -884,13 +884,37 @@ async def check_whitelisted_car():
 async def iterate_prc_logs():
     try:
         logging.warning("[ITERATE] Iteration Started")
-        async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
+        async for item in bot.settings.db.find({
+            'ERLC': {'$exists': True},
+            '$or': [
+                {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
+                {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
+                {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
+            ]
+        }):
             try:
                 guild = await bot.fetch_guild(item['_id'])
             except discord.HTTPException:
                 continue
 
             settings = await bot.settings.find_by_id(guild.id)
+
+            # Check if ERLC settings exist and have valid channels
+            erlc_settings = settings.get('ERLC', {})
+            if not erlc_settings:
+                continue
+
+            # Check if at least one of the required channels is set and is a valid int64
+            has_valid_channel = False
+            for channel_key in ['rdm_channel', 'kill_logs', 'player_logs']:
+                channel_value = erlc_settings.get(channel_key)
+                if isinstance(channel_value, int) and channel_value != 0:
+                    has_valid_channel = True
+                    break
+
+            if not has_valid_channel:
+                continue
+
             try:
                 kill_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('kill_logs'))
                 player_logs_channel = await fetch_get_channel(guild, item['ERLC'].get('player_logs'))
@@ -975,17 +999,17 @@ async def iterate_prc_logs():
                                 )
             staff_roles = []
             if settings["staff_management"].get("role"):
-                    if isinstance(settings["staff_management"]["role"], int):
-                        staff_roles.append(settings["staff_management"]["role"])
-                    elif isinstance(settings["staff_management"]["role"], list):
-                        for role in settings["staff_management"]["role"]:
+                    if isinstance(settings["staff_management"].get("role"), int):
+                        staff_roles.append(settings["staff_management"].get("role"))
+                    elif isinstance(settings["staff_management"].get("role"), list):
+                        for role in settings["staff_management"].get("role"):
                             staff_roles.append(role)
 
             if settings["staff_management"].get("management_role"):
-                if isinstance(settings["staff_management"]["management_role"], int):
-                    staff_roles.append(settings["staff_management"]["management_role"])
-                elif isinstance(settings["staff_management"]["management_role"], list):
-                    for role in settings["staff_management"]["management_role"]:
+                if isinstance(settings["staff_management"].get("management_role"), int):
+                    staff_roles.append(settings["staff_management"].get("management_role"))
+                elif isinstance(settings["staff_management"].get("management_role"), list):
+                    for role in settings["staff_management"].get("management_role"):
                         staff_roles.append(role)
                             
             await guild.chunk()
