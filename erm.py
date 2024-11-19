@@ -108,7 +108,7 @@ class Bot(commands.AutoShardedBot):
         if not setup:
             # await bot.load_extension('utils.routes')
             logging.info(
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━\n\n{} is online!".format(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━�������━━━━━━\n\n{} is online!".format(
                     self.user.name
                 )
             )
@@ -644,247 +644,12 @@ async def fetch_get_channel(target, identifier):
             channel = None
     return channel
 
-@tasks.loop(seconds=45, reconnect=True)
-async def statistics_check():
-    initial_time = time.time()
-    async for guild_data in bot.settings.db.find({}):
-        guild_id = guild_data['_id']
-
-        try:
-            guild = await bot.fetch_guild(guild_id)
-        except discord.errors.NotFound:
-            continue
-
-        settings = await bot.settings.find_by_id(guild_id)
-        if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
-            continue
-        
-        statistics = settings["ERLC"]["statistics"]
-
-        try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
-            queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure:
-            logging.error(f"PRC ResponseFailure for guild {guild_id}")
-            continue
-
-        on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
-        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
-        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
-        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        current_player = status.current_players
-        join_code = status.join_key
-        max_players = status.max_players
-        logging.info(f"Updating statistics for guild {guild_id}")
-
-        placeholders = {
-            "onduty": on_duty,
-            "staff": staff_ingame,
-            "mods": moderators,
-            "admins": admins,
-            "players": current_player,
-            "join_code": join_code,
-            "max_players": max_players,
-            "queue": queue
-        }
-
-        tasks = [update_channel(guild, channel_id, stat_value, placeholders) for channel_id, stat_value in statistics.items()]
-        await asyncio.gather(*tasks)
-
-    end_time = time.time()
-    logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
-
-async def run_command(guild_id, username, message):
-    while True:
-        command = f":pm {username} {message}"
-        command_response = await bot.prc_api.run_command(guild_id, command)
-        if command_response[0] == 200:
-            logging.info(f"Sent PM to {username} in guild {guild_id}")
-            break
-        elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
-            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
-            break
-
-def is_whitelisted(vehicle_name, whitelisted_vehicle):
-    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
-    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    if vehicle_year_match and whitelisted_year_match:
-        vehicle_year = vehicle_year_match.group()
-        whitelisted_year = whitelisted_year_match.group()
-        if vehicle_year != whitelisted_year:
-            return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    return False
-
-async def get_player_avatar_url(player_id):
-    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-            return data['data'][0]['imageUrl']
-
-pm_counter = {}
-@tasks.loop(minutes=2, reconnect=True)
-async def check_whitelisted_car():
-    initial_time = time.time()
-    async for items in bot.settings.db.find(
-        {"ERLC.vehicle_restrictions.enabled": {"$exists": True, "$eq": True}}
-    ):
-        guild_id = items['_id']
-        try:
-            guild = await bot.fetch_guild(guild_id)
-        except discord.errors.NotFound:
-            continue
-        try:
-            whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
-            alert_channel_id = items['ERLC'].get('vehicle_restrictions').get('channel')
-            whitelisted_vehicles = items['ERLC'].get('vehicle_restrictions').get('cars', [])
-            alert_message = items["ERLC"].get("vehicle_restrictions").get('message', "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
-        except KeyError:
-            logging.error(f"KeyError for guild {guild_id}")
-            continue
-
-        if not whitelisted_vehicle_roles or not alert_channel_id:
-            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
-            continue
-
-        if isinstance(whitelisted_vehicle_roles, int):
-            exotic_roles = [guild.get_role(whitelisted_vehicle_roles)]
-        elif isinstance(whitelisted_vehicle_roles, list):
-            exotic_roles = [guild.get_role(role_id) for role_id in whitelisted_vehicle_roles if guild.get_role(role_id)]
-        else:
-            logging.warning(f"Invalid whitelisted_vehicle_roles data: {whitelisted_vehicle_roles}")
-            continue
-
-        alert_channel = bot.get_channel(alert_channel_id)
-        if not alert_channel:
-            try:
-                alert_channel = await bot.fetch_channel(alert_channel_id)
-            except discord.HTTPException:
-                alert_channel = None
-                logging.warning(f"Alert channel not found for guild {guild_id}")
-                continue
-
-        if not exotic_roles or not alert_channel:
-            logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
-            continue
-        try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-        except prc_api.ResponseFailure:
-            logging.error(f"PRC ResponseFailure for guild {guild_id}")
-            continue
-
-        logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
-        logging.info(f"Found {len(players)} players in guild {guild_id}")
-
-        matched = {}
-        for item in vehicles:
-            for x in players:
-                if x.username == item.username:
-                    matched[item] = x
-
-        for vehicle, player in matched.items():
-            whitelisted = False
-            for whitelisted_vehicle in whitelisted_vehicles:
-                if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
-                    whitelisted = True
-                    break 
-                pattern = re.compile(re.escape(player.username), re.IGNORECASE)
-                member_found = False
-                for member in guild.members:
-                    if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
-                        member_found = True
-                        has_exotic_role = False
-                        for role in exotic_roles:
-                            if role in member.roles:
-                                has_exotic_role = True
-                                break
-                        
-                        if not has_exotic_role:
-                            logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
-                            await run_command(guild_id, player.username, alert_message)
-
-                            if player.username not in pm_counter:
-                                pm_counter[player.username] = 1
-                                logging.debug(f"PM Counter for {player.username}: 1")
-                            else:
-                                pm_counter[player.username] += 1
-                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
-
-                            if pm_counter[player.username] >= 4:
-                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
-                                try:
-                                    embed = discord.Embed(
-                                        title="Whitelisted Vehicle Warning",
-                                        description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
-                                        """,
-                                        color=RED_COLOR,
-                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
-                                    ).set_footer(
-                                        text=f"Guild: {guild.name} | Powered by ERM Systems",
-                                    ).set_thumbnail(
-                                        url=await get_player_avatar_url(player.id)
-                                    )
-                                    await alert_channel.send(embed=embed)
-                                except discord.HTTPException as e:
-                                    logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                                logging.info(f"Removing {player.username} from PM counter")
-                                pm_counter.pop(player.username)
-                        break
-                    elif member_found == False:
-                        logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
-                        await run_command(guild_id, player.username, alert_message)
-
-                        if player.username not in pm_counter:
-                            pm_counter[player.username] = 1
-                            logging.debug(f"PM Counter for {player.username}: 1")
-                        else:
-                            pm_counter[player.username] += 1
-                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
-
-                        if pm_counter[player.username] >= 4:
-                            logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
-                            try:
-                                embed = discord.Embed(
-                                    title="Whitelisted Vehicle Warning",
-                                    description=f"""
-                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
-                                    """,
-                                    color=RED_COLOR,
-                                    timestamp=datetime.datetime.now(tz=pytz.UTC)
-                                ).set_footer(
-                                    text=f"Guild: {guild.name} | Powered by ERM Systems",
-                                ).set_thumbnail(
-                                    url=await get_player_avatar_url(player.id)
-                                )
-                                await alert_channel.send(embed=embed)
-                            except discord.HTTPException as e:
-                                logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                            logging.info(f"Removing {player.username} from PM counter")
-                            pm_counter.pop(player.username)
-                        break
-                    else:
-                        continue
-        del matched
-
-    end_time = time.time()
-    logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
-
-
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
     try:
         server_count = await bot.settings.db.count_documents({
             'ERLC': {'$exists': True},
+            '_id': {'$in': await bot.server_keys.db.distinct('_id')},
             '$or': [
                 {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
                 {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
@@ -896,20 +661,24 @@ async def iterate_prc_logs():
         processed = 0
         start_time = time.time()
 
-        batch_size = 5
+        batch_size = 8
         async for items in bot.settings.db.find({
             'ERLC': {'$exists': True},
+            '_id': {'$in': await bot.server_keys.db.distinct('_id')},
             '$or': [
                 {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
                 {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
                 {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
             ]
         }).batch_size(batch_size):
-            processed += 1
-            
+            guild_id = items['_id']
             try:
-                guild = await bot.fetch_guild(items['_id'])
+                guild = await bot.fetch_guild(guild_id)
             except discord.HTTPException:
+                continue
+
+            # Add check for server key
+            if await bot.server_keys.db.count_documents({'_id': guild.id}) == 0:
                 continue
 
             settings = await bot.settings.find_by_id(guild.id)
