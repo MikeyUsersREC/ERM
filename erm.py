@@ -201,7 +201,7 @@ class Bot(commands.AutoShardedBot):
             statistics_check.start()
             tempban_checks.start()
             check_whitelisted_car.start()
-            change_status.start()
+            # change_status.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):
