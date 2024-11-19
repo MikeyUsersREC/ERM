@@ -884,7 +884,9 @@ async def check_whitelisted_car():
 async def iterate_prc_logs():
     # This will aim to constantly update the PRC Logs
     # and the relevant storage data.
+    logging.warning("[ITERATE] Iteration Started")
     async for item in bot.settings.db.find({'ERLC': {'$exists': True}}):
+        logging.warning("[ITERATE] Servers Found")
         try:
             guild = await bot.fetch_guild(item['_id'])
         except discord.HTTPException:
@@ -1045,6 +1047,9 @@ async def iterate_prc_logs():
                             color=GREEN_COLOR if item.type == 'join' else RED_COLOR
                         )
                     )
+    
+    logging.warning("[ITERATE] Completed task!")
+
 
 @iterate_prc_logs.before_loop
 async def anti_fetch_measure():
