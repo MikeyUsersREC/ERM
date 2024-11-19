@@ -919,6 +919,7 @@ async def iterate_prc_logs():
                     else:
                         players[item.killer_username] = [players[item.killer_username][0]+1, players[item.killer_username][1] + [item]]
                         await kill_logs_channel.send(embed=discord.Embed(title="Kill Log", color=BLANK_COLOR, description=f"[{item.killer_username}](https://roblox.com/users/{item.killer_user_id}/profile) killed [{item.killed_username}](https://roblox.com/users/{item.killed_user_id}/profile) • <t:{int(item.timestamp)}:T>"))
+                        logging.info(f"[ITERATE] Sent kill log for {item.killer_username} killing {item.killed_username} in {guild.name}")
 
 
             channel = ((settings or {}).get('ERLC', {}) or {}).get('rdm_channel', 0)
@@ -1045,6 +1046,7 @@ async def iterate_prc_logs():
                                 color=GREEN_COLOR if item.type == 'join' else RED_COLOR
                             )
                         )
+                        logging.info(f"[ITERATE] Sent player {item.type} log for {item.username} in {guild.name}")
         
         logging.warning("[ITERATE] Completed task!")
     except Exception as e:
