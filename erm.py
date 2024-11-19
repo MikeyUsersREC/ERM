@@ -880,7 +880,7 @@ async def check_whitelisted_car():
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
 
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(minutes=10, reconnect=True)
 async def iterate_prc_logs():
     try:
         server_count = await bot.settings.db.aggregate([
