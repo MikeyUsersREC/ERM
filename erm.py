@@ -883,14 +883,35 @@ async def check_whitelisted_car():
 @tasks.loop(seconds=120, reconnect=True)
 async def iterate_prc_logs():
     try:
-        server_count = await bot.settings.db.count_documents({
-            'ERLC': {'$exists': True},
-            '$or': [
-                {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
-                {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
-                {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
-            ]
-        })
+        server_count = await bot.settings.db.aggregate([
+            {
+            '$match': {
+                'ERLC': {'$exists': True},
+                '$or': [
+                    {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
+                ]
+            }
+            },
+            {
+            '$lookup': {
+                'from': 'server_keys',
+                'localField': '_id',
+                'foreignField': '_id',
+                'as': 'server_key'
+            }
+            },
+            {
+            '$match': {
+                'server_key': {'$ne': []}
+            }
+            },
+            {
+            '$count': 'total'
+            }
+        ]).to_list(1)
+        server_count = server_count[0]['total'] if server_count else 0
         
         logging.warning(f"[ITERATE] Starting iteration for {server_count} servers")
         processed = 0
