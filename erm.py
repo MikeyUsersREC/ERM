@@ -917,7 +917,7 @@ async def iterate_prc_logs():
         processed = 0
         start_time = time.time()
 
-        batch_size = 5
+        batch_size = 15
         pipeline = [
             {
             '$match': {
