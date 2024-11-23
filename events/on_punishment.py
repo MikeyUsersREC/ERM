@@ -110,7 +110,9 @@ class OnPunishment(commands.Cog):
                             f"> **Reason:** {warning.reason}\n"
                         )
                     ).set_thumbnail(url=thumbnail)
-                    await user_to_dm.send(embed=embed)
+                    view = discord.ui.View()
+                    view.add_item(discord.ui.Button(label="Appeal Moderation", url=f"https://ermbot.xyz/{guild.id}/{warning.snowflake}/appeal"))
+                    await user_to_dm.send(embed=embed, view=view)
                     logging.info(f"Sent DM to user {warned_discord_id} about punishment.")
             except Exception as e:
                 pass
