@@ -41,12 +41,18 @@ class JoinLeaveLog(BaseDataClass):
     username: str
     user_id: int
 
+    def __lt__(self, other):
+        return self.timestamp < other.timestamp
+
 class KillLog(BaseDataClass):
     killer_username: str
     killer_user_id: int
     timestamp: int
     killed_username: str
     killed_user_id: int
+
+    def __lt__(self, other):
+        return self.timestamp < other.timestamp
 
 class Player(BaseDataClass):
     username: str
