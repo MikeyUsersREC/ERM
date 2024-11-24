@@ -5,6 +5,7 @@ import time
 from dataclasses import MISSING
 from pkgutil import iter_modules
 import re
+from collections import defaultdict
 try:
     import Levenshtein
     from fuzzywuzzy import fuzz, process
@@ -880,7 +881,22 @@ async def check_whitelisted_car():
     logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
 
 
-@tasks.loop(minutes=5, reconnect=True)
+class LogTracker:
+    def __init__(self):
+        self.last_timestamps = defaultdict(lambda: defaultdict(int))
+    
+    def get_last_timestamp(self, guild_id: int, log_type: str) -> int:
+        return self.last_timestamps[guild_id][log_type]
+    
+    def update_timestamp(self, guild_id: int, log_type: str, timestamp: int):
+        self.last_timestamps[guild_id][log_type] = max(
+            timestamp,
+            self.last_timestamps[guild_id][log_type]
+        )
+
+log_tracker = LogTracker()
+
+@tasks.loop(minutes=10, reconnect=True)
 async def iterate_prc_logs():
     try:
         server_count = await bot.settings.db.aggregate([
@@ -944,62 +960,103 @@ async def iterate_prc_logs():
             }
         ]
 
-        async for items in bot.settings.db.aggregate(pipeline).batch_size(batch_size):
-            processed += 1
+        async def send_log_batch(channel, embeds):
+            if not embeds:
+                return
+            # Split embeds into chunks of 10 (Discord's limit)
+            for i in range(0, len(embeds), 10):
+                chunk = embeds[i:i+10]
+                try:
+                    await channel.send(embeds=chunk)
+                except discord.HTTPException as e:
+                    logging.error(f"Failed to send log batch: {e}")
+
+        def process_kill_logs(kill_logs, last_timestamp):
+            """Process kill logs and return embeds"""
+            embeds = []
+            latest_timestamp = last_timestamp
             
+            for log in sorted(kill_logs):
+                if log.timestamp <= last_timestamp:
+                    continue
+                
+                latest_timestamp = max(latest_timestamp, log.timestamp)
+                embed = discord.Embed(
+                    title="Kill Log",
+                    color=BLANK_COLOR,
+                    description=f"[{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:T>"
+                )
+                embeds.append(embed)
+            
+            return embeds, latest_timestamp
+
+        def process_player_logs(player_logs, last_timestamp):
+            """Process player logs and return embeds"""
+            embeds = []
+            latest_timestamp = last_timestamp
+            
+            for log in sorted(player_logs):
+                if log.timestamp <= last_timestamp:
+                    continue
+                    
+                latest_timestamp = max(latest_timestamp, log.timestamp)
+                embed = discord.Embed(
+                    title=f"Player {'Join' if log.type == 'join' else 'Leave'} Log",
+                    description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:T>",
+                    color=GREEN_COLOR if log.type == 'join' else RED_COLOR
+                )
+                embeds.append(embed)
+                
+            return embeds, latest_timestamp
+
+        async for items in bot.settings.db.aggregate(pipeline).batch_size(batch_size):
             try:
                 guild = await bot.fetch_guild(items['_id'])
-            except discord.HTTPException:
-                continue
+                settings = await bot.settings.find_by_id(guild.id)
+                erlc_settings = settings.get('ERLC', {})
+                
+                channels = {
+                    'kill_logs': erlc_settings.get('kill_logs'),
+                    'player_logs': erlc_settings.get('player_logs')
+                }
 
-            settings = await bot.settings.find_by_id(guild.id)
-            erlc_settings = settings.get('ERLC', {})
-            
-            channels = {
-                'kill_logs': erlc_settings.get('kill_logs'),
-                'player_logs': erlc_settings.get('player_logs')
-            }
-            if not any(channels.values()):
-                continue
+                if not any(channels.values()):
+                    continue
 
-            channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
-            if not channels:
-                continue
+                channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
+                if not channels:
+                    continue
 
-            try:
-                kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
+                try:
+                    kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
+                except Exception as e:
+                    logging.error(f"Failed to fetch logs for {guild.id}: {e}")
+                    continue
+
+                tasks = []
+
+                if 'kill_logs' in channels and kill_logs:
+                    last_timestamp = log_tracker.get_last_timestamp(guild.id, 'kill_logs')
+                    embeds, latest_timestamp = process_kill_logs(kill_logs, last_timestamp)
+                    if embeds:
+                        tasks.append(send_log_batch(channels['kill_logs'], embeds))
+                        log_tracker.update_timestamp(guild.id, 'kill_logs', latest_timestamp)
+
+                if 'player_logs' in channels and player_logs:
+                    last_timestamp = log_tracker.get_last_timestamp(guild.id, 'player_logs')
+                    embeds, latest_timestamp = process_player_logs(player_logs, last_timestamp)
+                    if embeds:
+                        tasks.append(send_log_batch(channels['player_logs'], embeds))
+                        log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
+
+                if tasks:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
             except Exception as e:
-                logging.error(f"Failed to fetch logs for {guild.id}: {e}")
+                logging.error(f"Error processing guild {items['_id']}: {e}")
                 continue
 
-            if not kill_logs and not player_logs:
-                continue
-
-            current_timestamp = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-            tasks = []
-
-            if 'kill_logs' in channels and kill_logs:
-                kill_log_tasks = process_kill_logs(
-                    kill_logs, 
-                    channels['kill_logs'],
-                    current_timestamp,
-                    guild
-                )
-                tasks.extend(kill_log_tasks)
-
-            if 'player_logs' in channels and player_logs:
-                player_log_tasks = process_player_logs(
-                    player_logs,
-                    channels['player_logs'], 
-                    current_timestamp,
-                    guild,
-                    settings
-                )
-                tasks.extend(player_log_tasks)
-
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-
+            processed += 1
             if processed % 10 == 0:
                 logging.warning(f"[ITERATE] Processed {processed}/{server_count} servers")
 
@@ -1026,42 +1083,6 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
                 continue
             raise
     return None, None
-
-def process_kill_logs(kill_logs, channel, current_timestamp, guild):
-    """Helper function to create tasks for processing kill logs"""
-    if not channel:
-        return []
-        
-    tasks = []
-    for log in kill_logs:
-        if (current_timestamp - log.timestamp) > 120:
-            continue
-        
-        embed = discord.Embed(
-            title="Kill Log",
-            color=BLANK_COLOR,
-            description=f"[{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:T>"
-        )
-        tasks.append(channel.send(embed=embed))
-    return tasks
-
-def process_player_logs(player_logs, channel, current_timestamp, guild, settings):
-    """Helper function to create tasks for processing player logs"""
-    if not channel:
-        return []
-        
-    tasks = []
-    for log in player_logs:
-        if (current_timestamp - log.timestamp) > 120:
-            continue
-
-        embed = discord.Embed(
-            title=f"Player {'Join' if log.type == 'join' else 'Leave'} Log",
-            description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:T>",
-            color=GREEN_COLOR if log.type == 'join' else RED_COLOR
-        )
-        tasks.append(channel.send(embed=embed))
-    return tasks
 
 @tasks.loop(minutes=5, reconnect=True)
 async def iterate_ics():
