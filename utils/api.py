@@ -13,6 +13,7 @@ import discord
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
+import copy
 from menus import LOAMenu
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import get_elapsed_time, secure_logging
@@ -404,7 +405,7 @@ class APIRoutes:
             }
         )
         
-        ns = schema
+        ns = copy.copy(schema)
         del ns["_id"]
         await self.bot.loas.db.update_one({"_id": schema["_id"]}, {"$set": ns})
     
