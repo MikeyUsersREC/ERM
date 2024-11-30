@@ -13,13 +13,13 @@ import discord
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
+from menus import LOAMenu
 from utils.constants import BLANK_COLOR, GREEN_COLOR
-from utils.utils import secure_logging
+from utils.utils import get_elapsed_time, secure_logging
 from pydantic import BaseModel
 
 from utils.timestamp import td_format
-# from helpers import MockContext
-from utils.utils import tokenGenerator
+from utils.utils import tokenGenerator, system_code_gen
 import logging
 
 logger = logging.getLogger(__name__)
@@ -292,6 +292,127 @@ class APIRoutes:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+    async def POST_send_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa") # OID -> dict { loa spec }
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        schema = s_loa_item
+        guild = self.bot.get_guild(schema["guild_id"]) or await self.bot.fetch_guild(schema["guild_id"])
+        try:
+            author = guild.get_member(schema["user_id"]) or await guild.get_member(schema["user_id"])
+        except:
+            raise HTTPException(status_code=400, detail="Invalid author")
+
+        request_type = schema['type']
+        settings = await self.bot.settings.find_by_id(guild.id)
+        management_roles = settings.get('staff_management', {}).get('management_role', [])
+        loa_roles = settings.get('staff_management').get(f'{request_type.lower()}_role')
+
+        embed = discord.Embed(
+            title=f"{request_type} Request",
+            color=BLANK_COLOR
+        )
+        embed.set_author(
+            name=guild.name,
+            icon_url=guild.icon.url if guild.icon else ''
+        )
+
+        past_author_notices = [item async for item in self.bot.loas.db.find({
+            "guild_id": guild.id,
+            "user_id": author.id,
+            "accepted": True,
+            "denied": False,
+            "expired": True,
+            "type": request_type.upper()
+        })]
+
+        shifts = []
+        storage_item = [
+            i
+            async for i in self.bot.shift_management.shifts.db.find(
+                {"UserID": author.id, "Guild": guild.id}
+            )
+        ]
+
+        for s in storage_item:
+            if s["EndEpoch"] != 0:
+                shifts.append(s)
+
+        total_seconds = sum([get_elapsed_time(i) for i in shifts])
+
+        embed.add_field(
+            name="Staff Information",
+            value=(
+                f"> **Staff Member:** {author.mention}\n"
+                f"> **Top Role:** {author.top_role.name}\n"
+                f"> **Past {request_type}s:** {len(past_author_notices)}\n"
+                f"> **Shift Time:** {td_format(datetime.timedelta(seconds=total_seconds))}"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="Request Information",
+            value=(
+                f"> **Type:** {request_type}\n"
+                f"> **Reason:** {schema['reason']}\n"
+                f"> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
+                f"> **Ends At:** <t:{schema['expiry']}>"
+            )
+        )
+
+        view = LOAMenu(
+            self.bot,
+            management_roles,
+            loa_roles,
+            schema,
+            author.id,
+            (code := system_code_gen())
+        )
+
+        staff_channel = settings.get("staff_management").get("channel")
+        staff_channel = discord.utils.get(guild.channels, id=staff_channel)
+
+        msg = await staff_channel.send(
+            embed=embed,
+            view=view
+        )
+        schema['message_id'] = msg.id
+        await self.bot.views.insert(
+            {
+                "_id": code,
+                "args": [
+                    'SELF',
+                    management_roles,
+                    loa_roles,
+                    schema,
+                    author.id,
+                    code
+                ],
+                "view_type": 'LOAMenu',
+                'message_id': msg.id
+            }
+        )
+        
+        ns = schema
+        del ns["_id"]
+        await self.bot.update_one({
+            "_id": schema["_id"]
+        }, ns)
+    
+        return 200
+            
+
     async def POST_accept_loa(
         self,
         authorization: Annotated[str | None, Header()],
@@ -304,10 +425,17 @@ class APIRoutes:
             raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
         json_data = await request.json()
-        s_loa = json_data.get("loa") # dict { loa spec }
-        roles = json_data.get("roles") # list[int]
+        s_loa = json_data.get("loa") # oid -> dict { loa spec }
+        accepted_by = json_data.get("accepted_by")
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        s_loa = s_loa_item
 
-        self.bot.dispatch("loa_accept", s_loa=s_loa, role_ids=roles)
+        # fetch the actual accept roles
+        guild_id = s_loa["guild_id"]
+        config = await self.bot.settings.find_by_id(guild_id) or {}
+        roles = config.get("staff_management", {}).get(f"{s_loa['type']}_role", []) or []
+
+        self.bot.dispatch("loa_accept", s_loa=s_loa, role_ids=roles, accepted_by=accepted_by)
 
         return 200
     
@@ -323,8 +451,12 @@ class APIRoutes:
             raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
         json_data = await request.json()
-        s_loa = json_data.get("loa") # dict { loa spec }
-        self.bot.dispatch("loa_deny", s_loa=s_loa)
+        s_loa = json_data.get("loa")
+        denied_by = json_data.get("denied_by")
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        s_loa = s_loa_item
+
+        self.bot.dispatch("loa_deny", s_loa=s_loa, denied_by=denied_by)
 
         return 200
 
