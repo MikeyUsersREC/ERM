@@ -406,9 +406,7 @@ class APIRoutes:
         
         ns = schema
         del ns["_id"]
-        await self.bot.update_one({
-            "_id": schema["_id"]
-        }, ns)
+        await self.bot.loas.update_by_id(schema)
     
         return 200
             
