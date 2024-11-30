@@ -1,1304 +1,1296 @@
-import datetime
-import json
-import logging
-import time
-from dataclasses import MISSING
-from pkgutil import iter_modules
-import re
-from collections import defaultdict
-try:
-    import Levenshtein
-    from fuzzywuzzy import fuzz, process
-except ImportError:
-    from fuzzywuzzy import fuzz, process
-import aiohttp
-import decouple
-import discord.mentions
-import motor.motor_asyncio
 import asyncio
+import copy
+import datetime
+import typing
+
+import aiohttp
 import pytz
-import sentry_sdk
+import uvicorn
+from bson import ObjectId
+from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
+from discord.ext import commands
+import discord
+from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
+from typing import Annotated
 from decouple import config
-from discord import app_commands
-from discord.ext import tasks
-from roblox import client as roblox
-from sentry_sdk import push_scope, capture_exception
-from sentry_sdk.integrations.pymongo import PyMongoIntegration
+from menus import LOAMenu
+from utils.constants import BLANK_COLOR, GREEN_COLOR
+from utils.utils import get_elapsed_time, secure_logging
+from pydantic import BaseModel
 
-from datamodels.CustomFlags import CustomFlags
-from datamodels.ServerKeys import ServerKeys
-from datamodels.ShiftManagement import ShiftManagement
-from datamodels.ActivityNotice import ActivityNotices
-from datamodels.Analytics import Analytics
-from datamodels.Consent import Consent
-from datamodels.CustomCommands import CustomCommands
-from datamodels.Errors import Errors
-from datamodels.FiveMLinks import FiveMLinks
-from datamodels.LinkStrings import LinkStrings
-from datamodels.PunishmentTypes import PunishmentTypes
-from datamodels.Reminders import Reminders
-from datamodels.Settings import Settings
-from datamodels.APITokens import APITokens
-from datamodels.StaffConnections import StaffConnections
-from datamodels.Views import Views
-from datamodels.Actions import Actions
-from datamodels.Warnings import Warnings
-from datamodels.ProhibitedUseKeys import ProhibitedUseKeys
-from datamodels.PendingOAuth2 import PendingOAuth2
-from datamodels.OAuth2Users import OAuth2Users
-from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
-from menus import CompleteReminder, LOAMenu, RDMActions
-from utils.viewstatemanger import ViewStateManager
-from utils.bloxlink import Bloxlink
-from utils.prc_api import PRCApiClient
-from utils.prc_api import ResponseFailure
-from utils.utils import *
-from utils.constants import *
-import utils.prc_api
+from utils.timestamp import td_format
+from utils.utils import tokenGenerator, system_code_gen
+import logging
+
+logger = logging.getLogger(__name__)
+
+class Identification(BaseModel):
+    license: typing.Optional[typing.Any]
+    discord: typing.Optional[typing.Any]
+    source: typing.Literal["fivem", "discord"]
 
 
-setup = False
-
-try:
-    sentry_url = config("SENTRY_URL")
-    bloxlink_api_key = config("BLOXLINK_API_KEY")
-except decouple.UndefinedValueError:
-    sentry_url = ""
-    bloxlink_api_key = ""
-
-discord.utils.setup_logging(level=logging.INFO)
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.voice_states = True
-
-credentials_dict = {}
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive",
-]
-
-
-class Bot(commands.AutoShardedBot):
-
-    async def close(self):
-        for session in self.external_http_sessions:
-            if session is not None and session.closed is False:
-                await session.close()
-        await super().close()
-
-    async def is_owner(self, user: discord.User):
-        # Only developers of the bot on the team should have
-        # full access to Jishaku commands. Hard-coded
-        # IDs are a security vulnerability.
-
-        # Else fall back to the original
-        if user.id == 1165311055728226444:
+async def validate_authorization(bot: Bot, token: str, disable_static_tokens=False):
+    # Check static and dynamic tokens
+    if not disable_static_tokens:
+        static_token = config("API_STATIC_TOKEN")  # Dashboard
+        if token == static_token:
             return True
-        
-        return await super().is_owner(user)
-
-    async def setup_hook(self) -> None:
-        self.external_http_sessions: list[aiohttp.ClientSession] = []
-        self.view_state_manager: ViewStateManager = ViewStateManager()
-
-        global setup
-        if not setup:
-            # await bot.load_extension('utils.routes')
-            logging.info(
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━\n\n{} is online!".format(
-                    self.user.name
-                )
-            )
-            self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
-            if environment == "DEVELOPMENT":
-                self.db = self.mongo["erm"]
-            elif environment == "PRODUCTION":
-                self.db = self.mongo["erm"]
-            elif environment == "ALPHA":
-                self.db = self.mongo['alpha']
-            else:
-                raise Exception("Invalid environment")
-
-            self.start_time = time.time()
-            self.shift_management = ShiftManagement(self.db, "shift_management")
-            self.errors = Errors(self.db, "errors")
-            self.loas = ActivityNotices(self.db, "leave_of_absences")
-            self.reminders = Reminders(self.db, "reminders")
-            self.custom_commands = CustomCommands(self.db, "custom_commands")
-            self.analytics = Analytics(self.db, "analytics")
-            self.punishment_types = PunishmentTypes(self.db, "punishment_types")
-            self.custom_flags = CustomFlags(self.db, "custom_flags")
-            self.views = Views(self.db, "views")
-            self.api_tokens = APITokens(self.db, "api_tokens")
-            self.link_strings = LinkStrings(self.db, "link_strings")
-            self.fivem_links = FiveMLinks(self.db, "fivem_links")
-            self.consent = Consent(self.db, "consent")
-            self.punishments = Warnings(self)
-            self.settings = Settings(self.db, "settings")
-            self.server_keys = ServerKeys(self.db, "server_keys")
-            self.staff_connections = StaffConnections(self.db, "staff_connections")
-            self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
-            self.actions = Actions(self.db, "actions")
-            self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
-
-            self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
-            self.oauth2_users = OAuth2Users(self.db, "oauth2")
-
-            self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
-            self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
-
-            Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
-            Events = [m.name for m in iter_modules(["events"], prefix="events.")]
-            BETA_EXT = ["cogs.StaffConduct"]
-            EXTERNAL_EXT = ["utils.api"]
-            [Extensions.append(i) for i in EXTERNAL_EXT]
-
-
-            for extension in Extensions:
-                try:
-                    if extension not in BETA_EXT:
-                        await self.load_extension(extension)
-                        logging.info(f"Loaded {extension}")
-                    elif environment == "DEVELOPMENT" or environment == "ALPHA":
-                        await self.load_extension(extension)
-                        logging.info(f"Loaded {extension}")
-                except Exception as e:
-                    logging.error(f"Failed to load extension {extension}.", exc_info=e)
-
-            for extension in Events:
-                try:
-                    await self.load_extension(extension)
-                    logging.info(f"Loaded {extension}")
-                except Exception as e:
-                    logging.error(f"Failed to load extension {extension}.", exc_info=e)
-
-            bot.error_list = []
-            logging.info("Connected to MongoDB!")
-
-            # await bot.load_extension("jishaku")
-            await bot.load_extension("utils.hot_reload")
-            # await bot.load_extension('utils.server')
-
-            if not bot.is_synced:  # check if slash commands have been synced
-                bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
-            if environment == "DEVELOPMENT":
-                await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-            else:
-                pass
-                # Prevent auto syncing
-                # await bot.tree.sync()
-                # guild specific: leave blank if global (global registration can take 1-24 hours)
-            bot.is_synced = True
-            check_reminders.start()
-            check_loa.start()
-            iterate_ics.start()
-            # GDPR.start()
-            iterate_prc_logs.start()
-            statistics_check.start()
-            tempban_checks.start()
-            check_whitelisted_car.start()
-            change_status.start()
-            logging.info("Setup_hook complete! All tasks are now running!")
-
-            async for document in self.views.db.find({}):
-                if document["view_type"] == "LOAMenu":
-                    for index, item in enumerate(document["args"]):
-                        if item == "SELF":
-                            document["args"][index] = self
-                    loa_id = document['args'][3]
-                    if isinstance(loa_id, dict):
-                        loa_expiry = loa_id['expiry']
-                        if loa_expiry < datetime.datetime.now().timestamp():
-                            await self.views.delete_by_id(document['_id'])
-                            continue
-                    self.add_view(
-                        LOAMenu(*document["args"]), message_id=document["message_id"]
-                    )
-            setup = True
-
-
-bot = Bot(
-    command_prefix=get_prefix,
-    case_insensitive=True,
-    intents=intents,
-    help_command=None,
-    allowed_mentions=discord.AllowedMentions(
-        replied_user=False, everyone=False, roles=False
-    ),
-)
-bot.debug_servers = [987798554972143728]
-bot.is_synced = False
-bot.shift_management_disabled = False
-bot.punishments_disabled = False
-bot.bloxlink_api_key = bloxlink_api_key
-environment = config("ENVIRONMENT", default="DEVELOPMENT")
-internal_command_storage = {}
-
-def running():
-    if bot:
-        if bot._ready != MISSING:
-            return 1
+    token_obj = await bot.api_tokens.db.find_one({"token": token})
+    if token_obj:
+        if int(datetime.datetime.now().timestamp()) < token_obj["expires_at"]:
+            return True
         else:
-            return -1
-    else:
-        return -1
-
-@bot.before_invoke
-async def AutoDefer(ctx: commands.Context):
-    internal_command_storage[ctx] = datetime.datetime.now(tz=pytz.UTC).timestamp()
-    if ctx.command:
-        if ctx.command.extras.get("ephemeral") is True:
-            if ctx.interaction:
-                return await ctx.defer(ephemeral=True)
-        if ctx.command.extras.get("ignoreDefer") is True:
-            return
-        await ctx.defer()
-
-@bot.after_invoke
-async def loggingCommandExecution(ctx: commands.Context):
-    if ctx in internal_command_storage:
-        command_name = ctx.command.qualified_name
-
-        duration = float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx])
-        logging.info(f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds")
-        shard_info = f"Shard ID ::: {ctx.guild.shard_id}" if ctx.guild else "Shard ID ::: -1, Direct Messages"
-        logging.info(shard_info)
-    else:
-        logging.info("Command could not be found in internal context storage. Please report.")
-    del internal_command_storage[ctx]
-
-
-client = roblox.Client()
-
-
-async def staff_check(bot_obj, guild, member):
-    guild_settings = await bot_obj.settings.find_by_id(guild.id)
-    if guild_settings:
-        if "role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["role"] != "":
-                if isinstance(guild_settings["staff_management"]["role"], list):
-                    for role in guild_settings["staff_management"]["role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(guild_settings["staff_management"]["role"], int):
-                    if guild_settings["staff_management"]["role"] in [
-                        role.id for role in member.roles
-                    ]:
-                        return True
-    if member.guild_permissions.manage_messages:
-        return True
-    return False
-
-
-async def management_check(bot_obj, guild, member):
-    guild_settings = await bot_obj.settings.find_by_id(guild.id)
-    if guild_settings:
-        if "management_role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["management_role"] != "":
-                if isinstance(
-                    guild_settings["staff_management"]["management_role"], list
-                ):
-                    for role in guild_settings["staff_management"]["management_role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(
-                    guild_settings["staff_management"]["management_role"], int
-                ):
-                    if guild_settings["staff_management"]["management_role"] in [
-                        role.id for role in member.roles
-                    ]:
-                        return True
-    if member.guild_permissions.manage_guild:
-        return True
-    return False
-
-async def admin_check(bot_obj, guild, member):
-    guild_settings = await bot_obj.settings.find_by_id(guild.id)
-    if guild_settings:
-        if "admin_role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["admin_role"] != "":
-                if isinstance(guild_settings["staff_management"]["admin_role"], list):
-                    for role in guild_settings["staff_management"]["admin_role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(guild_settings["staff_management"]["admin_role"], int):
-                    if guild_settings["staff_management"]["admin_role"] in [role.id for role in member.roles]:
-                        return True
-        if "management_role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["management_role"] != "":
-                if isinstance(guild_settings["staff_management"]["management_role"], list):
-                    for role in guild_settings["staff_management"]["management_role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(guild_settings["staff_management"]["management_role"], int):
-                    if guild_settings["staff_management"]["management_role"] in [role.id for role in member.roles]:
-                        return True
-    if member.guild_permissions.administrator:
-        return True
-    return False
-
-
-async def staff_predicate(ctx):
-    if ctx.guild is None:
-        return True
-    else:
-        return await staff_check(ctx.bot, ctx.guild, ctx.author)
-
-
-def is_staff():
-    return commands.check(staff_predicate)
-
-async def admin_predicate(ctx):
-    if ctx.guild is None:
-        return True
-    else:
-        return await admin_check(ctx.bot, ctx.guild, ctx.author)
-    
-def is_admin():
-    return commands.check(admin_predicate)
-
-async def management_predicate(ctx):
-    if ctx.guild is None:
-        return True
-    else:
-        return await management_check(ctx.bot, ctx.guild, ctx.author)
-
-
-def is_management():
-    return commands.check(management_predicate)
-
-
-async def check_privacy(bot: Bot, guild: int, setting: str):
-    privacySettings = await bot.privacy.find_by_id(guild)
-    if not privacySettings:
-        return True
-    if not setting in privacySettings.keys():
-        return True
-    return privacySettings[setting]
-
-
-async def warning_json_to_mongo(jsonName: str, guildId: int):
-    with open(f"{jsonName}", "r") as f:
-        logging.info(f)
-        f = json.load(f)
-
-    logging.info(f)
-
-    for key, value in f.items():
-        structure = {"_id": key.lower(), "warnings": []}
-        logging.info([key, value])
-        logging.info(key.lower())
-
-        if await bot.warnings.find_by_id(key.lower()):
-            data = await bot.warnings.find_by_id(key.lower())
-            for item in data["warnings"]:
-                structure["warnings"].append(item)
-
-        for item in value:
-            item.pop("ID", None)
-            item["id"] = next(generator)
-            item["Guild"] = guildId
-            structure["warnings"].append(item)
-
-        logging.info(structure)
-
-        if await bot.warnings.find_by_id(key.lower()) == None:
-            await bot.warnings.insert(structure)
-        else:
-            await bot.warnings.update(structure)
-
-
-bot.erm_team = {
-    "i_imikey": "Bot Developer",
-    "mbrinkley": "First Community Manager - Removed",
-    "theoneandonly_5567": "Executive Manager",
-    "royalcrests": "Website Developer & Asset Designer",
-    "1friendlydoge": "Data Scientist - a friendly doge",
-}
-
-
-async def staff_field(bot: Bot, embed, query):
-    flag = await bot.flags.find_by_id(query)
-    embed.add_field(
-        name="<:ERMAdmin:1111100635736187011> Flags",
-        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{flag['rank']}",
-        inline=False,
-    )
-    return embed
-
-
-bot.warning_json_to_mongo = warning_json_to_mongo
-
-# include environment variables
-if environment == "PRODUCTION":
-    bot_token = config("PRODUCTION_BOT_TOKEN")
-    logging.info("Using production token...")
-elif environment == "DEVELOPMENT":
-    try:
-        bot_token = config("DEVELOPMENT_BOT_TOKEN")
-    except decouple.UndefinedValueError:
-        bot_token = ""
-    logging.info("Using development token...")
-elif environment == "ALPHA":
-    try:
-        bot_token = config('ALPHA_BOT_TOKEN')
-    except decouple.UndefinedValueError:
-        bot_token = ""
-    logging.info('Using ERM V4 Alpha token...')
-else:
-    raise Exception("Invalid environment")
-try:
-    mongo_url = config("MONGO_URL", default=None)
-except decouple.UndefinedValueError:
-    mongo_url = ""
-
-
-# status change discord.ext.tasks
-
-
-@tasks.loop(hours=1)
-async def change_status():
-    await bot.wait_until_ready()
-    logging.info("Changing status")
-    status = "⚡ /about | ermbot.xyz"
-    await bot.change_presence(
-        activity=discord.CustomActivity(name=status)
-    )
-
-@tasks.loop(minutes=1)
-async def check_reminders():
-    try:
-        async for guildObj in bot.reminders.db.find({}):
-            new_go = await bot.reminders.db.find_one(guildObj)
-            g_id = new_go['_id']
-            for item in new_go["reminders"].copy():
-                try:
-                    if item.get("paused") is True:
-                        continue
-
-                    if not new_go.get('_id'):
-                        new_go['_id'] = g_id
-                    dT = datetime.datetime.now()
-                    interval = item["interval"]
-
-                    tD = dT + datetime.timedelta(seconds=interval)
-
-                    if tD.timestamp() - item["lastTriggered"] >= interval:
-                        guild = bot.get_guild(int(guildObj["_id"]))
-                        if not guild:
-                            continue
-                        channel = guild.get_channel(int(item["channel"]))
-                        if not channel:
-                            continue
-
-                        roles = []
-                        try:
-                            for role in item["role"]:
-                                roles.append(guild.get_role(int(role)).mention)
-                        except TypeError:
-                            roles = [""]
-
-                        if (
-                            item.get("completion_ability")
-                            and item.get("completion_ability") is True
-                        ):
-                            view = CompleteReminder()
-                        else:
-                            view = None
-                        embed = discord.Embed(
-                            title="Notification",
-                            description=f"{item['message']}",
-                            color=BLANK_COLOR,
-                        )
-                        lastTriggered = tD.timestamp()
-                        item["lastTriggered"] = lastTriggered
-                        await bot.reminders.update_by_id(new_go)
-
-
-                        if isinstance(item.get('integration'), dict):
-                            # This has the ERLC integration enabled
-                            command = 'h' if item['integration']['type'] == 'Hint' else ('m' if item['integration']['type'] == 'Message' else None)
-                            content = item['integration']['content']
-                            total = ':' + command + ' ' + content
-                            if await bot.server_keys.db.count_documents({'_id': channel.guild.id}) != 0:
-                                do_not_complete = False
-                                try:
-                                    status = await bot.prc_api.get_server_status(channel.guild.id)
-                                except prc_api.ResponseFailure as e:
-                                    do_not_complete = True
-                                # print(status)
-                                
-                                if not do_not_complete:
-                                    resp = await bot.prc_api.run_command(channel.guild.id, total)
-                                    if resp[0] != 200:
-                                        logging.info('Failed reaching PRC due to {} status code'.format(resp))
-                                    else:
-                                        logging.info('Integration success with 200 status code')
-                                else:
-                                    logging.info(f'Cancelled execution of reminder for {channel.guild.id} - {e.status_code}')
-
-                        if not view:
-                            await channel.send(" ".join(roles), embed=embed,
-                                allowed_mentions = discord.AllowedMentions(
-                                    replied_user=True, everyone=True, roles=True, users=True
-                            ))
-                        else:
-                            await channel.send(" ".join(roles), embed=embed, view=view,
-                                               allowed_mentions=discord.AllowedMentions(
-                                                   replied_user=True, everyone=True, roles=True, users=True
-                                               ))
-                except Exception as e:
-                    # print(e)
-                    pass
-    except Exception as e:
-        # print(e)
-        pass
-
-@tasks.loop(minutes=1, reconnect=True)
-async def tempban_checks():
-    # This will check for expired time bans
-    # and for servers which have this feature enabled
-    # to automatically remove the ban in-game
-    # using POST /server/command
-
-    # This will also use a GET request before
-    # sending that POST request, particularly
-    # GET /server/bans
-
-    # We also check if the punishment item is 
-    # before the update date, because else we'd
-    # have too high influx of invalid
-    # temporary bans
-
-    # For diagnostic purposes, we also choose to
-    # capture the amount of time it takes for this
-    # event to run, as it may cause issues in
-    # time registration.
-
-    cached_servers = {}
-    initial_time = time.time()
-    async for punishment_item in bot.punishments.db.find({
-        "Epoch": {"$gt": 1709164800},
-        "CheckExecuted": {"$exists": False},
-        "UntilEpoch": {"$lt": int(datetime.datetime.now(tz=pytz.UTC).timestamp())},
-        "Type": "Temporary Ban"
-    }):
-        try:
-            await bot.fetch_guild(punishment_item['Guild'])
-        except discord.HTTPException:
-            continue
-        
-        if not cached_servers.get(punishment_item['Guild']):
-            try:
-                cached_servers[punishment_item['Guild']] = await bot.prc_api.fetch_bans(punishment_item['Guild'])
-            except:
-                continue
-
-
-        punishment_item['CheckExecuted'] = True
-        await bot.punishments.update_by_id(punishment_item)
-
-        if punishment_item['UserID'] not in [i.user_id for i in cached_servers[punishment_item['Guild']]]:
-            continue
-
-        sorted_punishments = sorted([i async for i in bot.punishments.db.find({"UserID": punishment_item['UserID'], "Guild": punishment_item['Guild']})], key=lambda x: x['Epoch'], reverse=True)
-        new_sorted_punishments = []
-        for item in sorted_punishments:
-            if item == punishment_item:
-                break
-            new_sorted_punishments.append(item)
-        
-        if any([i['Type'] in ["Ban", "Temporary Ban"] for i in new_sorted_punishments]):
-            continue
-            
-        await bot.prc_api.unban_user(punishment_item['Guild'], punishment_item['user_id'])
-    del cached_servers
-    end_time = time.time()
-    logging.warning('Event tempban_checks took {} seconds'.format(str(end_time - initial_time)))
-
-async def update_channel(guild, channel_id, stat, placeholders):
-    try:
-        format_string = stat["format"]
-        channel_id = int(channel_id)
-        channel = await fetch_get_channel(guild, channel_id)
-        if channel:
-            for key, value in placeholders.items():
-                format_string = format_string.replace(f"{{{key}}}", str(value))
-            await channel.edit(name=format_string)
-            logging.info(f"Updated channel {channel_id} in guild {guild.id}")
-        else:
-            logging.error(f"Channel {channel_id} not found in guild {guild.id}")
-    except Exception as e:
-        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
-
-async def fetch_get_channel(target, identifier):
-    channel = target.get_channel(identifier)
-    if not channel:
-        try:
-            channel = await target.fetch_channel(identifier)
-        except discord.HTTPException as e:
-            channel = None
-    return channel
-
-@tasks.loop(seconds=45, reconnect=True)
-async def statistics_check():
-    initial_time = time.time()
-    async for guild_data in bot.settings.db.find({}):
-        guild_id = guild_data['_id']
-
-        try:
-            guild = await bot.fetch_guild(guild_id)
-        except discord.errors.NotFound:
-            continue
-
-        settings = await bot.settings.find_by_id(guild_id)
-        if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
-            continue
-        
-        statistics = settings["ERLC"]["statistics"]
-
-        try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
-            queue: int = await bot.prc_api.get_server_queue(guild_id, minimal=True)
-        except prc_api.ResponseFailure:
-            logging.error(f"PRC ResponseFailure for guild {guild_id}")
-            continue
-
-        on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
-        moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
-        admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
-        staff_ingame = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        current_player = status.current_players
-        join_code = status.join_key
-        max_players = status.max_players
-        logging.info(f"Updating statistics for guild {guild_id}")
-
-        placeholders = {
-            "onduty": on_duty,
-            "staff": staff_ingame,
-            "mods": moderators,
-            "admins": admins,
-            "players": current_player,
-            "join_code": join_code,
-            "max_players": max_players,
-            "queue": queue
-        }
-
-        tasks = [update_channel(guild, channel_id, stat_value, placeholders) for channel_id, stat_value in statistics.items()]
-        await asyncio.gather(*tasks)
-
-    end_time = time.time()
-    logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
-
-async def run_command(guild_id, username, message):
-    while True:
-        command = f":pm {username} {message}"
-        command_response = await bot.prc_api.run_command(guild_id, command)
-        if command_response[0] == 200:
-            logging.info(f"Sent PM to {username} in guild {guild_id}")
-            break
-        elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
-            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
-            break
-
-def is_whitelisted(vehicle_name, whitelisted_vehicle):
-    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
-    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    if vehicle_year_match and whitelisted_year_match:
-        vehicle_year = vehicle_year_match.group()
-        whitelisted_year = whitelisted_year_match.group()
-        if vehicle_year != whitelisted_year:
             return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    return False
+    else:
+        return False
 
-async def get_player_avatar_url(player_id):
-    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-            return data['data'][0]['imageUrl']
 
-pm_counter = {}
-@tasks.loop(minutes=2, reconnect=True)
-async def check_whitelisted_car():
-    initial_time = time.time()
-    async for items in bot.settings.db.find(
-        {"ERLC.vehicle_restrictions.enabled": {"$exists": True, "$eq": True}}
-    ):
-        guild_id = items['_id']
-        try:
-            guild = await bot.fetch_guild(guild_id)
-        except discord.errors.NotFound:
-            continue
-        try:
-            whitelisted_vehicle_roles = items['ERLC'].get('vehicle_restrictions').get('roles')
-            alert_channel_id = items['ERLC'].get('vehicle_restrictions').get('channel')
-            whitelisted_vehicles = items['ERLC'].get('vehicle_restrictions').get('cars', [])
-            alert_message = items["ERLC"].get("vehicle_restrictions").get('message', "You do not have the required role to use this vehicle. Switch it or risk being moderated.")
-        except KeyError:
-            logging.error(f"KeyError for guild {guild_id}")
-            continue
+class APIRoutes:
+    def __init__(self, bot: Bot):
+        self.bot = bot
+        self.router = APIRouter()
+        for i in dir(self):
+           # # # print(i)
+            if any(
+                [i.startswith(a) for a in ("GET_", "POST_", "PATCH_", "DELETE_")]
+            ) and not i.startswith("_"):
+                x = i.split("_")[0]
+                self.router.add_api_route(
+                    f"/{i.removeprefix(x+'_')}",
+                    getattr(self, i),
+                    methods=[i.split("_")[0].upper()],
+                )
 
-        if not whitelisted_vehicle_roles or not alert_channel_id:
-            logging.warning(f"Skipping guild {guild_id} due to missing whitelisted vehicle roles or alert channel.")
-            continue
+    def GET_status(self):
+        return {"guilds": len(self.bot.guilds), "ping": round(self.bot.latency * 1000)}
 
-        if isinstance(whitelisted_vehicle_roles, int):
-            exotic_roles = [guild.get_role(whitelisted_vehicle_roles)]
-        elif isinstance(whitelisted_vehicle_roles, list):
-            exotic_roles = [guild.get_role(role_id) for role_id in whitelisted_vehicle_roles if guild.get_role(role_id)]
-        else:
-            logging.warning(f"Invalid whitelisted_vehicle_roles data: {whitelisted_vehicle_roles}")
-            continue
+    async def POST_get_mutual_guilds(self, request: Request):
+        json_data = await request.json()
+        guild_ids = json_data.get("guilds")
+        if not guild_ids:
+            return HTTPException(status_code=400, detail="No guild ids given")
 
-        alert_channel = bot.get_channel(alert_channel_id)
-        if not alert_channel:
-            try:
-                alert_channel = await bot.fetch_channel(alert_channel_id)
-            except discord.HTTPException:
-                alert_channel = None
-                logging.warning(f"Alert channel not found for guild {guild_id}")
+        guilds = []
+        for i in guild_ids:
+            guild: discord.Guild = self.bot.get_guild(int(i))
+            if not guild:
                 continue
+            if guild.get_member(self.bot.user.id):
+                try:
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
+                    icon = str(icon)
+                except Exception as e:
+                   # # # print(e)
+                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
-        if not exotic_roles or not alert_channel:
-            logging.warning(f"Exotic role or alert channel not found for guild {guild_id}.")
-            continue
+                guilds.append(
+                    {"id": str(guild.id), "name": str(guild.name), "icon_url": icon}
+                )
+
+        return {"guilds": guilds}
+
+    async def GET_shard_pings(self, authorization: Annotated[str | None, Header()]):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        shard_pings = {}
+        for shard_id, shard in self.bot.shards.items():
+            shard_pings[shard_id] = round(shard.latency * 1000, 2)
+
+        return {"shard_pings": shard_pings}
+
+    async def GET_guild_shard(self, authorization: Annotated[str | None, Header()], guild_id: int):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
         try:
-            players: list[Player] = await bot.prc_api.get_server_players(guild_id)
-            vehicles: list[prc_api.ActiveVehicle] = await bot.prc_api.get_server_vehicles(guild_id)
-        except prc_api.ResponseFailure:
-            logging.error(f"PRC ResponseFailure for guild {guild_id}")
-            continue
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
 
-        logging.info(f"Found {len(vehicles)} vehicles in guild {guild_id}")
-        logging.info(f"Found {len(players)} players in guild {guild_id}")
+            shard_id = guild.shard_id
+            return {"guild_id": guild_id, "shard_id": shard_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-        matched = {}
-        for item in vehicles:
-            for x in players:
-                if x.username == item.username:
-                    matched[item] = x
-
-        for vehicle, player in matched.items():
-            whitelisted = False
-            for whitelisted_vehicle in whitelisted_vehicles:
-                if is_whitelisted(vehicle.vehicle, whitelisted_vehicle):
-                    whitelisted = True
-                    break 
-                pattern = re.compile(re.escape(player.username), re.IGNORECASE)
-                member_found = False
-                for member in guild.members:
-                    if pattern.search(member.name) or pattern.search(member.display_name) or (hasattr(member, 'global_name') and member.global_name and pattern.search(member.global_name)):
-                        member_found = True
-                        has_exotic_role = False
-                        for role in exotic_roles:
-                            if role in member.roles:
-                                has_exotic_role = True
-                                break
-                        
-                        if not has_exotic_role:
-                            logging.debug(f"Player {player.username} does not have the required role for their whitelisted vehicle.")
-                            await run_command(guild_id, player.username, alert_message)
-
-                            if player.username not in pm_counter:
-                                pm_counter[player.username] = 1
-                                logging.debug(f"PM Counter for {player.username}: 1")
-                            else:
-                                pm_counter[player.username] += 1
-                                logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
-
-                            if pm_counter[player.username] >= 4:
-                                logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
-                                try:
-                                    embed = discord.Embed(
-                                        title="Whitelisted Vehicle Warning",
-                                        description=f"""
-                                        > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
-                                        """,
-                                        color=RED_COLOR,
-                                        timestamp=datetime.datetime.now(tz=pytz.UTC)
-                                    ).set_footer(
-                                        text=f"Guild: {guild.name} | Powered by ERM Systems",
-                                    ).set_thumbnail(
-                                        url=await get_player_avatar_url(player.id)
-                                    )
-                                    await alert_channel.send(embed=embed)
-                                except discord.HTTPException as e:
-                                    logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                                logging.info(f"Removing {player.username} from PM counter")
-                                pm_counter.pop(player.username)
-                        break
-                    elif member_found == False:
-                        logging.debug(f"Member with username {player.username} not found in guild {guild.name}.")
-                        await run_command(guild_id, player.username, alert_message)
-
-                        if player.username not in pm_counter:
-                            pm_counter[player.username] = 1
-                            logging.debug(f"PM Counter for {player.username}: 1")
-                        else:
-                            pm_counter[player.username] += 1
-                            logging.debug(f"PM Counter for {player.username}: {pm_counter[player.username]}")
-
-                        if pm_counter[player.username] >= 4:
-                            logging.info(f"Sending warning embed for {player.username} in guild {guild.name}")
-                            try:
-                                embed = discord.Embed(
-                                    title="Whitelisted Vehicle Warning",
-                                    description=f"""
-                                    > Player [{player.username}](https://roblox.com/users/{player.id}/profile) has been PMed 3 times to obtain the required role for their whitelisted vehicle.
-                                    """,
-                                    color=RED_COLOR,
-                                    timestamp=datetime.datetime.now(tz=pytz.UTC)
-                                ).set_footer(
-                                    text=f"Guild: {guild.name} | Powered by ERM Systems",
-                                ).set_thumbnail(
-                                    url=await get_player_avatar_url(player.id)
-                                )
-                                await alert_channel.send(embed=embed)
-                            except discord.HTTPException as e:
-                                logging.error(f"Failed to send embed for {player.username} in guild {guild.name}: {e}")
-                            logging.info(f"Removing {player.username} from PM counter")
-                            pm_counter.pop(player.username)
-                        break
-                    else:
-                        continue
-        del matched
-
-    end_time = time.time()
-    logging.warning(f"Event check_whitelisted_car took {end_time - initial_time} seconds")
-
-
-class LogTracker:
-    def __init__(self):
-        self.last_timestamps = defaultdict(lambda: defaultdict(int))
+    async def POST_approve_application(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
     
-    def get_last_timestamp(self, guild_id: int, log_type: str) -> int:
-        return self.last_timestamps[guild_id][log_type]
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
     
-    def update_timestamp(self, guild_id: int, log_type: str, timestamp: int):
-        self.last_timestamps[guild_id][log_type] = max(
-            timestamp,
-            self.last_timestamps[guild_id][log_type]
+        try:
+            json_data = await request.json()
+            user_id = int(json_data["user"])
+            add_role_ids = json_data.get("roles", [])
+            remove_role_ids = json_data.get("remove_roles", [])
+            guild_id = int(json_data["guild"])
+            submitted_on = json_data.get("submitted", 1)
+            note = json_data.get("note", "Not provided.")
+            application_name = json_data.get("application_name")
+
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=400, detail="Invalid Guild ID")
+
+            try:
+                user = await guild.fetch_member(user_id)
+            except discord.NotFound:
+                raise HTTPException(status_code=400, detail="User not found in guild")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
+
+            embed = discord.Embed(
+                title="<:success:1163149118366040106> Application Accepted",
+                description=f"Your application in **{guild.name}** has been accepted. Congratulations!\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+                color=GREEN_COLOR
+            )
+            
+            try:
+                await user.send(embed=embed)
+            except discord.Forbidden:
+                print(f"Could not send DM to user {user_id}")
+            
+            # Fetch and validate roles
+            fetched_roles = await guild.fetch_roles()
+            roles_to_add = []
+            roles_to_remove = []
+            
+            # Process roles to add
+            for role_id in add_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_add.append(role)
+            
+            # Process roles to remove
+            for role_id in remove_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_remove.append(role)
+
+            # Add roles
+            if roles_to_add:
+                try:
+                    await user.add_roles(*roles_to_add, reason="Application approved - roles added")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+
+            # Remove roles
+            if roles_to_remove:
+                try:
+                    await user.remove_roles(*roles_to_remove, reason="Application approved - roles removed")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+
+            return 200
+                
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+    async def POST_deny_application(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        try:
+            json_data = await request.json()
+            user_id = int(json_data["user"])
+            add_role_ids = json_data.get("roles", [])
+            remove_role_ids = json_data.get("remove_roles", [])
+            guild_id = int(json_data["guild"])
+            submitted_on = json_data.get("submitted", 1)
+            note = json_data.get("note", "Not provided.")
+            application_name = json_data.get("application_name")
+
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=400, detail="Invalid Guild ID")
+
+            try:
+                user = await guild.fetch_member(user_id)
+            except discord.NotFound:
+                raise HTTPException(status_code=400, detail="User not found in guild")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
+
+            embed = discord.Embed(
+                title="Application Denied",
+                description=f"Your application in **{guild.name}** has been denied.\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
+                color=BLANK_COLOR
+            )
+            
+            try:
+                await user.send(embed=embed)
+            except discord.Forbidden:
+                print(f"Could not send DM to user {user_id}")
+            
+            # Fetch and validate roles
+            fetched_roles = await guild.fetch_roles()
+            roles_to_add = []
+            roles_to_remove = []
+            
+            # Process roles to add
+            for role_id in add_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_add.append(role)
+            
+            # Process roles to remove
+            for role_id in remove_role_ids:
+                role = discord.utils.get(fetched_roles, id=int(role_id))
+                if role:
+                    roles_to_remove.append(role)
+
+            # Add roles
+            if roles_to_add:
+                try:
+                    await user.add_roles(*roles_to_add, reason="Application denied - roles added")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+
+            # Remove roles
+            if roles_to_remove:
+                try:
+                    await user.remove_roles(*roles_to_remove, reason="Application denied - roles removed")
+                except discord.Forbidden:
+                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+
+            return 200
+                
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+    async def POST_send_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa") # OID -> dict { loa spec }
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        schema = s_loa_item
+        guild = self.bot.get_guild(schema["guild_id"]) or await self.bot.fetch_guild(schema["guild_id"])
+        try:
+            author = guild.get_member(schema["user_id"]) or await guild.get_member(schema["user_id"])
+        except:
+            raise HTTPException(status_code=400, detail="Invalid author")
+
+        request_type = schema['type']
+        settings = await self.bot.settings.find_by_id(guild.id)
+        management_roles = settings.get('staff_management', {}).get('management_role', [])
+        loa_roles = settings.get('staff_management').get(f'{request_type.lower()}_role')
+
+        embed = discord.Embed(
+            title=f"{request_type} Request",
+            color=BLANK_COLOR
+        )
+        embed.set_author(
+            name=guild.name,
+            icon_url=guild.icon.url if guild.icon else ''
         )
 
-log_tracker = LogTracker()
+        past_author_notices = [item async for item in self.bot.loas.db.find({
+            "guild_id": guild.id,
+            "user_id": author.id,
+            "accepted": True,
+            "denied": False,
+            "expired": True,
+            "type": request_type.upper()
+        })]
 
-@tasks.loop(minutes=10, reconnect=True)
-async def iterate_prc_logs():
-    try:
-        server_count = await bot.settings.db.aggregate([
-            {
-            '$match': {
-                'ERLC': {'$exists': True},
-                '$or': [
-                    {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
-                    {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
-                    {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
-                ]
-            }
-            },
-            {
-            '$lookup': {
-                'from': 'server_keys',
-                'localField': '_id',
-                'foreignField': '_id',
-                'as': 'server_key'
-            }
-            },
-            {
-            '$match': {
-                'server_key': {'$ne': []}
-            }
-            },
-            {
-            '$count': 'total'
-            }
-        ]).to_list(1)
-        server_count = server_count[0]['total'] if server_count else 0
-        
-        logging.warning(f"[ITERATE] Starting iteration for {server_count} servers")
-        processed = 0
-        start_time = time.time()
-
-        batch_size = 15
-        pipeline = [
-            {
-            '$match': {
-                'ERLC': {'$exists': True},
-                '$or': [
-                {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
-                {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
-                {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
-                ]
-            }
-            },
-            {
-            '$lookup': {
-                'from': 'server_keys',
-                'localField': '_id', 
-                'foreignField': '_id',
-                'as': 'server_key'
-            }
-            },
-            {
-            '$match': {
-                'server_key': {'$ne': []}
-            }
-            }
+        shifts = []
+        storage_item = [
+            i
+            async for i in self.bot.shift_management.shifts.db.find(
+                {"UserID": author.id, "Guild": guild.id}
+            )
         ]
 
-        async def send_log_batch(channel, embeds):
-            if not embeds:
-                return
-            # Split embeds into chunks of 10 (Discord's limit)
-            for i in range(0, len(embeds), 10):
-                chunk = embeds[i:i+10]
-                try:
-                    await channel.send(embeds=chunk)
-                except discord.HTTPException as e:
-                    logging.error(f"Failed to send log batch: {e}")
+        for s in storage_item:
+            if s["EndEpoch"] != 0:
+                shifts.append(s)
 
-        def process_kill_logs(kill_logs, last_timestamp):
-            """Process kill logs and return embeds"""
-            embeds = []
-            latest_timestamp = last_timestamp
-            
-            for log in sorted(kill_logs):
-                if log.timestamp <= last_timestamp:
-                    continue
-                
-                latest_timestamp = max(latest_timestamp, log.timestamp)
-                embed = discord.Embed(
-                    title="Kill Log",
-                    color=BLANK_COLOR,
-                    description=f"[{log.killer_username}](https://roblox.com/users/{log.killer_user_id}/profile) killed [{log.killed_username}](https://roblox.com/users/{log.killed_user_id}/profile) • <t:{int(log.timestamp)}:T>"
-                )
-                embeds.append(embed)
-            
-            return embeds, latest_timestamp
+        total_seconds = sum([get_elapsed_time(i) for i in shifts])
 
-        def process_player_logs(player_logs, last_timestamp):
-            """Process player logs and return embeds"""
-            embeds = []
-            latest_timestamp = last_timestamp
-            
-            for log in sorted(player_logs):
-                if log.timestamp <= last_timestamp:
-                    continue
-                    
-                latest_timestamp = max(latest_timestamp, log.timestamp)
-                embed = discord.Embed(
-                    title=f"Player {'Join' if log.type == 'join' else 'Leave'} Log",
-                    description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:T>",
-                    color=GREEN_COLOR if log.type == 'join' else RED_COLOR
-                )
-                embeds.append(embed)
-                
-            return embeds, latest_timestamp
+        embed.add_field(
+            name="Staff Information",
+            value=(
+                f"> **Staff Member:** {author.mention}\n"
+                f"> **Top Role:** {author.top_role.name}\n"
+                f"> **Past {request_type}s:** {len(past_author_notices)}\n"
+                f"> **Shift Time:** {td_format(datetime.timedelta(seconds=total_seconds))}"
+            ),
+            inline=False
+        )
 
-        async for items in bot.settings.db.aggregate(pipeline).batch_size(batch_size):
-            try:
-                guild = await bot.fetch_guild(items['_id'])
-                settings = await bot.settings.find_by_id(guild.id)
-                erlc_settings = settings.get('ERLC', {})
-                
-                channels = {
-                    'kill_logs': erlc_settings.get('kill_logs'),
-                    'player_logs': erlc_settings.get('player_logs')
-                }
+        embed.add_field(
+            name="Request Information",
+            value=(
+                f"> **Type:** {request_type}\n"
+                f"> **Reason:** {schema['reason']}\n"
+                f"> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
+                f"> **Ends At:** <t:{schema['expiry']}>"
+            )
+        )
 
-                if not any(channels.values()):
-                    continue
+        view = LOAMenu(
+            self.bot,
+            management_roles,
+            loa_roles,
+            schema,
+            author.id,
+            (code := system_code_gen())
+        )
 
-                channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
-                if not channels:
-                    continue
+        staff_channel = settings.get("staff_management").get("channel")
+        staff_channel = discord.utils.get(guild.channels, id=staff_channel)
 
-                try:
-                    kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
-                except Exception as e:
-                    logging.error(f"Failed to fetch logs for {guild.id}: {e}")
-                    continue
-
-                tasks = []
-
-                if 'kill_logs' in channels and kill_logs:
-                    last_timestamp = log_tracker.get_last_timestamp(guild.id, 'kill_logs')
-                    embeds, latest_timestamp = process_kill_logs(kill_logs, last_timestamp)
-                    if embeds:
-                        tasks.append(send_log_batch(channels['kill_logs'], embeds))
-                        log_tracker.update_timestamp(guild.id, 'kill_logs', latest_timestamp)
-
-                if 'player_logs' in channels and player_logs:
-                    last_timestamp = log_tracker.get_last_timestamp(guild.id, 'player_logs')
-                    embeds, latest_timestamp = process_player_logs(player_logs, last_timestamp)
-                    if embeds:
-                        tasks.append(send_log_batch(channels['player_logs'], embeds))
-                        log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
-
-                if tasks:
-                    await asyncio.gather(*tasks, return_exceptions=True)
-
-            except Exception as e:
-                logging.error(f"Error processing guild {items['_id']}: {e}")
-                continue
-
-            processed += 1
-            if processed % 10 == 0:
-                logging.warning(f"[ITERATE] Processed {processed}/{server_count} servers")
-
-            if processed % batch_size == 0:
-                await asyncio.sleep(1)
-
-        end_time = time.time()
-        logging.warning(f"[ITERATE] Completed task! Processed {processed} servers in {end_time - start_time:.2f} seconds")
-
-    except Exception as e:
-        logging.error(f"[ITERATE] Error in iteration: {str(e)}", exc_info=True)
-
-async def fetch_logs_with_retry(guild_id, bot, retries=3):
-    """Helper function to fetch logs with retry logic"""
-    for attempt in range(retries):
-        try:
-            kill_logs = await bot.prc_api.fetch_kill_logs(guild_id)
-            player_logs = await bot.prc_api.fetch_player_logs(guild_id)
-            return kill_logs, player_logs
-        except prc_api.ResponseFailure as e:
-            if e.status_code == 429 and attempt < retries - 1:
-                retry_after = float(e.response.get('retry_after', 5))
-                await asyncio.sleep(retry_after)
-                continue
-            raise
-    return None, None
-
-@tasks.loop(minutes=5, reconnect=True)
-async def iterate_ics():
-    # This will aim to constantly update the Integration Command Storage
-    # and the relevant storage data.
-    # print('ICS')
-    async for item in bot.ics.db.find({}):
-        try:
-            guild = await bot.fetch_guild(item['guild'])
-        except discord.HTTPException:
-            continue
-
-        selected = None
-        custom_command_data = await bot.custom_commands.find_by_id(item['guild']) or {}
-        for command in custom_command_data.get('commands', []):
-            if command['id'] == item['_id']:
-                selected = command
-
-        if not selected:
-            continue
-            
-        try:
-            status: ServerStatus = await bot.prc_api.get_server_status(guild.id)
-        except prc_api.ResponseFailure:
-            status = None
-        if not isinstance(status, ServerStatus):
-            continue # Invalid key
-        
-        queue: int = await bot.prc_api.get_server_queue(guild.id, minimal=True)
-        players: list[Player] = await bot.prc_api.get_server_players(guild.id)
-        mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-        admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
-        total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
-            "Guild": guild.id, "EndEpoch": 0
-        })])
-
-        new_data = {
-                'join_code': status.join_key,
-                'players': status.current_players,
-                'max_players': status.max_players,
-                'queue': queue,
-                'staff': total_staff,
-                'admins': admins,
-                'mods': mods,
-                "onduty": onduty
+        msg = await staff_channel.send(
+            embed=embed,
+            view=view
+        )
+        schema['message_id'] = msg.id
+        await self.bot.views.insert(
+            {
+                "_id": code,
+                "args": [
+                    'SELF',
+                    management_roles,
+                    loa_roles,
+                    schema,
+                    author.id,
+                    code
+                ],
+                "view_type": 'LOAMenu',
+                'message_id': msg.id
             }
-        # print(json.dumps(new_data, indent=4))
+        )
         
-        if new_data != item['data']:
-            # Updated data
-            for arr in item['associated_messages']:
-                channel, message_id = arr[0], arr[1]
+        ns = schema
+        del ns["_id"]
+        await self.bot.update_one({
+            "_id": schema["_id"]
+        }, ns)
+    
+        return 200
+            
+
+    async def POST_accept_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa") # oid -> dict { loa spec }
+        accepted_by = json_data.get("accepted_by")
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        s_loa = s_loa_item
+
+        # fetch the actual accept roles
+        guild_id = s_loa["guild_id"]
+        config = await self.bot.settings.find_by_id(guild_id) or {}
+        roles = config.get("staff_management", {}).get(f"{s_loa['type']}_role", []) or []
+
+        self.bot.dispatch("loa_accept", s_loa=s_loa, role_ids=roles, accepted_by=accepted_by)
+
+        return 200
+    
+    async def POST_deny_loa(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        s_loa = json_data.get("loa")
+        denied_by = json_data.get("denied_by")
+        reason = json_data.get("reason", "No reason provided.")
+        s_loa_item = await self.bot.loas.find_by_id(s_loa)
+        s_loa = s_loa_item
+
+        self.bot.dispatch("loa_deny", s_loa=s_loa, denied_by=denied_by, reason=reason)
+
+        return 200
+
+    async def POST_send_application_wave(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        if not json_data.get("Channel"):
+            return HTTPException(status_code=400, detail="Bad Format")
+            
+        channel = await self.bot.fetch_channel(json_data["Channel"])
+        embed = discord.Embed(
+            title="Application Results",
+            description=f"The applications for **{json_data['ApplicationName']}** have been released!\n\n",
+            color=BLANK_COLOR
+        )
+        embed_temp = discord.Embed(
+            description="",
+            color=BLANK_COLOR
+        )
+        embeds = [embed]
+        
+        for item in json_data["Applicants"]:
+            new_content = f"<@{item['DiscordID']}>\n> Status: **{item['Status']}**\n> Reason: **{item['Reason']}**\n> Submission Time: <t:{int(item['SubmissionTime'])}>\n\n"
+            
+            current_desc = embeds[-1].description or ""
+            if len(current_desc) + len(new_content) > 4000:
+                new_embed = discord.Embed(description="", color=BLANK_COLOR)
+                embeds.append(new_embed)
+            
+            embeds[-1].description = (embeds[-1].description or "") + new_content
+            
+        await channel.send(embeds=embeds)
+
+    async def POST_all_members(
+        self,
+        authorization: Annotated[str | None, Header()],
+        guild_id: int
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+    
+        if not guild.chunked:
+            try:
+                await guild.chunk(cache=True)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
+    
+        member_data = []
+        for member in guild.members:
+            voice_state = member.voice
+            member_info = {
+                "id": member.id,
+                "name": member.name,
+                "nick": member.nick,
+                "roles": [role.id for role in member.roles[1:]],
+                "voice_state": None
+            }
+            
+            if voice_state:
+                member_info["voice_state"] = {
+                    "channel_id": voice_state.channel.id if voice_state.channel else None,
+                    "channel_name": voice_state.channel.name if voice_state.channel else None,
+                }
+            
+            member_data.append(member_info)
+    
+        response = {
+            "members": member_data,
+            "total_members": len(member_data)
+        }
+    
+        return response
+    
+    async def POST_send_logging(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        json_data = await request.json()
+        await secure_logging(self.bot, json_data["guild_id"], json_data["author_id"], json_data["interpret_type"], json_data["command_string"], json_data["attempted"])
+        return {
+            "message": "Successfully logged!"
+        }
+
+    async def POST_get_staff_guilds(self, request: Request):
+        json_data = await request.json()
+        guild_ids = json_data.get("guilds")
+        user_id = json_data.get("user")
+        if not guild_ids:
+            raise HTTPException(status_code=400, detail="No guilds specified")
+    
+        semaphore = asyncio.Semaphore(5)
+
+        async def get_or_fetch(guild: discord.Guild, member_id: int):
+            m = guild.get_member(member_id)
+            if m:
+                return m
+            try:
+                m = await guild.fetch_member(member_id)
+            except:
+                m = None
+            return m
+    
+        async def process_guild(guild_id):
+            async with semaphore:
+                guild: discord.Guild = self.bot.get_guild(int(guild_id))
+                if not guild:
+                    return None
                 try:
-                    channel = await guild.fetch_channel(channel)
-                    message = await channel.fetch_message(message_id)
-                except discord.HTTPException:
-                    continue
+                    icon = guild.icon.with_size(512)
+                    icon = icon.with_format("png")
+                    icon = str(icon)
+                except AttributeError:
 
-                if not message or not channel:
-                    continue
+                    icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
-                await message.edit(content=await interpret_content(bot, await bot.get_context(message), channel, selected['message']['content'], item['_id']), embeds=[
-                    (await interpret_embed(bot, await bot.get_context(message), channel, embed, item['_id'])) for embed in selected['message']['embeds']
-                ] if selected['message']['embeds'] is not None else [])
+                try:
+                    user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
+                except (discord.NotFound, asyncio.TimeoutError):
+                    return None
+
+                if user is None:
+                    return None
+    
+                permission_level = 0
+                if await management_check(self.bot, guild, user):
+                    permission_level = 2
+                elif await admin_check(self.bot, guild, user):
+                    permission_level = 3
+                elif await staff_check(self.bot, guild, user):
+                    permission_level = 1
+                if permission_level > 0:
+                    return {
+                        "id": str(guild.id),
+                        "name": str(guild.name),
+                        "member_count": str(guild.member_count),
+                        "icon_url": icon,
+                        "permission_level": permission_level,
+                    }
+                return None
+    
+        guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
+    
+        guilds = list(filter(lambda x: x is not None, guild_results))
+    
+        return guilds
+
+    async def POST_check_staff_level(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        user_id = json_data.get("user")
+        if not guild_id or not user_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        try:
+            user = await guild.fetch_member(user_id)
+        except (discord.Forbidden, discord.HTTPException):
+            return {"permission_level": 0}
+
+        permission_level = 0
+        if await management_check(self.bot, guild, user):
+            permission_level = 2
+        elif await admin_check(self.bot, guild, user):
+            permission_level = 3
+        elif await staff_check(self.bot, guild, user):
+            permission_level = 1
+
+
+        return {"permission_level": permission_level}
+
+    async def POST_get_guild_settings(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return HTTPException(status_code=400, detail="Invalid guild")
+
+        return settings
+
+    async def POST_update_guild_settings(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        for key, value in json_data.items():
+            if key == "guild":
+                continue
+            if isinstance(value, dict):
+                settings = await self.bot.settings.find_by_id(guild_id)
+                if not settings:
+                    return HTTPException(status_code=400, detail="Invalid guild")
+                for k, v in value.items():
+                    settings[key][k] = v
+        await self.bot.settings.update_by_id(settings)
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            return HTTPException(status_code=404, detail="Guild does not have settings attribute")
+
+        return settings
+
+
+    async def POST_get_guild_roles(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
 
 
 
-@tasks.loop(minutes=1, reconnect=True)
-async def check_loa():
+        return [{
+            "name": role.name,
+            "id": role.id,
+            "color": str(role.color)
+        } for role in guild.roles]
+
+    async def POST_get_guild_channels(self, request: Request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+
+        if not guild_id:
+            return HTTPException(status_code=400, detail="Invalid guild")
+        guild: discord.Guild = self.bot.get_guild(int(guild_id))
+
+        return [{
+            "name": channel.name,
+            "id": channel.id,
+            "type": channel.type
+        } for channel in guild.channels]
+
+    async def POST_get_last_warnings(self, request):
+        json_data = await request.json()
+        guild_id = json_data.get("guild")
+        # NOTE: This API is deprecated.
+        return HTTPException(status_code=500, detail="This API is deprecated")
+
+        # warning_objects = {}
+        # async for document in self.bot.warnings.db.find(
+        #         {"Guild": guild_id}
+        # ).sort([("$natural", -1)]).limit(10):
+        #     warning_objects[document["_id"]] = list(
+        #         filter(lambda x: x["Guild"] == guild_id, document["warnings"])
+        #     )
+
+        # return warning_objects
+
+    async def GET_get_token(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        """
+
+        Generates a token for the API. Requires an unspecified private key.
+
+        :param authorization:
+        :param request:
+        :return:
+        """
+
+        if authorization != config("API_PRIVATE_KEY"):
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+        has_token = await self.bot.api_tokens.find_by_id(request.client.host)
+        if has_token:
+            if not int(datetime.datetime.now().timestamp()) > has_token["expires_at"]:
+                return has_token
+       # # # print(request)
+        generated = tokenGenerator()
+        object = {
+            "_id": request.client.host,
+            "token": generated,
+            "created_at": int(datetime.datetime.now().timestamp()),
+            "expires_at": int(datetime.datetime.now().timestamp()) + 2.592e6,
+        }
+
+        await self.bot.api_tokens.upsert(object)
+
+        return object
+
+    async def POST_authorize_token(
+        self,
+        authorization: Annotated[str | None, Header()],
+        x_link_string: Annotated[str | None, Header()],
+    ):
+        """
+
+        Authorizes a token for the API, and links a Discord server to the token. Requires a token and a transfer string, which is placed in the X-Link-String header.
+
+        :param authorization:
+        :param x_link_string:
+        :return:
+        """
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(
+            self.bot, authorization, disable_static_tokens=True
+        ):
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not x_link_string:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        link_string_obj = await self.bot.link_strings.db.find_one(
+            {"_id": x_link_string}
+        )
+
+        if not link_string_obj:
+            raise HTTPException(status_code=401, detail="Invalid link string")
+
+        link_string_obj["token"] = authorization
+        link_string_obj["ip"] = token_obj["_id"]
+        link_string_obj["link_string"] = link_string_obj["_id"]
+        await self.bot.link_strings.update_by_id(link_string_obj)
+
+        token_obj["link_string"] = link_string_obj["_id"]
+        await self.bot.api_tokens.update_by_id(token_obj)
+
+        return link_string_obj
+
+    async def GET_get_link_string(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        """
+        Given an authorization token as a header, returns a dictionary with information about the token.
+
+        Parameters:
+            authorization (str | None): The authorization token to be verified.
+            request (fastapi.Request): The incoming HTTP request.
+
+        Raises:
+            HTTPException: If the authorization token is missing, invalid, or has expired.
+
+        Returns:
+            dict: A dictionary containing information about the authorization token, such as the token string,
+                  its expiration timestamp, and any other associated data.
+        """
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not token_obj:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        return token_obj
+
+    async def GET_get_current_token(self, request: Request):
+        """
+        Given the client host IP, returns a dictionary with information about the token.
+
+        Parameters:
+            request (fastapi.Request): The incoming HTTP request.
+
+        Raises:
+            HTTPException: If the authorization token is missing, invalid, or has expired.
+
+        Returns:
+            dict: A dictionary containing information about the authorization token, such as the token string,
+                  its expiration timestamp, and any other associated data.
+        """
+
+        token_obj = await self.bot.api_tokens.db.find_one({"_id": request.client.host})
+        ## # print(token_obj)
+        # # print(request.client.host)
+        if not token_obj:
+            raise HTTPException(
+                status_code=404, detail="Could not find token associated with IP"
+            )
+
+        return token_obj
+
+    async def GET_get_online_staff(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        # Use the self.bot.shifts to get all current shifts for the guild ID associated with the link string associated with the token
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not token_obj:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        link_string_obj = await self.bot.link_strings.db.find_one(
+            {"_id": token_obj["link_string"]}
+        )
+
+        if not link_string_obj:
+            raise HTTPException(status_code=401, detail="Invalid link string")
+
+        guild = self.bot.get_guild(link_string_obj["guild"])
+
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+
+        shifts = []
+        async for doc in self.bot.shift_management.shifts.db.find(
+            {"data": {"$elemMatch": {"guild": link_string_obj["guild"]}}}
+        ):
+            item = [
+                *list(
+                    filter(
+                        lambda x: (x or {}).get("guild") == link_string_obj["guild"],
+                        doc["data"],
+                    )
+                )
+            ][0]
+            item["discord"] = doc["_id"]
+            fivem_link = await self.bot.fivem_links.db.find_one(
+                {"_id": item["discord"]}
+            )
+            item["fivem"] = (fivem_link or {}).get("steam_id")
+            shifts.append(item)
+
+        return shifts
+
+    async def POST_get_discord(
+        self,
+        authorization: Annotated[str | None, Header()],
+        body: Identification,
+        request: Request,
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not token_obj:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        link_string_obj = await self.bot.link_strings.db.find_one(
+            {"_id": token_obj["link_string"]}
+        )
+
+        if not link_string_obj:
+            raise HTTPException(status_code=401, detail="Invalid link string")
+
+        if not body or not body.license:
+            raise HTTPException(status_code=400, detail="Missing license")
+
+        fivem_link = await self.bot.fivem_links.db.find_one({"license": body.license})
+        return (
+            {"status": "success"}.update(fivem_link)
+            if fivem_link
+            else {"status": "failed"}
+        )
+
+    async def POST_get_fivem(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not token_obj:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        link_string_obj = await self.bot.link_strings.db.find_one(
+            {"_id": token_obj["link_string"]}
+        )
+
+        if not link_string_obj:
+            raise HTTPException(status_code=401, detail="Invalid link string")
+
+        body = await request.json()
+        if not body or not body.get("discord_id"):
+            raise HTTPException(status_code=400, detail="Missing discord_id")
+
+        fivem_link = await self.bot.fivem_links.db.find_one({"_id": body["discord_id"]})
+        return (
+            {"status": "success"}.update(fivem_link)
+            if fivem_link
+            else {"status": "failed"}
+        )
+
+    async def POST_duty_on_actions(
+            self, authorization: Annotated[str | None, Header()],
+            request: Request
+    ):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+        self.bot.dispatch('shift_start', ObjectId(data))
+        return 200
+
+
+    async def POST_duty_off_actions(self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+        self.bot.dispatch('shift_end', ObjectId(data))
+        return 200
+
+
+    async def POST_duty_break_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+        self.bot.dispatch('break_start', ObjectId(data))
+        return 200
+
+    async def POST_duty_end_break_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+
+
+        self.bot.dispatch('break_end', ObjectId(data))
+        return 200
+
+    async def POST_duty_voided_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+        dataobject = await self.bot.shift_management.fetch_shift(ObjectId(data))
+        guild = await self.bot.fetch_guild(dataobject["Guild"])
+        staff_member = await guild.fetch_member(dataobject['UserID'])
+
+        self.bot.dispatch('shift_void', staff_member, ObjectId(data))
+        return 200
+
+    async def POST_punishment_logged(self, authorization: Annotated[str | None, Header()], request: Request):
+        if not authorization:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+
+        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        # print(base_auth)
+        if not base_auth:
+            return HTTPException(status_code=401, detail="Invalid authorization")
+        data = request.query_params.get("ObjectId")
+        if not data:
+            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+
+        self.bot.dispatch('punishment', ObjectId(data))
+        return 200
+    async def POST_duty_on(
+        self,
+        authorization: Annotated[str | None, Header()],
+        identification: Identification,
+        request: Request,
+    ):
+        # # print(request)
+        # # print(await request.json())
+        # # print("REQUEST ^^")
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if not token_obj:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if int(datetime.datetime.now().timestamp()) > token_obj["expires_at"]:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        link_string_obj = await self.bot.link_strings.db.find_one(
+            {"_id": token_obj["link_string"]}
+        )
+
+        if not link_string_obj:
+            raise HTTPException(status_code=401, detail="Invalid link string")
+
+        guild = self.bot.get_guild(link_string_obj["guild"])
+
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+
+        body = await request.json()
+
+        if not body:
+            raise HTTPException(status_code=400, detail="No body provided")
+
+        if not body.get("steam_id"):
+            raise HTTPException(status_code=400, detail="No steam ID provided")
+
+        # # print(body)
+        fivem_link = await self.bot.fivem_links.db.find_one(
+            {"steam_id": body["steam_id"]}
+        )
+
+        if not fivem_link:
+            raise HTTPException(status_code=404, detail="Could not find FiveM link")
+
+        if not fivem_link.get("_id"):
+            raise HTTPException(status_code=404, detail="Could not find FiveM link")
+
+        try:
+            member = await guild.fetch_member(fivem_link["_id"])
+        except discord.NotFound:
+            raise HTTPException(status_code=404, detail="Could not find Discord member")
+
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            raise HTTPException(status_code=404, detail="Could not find settings")
+
+        if settings.get("shift_types"):
+            available_shift_types = []
+            for shift_type in settings["shift_types"]:
+                available_shift_types.append(shift_type["id"])
+
+        if not body.get("shift_type"):
+            await self.bot.shift_management.add_shift_by_user(member, {"guild": guild})
+        else:
+            if body["shift_type"] not in available_shift_types:
+                raise HTTPException(status_code=400, detail="Invalid shift type")
+            await self.bot.shift_management.add_shift_by_user(
+                member, {"guild": guild, "shift_type": body["shift_type"]}
+            )
+
+        return {
+            "status": "success",
+            "member": member.id,
+            "shift_type": body.get("shift_type"),
+        }
+
+    async def POST_duty_off(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+        
+        if not await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        ):
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
+        token_obj = await self.bot.api_tokens.db.find_one({"token": authorization})
+
+        if token_obj:
+            link_string_obj = await self.bot.link_strings.db.find_one(
+                {"_id": token_obj["link_string"]}
+            )
+
+            if not link_string_obj:
+                raise HTTPException(status_code=401, detail="Invalid link string")
+
+            guild = self.bot.get_guild(link_string_obj["guild"])
+        else:
+            data = await request.json()
+            guild = data['guild']
+
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+
+        body = await request.json()
+
+        if not body:
+            raise HTTPException(status_code=400, detail="No body provided")
+
+        if token_obj:
+            if not body.get("steam_id"):
+                raise HTTPException(status_code=400, detail="No steam ID provided")
+
+            fivem_link = await self.bot.fivem_links.db.find_one(
+                {"steam_id": body["steam_id"]}
+            )
+
+            if not fivem_link:
+                raise HTTPException(status_code=404, detail="Could not find FiveM link")
+
+            if not fivem_link.get("_id"):
+                raise HTTPException(status_code=404, detail="Could not find FiveM link")
+
+        try:
+            member = await guild.fetch_member(fivem_link["_id"])
+        except discord.NotFound:
+            raise HTTPException(status_code=404, detail="Could not find Discord member")
+
+        settings = await self.bot.settings.find_by_id(guild.id)
+        if not settings:
+            raise HTTPException(status_code=404, detail="Could not find settings")
+
+        shifts = await self.bot.shift_management.shifts.find_by_id(member.id)
+        if not shifts:
+            raise HTTPException(status_code=404, detail="Could not find user shifts")
+
+        associated_shift = list(
+            filter(lambda x: (x or {}).get("guild") == guild.id, shifts["data"])
+        )
+        if not associated_shift or len(associated_shift) == 0:
+            raise HTTPException(status_code=404, detail="Could not find user shifts")
+        else:
+            associated_shift = associated_shift[0]
+
+        await self.bot.shift_management.remove_shift_by_user(
+            member, {"guild": guild, "shift": associated_shift}
+        )
+
+
+
+
+api = FastAPI()
+
+
+class ServerAPI(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.server = None
+        self.server_task = None
+
+    async def start_server(self):
+        try:
+            api.include_router(APIRoutes(self.bot).router)
+            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
+            self.server = uvicorn.Server(self.config)
+            await self.server.serve()
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+            await asyncio.sleep(5)
+            self.server_task = asyncio.create_task(self.start_server())
+
+    async def stop_server(self):
+        try:
+            if self.server:
+                await self.server.shutdown()
+            else:
+                logger.info("Server was not running")
+        except Exception as e:
+            logger.error(f"Error stopping server: {e}")
+
+    async def cog_load(self) -> None:
+        self.server_task = asyncio.create_task(self.start_server())
+        self.server_task.add_done_callback(self.server_error_handler)
+
+    def server_error_handler(self, future: asyncio.Future):
+        try:
+            future.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Unhandled server error: {e}")
+            self.server_task = asyncio.create_task(self.start_server())
+
+    async def cog_unload(self) -> None:
+        try:
+            if self.server_task:
+                self.server_task.cancel()
+            await self.stop_server()
+        except Exception as e:
+            logger.error(f"Error during cog unload: {e}")
+
+async def setup(bot):
     try:
-        loas = bot.loas
-
-        async for loaObject in bot.loas.db.find({}):
-            if (
-                datetime.datetime.now().timestamp() > loaObject["expiry"]
-                and loaObject["expired"] == False
-            ):
-                if loaObject["accepted"] is True:
-                    loaObject["expired"] = True
-                    await bot.loas.update_by_id(loaObject)
-                    guild = bot.get_guild(loaObject["guild_id"])
-                    if guild:
-
-                        member = guild.get_member(loaObject["user_id"])
-                        settings = await bot.settings.find_by_id(guild.id)
-                        roles = [None]
-                        if settings is not None:
-                            if "loa_role" in settings["staff_management"]:
-                                try:
-                                    if isinstance(
-                                        settings["staff_management"]["loa_role"], int
-                                    ):
-                                        roles = [
-                                            discord.utils.get(
-                                                guild.roles,
-                                                id=settings["staff_management"][
-                                                    "loa_role"
-                                                ],
-                                            )
-                                        ]
-                                    elif isinstance(
-                                        settings["staff_management"]["loa_role"], list
-                                    ):
-                                        roles = [
-                                            discord.utils.get(guild.roles, id=role)
-                                            for role in settings["staff_management"][
-                                                "loa_role"
-                                            ]
-                                        ]
-                                except KeyError:
-                                    pass
-
-                        docs = bot.loas.db.find(
-                            {
-                                "user_id": loaObject["user_id"],
-                                "guild_id": loaObject["guild_id"],
-                                "accepted": True,
-                                "expired": False,
-                                "denied": False,
-                            }
-                        )
-                        should_remove_roles = True
-                        async for doc in docs:
-                            if doc["type"] == loaObject["type"]:
-                                if not doc["expired"]:
-                                    if not doc == loaObject:
-                                        should_remove_roles = False
-                                        break
-
-                        if should_remove_roles:
-                            for role in roles:
-                                if role is not None:
-                                    if member:
-                                        if role in member.roles:
-                                            try:
-                                                await member.remove_roles(
-                                                    role,
-                                                    reason="LOA Expired",
-                                                    atomic=True,
-                                                )
-                                            except discord.HTTPException:
-                                                channel = settings["staff_management"]["channel"]
-                                                if channel:
-                                                    channel = guild.get_channel(channel)
-                                                    if channel:
-                                                        await channel.send(
-                                                            embed = discord.Embed(
-                                                                title="Failed to Remove Role",
-                                                                description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
-                                                                color=RED_COLOR
-                                                            )
-                                                        )
-                                                else:
-                                                    owner = guild.owner
-                                                    await owner.send(
-                                                        embed = discord.Embed(
-                                                            title="Failed to Remove Role",
-                                                            description=f"Failed to remove {role.mention} from {member.mention} due to a permissions error.",
-                                                            color=RED_COLOR
-                                                        )
-                                                    )
-                        if member:
-                            try:
-                                await member.send(embed=discord.Embed(
-                                    title=f"{loaObject['type']} Expired",
-                                    description=f"Your {loaObject['type']} has expired in **{guild.name}**.",
-                                    color=BLANK_COLOR
-                                ))
-                            except discord.Forbidden:
-                                pass
-    except ValueError:
-        pass
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.voice_states = True
-
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive",
-]
-
-credentials_dict = {
-    "type": config("TYPE", default=""),
-    "project_id": config("PROJECT_ID", default=""),
-    "private_key_id": config("PRIVATE_KEY_ID", default=""),
-    "private_key": config("PRIVATE_KEY", default="").replace("\\n", "\n"),
-    "client_email": config("CLIENT_EMAIL", default=""),
-    "client_id": config("CLIENT_ID", default=""),
-    "auth_uri": config("AUTH_URI", default=""),
-    "token_uri": config("TOKEN_URI", default=""),
-    "auth_provider_x509_cert_url": config("AUTH_PROVIDER_X509_CERT_URL", default=""),
-    "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=""),
-}
-
-def run():
-    sentry_sdk.init(
-        dsn=sentry_url,
-        traces_sample_rate=1.0,
-        integrations=[PyMongoIntegration()],
-        _experiments={
-            "profiles_sample_rate": 1.0,
-        },
-    )
-
-    try:
-        bot.run(bot_token)
+        await bot.add_cog(ServerAPI(bot))
     except Exception as e:
-        with sentry_sdk.isolation_scope() as scope:
-            scope.level = "error"
-            capture_exception(e)
-
-
-if __name__ == "__main__":
-    run()
+        logger.error(f"Error setting up ServerAPI cog: {e}")
