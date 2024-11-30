@@ -9,13 +9,13 @@ class OnLOADeny(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_loa_deny(self, s_loa: dict, denied_by: int):
+    async def on_loa_deny(self, s_loa: dict, denied_by: int, reason: str = "No reason provided."):
         guild = self.bot.get_guild(s_loa["guild_id"])
         try:
             user = await guild.fetch_member(int(s_loa["user_id"]))
         except:
             return
-        reason = s_loa["denial_reason"]
+        
         try:
             await user.send(
                 embed=discord.Embed(
