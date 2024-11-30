@@ -453,13 +453,13 @@ class APIRoutes:
         json_data = await request.json()
         s_loa = json_data.get("loa")
         denied_by = json_data.get("denied_by")
+        reason = json_data.get("reason", "No reason provided.")
         s_loa_item = await self.bot.loas.find_by_id(s_loa)
         s_loa = s_loa_item
 
-        self.bot.dispatch("loa_deny", s_loa=s_loa, denied_by=denied_by)
+        self.bot.dispatch("loa_deny", s_loa=s_loa, denied_by=denied_by, reason=reason)
 
         return 200
-
 
     async def POST_send_application_wave(
         self,
