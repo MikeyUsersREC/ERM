@@ -372,6 +372,33 @@ async def management_predicate(ctx):
 def is_management():
     return commands.check(management_predicate)
 
+async def advance_check(bot_obj, guild, member, permission):
+    if member.guild_permissions.administrator:
+        return True
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
+    if guild_settings and "advance_perm" in guild_settings:
+        member_roles = [str(role.id) for role in member.roles]
+        for role_id in member_roles:
+            if role_id in guild_settings["advance_perm"]:
+                if guild_settings["advance_perm"][role_id] == permission:
+                    return True
+    
+    if await management_check(bot_obj, guild, member):
+        return True
+    
+    if await admin_check(bot_obj, guild, member):
+        return True
+
+    return False
+
+async def advance_predicate(ctx, permission):
+    if ctx.guild is None:
+        return True
+    else:
+        return await advance_check(ctx.bot, ctx.guild, ctx.author, permission)
+
+def advance_perm(permission):
+    return commands.check(lambda ctx: advance_predicate(ctx, permission))
 
 async def check_privacy(bot: Bot, guild: int, setting: str):
     privacySettings = await bot.privacy.find_by_id(guild)

@@ -11032,7 +11032,9 @@ class AccountLinkingMenu(discord.ui.View):
         
         if full_string.lower() in new_user.description.lower():
             await self.bot.pending_oauth2.db.delete_one({"discord_id": interaction.user.id})
-            await self.bot.oauth2_users.db.insert_one({"roblox_id": new_user.id, "discord_id": interaction.user.id})
+            if await self.bot.oauth2_users.db.find_one({"discord_id": interaction.user.id}):
+                await self.bot.oauth2_users.db.delete_one({"discord_id": interaction.user.id})
+            await self.bot.oauth2_users.insert_one({"roblox_id": new_user.id, "discord_id": interaction.user.id})
             
             self.mode = "Code"
             self.username = new_user.name 
