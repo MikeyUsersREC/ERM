@@ -610,8 +610,10 @@ async def run_pm_command(guild_id, username, message, bot):
             logging.info(f"Sent PM to {username} in guild {guild_id}")
             break
         elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
-            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+            rate_limit_reset = int(command_response[1].get('RateLimit-Reset', 5))
+            reset_time = int(rate_limit_reset)
+            current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            retry_after = reset_time - current_time
             await asyncio.sleep(retry_after)
         else:
             logging.error(f"Failed to send PM to {username} in guild {guild_id}")

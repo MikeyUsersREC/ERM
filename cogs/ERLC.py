@@ -710,18 +710,25 @@ class ERLC(commands.Cog):
 
         guild_members_dict = {}
         for member in ctx.guild.members:
-            guild_members_dict[member.name.lower()] = member
-            guild_members_dict[member.display_name.lower()] = member
+            if member.bot:
+                continue
+            keys = {
+                member.name.lower(): member,
+                member.display_name.lower(): member,
+            }
             if hasattr(member, 'global_name') and member.global_name:
-                guild_members_dict[member.global_name.lower()] = member
+                keys[member.global_name.lower()] = member
+            for key in keys:
+                if key not in guild_members_dict:
+                    guild_members_dict[key] = []
+                guild_members_dict[key].append(member)
 
-        guild_member_keys = set(guild_members_dict.keys())
         all_users = []
 
         for player in players:
             player_username_lower = player.username.lower()
 
-            if player_username_lower in guild_member_keys:
+            if player_username_lower in guild_members_dict and guild_members_dict[player_username_lower]:
                 continue
 
             try:

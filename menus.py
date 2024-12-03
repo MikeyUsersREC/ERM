@@ -927,10 +927,8 @@ class LOAMenu(discord.ui.View):
                 item.label = "Accepted"
             else:
                 self.remove_item(item)
-        await interaction.message.edit(view=self)
         s_loa = None
-        # # # # print(t(t(t(t(self)
-        # # # # print(t(t(t(t(self.bot)
+
         for loa in await self.bot.loas.get_all():
             if (
                     loa["message_id"] == interaction.message.id

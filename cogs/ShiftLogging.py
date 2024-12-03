@@ -994,9 +994,9 @@ class ShiftLogging(commands.Cog):
                 time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
 
                 if buffer is None:
-                    buffer = f"{member.name} • {time_str} • {i['moderations']} Moderations"
+                    buffer = f"{member.name} • {time_str}"
                 else:
-                    buffer += f"\n{member.name} • {time_str} • {i['moderations']} Moderations"
+                    buffer += f"\n{member.name} • {time_str}"
 
                 data.append([
                     index + 1,
@@ -1089,11 +1089,11 @@ class ShiftLogging(commands.Cog):
                                 if embeds[-1].description is None:
                                     embeds[
                                         -1
-                                    ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
+                                    ].description = f"**Total Shifts**\n**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))} • {i['moderations']} Moderations\n"
                                 else:
                                     embeds[
                                         -1
-                                    ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))}\n"
+                                    ].description += f"**{index + 1}.** {member.mention} • {td_format(datetime.timedelta(seconds=0))} • {i['moderations']} Moderations\n"
 
                             else:
                                 new_embed = discord.Embed(
