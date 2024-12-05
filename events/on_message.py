@@ -270,7 +270,7 @@ class OnMessage(commands.Cog):
                 if 'bring' in embed.description.lower() or 'tp' in embed.description.lower() or 'kick' in embed.description.lower() or 'ban' in embed.description.lower():
                     async with aiohttp.ClientSession(headers={'Content-Type': 'application/json', 'X-Static-Token': config("PANEL_STATIC_AUTH")}) as session:
                         async with session.post(
-                            url=f"https://panel.ermbot.xyz/Internal/{message.guild.id}/SyncWebhookLogs",
+                            url=f"{config('PANEL_API_URL')}/Internal/{message.guild.id}/SyncWebhookLogs",
                             data={'content': embed.description.split('`')[1].strip()}
                         ) as resp:
                             if resp.status != 200:
