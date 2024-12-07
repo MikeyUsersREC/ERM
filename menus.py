@@ -9791,11 +9791,13 @@ class PunishmentModifier(discord.ui.View):
 
         punishment_types = (await self.bot.punishment_types.get_punishment_types(interaction.guild.id)) or {'types': []}
         chosen_identifier = None
-        for item in punishment_types['types']:
+        for item in punishment_types['types'] + ["Warning", "Kick", "Ban", "BOLO"]:
             if isinstance(item, str) and item.lower() == chosen_type.lower():
                 chosen_identifier = item
+                break
             elif isinstance(item, dict) and item['name'].lower() == chosen_type.lower():
                 chosen_identifier = item['name']
+                break
 
 
         if not chosen_identifier:
