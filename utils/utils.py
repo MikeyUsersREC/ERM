@@ -1,4 +1,4 @@
-import asyncio
+Aimport asyncio
 import datetime
 import typing
 import aiohttp
@@ -192,7 +192,7 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
     except AttributeError:
         pass
 
-    if str(var := await sub_vars(bot, ctx, channel, embed.author.name) != "None":
+    if str(var := await sub_vars(bot, ctx, channel, embed.author.name)) != "None":
         try:
             embed.set_author(name=await sub_vars(bot, ctx, channel, embed.author.name))
         except AttributeError:
