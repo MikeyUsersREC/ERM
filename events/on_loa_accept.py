@@ -38,7 +38,7 @@ class OnLOAAccept(commands.Cog):
 
         msg = s_loa["message_id"]
         loa_channel_id = settings.get("staff_management", {}).get("channel", 0)
-        if not loa_channel_id:
+        if not loa_channel_ifd:
             return
         loa_channel = guild.get_channel(loa_channel_id) or await guild.fetch_channel(loa_channel_id)
         messg = None
