@@ -4,6 +4,7 @@ import typing
 
 import discord
 import roblox
+import pytz
 from discord.ext import commands
 import aiohttp
 from decouple import config
@@ -133,7 +134,7 @@ class PRCApiClient:
             #         "ProhibitedUntil": 9999999999
             #     })
             #     response.status = 423
-                
+
             return response.status, (await response.json() if response.content_type != "text/html" else {})
 
 
@@ -263,7 +264,10 @@ class PRCApiClient:
                 killed_user_id=log_item['Killed'].split(':')[1]
             ) for log_item in response_json]
         elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
+            rate_limit_reset = int(response_json[1].get('RateLimit-Reset', 5))
+            reset_time = int(rate_limit_reset)
+            current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            retry_after = reset_time - current_time
             await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
@@ -297,7 +301,10 @@ class PRCApiClient:
                 type='join' if log_item['Join'] is True else 'leave'
             ) for log_item in response_json]
         elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
+            rate_limit_reset = int(response_json[1].get('RateLimit-Reset', 5))
+            reset_time = int(rate_limit_reset)
+            current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            retry_after = reset_time - current_time
             await asyncio.sleep(retry_after)
         else:
             raise ResponseFailure(
@@ -320,7 +327,11 @@ class PRCApiClient:
                 "command": ":unban {}".format(str(user_id))
             })
             if status_code == 429:
-                await asyncio.sleep(response_json['retry_after']+0.1)
+                rate_limit_reset = int(response_json[1].get('RateLimit-Reset', 5))
+                reset_time = int(rate_limit_reset)
+                current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+                retry_after = reset_time - current_time
+                await asyncio.sleep(retry_after)
             else:
                 return status_code
 
