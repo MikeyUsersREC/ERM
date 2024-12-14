@@ -499,23 +499,26 @@ class ERLC(commands.Cog):
         
         if not user_id and username:
             user_id = "999999999999999999999999"
-
+        old_embed = embed
+        embeds = [embed]
         for log in bans:
             if str(username or "") in str(log.username) or str(user_id or "") in str(log.user_id):
+                embed = embeds[-1]
                 if len(embed.description) > 3800:
-                    break
-                embed.description += f"> [{log.username}:{log.user_id}](https://roblox.com/users/{log.user_id}/profile)\n"
+                    new = old_embed
+                    embeds.append(new)
+                embeds[-1].description += f"> [{log.username}:{log.user_id}](https://roblox.com/users/{log.user_id}/profile)\n"
 
-        if embed.description in ['', '\n']:
-            embed.description = "> This ban was not found." if status else "> Bans were not found in your server."
+        if embeds[0].description in ['', '\n']:
+            embeds[0].description = "> This ban was not found." if status else "> Bans were not found in your server."
 
 
-        embed.set_author(
+        embeds[0].set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
 
-        await ctx.send(embed=embed)
+        await ctx.send(embeds=embeds)
 
 
     @server.command(
