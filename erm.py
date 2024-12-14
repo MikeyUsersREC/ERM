@@ -57,6 +57,8 @@ from utils.constants import *
 import utils.prc_api
 
 
+setup = False
+
 try:
     sentry_url = config("SENTRY_URL")
     bloxlink_api_key = config("BLOXLINK_API_KEY")
@@ -81,10 +83,6 @@ scope = [
 
 
 class Bot(commands.AutoShardedBot):
-    setup: bool = False
-
-    async def is_setup(self):
-        return bot.setup
 
     async def close(self):
         for session in self.external_http_sessions:
@@ -107,7 +105,8 @@ class Bot(commands.AutoShardedBot):
         self.external_http_sessions: list[aiohttp.ClientSession] = []
         self.view_state_manager: ViewStateManager = ViewStateManager()
 
-        if not bot.is_setup():
+        global setup
+        if not setup:
             # await bot.load_extension('utils.routes')
             logging.info(
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━\n\n{} is online!".format(
@@ -220,7 +219,7 @@ class Bot(commands.AutoShardedBot):
                     self.add_view(
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
-            bot.setup = True
+            setup = True
 
 
 bot = Bot(
@@ -416,6 +415,8 @@ async def warning_json_to_mongo(jsonName: str, guildId: int):
 
 bot.erm_team = {
     "i_imikey": "Bot Developer",
+    "mbrinkley": "First Community Manager - Removed",
+    "theoneandonly_5567": "Executive Manager",
     "royalcrests": "Website Developer & Asset Designer",
     "1friendlydoge": "Data Scientist - a friendly doge",
 }
