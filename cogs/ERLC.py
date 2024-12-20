@@ -502,7 +502,7 @@ class ERLC(commands.Cog):
         old_embed = embed
         embeds = [embed]
         for log in bans:
-            if str(username or "") in str(log.username) or str(user_id or "") in str(log.user_id):
+            if str(username or "") in str(log.username).lower() or str(user_id or "") in str(log.user_id):
                 embed = embeds[-1]
                 if len(embed.description) > 3800:
                     new = old_embed
