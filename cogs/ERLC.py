@@ -520,8 +520,8 @@ class ERLC(commands.Cog):
 
         if len(embeds) > 10:
             pages = []
-            for i in range(0, (len(embeds) // 5)+1):
-                pages.append(CustomPage(embeds=embeds[i*5:(i*5)+4], identifier=str(i)))
+            for i in range(0, (len(embeds) // 3)+1):
+                pages.append(CustomPage(embeds=embeds[i*3:(i*3)+2], identifier=str(i)))
             paginator = SelectPagination(ctx.author.id, pages)
             await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
             return
