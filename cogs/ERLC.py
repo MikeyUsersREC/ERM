@@ -9,6 +9,7 @@ from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
 from menus import ReloadView
+import copy
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog, ResponseFailure
 import utils.prc_api as prc_api
@@ -499,13 +500,13 @@ class ERLC(commands.Cog):
         
         if not user_id and username:
             user_id = "999999999999999999999999"
-        old_embed = embed
+        old_embed = copy.copy(embed)
         embeds = [embed]
         for log in bans:
             if str(username or "") in str(log.username).lower() or str(user_id or "") in str(log.user_id):
                 embed = embeds[-1]
                 if len(embed.description) > 3800:
-                    new = old_embed
+                    new = copy.copy(old_embed)
                     embeds.append(new)
                 embeds[-1].description += f"> [{log.username}:{log.user_id}](https://roblox.com/users/{log.user_id}/profile)\n"
 
@@ -521,7 +522,7 @@ class ERLC(commands.Cog):
         if len(embeds) > 1:
             pages = [ CustomPage(embeds=[embeds[i]], identifier=str(i+1)) for i in range(0, len(embeds)-1) ] 
             paginator = SelectPagination(ctx.author.id, pages)
-            await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+            await ctx.send(embeds=embeds[0], view=paginator.get_current_view())
             return
 
 
