@@ -520,13 +520,10 @@ class ERLC(commands.Cog):
 
         if len(embeds) > 10:
             pages = []
-            for i in range(0, (len(embeds) // 10)+1):
-                pages.append(CustomPage(embeds=embeds[i*10:(i*10)+9], identifier=str(i)))
+            for i in range(0, (len(embeds) // 5)+1):
+                pages.append(CustomPage(embeds=embeds[i*5:(i*5)+4], identifier=str(i)))
             paginator = SelectPagination(ctx.author.id, pages)
-            try:
-                await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
-            except discord.HTTPException:
-                pass
+            await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
             return
         await ctx.send(embeds=embeds)
 
