@@ -519,9 +519,9 @@ class ERLC(commands.Cog):
         )
 
         if len(embeds) > 1:
-            pages = [ CustomPage(embeds=embeds[i], identifier=str(i+1)) for i in range(0, len(embeds)-1) ] 
+            pages = [ CustomPage(embeds=[embeds[i]], identifier=str(i+1)) for i in range(0, len(embeds)-1) ] 
             paginator = SelectPagination(ctx.author.id, pages)
-            await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+            await ctx.send(embeds=pages[0].embeds[0], view=paginator.get_current_view())
             return
 
 
