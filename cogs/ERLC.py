@@ -518,6 +518,16 @@ class ERLC(commands.Cog):
             icon_url=ctx.guild.icon
         )
 
+        if len(embeds) > 10:
+            pages = []
+            for i in range(0, (len(embeds) // 10)+1):
+                pages.append(CustomPage(embeds=embeds[i*10:(i*10)+10])
+            paginator = SelectPagination(ctx.author.id, pages)
+            try:
+                await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
+            except discord.HTTPException:
+                pass
+            return
         await ctx.send(embeds=embeds)
 
 
