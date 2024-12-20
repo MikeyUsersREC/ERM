@@ -518,14 +518,11 @@ class ERLC(commands.Cog):
             icon_url=ctx.guild.icon
         )
 
-        if len(embeds) > 10:
-            pages = []
-            for i in range(0, (len(embeds) // 3)+1):
-                pages.append(CustomPage(embeds=embeds[i*3:(i*3)+2], identifier=str(i)))
+        if len(embeds) > 1:
+            pages = [ pages.append(CustomPage(embeds=embeds[i], identifier=str(i+1))) for i in range(0, len(embeds) ] 
             paginator = SelectPagination(ctx.author.id, pages)
             await ctx.send(embeds=pages[0].embeds, view=paginator.get_current_view())
             return
-        await ctx.send(embeds=embeds)
 
 
     @server.command(
