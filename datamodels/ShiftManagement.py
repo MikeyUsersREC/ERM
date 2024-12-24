@@ -104,11 +104,19 @@ class ShiftManagement:
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                             f"{url_var}/Internal/SyncStartShift/{data['_id']}", headers={
                                 "Authorization": config('INTERNAL_API_AUTH')
+                            }):
+                        pass
+            if panel_url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                            f"{panel_url_var}/{guild_id}/SyncStartShift?ID={data['_id']}", headers={
+                                "X-Static-Token": config('PANEL_STATIC_AUTH')
                             }):
                         pass
         except:
@@ -138,22 +146,26 @@ class ShiftManagement:
         """
         Ends the specified user's shift.
         """
-
+    
         document = await self.shifts.db.find_one({"_id": ObjectId(identifier)})
         if not document:
             raise ValueError("Shift not found.")
-
-        if document["Guild"] != (guild_id if guild_id else document["Guild"]):
+    
+        # Extract guild_id from the document if not provided
+        guild_id = guild_id if guild_id else document["Guild"]
+    
+        if document["Guild"] != guild_id:
             raise ValueError("Shift not found.")
-
+    
         document["EndEpoch"] = datetime.datetime.now().timestamp()
-
+    
         for breaks in document["Breaks"]:
             if breaks["EndEpoch"] == 0:
                 breaks["EndEpoch"] = int(datetime.datetime.now().timestamp()) if timestamp in [None, 0] else timestamp
-
+    
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
@@ -161,9 +173,16 @@ class ShiftManagement:
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
+            if panel_url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.delete(
+                            f"{panel_url_var}/{guild_id}/SyncEndShift?ID={document['_id']}", headers={
+                                "X-Static-Token": config('PANEL_STATIC_AUTH')
+                            }):
+                        pass
         except:
             pass
-
+            
         await self.shifts.update_by_id(document)
         return document
 
