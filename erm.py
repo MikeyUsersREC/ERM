@@ -83,6 +83,9 @@ scope = [
 
 
 class Bot(commands.AutoShardedBot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setup_status: bool = False
 
     async def close(self):
         for session in self.external_http_sessions:
@@ -106,7 +109,7 @@ class Bot(commands.AutoShardedBot):
         self.view_state_manager: ViewStateManager = ViewStateManager()
 
         global setup
-        if not setup:
+        if not self.setup_status:
             # await bot.load_extension('utils.routes')
             logging.info(
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━\n\n{} is online!".format(
@@ -219,7 +222,7 @@ class Bot(commands.AutoShardedBot):
                     self.add_view(
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
-            setup = True
+            self.setup_status = True
 
 
 bot = Bot(
