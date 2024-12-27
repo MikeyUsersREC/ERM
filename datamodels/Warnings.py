@@ -193,10 +193,18 @@ class Warnings(Document):
 
         try:
             url_var = config("BASE_API_URL")
+            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                             f"{url_var}/Internal/SyncCreatePunishment/{identifier}", headers={
+                                "Authorization": config('INTERNAL_API_AUTH')
+                            }):
+                        pass
+            if panel_url_var not in ["", None]:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                            f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}", headers={
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
                         pass
@@ -394,10 +402,18 @@ class Warnings(Document):
         if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
             try:
                 url_var = config("BASE_API_URL")
+                panel_url_var = config("PANEL_API_URL")
                 if url_var not in ["", None]:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
                                 f"{url_var}/Internal/SyncDeletePunishment/{selected_item['_id']}", headers={
+                                    "Authorization": config('INTERNAL_API_AUTH')
+                                }):
+                            pass
+                if panel_url_var not in ["", None]:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                                f"{panel_url_var}/{guild_id}/SyncDeletePunishment?ID={identifier}", headers={
                                     "Authorization": config('INTERNAL_API_AUTH')
                                 }):
                             pass
