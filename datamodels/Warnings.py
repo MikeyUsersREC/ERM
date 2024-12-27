@@ -193,25 +193,13 @@ class Warnings(Document):
 
         try:
             url_var = config("BASE_API_URL")
-            panel_url_var = config("PANEL_API_URL")
             if url_var not in ["", None]:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
                             f"{url_var}/Internal/SyncCreatePunishment/{identifier}", headers={
                                 "Authorization": config('INTERNAL_API_AUTH')
                             }):
-                            pass
-            if panel_url_var not in ["", None]:
-                # Print the final URL to the panel API
-                final_url = f"{panel_url_var}/{guild_id}/SyncCreatePunishment?ID={identifier}"
-                print(f"Final Panel URL: {final_url}")
-                
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                            final_url, headers={
-                                "X-Static-Token": config('PANEL_STATIC_AUTH')
-                            }):
-                            pass
+                        pass
         except:
             pass
 
@@ -406,25 +394,13 @@ class Warnings(Document):
         if selected_item["Guild"] == (guild_id or selected_item["Guild"]):
             try:
                 url_var = config("BASE_API_URL")
-                panel_url_var = config("PANEL_API_URL")
                 if url_var not in ["", None]:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
                                 f"{url_var}/Internal/SyncDeletePunishment/{selected_item['_id']}", headers={
                                     "Authorization": config('INTERNAL_API_AUTH')
                                 }):
-                                pass
-                if panel_url_var not in ["", None]:
-                    final_guild_id = guild_id or selected_item["Guild"]
-                    final_url = f"{panel_url_var}/{final_guild_id}/SyncDeletePunishment?ID={selected_item['_id']}"
-                    print(f"Final Panel URL: {final_url}")
-            
-                    async with aiohttp.ClientSession() as session:
-                        async with session.delete(
-                                final_url, headers={
-                                    "X-Static-Token": config('PANEL_STATIC_AUTH')
-                                }):
-                                pass
+                            pass
             except ValueError:
                 pass
             return await self.db.delete_one({"Snowflake": identifier})
