@@ -970,7 +970,6 @@ async def iterate_prc_logs():
             for log in sorted(kill_logs):
                 if log.timestamp <= last_timestamp:
                     continue
-                
                 latest_timestamp = max(latest_timestamp, log.timestamp)
                 embed = discord.Embed(
                     title="Kill Log",
@@ -989,7 +988,8 @@ async def iterate_prc_logs():
             for log in sorted(player_logs):
                 if log.timestamp <= last_timestamp:
                     continue
-                    
+                if log.timestamp < (datetime.datetime.now().timestamp() - 600):
+                    continue
                 latest_timestamp = max(latest_timestamp, log.timestamp)
                 embed = discord.Embed(
                     title=f"Player {'Join' if log.type == 'join' else 'Leave'} Log",
