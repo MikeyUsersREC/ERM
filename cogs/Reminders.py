@@ -36,10 +36,7 @@ class Reminders(commands.Cog):
     @require_settings()
     async def manage_reminders(self, ctx):
         bot = self.bot
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Reminders Manage")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Reminders Manage")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Reminders Manage")
         reminder_data = await bot.reminders.find_by_id(ctx.guild.id)
         if reminder_data is None:
             reminder_data = {"_id": ctx.guild.id, "reminders": []}

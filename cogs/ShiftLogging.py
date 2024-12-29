@@ -232,10 +232,7 @@ class ShiftLogging(commands.Cog):
                             pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Duty Admin for {member.name}")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Duty Admin for {member.name}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Duty Admin for {member.name}")
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,

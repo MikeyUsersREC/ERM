@@ -267,7 +267,7 @@ class OnMessage(commands.Cog):
                 if embed.description in ["", None] and embed.title in ["", None]:
                     break
 
-                if 'bring' in embed.description.lower() or 'tp' in embed.description.lower() or 'kick' in embed.description.lower() or 'ban' in embed.description.lower():
+                if ':bring' in embed.description.lower() or ':tp' in embed.description.lower() or ':kick' in embed.description.lower() or ':ban' in embed.description.lower():
                     async with aiohttp.ClientSession(headers={'Content-Type': 'application/json', 'X-Static-Token': config("PANEL_STATIC_AUTH")}) as session:
                         async with session.post(
                             url=f"{config('PANEL_API_URL')}/Internal/{message.guild.id}/SyncWebhookLogs",

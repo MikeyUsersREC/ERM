@@ -44,10 +44,7 @@ class CustomCommands(commands.Cog):
     async def custom_manage(self, ctx):
         bot = self.bot
         Data = await bot.custom_commands.find_by_id(ctx.guild.id)
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Custom Manage")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Custom Manage")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Custom Manage")
         if Data is None:
             Data = {"_id": ctx.guild.id, "commands": []}
 

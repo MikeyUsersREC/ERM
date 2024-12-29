@@ -22,7 +22,7 @@ class ERLC(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-
+    @staticmethod
     def is_server_linked():
         async def predicate(ctx: commands.Context):
             guild_id = ctx.guild.id
@@ -116,10 +116,7 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"ERLC Link")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(

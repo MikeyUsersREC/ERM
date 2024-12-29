@@ -691,10 +691,7 @@ class StaffManagement(commands.Cog):
         member="Who's RA would you like to administrate? Specify a Discord user."
     )
     async def ra_admin(self, ctx, member: discord.Member):
-        try:
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
-        except:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"RA Admin: {member}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
     @commands.hybrid_group(
@@ -743,10 +740,7 @@ class StaffManagement(commands.Cog):
         member="Who's LOA would you like to administrate? Specify a Discord user."
     )
     async def loa_admin(self, ctx, member: discord.Member):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"LOA Admin: {member}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
 
         return await self.core_commands.core_command_admin(ctx, 'loa', member)
 

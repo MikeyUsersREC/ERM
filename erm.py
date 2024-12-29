@@ -6,6 +6,9 @@ from dataclasses import MISSING
 from pkgutil import iter_modules
 import re
 from collections import defaultdict
+
+from utils.mongo import Document
+
 try:
     import Levenshtein
     from fuzzywuzzy import fuzz, process
@@ -126,6 +129,9 @@ class Bot(commands.AutoShardedBot):
             else:
                 raise Exception("Invalid environment")
 
+            self.panel_db = self.mongo["UserIdentity"]
+            self.priority_settings = Document(self.panel_db, "PrioritySettings")
+
             self.start_time = time.time()
             self.shift_management = ShiftManagement(self.db, "shift_management")
             self.errors = Errors(self.db, "errors")
@@ -241,6 +247,7 @@ bot.punishments_disabled = False
 bot.bloxlink_api_key = bloxlink_api_key
 environment = config("ENVIRONMENT", default="DEVELOPMENT")
 internal_command_storage = {}
+team_restrictions_infractions = {} # Guild ID => [ { Username: Count } ]
 
 def running():
     if bot:
@@ -909,7 +916,9 @@ async def iterate_prc_logs():
                 '$or': [
                     {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
                     {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
-                    {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
+                    {'ERLC.player_logs': {'$type': 'long', '$ne': 0}},
+                    {"ERLC.welcome_message": {"$exists": True}},
+                    {"ERLC.team_restrictions": {"$exists": True}}
                 ]
             }
             },
@@ -936,15 +945,17 @@ async def iterate_prc_logs():
         processed = 0
         start_time = time.time()
 
-        batch_size = 15
+        batch_size = 1
         pipeline = [
             {
             '$match': {
                 'ERLC': {'$exists': True},
                 '$or': [
-                {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
-                {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
-                {'ERLC.player_logs': {'$type': 'long', '$ne': 0}}
+                    {'ERLC.rdm_channel': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.player_logs': {'$type': 'long', '$ne': 0}},
+                    {"ERLC.welcome_message": {"$exists": True}},
+                    {"ERLC.team_restrictions": {"$exists": True}}
                 ]
             }
             },
@@ -973,6 +984,150 @@ async def iterate_prc_logs():
                     await channel.send(embeds=chunk)
                 except discord.HTTPException as e:
                     logging.error(f"Failed to send log batch: {e}")
+
+        async def is_username_found(username: str, members: list[discord.Member]) -> bool:
+            pattern = re.compile(re.escape(username), re.IGNORECASE)
+            member_found = False
+
+            for member in members:
+                if pattern.search(member.name) or pattern.search(member.display_name) or (
+                        hasattr(member, 'global_name') and member.global_name and pattern.search(
+                        member.global_name)):
+                    member_found = True
+                    break
+
+            return member_found
+        async def check_team_restrictions(guild_id, players):
+            logging.info(f"Checking team restrictions for server {guild_id}")
+            team_restrictions = settings["ERLC"].get("team_restrictions", {})
+            if team_restrictions in [None, {}]:
+                return
+            teams = {}
+            for item in players:
+                if teams.get(item.team):
+                    teams[item.team].append(item)
+                else:
+                    teams[item.team] = [item]
+
+            load_against = [] # [Username]
+            pm_against = {} # Message: [Username]
+            send_to = {} # Channel_ID: [Username, Team]
+            kick_against = [] # [Username]
+
+            guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
+            all_roles = await guild.fetch_roles()
+            for team_name, plrs in teams.items():
+                if team_restrictions.get(team_name) is not None:
+                    restriction = team_restrictions.get(team_name)
+                    roles = restriction["required_roles"]
+                    actual_roles = [discord.utils.get(all_roles, id=r) for r in roles]
+                    members = []
+                    for item in actual_roles:
+                        for member in item.members:
+                            if member not in members:
+                                members.append(member)
+                    for plr in plrs:
+                        is_found = await is_username_found(plr.username, members)
+                        if not is_found:
+                            do_load = restriction["load_player"]
+                            if do_load:
+                                load_against.append(plr.username)
+                            if restriction["warn_player"]:
+                                if pm_against.get(restriction["warning_message"]) is not None:
+                                    pm_against[restriction["warning_message"]].append(plr.username)
+                                else:
+                                    pm_against[restriction["warning_message"]] = [plr.username]
+                            if restriction["notification_channel"] != 0:
+                                if send_to.get(restriction["notification_channel"]) is None:
+                                    send_to[restriction["notification_channel"]] = [plr.username, plr.team]
+                                else:
+                                    send_to[restriction["notification_channel"]].append([plr.username, plr.team])
+                            if restriction["kick_after_infractions"] != 0:
+                                if team_restrictions_infractions.get(guild_id) is not None:
+                                    if not team_restrictions_infractions[guild_id].get(plr.username):
+                                        team_restrictions_infractions[guild_id][plr.username] = 1
+                                    else:
+                                        team_restrictions_infractions[guild_id][plr.username] += 1
+                                else:
+                                    team_restrictions_infractions[guild_id] = {
+                                        plr.username: 1
+                                    }
+                                if team_restrictions_infractions[guild_id][plr.username] >= restriction["kick_after_infractions"]:
+                                    kick_against.append(plr.username)
+                                    team_restrictions_infractions[guild_id][plr.username] = 0
+
+
+            if len(load_against) > 0:
+                try:
+                    await bot.prc_api.run_command(guild_id, f":load {','.join(load_against)}")
+                except prc_api.ResponseFailure:
+                    logging.warning("PRC API Rate limit reached when loading.")
+            for message, plrs_to_send in pm_against.items():
+                try:
+                    await bot.prc_api.run_command(guild_id, f":pm {','.join(plrs_to_send)} {message}")
+                except prc_api.ResponseFailure:
+                    logging.warning("PRC API Rate limit reached when PMing.")
+
+            if len(kick_against) > 0:
+                try:
+                    await bot.prc_api.run_command(guild_id, f":kick {','.join(kick_against)}")
+                except prc_api.ResponseFailure:
+                    logging.warning("PRC API Rate limit reached when kicking.")
+
+            send_by_teams = {}
+            team_to_channel = {}
+            for channel, player_team_union in send_to.items():
+                if send_by_teams.get(player_team_union[1]) is None:
+                    send_by_teams[player_team_union[1]] = [player_team_union[0]]
+                    team_to_channel[player_team_union[1]] = channel
+                else:
+                    send_by_teams[player_team_union[1]].append(player_team_union[0])
+
+            for team, channel in team_to_channel.items():
+                players = send_by_teams[team]
+                mentioned_roles = team_restrictions[team]["mentioned_roles"]
+                missing_roles = team_restrictions[team]["required_roles"]
+                try:
+                    channel = await bot.fetch_channel(channel)
+                except discord.HTTPException:
+                    continue
+                listed_users = ""
+                for item in players:
+                    listed_users += f"- {item}\n"
+                await channel.send(
+                    ', '.join([f"<@&{role}>" for role in mentioned_roles]),
+                    embed=discord.Embed(
+                        title="Team Restrictions",
+                        description=f"The following individuals are on the **{team}** team without holding any of the roles {', '.join([f'<@&{role}>' for role in missing_roles])}.\n{listed_users}",
+                        color=BLANK_COLOR
+                    )
+                )
+
+
+        async def send_welcome_message(guild_id, player_logs, last_timestamp) -> int:
+            welcome_message = settings["ERLC"].get("welcome_message", "")
+
+            player_names = {}
+            for log in sorted(player_logs, key=lambda x: x.timestamp):
+                if log.timestamp <= last_timestamp:
+                    continue
+                if log.timestamp <= bot.start_time:
+                    continue
+                if log.type == "join":
+                    player_names[log.username] = log.timestamp
+                else:
+                    if player_names.get(log.username, None) is not None:
+                        if player_names[log.username] < log.timestamp:
+                            del player_names[log.username]
+            players = player_names.keys()
+            if len(players) == 0:
+                return sorted(player_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+            try:
+                await bot.prc_api.run_command(guild_id, f":pm {','.join(players)} {welcome_message}")
+            except prc_api.ResponseFailure:
+                pass
+            return sorted(player_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
 
         def process_kill_logs(kill_logs, last_timestamp):
             """Process kill logs and return embeds"""
@@ -1023,11 +1178,14 @@ async def iterate_prc_logs():
                     'player_logs': erlc_settings.get('player_logs')
                 }
 
-                if not any(channels.values()):
-                    continue
+                # if not any(channels.values()):
+                #     continue
 
                 channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
-                if not channels:
+                has_welcome_message = bool(erlc_settings.get("welcome_message", False))
+                has_team_restrictions = bool(erlc_settings.get("team_restrictions"))
+
+                if not channels and not has_welcome_message and not has_team_restrictions:
                     continue
 
                 try:
@@ -1035,8 +1193,15 @@ async def iterate_prc_logs():
                 except Exception as e:
                     logging.error(f"Failed to fetch logs for {guild.id}: {e}")
                     continue
-
                 tasks = []
+
+                if has_welcome_message:
+                    last_timestamp = log_tracker.get_last_timestamp(guild.id, 'player_logs')
+                    latest_timestamp = await send_welcome_message(guild.id, player_logs, last_timestamp)
+                    log_tracker.update_timestamp(guild.id, "welcome_message", latest_timestamp)
+
+                if has_team_restrictions:
+                    await check_team_restrictions(guild.id, await bot.prc_api.get_server_players(guild.id))
 
                 if 'kill_logs' in channels and kill_logs:
                     last_timestamp = log_tracker.get_last_timestamp(guild.id, 'kill_logs')

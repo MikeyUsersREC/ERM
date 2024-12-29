@@ -4568,12 +4568,9 @@ class AssociationConfigurationView(discord.ui.View):
         await self.message.edit(view=self)
 
     async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
-        # # print(t(t(t(t('3064 : Interaction Check')
         if interaction.user.id == self.user_id:
-            # # print(t(t(t(t('PASSED - {} - {}'.format(interaction.user.id, self.user_id))
             return True
         else:
-            # # print(t(t(t(t('FAILED - {} - {}'.format(interaction.user.id, self.user_id))
             await interaction.response.send_message(embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
@@ -6633,6 +6630,64 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"RDM Alert Channel Set: <#{select.values[0].id}>")
 
+    @discord.ui.select(placeholder="PM on Warning", row=2, options=[
+        discord.SelectOption(
+            label='Enabled',
+            value="enabled",
+            description="Priority Logging is enabled."
+        ),
+        discord.SelectOption(
+            label="Disabled",
+            value="disabled",
+            description="Priority Logging is disabled."
+        )
+    ])
+    async def message_on_warning(self, interaction: discord.Interaction, select: discord.ui.Select):
+        value = await self.interaction_check(interaction)
+        if not value: return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['ERLC']['message_on_warning'] = bool(select.values[0].lower() == "enabled")
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"PM on Warning set: {select.values[0]}")
+
+    @discord.ui.button(
+        label="Welcome Messaging",
+        row=3
+    )
+    async def welcome_messaging(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        welcome_message = (settings.get("ERLC") or {}).get("welcome_message") or ""
+
+        embed = discord.Embed(
+            title="Welcome Messaging",
+            description="*This module allows for a message to appear to players of your server when they initially join your server.*\n\n",
+            color=BLANK_COLOR
+        )
+        embed.description += f"**Welcome Message:** {welcome_message if welcome_message != '' else 'None'}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        view = WelcomeMessagingConfiguration(self.bot, interaction, welcome_message)
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
+
 class AutomaticShiftConfiguration(discord.ui.View):
     def __init__(self, bot, sustained_interaction: Interaction, shift_types: list, auto_data: dict):
         self.bot = bot
@@ -6803,6 +6858,70 @@ class RemoteCommandConfiguration(discord.ui.View):
         sett['ERLC']['remote_commands'] = self.auto_data
         await self.bot.settings.update_by_id(sett)
 
+
+class WelcomeMessagingConfiguration(discord.ui.View):
+    def __init__(self, bot, sustained_interaction: Interaction, welcome_message: str):
+        self.bot = bot
+        self.sustained_interaction = sustained_interaction
+        self.welcome_message = welcome_message
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="Set Welcome Message",
+    )
+    async def webhook_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = CustomModal(
+            f"Set Welcome Message",
+            [
+                (
+                    "welcome_message",
+                    (
+                        discord.ui.TextInput(
+                            label="Welcome Message",
+                            placeholder="Enter a welcome message to appear to players in your server.",
+                            required=True,
+                        )
+                    ),
+                )
+            ],
+        )
+        await interaction.response.send_modal(modal)
+
+        timeout = await modal.wait()
+        if timeout:
+            return
+
+        welcome_message = modal.welcome_message.value
+
+        embed = discord.Embed(
+            title="Welcome Messaging",
+            description="*This module allows for a message to appear to players of your server when they initially join your server.*\n\n",
+            color=BLANK_COLOR
+        )
+        embed.description += f"**Welcome Message:** {welcome_message if welcome_message != '' else 'None'}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        self.welcome_message = welcome_message
+        await (await self.sustained_interaction.original_response()).edit(embed=embed, view=self)
+
+    @discord.ui.button(
+        label="Finish Configuration",
+        style=discord.ButtonStyle.success,
+        row=2
+    )
+    async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        await (await self.sustained_interaction.original_response()).delete()
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if not sett:
+            return
+        if not sett.get('ERLC'):
+            sett['ERLC'] = {}
+        sett['ERLC']['welcome_message'] = self.welcome_message
+        await self.bot.settings.update_by_id(sett)
 class WhitelistVehiclesManagement(discord.ui.View):
     def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
@@ -7226,10 +7345,10 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         )
 
     @discord.ui.button(
-        label="Add Vehicle Restriction",
+        label="Vehicle Restrictions",
         row=3
     )
-    async def add_vehicle_restriction(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def vehicle_restrictions(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
         if val is False:
             return
@@ -7292,15 +7411,18 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             ephemeral=True
     )
 
+
+
     @discord.ui.button(
-        label="ER:LC Statistics Updates",
-        row=3
+        label="ER:LC Statistics",
+        row=3,
+        disabled=True
     )
-    async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def erlc_statistics(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
         if val is False:
             return
-        
+
         view = ERLCStats(self.bot,interaction.user.id,interaction.guild.id)
         sett = await self.bot.settings.find_by_id(interaction.guild.id)
         if not sett:
@@ -7330,6 +7452,222 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             view=view,
             ephemeral=True
         )
+
+class ExtendedPriorityConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+    @discord.ui.button(
+        label='Set Minimum Players',
+        row=3
+    )
+    async def set_min_players(self, interaction: discord.Interaction, button: discord.Button):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        self.modal = CustomModal("Minimum Players", [
+            (
+                'min_players',
+                discord.ui.TextInput(
+                    label="Minimum Players for a Priority",
+                    placeholder="i.e. 5",
+                    default=priority_settings.get("min_players", 0) or 0,
+                    required=False
+                )
+            )
+        ])
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        min_players = self.modal.min_players.value
+        min_players = int(min_players.strip())
+
+        priority_settings["min_players"] = min_players
+        await func(priority_settings)
+        await config_change_log(self.bot, interaction.guild, interaction.user,
+                                f"Priority Request minimum players has been set to {min_players}.")
+
+    @discord.ui.button(
+        label='Set Maximum Players',
+        row=3
+    )
+    async def set_max_players(self, interaction: discord.Interaction, button: discord.Button):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        self.modal = CustomModal("Maximum Players", [
+            (
+                'max_players',
+                discord.ui.TextInput(
+                    label="Maximum Players for a Priority",
+                    placeholder="i.e. 5",
+                    default=priority_settings.get("max_players", 0) or 0,
+                    required=False
+                )
+            )
+        ])
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        max_players = self.modal.max_players.value
+        max_players = int(max_players.strip())
+
+        priority_settings["max_players"] = max_players
+        await func(priority_settings)
+        await config_change_log(self.bot, interaction.guild, interaction.user,
+                                f"Priority Request maximum players has been set to {max_players}.")
+
+    @discord.ui.button(
+        label='Set Global Cooldown',
+        row=3
+    )
+    async def set_global_cooldown(self, interaction: discord.Interaction, button: discord.Button):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        self.modal = CustomModal("Global Cooldown", [
+            (
+                'global_cooldown',
+                discord.ui.TextInput(
+                    label="Global Cooldown (minutes)",
+                    placeholder="i.e. 5",
+                    default=priority_settings.get("global_cooldown", 0) or 0,
+                    required=False
+                )
+            )
+        ])
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        global_cooldown = self.modal.global_cooldown.value
+        global_cooldown = int(global_cooldown.strip())
+
+        priority_settings["global_cooldown"] = global_cooldown
+        await func(priority_settings)
+        await config_change_log(self.bot, interaction.guild, interaction.user,
+                                f"Priority Request global cooldown has been set to {global_cooldown}.")
+
+
+class PriorityRequestConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, min_values=1, max_values=25, placeholder="Blacklisted Roles", row=0)
+    async def blacklisted_roles(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        priority_settings["blacklisted_roles"] = [
+            str(i.id) for i in select.values
+        ]
+        await func(priority_settings)
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, min_values=1, max_values=25, placeholder="Mentioned Roles", row=1)
+    async def mentioned_roles(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        priority_settings["mentioned_roles"] = [
+            str(i.id) for i in select.values
+        ]
+        await func(priority_settings)
+
+    @discord.ui.select(cls=discord.ui.RoleSelect, min_values=1, max_values=1, placeholder="Priority Channel", row=2)
+    async def priority_channel(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        priority_settings["channel_id"] = str(select.values[0].id)
+        await func(priority_settings)
+
+    @discord.ui.button(
+        label='Set Cooldown',
+        row=3
+    )
+    async def set_cooldown(self, interaction: discord.Interaction, button: discord.Button):
+        whether_to_continue = await self.interaction_check(interaction)
+        if whether_to_continue is False:
+            return
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(interaction.guild.id)})
+        func = self.bot.priority_settings.update_by_id
+        if not priority_settings:
+            priority_settings = {
+                "guild_id": str(interaction.guild.id)
+            }
+            func = self.bot.priority_settings.db.insert_one
+        self.modal = CustomModal("Cooldown", [
+            (
+                'cooldown',
+                discord.ui.TextInput(
+                    label="Priority Request Cooldown (minutes)",
+                    placeholder="i.e. 5",
+                    default=priority_settings.get("cooldown", 0) or 0,
+                    required=False
+                )
+            )
+        ])
+        await interaction.response.send_modal(self.modal)
+        await self.modal.wait()
+        cooldown = self.modal.cooldown.value
+        cooldown = int(cooldown.strip())
+
+        priority_settings["cooldown"] = cooldown
+        await func(priority_settings)
+        await config_change_log(self.bot, interaction.guild, interaction.user,
+                                f"Priority Request cooldown has been set to {cooldown}.")
+
+    @discord.ui.button(
+        label='More Options',
+        row=3
+    )
+    async def more_options(self, interaction: discord.Interaction, button: discord.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        new_view = ExtendedPriorityConfiguration(self.bot, interaction.user.id, [])
+        await interaction.response.send_message(view=new_view, ephemeral=True)
+
+
 
 class ERLCStats(discord.ui.View):
     def __init__(self, bot, user_id, guild_id):
