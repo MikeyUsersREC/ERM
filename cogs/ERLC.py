@@ -561,19 +561,19 @@ class ERLC(commands.Cog):
             staff = staff_copy
 
         embed2.description += (
-            f"**Server Staff [{len(staff)}]**\n" + 
-            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
+            f"**Server Staff [{len(staff)}]**\n" +
+            (', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff]) or "> No players in this category.")
         )
         
         
         embed2.description += (
             f"\n\n**Online Players [{len(actual_players)}]**\n" +
-            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+            (', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players]) or "> No players in this category.")
         )
         
         embed2.description += (
             f"\n\n**Queue [{len(queue)}]**\n" +
-            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
+            (', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue]) or "> No players in this category.")
         )
 
         embed2.set_author(
