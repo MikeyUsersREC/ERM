@@ -945,7 +945,7 @@ async def iterate_prc_logs():
         processed = 0
         start_time = time.time()
 
-        batch_size = 1
+        batch_size = 15
         pipeline = [
             {
             '$match': {
@@ -1013,6 +1013,10 @@ async def iterate_prc_logs():
             pm_against = {} # Message: [Username]
             send_to = {} # Channel_ID: [Username, Team]
             kick_against = [] # [Username]
+
+            min_count_for_compute = team_restrictions.get("min_players", 0)
+            if min_count_for_compute >= len(players):
+                return
 
             guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
             all_roles = await guild.fetch_roles()

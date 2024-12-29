@@ -529,7 +529,7 @@ class ERLC(commands.Cog):
     )
     @is_staff()
     @is_server_linked()
-    async def server_players(self, ctx: commands.Context):
+    async def server_players(self, ctx: commands.Context, filter: typing.Optional[str] = None):
         guild_id = int(ctx.guild.id)
         # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
@@ -547,6 +547,18 @@ class ERLC(commands.Cog):
                 actual_players.append(item)
             else:
                 staff.append(item)
+
+        if filter not in [None, ""]:
+            actual_players_copy = []
+            for item in actual_players:
+                if item.username.lower().startswith(filter.lower()):
+                    actual_players_copy.append(item)
+            actual_players = actual_players_copy
+            staff_copy = []
+            for item in staff:
+                if item.username.lower().startswith(filter.lower()):
+                    staff_copy.append(item)
+            staff = staff_copy
 
         embed2.description += (
             f"**Server Staff [{len(staff)}]**\n" + 
