@@ -600,6 +600,54 @@ class ERLC(commands.Cog):
         await ctx.send(embed=embed2)
 
     @server.command(
+        name="teams",
+        description:"See all players in the server, grouped by team."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def server_teams(self, ctx: commands.Context, filter:typing.Optional[str] = None):
+        guild_id = int(ctx.guild.id)
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        queue: list[Player] = await self.bot.prc_api.get_server_queue(guild_id)
+
+    embed2 = discord.Embed(
+        title=f"Server Players by Team [{len(players)}]",
+        color=BLANK_COLOR,
+        description=""
+    )
+
+    teams = {}
+    for plr in players:
+        if filter and not plr.username.lower().startswith(filter.lower()):
+            continue
+        if plr.team not in teams:
+            teams[plr.team] = []
+            teams[plr.team].append(plr)
+
+    for team, team_players in teams.items():
+        embed2.description += (
+            f"**{team [(len(team_players)}]**\n" +
+            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in team_players]) +
+            "\n\n"
+        )
+
+    if queue:
+        embed2.description += (
+            f"**Queue [{len(queue)}]**\n" +
+            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
+        )
+
+    embed2.set_author(
+        name=ctx.guild.name,
+        icon_url=ctx.guild.icon
+    )
+
+    if len(embed2.description) > 3999:
+        embed2.description = "> The list is too long to display."
+
+    await ctx.send(embed=embed2)
+
+    @server.command(
         name="vehicles",
         description="See all vehicles of players in the server."
     )
