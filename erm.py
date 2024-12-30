@@ -212,6 +212,7 @@ class Bot(commands.AutoShardedBot):
             tempban_checks.start()
             check_whitelisted_car.start()
             change_status.start()
+            process_scheduled_pms.start()
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):
@@ -742,6 +743,22 @@ async def get_player_avatar_url(player_id):
             return data['data'][0]['imageUrl']
 
 pm_counter = {}
+scheduled_pm_queue = asyncio.Queue()
+
+@tasks.loop(seconds=5)
+async def process_scheduled_pms():
+    try:
+        while not scheduled_pm_queue.empty():
+            pm_data = await scheduled_pm_queue.get()
+            guild_id, usernames, message = pm_data
+            try:
+                await bot.prc_api.run_command(guild_id, f":pm {usernames} {message}")
+            except prc_api.ResponseFailure as e:
+                if e.status_code == 429:
+                    await scheduled_pm_queue.put(pm_data)
+    except Exception as e:
+        logging.error(f"Error in process_scheduled_pms: {e}")
+
 @tasks.loop(minutes=2, reconnect=True)
 async def check_whitelisted_car():
     initial_time = time.time()
@@ -1207,17 +1224,18 @@ async def check_team_restrictions(settings, guild_id, players):
     if len(load_against) > 0:
         try:
             await bot.prc_api.run_command(guild_id, f":load {','.join(load_against)}")
-        except prc_api.ResponseFailure:
+        except:
             logging.warning("PRC API Rate limit reached when loading.")
     for message, plrs_to_send in pm_against.items():
         try:
-            await bot.prc_api.run_command(guild_id, f":pm {','.join(plrs_to_send)} {message}")
-        except prc_api.ResponseFailure:
+            await scheduled_pm_queue.put((guild_id, ','.join(plrs_to_send), message))
+            logging.warning("Added to scheduled PM queue.")
+        except:
             logging.warning("PRC API Rate limit reached when PMing.")
     if len(kick_against) > 0:
         try:
             await bot.prc_api.run_command(guild_id, f":kick {','.join(kick_against)}")
-        except prc_api.ResponseFailure:
+        except:
             logging.warning("PRC API Rate limit reached when kicking.")
     send_by_teams = {}
     team_to_channel = {}
