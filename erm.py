@@ -745,16 +745,19 @@ async def get_player_avatar_url(player_id):
 pm_counter = {}
 scheduled_pm_queue = asyncio.Queue()
 
-@tasks.loop(seconds=5)
+@tasks.loop(seconds=10)
 async def process_scheduled_pms():
     try:
+        logging.info("Processing scheduled PMs.")
         while not scheduled_pm_queue.empty():
             pm_data = await scheduled_pm_queue.get()
             guild_id, usernames, message = pm_data
+            logging.info("Not empty, grabbed last queue of scheduled PMs.")
             try:
                 await bot.prc_api.run_command(guild_id, f":pm {usernames} {message}")
             except prc_api.ResponseFailure as e:
                 if e.status_code == 429:
+                    logging.info("429 for last item in scheduled PM, putting back into queue.")
                     await scheduled_pm_queue.put(pm_data)
     except Exception as e:
         logging.error(f"Error in process_scheduled_pms: {e}")
@@ -1230,7 +1233,7 @@ async def check_team_restrictions(settings, guild_id, players):
         try:
             await scheduled_pm_queue.put((guild_id, ','.join(plrs_to_send), message))
             logging.warning("Added to scheduled PM queue.")
-        except:
+        except Exception as e:
             logging.warning("PRC API Rate limit reached when PMing.")
     if len(kick_against) > 0:
         try:
