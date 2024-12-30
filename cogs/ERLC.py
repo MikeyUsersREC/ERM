@@ -601,7 +601,7 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="teams",
-        description:"See all players in the server, grouped by team."
+        description="See all players in the server, grouped by team."
     )
     @is_staff()
     @is_server_linked()
@@ -622,11 +622,11 @@ class ERLC(commands.Cog):
             continue
         if plr.team not in teams:
             teams[plr.team] = []
-            teams[plr.team].append(plr)
+        teams[plr.team].append(plr)
 
     for team, team_players in teams.items():
         embed2.description += (
-            f"**{team [(len(team_players)}]**\n" +
+            f"**{team} [{len(team_players)}]**\n" +
             ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in team_players]) +
             "\n\n"
         )
