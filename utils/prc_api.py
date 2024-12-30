@@ -264,8 +264,9 @@ class PRCApiClient:
                 killed_user_id=log_item['Killed'].split(':')[1]
             ) for log_item in response_json]
         elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
+            retry_after = int(response_json.get('retry_after', 5))
             await asyncio.sleep(retry_after)
+            return await self.fetch_kill_logs(guild_id)
         else:
             raise ResponseFailure(
                 status_code=status_code,
@@ -298,7 +299,7 @@ class PRCApiClient:
                 type='join' if log_item['Join'] is True else 'leave'
             ) for log_item in response_json]
         elif status_code == 429:
-            retry_after = int(response_json[1].get('retry_after', 5))
+            retry_after = int(response_json.get('retry_after', 5))
             await asyncio.sleep(retry_after)
             return await self.fetch_player_logs(guild_id)
         else:
