@@ -906,7 +906,7 @@ class LogTracker:
 
 log_tracker = LogTracker()
 
-@tasks.loop(minutes=10, reconnect=True)
+@tasks.loop(minutes=3, reconnect=True)
 async def iterate_prc_logs():
     try:
         server_count = await bot.settings.db.aggregate([

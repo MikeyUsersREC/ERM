@@ -7416,7 +7416,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
     @discord.ui.button(
         label="ER:LC Statistics",
         row=3,
-        disabled=True
+        disabled=False
     )
     async def erlc_statistics(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
