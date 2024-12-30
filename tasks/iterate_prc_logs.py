@@ -84,7 +84,7 @@ async def iterate_prc_logs(bot):
         async def process_guild(items):
             async with semaphore:
                 try:
-                    guild = bot.get_guild(items["id"]) or await bot.fetch_guild(items['_id'])
+                    guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(items['_id'])
                     settings = await bot.settings.find_by_id(guild.id)
                     erlc_settings = settings.get('ERLC', {})
 
