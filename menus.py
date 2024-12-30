@@ -8457,7 +8457,8 @@ class ShiftTypeCreator(discord.ui.View):
                     "nickname_prefix",
                     discord.ui.TextInput(
                         label="Nickname Prefix",
-                        max_length=20
+                        max_length=20,
+                        required=False
                     )
                 )
             ]

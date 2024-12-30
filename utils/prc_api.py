@@ -133,7 +133,8 @@ class PRCApiClient:
             #         "ProhibitedUntil": 9999999999
             #     })
             #     response.status = 423
-                
+            if response.status == 502:
+                return await self._send_api_request(method=method, endpoint=endpoint, guild_id=guild_id, data=data, key=key)
             return response.status, (await response.json() if response.content_type != "text/html" else {})
 
 
@@ -299,6 +300,7 @@ class PRCApiClient:
         elif status_code == 429:
             retry_after = int(response_json[1].get('retry_after', 5))
             await asyncio.sleep(retry_after)
+            return await self.fetch_player_logs(guild_id)
         else:
             raise ResponseFailure(
                 status_code=status_code,
@@ -311,6 +313,9 @@ class PRCApiClient:
         status_code, response_json = await self._send_api_request('POST', '/server/command', guild_id, data={
             "command": command
         })
+        if status_code == 429:
+            await asyncio.sleep(response_json['retry_after']+0.1)
+            return await self.run_command(guild_id, command)
         return status_code, response_json
     
     async def unban_user(self, guild_id: int, user_id: int):

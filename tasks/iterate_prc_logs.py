@@ -84,7 +84,7 @@ async def iterate_prc_logs(bot):
         async def process_guild(items):
             async with semaphore:
                 try:
-                    guild = await bot.fetch_guild(items['_id'])
+                    guild = bot.get_guild(items["id"]) or await bot.fetch_guild(items['_id'])
                     settings = await bot.settings.find_by_id(guild.id)
                     erlc_settings = settings.get('ERLC', {})
 
@@ -347,7 +347,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
         mentioned_roles = team_restrictions[team]["mentioned_roles"]
         missing_roles = team_restrictions[team]["required_roles"]
         try:
-            channel = await bot.fetch_channel(channel)
+            channel = await fetch_get_channel(guild, channel)
         except discord.HTTPException:
             continue
         listed_users = ""
