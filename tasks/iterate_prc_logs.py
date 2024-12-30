@@ -6,7 +6,10 @@ import time
 import logging
 import asyncio
 import datetime
-from utils.utils import fetch_get_channel
+
+from sentry_sdk import push_scope, capture_exception
+
+from utils.utils import fetch_get_channel, error_gen
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 
@@ -130,7 +133,13 @@ async def iterate_prc_logs(bot):
                         await asyncio.gather(*subtasks, return_exceptions=True)
 
                 except Exception as e:
-                    logging.error(f"Error processing guild {items['_id']}: {e}")
+                    error_id = error_gen()
+                    with push_scope() as scope:
+                        scope.set_tag("error_id", error_id)
+                        scope.level = "error"
+
+                        capture_exception(e)
+                logging.error(f"Error processing guild {items['_id']}: {error_id}")
 
         async for items in bot.settings.db.aggregate(pipeline):
             tasks.append(process_guild(items))
