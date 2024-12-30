@@ -976,8 +976,8 @@ class ShiftLogging(commands.Cog):
                     )
 
         my_data = None
-
-        members = {m.id: m for m in ctx.guild.members}  # Cache guild members
+        member_list = await ctx.guild.chunk()
+        members = {m.id: m for m in member_list}  # Cache guild members
 
         for index, i in enumerate(sorted_staff):
             member = members.get(i["id"])
@@ -1109,7 +1109,7 @@ class ShiftLogging(commands.Cog):
                                   or m.guild_permissions.manage_guild
                           )
                           and not m.bot,
-                ctx.guild.members,
+                member_list,
             )
         )
         for member in perm_staff:
@@ -1176,6 +1176,8 @@ class ShiftLogging(commands.Cog):
         for list_item in data:
             for item in list_item:
                 combined.append(item)
+        if buffer == "":
+            buffer += "No data to display."
 
         bbytes = buffer.encode("utf-8", "ignore")
 

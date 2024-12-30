@@ -1,5 +1,7 @@
 import asyncio
 import datetime
+import logging
+import re
 import typing
 import aiohttp
 import discord
@@ -8,6 +10,7 @@ import roblox.users
 from decouple import config
 from discord import Embed, InteractionResponse, Webhook
 from discord.ext import commands
+from fuzzywuzzy import fuzz
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
 from utils.constants import BLANK_COLOR, RED_COLOR
@@ -15,6 +18,7 @@ from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
 import requests
 import json
+
 
 class ArgumentMockingInstance:
     def __init__(self, **kwargs):
@@ -137,14 +141,15 @@ def require_settings():
 
     return commands.check(predicate)
 
+
 async def update_ics(bot, ctx, channel, return_val: dict, ics_id: int):
     try:
         status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
     except prc_api.ResponseFailure:
         status = None
     if not isinstance(status, ServerStatus):
-        return return_val # Invalid key
-    
+        return return_val  # Invalid key
+
     queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
     players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
     mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
@@ -208,14 +213,15 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
         )
     except AttributeError:
         pass
-    for i in embed.fields:
-        i.name = await sub_vars(bot, ctx, channel, i.name)
-        i.value = await sub_vars(bot, ctx, channel, i.value)
+    for index, i in enumerate(embed.fields):
+        embed.set_field_at(index, name=await sub_vars(bot, ctx, channel, i.name),
+                           value=await sub_vars(bot, ctx, channel, i.value))
 
     if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
-        return embed # end here no point
-    
+        return embed
+
     return await update_ics(bot, ctx, channel, embed, ics_id)
+
 
 async def interpret_content(bot, ctx, channel, content: str, ics_id):
     await update_ics(bot, ctx, channel, content, ics_id)
@@ -228,10 +234,10 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
         string = string.replace("{username}", ctx.author.name)
         string = string.replace("{display_name}", ctx.author.display_name)
         string = string.replace("{time}", f"<t:{int(datetime.datetime.now().timestamp())}>")
-        string = string.replace("{server}",  ctx.guild.name)
+        string = string.replace("{server}", ctx.guild.name)
         string = string.replace("{channel}", channel.mention)
         string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
-        
+
         onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
             "Guild": ctx.guild.id, "EndEpoch": 0
         })])
@@ -241,17 +247,17 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
         #### CUSTOM ERLC VARS
         # Fetch whether they should even be allowed to use ERLC vars
         if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
-            return string # end here no point
-        
+            return string  # end here no point
+
         status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
         if not isinstance(status, ServerStatus):
-            return string # Invalid key
+            return string  # Invalid key
         queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
         players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
         mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
         admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
         total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
-        
+
         string = string.replace("{join_code}", status.join_key)
         string = string.replace("{players}", str(status.current_players))
         string = string.replace("{max_players}", str(status.max_players))
@@ -431,6 +437,45 @@ async def new_failure_embed(
     return msg
 
 
+async def get_player_avatar_url(player_id):
+    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={player_id}&size=180x180&format=Png&isCircular=false"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return data['data'][0]['imageUrl']
+
+
+async def run_command(bot, guild_id, username, message):
+    while True:
+        command = f":pm {username} {message}"
+        command_response = await bot.prc_api.run_command(guild_id, command)
+        if command_response[0] == 200:
+            logging.info(f"Sent PM to {username} in guild {guild_id}")
+            break
+        elif command_response[0] == 429:
+            retry_after = int(command_response[1].get('Retry-After', 5))
+            logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logging.error(f"Failed to send PM to {username} in guild {guild_id}")
+            break
+
+
+def is_whitelisted(vehicle_name, whitelisted_vehicle):
+    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
+    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
+    if vehicle_year_match and whitelisted_year_match:
+        vehicle_year = vehicle_year_match.group()
+        whitelisted_year = whitelisted_year_match.group()
+        if vehicle_year != whitelisted_year:
+            return False
+        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
+        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
+        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+    return False
+
+
+
 async def int_failure_embed(interaction, content, **kwargs):
     try:
         await interaction.response.send_message(
@@ -529,7 +574,18 @@ def make_ordinal(n):
         suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
     return str(n) + suffix
 
-async def get_discord_by_roblox(bot,username):
+
+async def fetch_get_channel(target, identifier):
+    channel = target.get_channel(identifier)
+    if not channel:
+        try:
+            channel = await target.fetch_channel(identifier)
+        except discord.HTTPException as e:
+            channel = None
+    return channel
+
+
+async def get_discord_by_roblox(bot, username):
     api_url = "https://users.roblox.com/v1/usernames/users"
     payload = {"usernames": [username], "excludeBannedUsers": True}
     response = requests.post(api_url, json=payload)
@@ -541,7 +597,8 @@ async def get_discord_by_roblox(bot,username):
             return linked_account["discord_id"]
         else:
             return None
-        
+
+
 async def log_command_usage(bot, guild, member, command_name):
     settings = await bot.settings.find_by_id(guild.id)
     if not settings:
@@ -567,7 +624,8 @@ async def log_command_usage(bot, guild, member, command_name):
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
     await log_channel.send(embed=embed)
 
-async def config_change_log(bot,guild,member,data):
+
+async def config_change_log(bot, guild, member, data):
     setting = await bot.settings.find_by_id(guild.id)
     if not setting:
         return
@@ -575,7 +633,7 @@ async def config_change_log(bot,guild,member,data):
         return
     try:
         log_channel_id = setting.get('staff_management', {}).get('erm_log_channel')
-    except (ValueError,TypeError) as e:
+    except (ValueError, TypeError) as e:
         return
     log_channel = guild.get_channel(log_channel_id)
     if log_channel is None:
@@ -586,34 +644,35 @@ async def config_change_log(bot,guild,member,data):
         title="ERM Config Change Log",
         description=f"Configuration change made by {member.mention}",
         color=BLANK_COLOR
-    ).add_field(name="Configuration Change",value=data)
+    ).add_field(name="Configuration Change", value=data)
     embed.set_footer(text=f"User ID: {member.id}")
     embed.set_author(name=member.name, icon_url=member.display_avatar.url)
     embed.timestamp = datetime.datetime.now(datetime.timezone.utc)
     await log_channel.send(embed=embed)
 
 
-async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'], command_string: str, attempted: bool = False):
-        settings = await bot.settings.find_by_id(guild_id)
-        channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
-        try:
-            channel = await (await bot.fetch_guild(guild_id)).fetch_channel(channel)
-        except discord.HTTPException:
-            channel = None
-        bloxlink_user = await bot.bloxlink.find_roblox(author_id)
-        # # print(bloxlink_user)
-        server_status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
-        if channel is not None:
-            if not attempted:
-                await channel.send(embed=discord.Embed(
-                    title="Remote Server Logs",
-                    description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                    color=RED_COLOR
-                ).set_footer(text=f"Private Server: {server_status.join_key}"))
-            else:
-                await channel.send(embed=discord.Embed(
-                        title="Attempted Command Execution",
-                        description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                        color=RED_COLOR
-                    ).set_footer(text=f"Private Server: {server_status.join_key}")
-                )   
+async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'],
+                         command_string: str, attempted: bool = False):
+    settings = await bot.settings.find_by_id(guild_id)
+    channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
+    try:
+        channel = await (await bot.fetch_guild(guild_id)).fetch_channel(channel)
+    except discord.HTTPException:
+        channel = None
+    bloxlink_user = await bot.bloxlink.find_roblox(author_id)
+    # # print(bloxlink_user)
+    server_status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
+    if channel is not None:
+        if not attempted:
+            await channel.send(embed=discord.Embed(
+                title="Remote Server Logs",
+                description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                color=RED_COLOR
+            ).set_footer(text=f"Private Server: {server_status.join_key}"))
+        else:
+            await channel.send(embed=discord.Embed(
+                title="Attempted Command Execution",
+                description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                color=RED_COLOR
+            ).set_footer(text=f"Private Server: {server_status.join_key}")
+                               )

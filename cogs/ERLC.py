@@ -608,8 +608,6 @@ class ERLC(commands.Cog):
     async def server_teams(self, ctx: commands.Context, filter:typing.Optional[str] = None):
         guild_id = int(ctx.guild.id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
-        queue: list[Player] = await self.bot.prc_api.get_server_queue(guild_id)
-
         embed2 = discord.Embed(
             title=f"Server Players by Team [{len(players)}]",
             color=BLANK_COLOR,
@@ -630,12 +628,8 @@ class ERLC(commands.Cog):
                 ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in team_players]) +
                 "\n\n"
             )
-
-        if queue:
-            embed2.description += (
-                f"**Queue [{len(queue)}]**\n" +
-                ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
-            )
+        if embed2.description.strip() == "":
+            embed2.description = "> There are no players in-game."
 
         embed2.set_author(
             name=ctx.guild.name,

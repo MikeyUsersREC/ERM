@@ -6634,12 +6634,12 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         discord.SelectOption(
             label='Enabled',
             value="enabled",
-            description="Priority Logging is enabled."
+            description="PM on Warning is enabled."
         ),
         discord.SelectOption(
             label="Disabled",
             value="disabled",
-            description="Priority Logging is disabled."
+            description="PM on Warning is disabled."
         )
     ])
     async def message_on_warning(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -6718,7 +6718,7 @@ class AutomaticShiftConfiguration(discord.ui.View):
             color=BLANK_COLOR
         )
         for key, value in self.auto_data.items():
-            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+            embed.description += f"**{key.replace('_', ' ').title()}:** {(value or 'Default') if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
 
         embed.set_author(
             name=interaction.guild.name,
@@ -6778,7 +6778,7 @@ class AutomaticShiftConfiguration(discord.ui.View):
             color=BLANK_COLOR
         )
         for key, value in self.auto_data.items():
-            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+            embed.description += f"**{key.replace('_', ' ').title()}:** {(value or 'Default') if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
 
         embed.set_author(
             name=interaction.guild.name,
@@ -7293,7 +7293,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             color=BLANK_COLOR
         )
         for key, value in auto_shift_data.items():
-            embed.description += f"**{key.replace('_', ' ').title()}:** {value if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+            embed.description += f"**{key.replace('_', ' ').title()}:** {(value or 'Default') if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
 
         embed.set_author(
             name=interaction.guild.name,
