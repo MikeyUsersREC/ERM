@@ -384,7 +384,7 @@ class APIRoutes:
         mentioned_roles = priority_settings["mentioned_roles"]
         content = ", ".join([f"<@&{role}>" for role in mentioned_roles])
         try:
-            await channel.send(content, embed=embed)
+            await channel.send(content, embed=embed, allowed_mentions=discord.AllowedMentions.all())
         except discord.HTTPException:
             return HTTPException(status_code=404, detail="Channel not found")
 

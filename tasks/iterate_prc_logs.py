@@ -108,7 +108,8 @@ async def iterate_prc_logs(bot):
 
                     if has_welcome_message:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'welcome_message')
-                        latest_timestamp = await send_welcome_message(bot, settings, guild.id, player_logs, last_timestamp)
+                        latest_timestamp = await send_welcome_message(bot, settings, guild.id, player_logs,
+                                                                      last_timestamp)
                         bot.log_tracker.update_timestamp(guild.id, "welcome_message", latest_timestamp)
 
                     if has_team_restrictions:
@@ -362,12 +363,32 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             continue
         per_user_action_list = ""
         for index, item in enumerate(players):
-            per_user_action_list += f"- **{index+1}.** {item}\n  - **Actions:** "
+            per_user_action_list += f"- **{index + 1}.** {item}\n  - **Actions:** "
             preappended_items = 0
             if item.lower() in [i.lower() for i in kick_against]:
                 per_user_action_list += "Kicked"
                 preappended_items += 1
-
+            users_to_pm = pm_against.values()
+            total_users = []
+            for userlist in users_to_pm:
+                for user in userlist:
+                    if user.lower() not in total_users:
+                        total_users.append(user.lower())
+            if item.lower() in total_users:  # This whole thing is entirely overengineered, and I should've just used
+                # ','.join(list) but I didn't realise this before writing this whole
+                # algorithm :skull:
+                if preappended_items > 0:
+                    per_user_action_list += ", Private Messaged"
+                else:
+                    per_user_action_list += "Private Messaged"
+                preappended_items += 1
+            if item.lower() in [i.lower() for i in load_against]:
+                if preappended_items > 0:
+                    per_user_action_list += ", Loaded"
+                else:
+                    per_user_action_list += "Loaded"
+                preappended_items += 1
+            per_user_action_list += "\n"
         embed = discord.Embed(
             title="Team Restrictions",
             description=f"Your team restriction for the `{team}` team has affected **{len(players)}** players.",
@@ -380,5 +401,6 @@ async def check_team_restrictions(bot, settings, guild_id, players):
 
         await channel.send(
             ', '.join([f"<@&{role}>" for role in mentioned_roles]),
-
+            embed=embed,
+            allowed_mentions=discord.AllowedMentions.all()
         )

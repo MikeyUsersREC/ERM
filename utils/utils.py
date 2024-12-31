@@ -150,8 +150,11 @@ async def update_ics(bot, ctx, channel, return_val: dict, ics_id: int):
     if not isinstance(status, ServerStatus):
         return return_val  # Invalid key
 
-    queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
-    players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
+    try:
+        queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
+        players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
+    except prc_api.ResponseFailure:
+        return return_val # fuck knows why
     mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
     admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
     total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
