@@ -107,7 +107,7 @@ async def iterate_prc_logs(bot):
                     subtasks = []
 
                     if has_welcome_message:
-                        last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'player_logs')
+                        last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'welcome_message')
                         latest_timestamp = await send_welcome_message(bot, settings, guild.id, player_logs, last_timestamp)
                         bot.log_tracker.update_timestamp(guild.id, "welcome_message", latest_timestamp)
 
@@ -242,9 +242,9 @@ async def send_welcome_message(bot, settings, guild_id, player_logs, last_timest
     welcome_message = settings["ERLC"].get("welcome_message", "")
 
     player_names = {}
-    for log in sorted(player_logs, key=lambda x: x.timestamp):
+    for log in sorted(player_logs, key=lambda x: x.timestamp, reverse=True):
         if log.timestamp <= last_timestamp:
-            continue
+            break
         if log.timestamp <= bot.start_time:
             continue
         if log.type == "join":
@@ -309,8 +309,8 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                         else:
                             pm_against[restriction["warning_message"]] = [plr.username]
                     if restriction["notification_channel"] != 0:
-                        if send_to.get(restriction["notification_channel"]) is None:
-                            send_to[restriction["notification_channel"]] = [plr.username, plr.team]
+                        if not isinstance(send_to.get(restriction["notification_channel"]), list):
+                            send_to[restriction["notification_channel"]] = [[plr.username, plr.team]]
                         else:
                             send_to[restriction["notification_channel"]].append([plr.username, plr.team])
                     if restriction["kick_after_infractions"] != 0:
@@ -345,12 +345,13 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             logging.warning("PRC API Rate limit reached when kicking.")
     send_by_teams = {}
     team_to_channel = {}
-    for channel, player_team_union in send_to.items():
-        if send_by_teams.get(player_team_union[1]) is None:
-            send_by_teams[player_team_union[1]] = [player_team_union[0]]
-            team_to_channel[player_team_union[1]] = channel
-        else:
-            send_by_teams[player_team_union[1]].append(player_team_union[0])
+    for channel, players_team_unions in send_to.items():
+        for player_team_union in players_team_unions:
+            if send_by_teams.get(player_team_union[1]) is None:
+                send_by_teams[player_team_union[1]] = [player_team_union[0]]
+                team_to_channel[player_team_union[1]] = channel
+            else:
+                send_by_teams[player_team_union[1]].append(player_team_union[0])
     for team, channel in team_to_channel.items():
         players = send_by_teams[team]
         mentioned_roles = team_restrictions[team]["mentioned_roles"]
@@ -359,14 +360,25 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             channel = await fetch_get_channel(guild, channel)
         except discord.HTTPException:
             continue
-        listed_users = ""
-        for item in players:
-            listed_users += f"- {item}\n"
+        per_user_action_list = ""
+        for index, item in enumerate(players):
+            per_user_action_list += f"- **{index+1}.** {item}\n  - **Actions:** "
+            preappended_items = 0
+            if item.lower() in [i.lower() for i in kick_against]:
+                per_user_action_list += "Kicked"
+                preappended_items += 1
+
+        embed = discord.Embed(
+            title="Team Restrictions",
+            description=f"Your team restriction for the `{team}` team has affected **{len(players)}** players.",
+            color=BLANK_COLOR
+        ).add_field(
+            name=f"Players Affected [{len(players)}]",
+            inline=False,
+            value=per_user_action_list
+        )
+
         await channel.send(
             ', '.join([f"<@&{role}>" for role in mentioned_roles]),
-            embed=discord.Embed(
-                title="Team Restrictions",
-                description=f"The following individuals are on the **{team}** team without holding any of the roles {', '.join([f'<@&{role}>' for role in missing_roles])}.\n{listed_users}",
-                color=BLANK_COLOR
-            )
+
         )

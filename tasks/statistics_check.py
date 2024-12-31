@@ -28,7 +28,7 @@ async def update_channel(guild, channel_id, stat, placeholders):
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check(bot):
     initial_time = time.time()
-    async for guild_data in bot.settings.db.find({}):
+    async for guild_data in bot.settings.db.find({"ERLC.statistics": {"$exists": True}}):
         guild_id = guild_data['_id']
 
         try:
