@@ -387,7 +387,7 @@ class ActivityCoreCommands:
             if not current_notice:
                 return await respond(
                     embed=discord.Embed(
-                        title="<:error:1164666124496019637> No Active Notice",
+                        title="No Active Notice",
                         description="This staff member has no active notice."
                     )
                 )
@@ -395,7 +395,7 @@ class ActivityCoreCommands:
             current_time = int(datetime.datetime.now().timestamp())
             await self.bot.loas.db.update_one(
                 {"_id": current_notice["_id"]},
-                {"$set": {"expiry": current_time}}
+                {"$set": {"expiry": current_time, "expired": true}}
             )
 
             return await respond(
