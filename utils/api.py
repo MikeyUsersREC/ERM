@@ -359,7 +359,7 @@ class APIRoutes:
 
         embed = discord.Embed(
             title="New Priority Received",
-            description=f"We have received a new priority request from **{json_data['username']}** ({json_data['user_id']})",
+            description=f"We have received a new priority request from **<@{json_data['username']}>** ({json_data['user_id']})",
             color=BLANK_COLOR
         )
 
