@@ -7605,8 +7605,8 @@ class PriorityRequestConfiguration(AssociationConfigurationView):
         ]
         await func(priority_settings)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, min_values=1, max_values=1, placeholder="Priority Channel", row=2)
-    async def priority_channel(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
+    @discord.ui.select(cls=discord.ui.ChannelSelect, min_values=1, max_values=1, placeholder="Priority Channel", row=2)
+    async def priority_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         whether_to_continue = await self.interaction_check(interaction)
         if whether_to_continue is False:
             return
