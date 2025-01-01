@@ -624,7 +624,10 @@ class ERLC(commands.Cog):
                 teams[plr.team] = []
             teams[plr.team].append(plr)
 
-        for team, team_players in teams.items():
+        team_order = ["Police", "Sheriff", "Fire", "DOT", "Civilian"]
+        for team in team_order:
+            if team in teams:
+                team_players = teams[team]
             embed2.description += (
                 f"**{team} [{len(team_players)}]**\n" +
                 ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in team_players]) +
