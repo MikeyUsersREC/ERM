@@ -215,9 +215,10 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     avatar_check_settings = settings.get('ERLC', {}).get('avatar_check', {})
     
     player_names = {}
-    for log in sorted(player_logs, key=lambda x: x.timestamp, reverse=True):
+    # Sort logs in ascending order to process events chronologically
+    for log in sorted(player_logs, key=lambda x: x.timestamp):
         if log.timestamp <= last_timestamp:
-            break
+            continue
         if log.timestamp <= bot.start_time:
             continue
         
