@@ -1,10 +1,11 @@
 import re
-
 import discord
 from discord.ext import commands, tasks
 import time
 import logging
 import asyncio
+import aiohttp
+import roblox
 import datetime
 
 from sentry_sdk import push_scope, capture_exception
@@ -12,6 +13,7 @@ from sentry_sdk import push_scope, capture_exception
 from utils.utils import fetch_get_channel, error_gen
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
+from menus import AvatarCheckView
 
 
 @tasks.loop(seconds=90, reconnect=True)
@@ -125,7 +127,7 @@ async def iterate_prc_logs(bot):
 
                     if 'player_logs' in channels and player_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'player_logs')
-                        embeds, latest_timestamp = process_player_logs(player_logs, last_timestamp)
+                        embeds, latest_timestamp = await process_player_logs(bot, settings, guild.id, player_logs, last_timestamp)
                         if embeds:
                             subtasks.append(send_log_batch(channels['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
@@ -206,14 +208,17 @@ def process_kill_logs(kill_logs, last_timestamp):
     return embeds, latest_timestamp
 
 
-def process_player_logs(player_logs, last_timestamp):
+async def process_player_logs(bot, settings, guild_id, player_logs, last_timestamp):
     """Process player logs and return embeds"""
     embeds = []
     latest_timestamp = last_timestamp
+    new_join_ids = []
 
     for log in sorted(player_logs):
         if log.timestamp <= last_timestamp:
             continue
+        if log.type == 'join':
+            new_join_ids.append(log.user_id)
 
         latest_timestamp = max(latest_timestamp, log.timestamp)
         embed = discord.Embed(
@@ -222,6 +227,57 @@ def process_player_logs(player_logs, last_timestamp):
             color=GREEN_COLOR if log.type == 'join' else RED_COLOR
         )
         embeds.append(embed)
+
+    if new_join_ids and settings.get('ERLC', {}).get('avatar_check', {}).get('channel'):
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(
+                    'https://avatar-checking.jxselinxe.workers.dev/internal/check_avatars',
+                    json={'robloxIds': new_join_ids},
+                    timeout=10
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get('success'):
+                            for user_id, result in data['data']['results'].items():
+                                if result.get('unrealistic'):
+                                    if not any(item in (settings.get('ERLC', {}).get('unrealistic_items_whitelist', []) or []) 
+                                             for item in result.get('unrealistic_item_ids', [])):
+                                        
+                                        channel_id = settings['ERLC']['avatar_check']['channel']
+                                        guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
+                                        channel = await fetch_get_channel(guild, channel_id)
+                                        if channel:
+                                            try:
+                                                user = await bot.roblox.get_user(int(user_id))
+                                                avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
+                                                avatar_url = avatar[0].image_url
+                                            except:
+                                                return
+                                            
+                                            view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
+                                            await channel.send(
+                                                content=', '.join([f'<@&{role}>' for role in settings['ERLC']['avatar_check'].get('mentioned_roles', [])]),
+                                                embed=discord.Embed(
+                                                    title="Unrealistic Avatar Detected",
+                                                    description="We have detected that a player in your server has an unrealistic avatar.",
+                                                    color=0x2C2F33
+                                                ).add_field(
+                                                    name="Player Information",
+                                                    value=f"> **Username:** [{user.name}](https://roblox.com/users/{user_id}/profile)\n> **User ID:** {user_id}\n> **Reason:** {', '.join(result['reasons'])}"
+                                                ).set_thumbnail(url=avatar_url),
+                                                view=view
+                                            )
+                                            
+                                            if settings['ERLC']['avatar_check'].get('message'):
+                                                await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
+            except Exception as e:
+                    error_id = error_gen()
+                    with push_scope() as scope:
+                        scope.set_tag("error_id", error_id)
+                        scope.level = "error"
+
+                        capture_exception(e)
 
     return embeds, latest_timestamp
 
