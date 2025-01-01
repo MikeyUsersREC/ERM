@@ -133,6 +133,10 @@ class PRCApiClient:
             #         "ProhibitedUntil": 9999999999
             #     })
             #     response.status = 423
+            if response.status == 429:
+                retry_after = int((await response.json()).get('retry_after', 5))
+                await asyncio.sleep(retry_after)
+                return await self._send_api_request(method=method, endpoint=endpoint, guild_id=guild_id, data=data, key=key)
             if response.status == 502:
                 return await self._send_api_request(method=method, endpoint=endpoint, guild_id=guild_id, data=data, key=key)
             return response.status, (await response.json() if response.content_type != "text/html" else {})
