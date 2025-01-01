@@ -10367,3 +10367,54 @@ class AccountLinkingMenu(discord.ui.View):
                 ),
                 view=None
             )
+
+
+class AvatarCheckView(discord.ui.View):
+    def __init__(self, bot, user_id: str, message: str):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.user_id = user_id  
+        self.message = message
+
+    @discord.ui.button(label="Mark as Reviewed", style=discord.ButtonStyle.success)
+    async def mark_reviewed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = interaction.message.embeds[0]
+        embed.title = "<:success:1163149118366040106> Unrealistic Avatar Reviewed" 
+        embed.color = GREEN_COLOR
+
+        for item in self.children:
+            item.disabled = True
+            if item.label == "Mark as Reviewed":
+                item.label = f"Reviewed by {interaction.user.name}"
+
+        await interaction.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    @discord.ui.button(label="Kick Player", style=discord.ButtonStyle.secondary)
+    async def kick_player(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await self.bot.prc_api.run_command(interaction.guild.id, f":kick {self.user_id}")
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Kicked Player",
+                    description="The player has been kicked from the server.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+            for item in self.children:
+                if item == button:
+                    item.disabled = True
+
+            await interaction.message.edit(view=self)
+
+        except Exception as e:
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Not Executed",
+                    description=f"Failed to kick player: {str(e)}",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
