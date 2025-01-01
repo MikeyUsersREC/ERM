@@ -315,12 +315,15 @@ class ERLC(commands.Cog):
         new_keymap = dict(zip(new_maps, new_vals))
         embed2.title = f"Online Staff Members [{sum([len(i) for i in new_vals])}]"
         for key, value in new_keymap.items():
-            if (value := '\n'.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value])) not in ['', '\n']:
+            if value:
+                value_length = len(value)
+                value = '\n'.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value])
                 embed2.add_field(
-                    name=f'{key} [{len(value)}]',
+                    name=f'{key} [{value_length}]',
                     value=value,
                     inline=False
                 )
+
 
         if len(embed2.fields) == 0:
             embed2.description = "> There are no online staff members."
