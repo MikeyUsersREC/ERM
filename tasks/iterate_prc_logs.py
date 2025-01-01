@@ -215,34 +215,39 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     avatar_check_settings = settings.get('ERLC', {}).get('avatar_check', {})
     
     player_names = {}
-    new_join_ids = []
     for log in sorted(player_logs, key=lambda x: x.timestamp, reverse=True):
         if log.timestamp <= last_timestamp:
+            break
+        if log.timestamp <= bot.start_time:
             continue
         
         latest_timestamp = max(latest_timestamp, log.timestamp)
+        
         if log.type == "join":
             player_names[log.username] = log.timestamp
-            new_join_ids.append(log.user_id)
-            
             embed = discord.Embed(
                 title="Player Join Log",
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) joined the server • <t:{int(log.timestamp)}:T>",
                 color=GREEN_COLOR
             )
+            embeds.append(embed)
         else:
             if player_names.get(log.username, None) is not None:
                 if player_names[log.username] < log.timestamp:
                     del player_names[log.username]
-                    
+            
             embed = discord.Embed(
                 title="Player Leave Log",
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) left the server • <t:{int(log.timestamp)}:T>",
                 color=RED_COLOR
             )
-        embeds.append(embed)
+            embeds.append(embed)
 
-    if new_join_ids and avatar_check_settings.get('channel'):
+    # Process avatar checks for new players
+    new_players = list(player_names.keys())
+    if new_players and avatar_check_settings.get('channel'):
+        new_join_ids = [log.user_id for log in player_logs if log.username in new_players]
+        
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
