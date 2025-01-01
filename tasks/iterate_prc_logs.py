@@ -211,6 +211,7 @@ def process_kill_logs(kill_logs, last_timestamp):
 async def process_player_logs(bot, settings, guild_id, player_logs, last_timestamp):
     """Process player logs and return embeds"""
     embeds = []
+    current_embeds = []  # Buffer for periodic sending
     latest_timestamp = last_timestamp
     avatar_check_settings = settings.get('ERLC', {}).get('avatar_check', {})
     
@@ -231,7 +232,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) joined the server • <t:{int(log.timestamp)}:T>",
                 color=GREEN_COLOR
             )
-            embeds.append(embed)
+            current_embeds.append(embed)
         else:
             if player_names.get(log.username, None) is not None:
                 if player_names[log.username] < log.timestamp:
@@ -242,7 +243,16 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) left the server • <t:{int(log.timestamp)}:T>",
                 color=RED_COLOR
             )
-            embeds.append(embed)
+            current_embeds.append(embed)
+        
+        # Add current embeds to main list and clear buffer when we have 10 embeds
+        if len(current_embeds) >= 10:
+            embeds.extend(current_embeds)
+            current_embeds = []
+
+    # Add any remaining embeds
+    if current_embeds:
+        embeds.extend(current_embeds)
 
     # Process avatar checks for new players
     new_players = list(player_names.keys())
