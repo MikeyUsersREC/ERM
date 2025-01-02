@@ -14,9 +14,10 @@ from utils.utils import fetch_get_channel, error_gen
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
+from discord import Webhook
 
 
-@tasks.loop(seconds=90, reconnect=True)
+@tasks.loop(minutes=3, reconnect=True)
 async def iterate_prc_logs(bot):
     try:
         server_count = await bot.settings.db.aggregate([
@@ -83,13 +84,16 @@ async def iterate_prc_logs(bot):
             }
         ]
 
-        semaphore = asyncio.Semaphore(20)  # Limit concurrent API requests to 20
+        semaphore = asyncio.Semaphore(10)  # Limit concurrent API requests to 20
         tasks = []
 
         async def process_guild(items):
             async with semaphore:
                 try:
-                    guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(items['_id'])
+                    guild = bot.get_guild(items["_id"])
+                    if not guild:  # Skip if server isn't cached
+                        return
+                        
                     settings = await bot.settings.find_by_id(guild.id)
                     erlc_settings = settings.get('ERLC', {})
 
@@ -98,12 +102,22 @@ async def iterate_prc_logs(bot):
                         'player_logs': erlc_settings.get('player_logs')
                     }
 
-                    channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
+                    channels = {k: guild.get_channel(v) for k, v in channels.items() if v}
                     has_welcome_message = bool(erlc_settings.get("welcome_message", False))
                     has_team_restrictions = bool(erlc_settings.get("team_restrictions"))
 
                     if not channels and not has_welcome_message and not has_team_restrictions:
                         return
+
+                    # Create webhooks if they don't exist
+                    webhooks = {}
+                    for channel_type, channel in channels.items():
+                        if channel:
+                            existing_webhooks = await channel.webhooks()
+                            webhook = discord.utils.get(existing_webhooks, name="ERM")
+                            if not webhook:
+                                webhook = await channel.create_webhook(name="ERM", avatar=await get_erm_avatar())
+                            webhooks[channel_type] = webhook
 
                     kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
                     subtasks = []
@@ -118,18 +132,18 @@ async def iterate_prc_logs(bot):
                         await check_team_restrictions(bot, settings, guild.id,
                                                       await bot.prc_api.get_server_players(guild.id))
 
-                    if 'kill_logs' in channels and kill_logs:
+                    if 'kill_logs' in webhooks and kill_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'kill_logs')
                         embeds, latest_timestamp = process_kill_logs(kill_logs, last_timestamp)
                         if embeds:
-                            subtasks.append(send_log_batch(channels['kill_logs'], embeds))
+                            subtasks.append(send_log_webhook(webhooks['kill_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'kill_logs', latest_timestamp)
 
-                    if 'player_logs' in channels and player_logs:
+                    if 'player_logs' in webhooks and player_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'player_logs')
                         embeds, latest_timestamp = await process_player_logs(bot, settings, guild.id, player_logs, last_timestamp)
                         if embeds:
-                            subtasks.append(send_log_batch(channels['player_logs'], embeds))
+                            subtasks.append(send_log_webhook(webhooks['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
 
                     if subtasks:
@@ -142,7 +156,7 @@ async def iterate_prc_logs(bot):
                         scope.level = "error"
 
                         capture_exception(e)
-                logging.error(f"Error processing guild {items['_id']}: {error_id}")
+                    logging.error(f"Error processing guild {items['_id']}: {error_id}")
 
         async for items in bot.settings.db.aggregate(pipeline):
             tasks.append(process_guild(items))
@@ -175,15 +189,15 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
     return None, None
 
 
-async def send_log_batch(channel, embeds):
-    """Helper function to send log embeds in batches"""
+async def send_log_webhook(webhook: Webhook, embeds: list):
+    """Helper function to send log embeds via webhook"""
     if not embeds:
         return
     # Split embeds into chunks of 10 (Discord's limit)
     for i in range(0, len(embeds), 10):
         chunk = embeds[i:i + 10]
         try:
-            await channel.send(embeds=chunk)
+            await webhook.send(embeds=chunk)
         except discord.HTTPException as e:
             logging.error(f"Failed to send log batch: {e}")
 
@@ -211,7 +225,6 @@ def process_kill_logs(kill_logs, last_timestamp):
 async def process_player_logs(bot, settings, guild_id, player_logs, last_timestamp):
     """Process player logs and return embeds"""
     embeds = []
-    current_embeds = []  # Buffer for periodic sending
     latest_timestamp = last_timestamp
     avatar_check_settings = settings.get('ERLC', {}).get('avatar_check', {})
     
@@ -232,7 +245,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) joined the server • <t:{int(log.timestamp)}:T>",
                 color=GREEN_COLOR
             )
-            current_embeds.append(embed)
+            embeds.append(embed)
         else:
             if player_names.get(log.username, None) is not None:
                 if player_names[log.username] < log.timestamp:
@@ -243,16 +256,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                 description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) left the server • <t:{int(log.timestamp)}:T>",
                 color=RED_COLOR
             )
-            current_embeds.append(embed)
-        
-        # Add current embeds to main list and clear buffer when we have 10 embeds
-        if len(current_embeds) >= 10:
-            embeds.extend(current_embeds)
-            current_embeds = []
-
-    # Add any remaining embeds
-    if current_embeds:
-        embeds.extend(current_embeds)
+            embeds.append(embed)
 
     # Process avatar checks for new players
     new_players = list(player_names.keys())
@@ -490,3 +494,9 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all()
         )
+
+
+async def get_erm_avatar():
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://cdn.discordapp.com/avatars/978662093408591912/9927443fdcceaacb41684747a58bae7d.png?size=512") as resp:
+            return await resp.read()
