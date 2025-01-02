@@ -8171,18 +8171,52 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             ephemeral=True
     )
 
-
-
     @discord.ui.button(
-        label="ER:LC Statistics",
-        row=3,
-        disabled=False
+        label="More Features",
+        row=3
     )
-    async def erlc_statistics(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def more_features(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
         if val is False:
             return
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        view = MoreOptions(self.bot, interaction.guild.id)
+        await interaction.response.send_message(
+            embed = discord.Embed(
+                title="More Features",
+                description="",
+                color=BLANK_COLOR
+            ).add_field(
+                name="ER:LC Statistics Updates",
+                value="This is where you can configure the statistics updates for ER:LC.",
+                inline=False
+            ).add_field(
+                name="Auto Kick/Ban Logging",
+                value="This is where you can configure the auto kick/ban feature for ER:LC.",
+                inline=False
+            ).add_field(
+                name="Discord Check Message",
+                value="This message is sent to in-game users when a Discord Check is performed with bot if user is not found in server.",
+                inline=False
+            ),
+            view=view,
+            ephemeral=True
+        )
+class MoreOptions(discord.ui.View):
+    def __init__(self, bot, guild_id):
+        super().__init__(timeout=900.0)
+        self.bot = bot
+        self.guild_id = guild_id
 
+    @discord.ui.button(
+        label="ER:LC Statistics Updates",
+        row=0
+    )
+    async def erlc_statics(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        
         view = ERLCStats(self.bot,interaction.user.id,interaction.guild.id)
         sett = await self.bot.settings.find_by_id(interaction.guild.id)
         if not sett:
@@ -8307,7 +8341,6 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 }
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Check Message Set: {modal.message.value}")
-
 class AutoLogging(discord.ui.View):
     def __init__(self,bot,sett):
         super().__init__(timeout=600.0)

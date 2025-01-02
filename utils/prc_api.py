@@ -331,11 +331,7 @@ class PRCApiClient:
                 "command": ":unban {}".format(str(user_id))
             })
             if status_code == 429:
-                rate_limit_reset = int(response_json[1].get('RateLimit-Reset', 5))
-                reset_time = int(rate_limit_reset)
-                current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-                retry_after = reset_time - current_time
-                await asyncio.sleep(retry_after)
+                await asyncio.sleep(response_json['retry_after']+0.1)
             else:
                 return status_code
 
