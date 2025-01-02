@@ -348,6 +348,8 @@ async def check_team_restrictions(bot, settings, guild_id, players):
         if team_restrictions.get(team_name) is not None:
             restriction = team_restrictions.get(team_name)
             roles = restriction["required_roles"]
+            if roles == []:
+                continue
             actual_roles = [discord.utils.get(all_roles, id=r) for r in roles]
             members = []
             for item in actual_roles:
