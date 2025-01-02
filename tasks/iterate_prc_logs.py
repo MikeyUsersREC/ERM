@@ -16,7 +16,7 @@ from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
 
 
-@tasks.loop(seconds=90, reconnect=True)
+@tasks.loop(seconds=13, reconnect=True)
 async def iterate_prc_logs(bot):
     try:
         server_count = await bot.settings.db.aggregate([
@@ -212,27 +212,44 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     """Process player logs and return embeds"""
     embeds = []
     latest_timestamp = last_timestamp
-    new_join_ids = []
-
-    for log in sorted(player_logs):
+    avatar_check_settings = settings.get('ERLC', {}).get('avatar_check', {})
+    
+    player_names = {}
+    # Sort logs in ascending order to process events chronologically
+    for log in sorted(player_logs, key=lambda x: x.timestamp):
         if log.timestamp <= last_timestamp:
             continue
-        if log.type == 'join':
-            new_join_ids.append(log.user_id)
-
+        if log.timestamp <= bot.start_time:
+            continue
+        
         latest_timestamp = max(latest_timestamp, log.timestamp)
-        embed = discord.Embed(
-            title=f"Player {'Join' if log.type == 'join' else 'Leave'} Log",
-            description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) {'joined the server' if log.type == 'join' else 'left the server'} • <t:{int(log.timestamp)}:T>",
-            color=GREEN_COLOR if log.type == 'join' else RED_COLOR
-        )
-        embeds.append(embed)
+        
+        if log.type == "join":
+            player_names[log.username] = log.timestamp
+            embed = discord.Embed(
+                title="Player Join Log",
+                description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) joined the server • <t:{int(log.timestamp)}:T>",
+                color=GREEN_COLOR
+            )
+            embeds.append(embed)
+        else:
+            if player_names.get(log.username, None) is not None:
+                if player_names[log.username] < log.timestamp:
+                    del player_names[log.username]
+            
+            embed = discord.Embed(
+                title="Player Leave Log",
+                description=f"[{log.username}](https://roblox.com/users/{log.user_id}/profile) left the server • <t:{int(log.timestamp)}:T>",
+                color=RED_COLOR
+            )
+            embeds.append(embed)
 
-    if new_join_ids and settings.get('ERLC', {}).get('avatar_check', {}).get('channel'):
-        enabled = settings.get('ERLC', {}).get('avatar_check', {}).get("enabled", True)
-        if not enabled:
-            return
-
+    # Process avatar checks for new players
+    new_players = list(player_names.keys())
+    if new_players and avatar_check_settings.get('channel'):
+        new_join_ids = [log.user_id for log in player_logs if log.username in new_players]
+        blacklisted_items = avatar_check_settings.get('blacklisted_items', [])
+        
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
@@ -244,11 +261,20 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                         data = await resp.json()
                         if data.get('success'):
                             for user_id, result in data['data']['results'].items():
+                                for item in result.get('current_items', []):
+                                    if item['id'] in blacklisted_items:
+                                        if not result.get('unrealistic'):
+                                            result['unrealistic'] = True
+                                            result['reasons'] = []
+                                            result.setdefault('unrealistic_item_ids', [])
+                                        result['reasons'].append(f"Using a blacklisted item: {item['name']}")
+                                        result['unrealistic_item_ids'].append(item['id'])
+
                                 if result.get('unrealistic'):
                                     if not any(item in (settings.get('ERLC', {}).get('unrealistic_items_whitelist', []) or []) 
                                              for item in result.get('unrealistic_item_ids', [])):
                                         
-                                        channel_id = settings['ERLC']['avatar_check']['channel']
+                                        channel_id = avatar_check_settings['channel']
                                         guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
                                         channel = await fetch_get_channel(guild, channel_id)
                                         if channel:
@@ -257,11 +283,11 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                                 avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
                                                 avatar_url = avatar[0].image_url
                                             except:
-                                                return
+                                                continue
                                             
-                                            view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
+                                            view = AvatarCheckView(bot, user_id, avatar_check_settings.get('message', ''))
                                             await channel.send(
-                                                content=', '.join([f'<@&{role}>' for role in settings['ERLC']['avatar_check'].get('mentioned_roles', [])]),
+                                                content=', '.join([f'<@&{role}>' for role in avatar_check_settings.get('mentioned_roles', [])]),
                                                 embed=discord.Embed(
                                                     title="Unrealistic Avatar Detected",
                                                     description="We have detected that a player in your server has an unrealistic avatar.",
@@ -273,15 +299,14 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                                 view=view
                                             )
                                             
-                                            if settings['ERLC']['avatar_check'].get('message'):
-                                                await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
+                                            if avatar_check_settings.get('message'):
+                                                await bot.scheduled_pm_queue.put((guild_id, user.name, avatar_check_settings['message']))
             except Exception as e:
-                    error_id = error_gen()
-                    with push_scope() as scope:
-                        scope.set_tag("error_id", error_id)
-                        scope.level = "error"
-
-                        capture_exception(e)
+                error_id = error_gen()
+                with push_scope() as scope:
+                    scope.set_tag("error_id", error_id)
+                    scope.level = "error"
+                    capture_exception(e)
 
     return embeds, latest_timestamp
 
@@ -314,13 +339,14 @@ async def send_welcome_message(bot, settings, guild_id, player_logs, last_timest
             if player_names.get(log.username, None) is not None:
                 if player_names[log.username] < log.timestamp:
                     del player_names[log.username]
+
     players = player_names.keys()
-    if len(players) == 0:
-        return sorted(player_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
-    try:
-        await bot.prc_api.run_command(guild_id, f":pm {','.join(players)} {welcome_message}")
-    except prc_api.ResponseFailure:
-        pass
+    if len(players) > 0:
+        try:
+            await bot.prc_api.run_command(guild_id, f":pm {','.join(players)} {welcome_message}")
+        except prc_api.ResponseFailure:
+            pass
+
     return sorted(player_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
 
 
@@ -345,10 +371,6 @@ async def check_team_restrictions(bot, settings, guild_id, players):
     min_count_for_compute = team_restrictions.get("min_players", 0)
     if min_count_for_compute >= len(players):
         return
-    
-    enabled = team_restrictions.get("enabled", True)
-    if not enabled:
-        return
 
     guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
     all_roles = await guild.fetch_roles()
@@ -356,8 +378,6 @@ async def check_team_restrictions(bot, settings, guild_id, players):
         if team_restrictions.get(team_name) is not None:
             restriction = team_restrictions.get(team_name)
             roles = restriction["required_roles"]
-            if roles == []:
-                continue
             actual_roles = [discord.utils.get(all_roles, id=r) for r in roles]
             members = []
             for item in actual_roles:
