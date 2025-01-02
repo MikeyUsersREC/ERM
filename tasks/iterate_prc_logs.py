@@ -341,6 +341,10 @@ async def check_team_restrictions(bot, settings, guild_id, players):
     min_count_for_compute = team_restrictions.get("min_players", 0)
     if min_count_for_compute >= len(players):
         return
+    
+    enabled = team_restrictions.get("enabled", True)
+    if not enabled:
+        return
 
     guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
     all_roles = await guild.fetch_roles()
