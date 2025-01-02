@@ -229,6 +229,10 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
         embeds.append(embed)
 
     if new_join_ids and settings.get('ERLC', {}).get('avatar_check', {}).get('channel'):
+        enabled = settings.get('ERLC', {}).get('avatar_check', {}).get("enabled", True)
+        if not enabled:
+            return
+
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
