@@ -408,7 +408,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                             kick_against.append(plr.username)
                             bot.team_restrictions_infractions[guild_id][plr.username] = 0
     if len(load_against) > 0:
-        filtered_load = [username for username in load_against if username.strip()]
+        filtered_load = [username for username in load_against if username.strip() and len(username.strip()) >= 3]
         if filtered_load:
             cmd = f":load {','.join(filtered_load)}"
             try:
@@ -416,7 +416,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             except:
                 logging.warning("PRC API Rate limit reached when loading.")
         else:
-            logging.warning("Skipped sending empty load command")
+            logging.warning("Skipped sending load command - usernames too short or empty")
 
     for message, plrs_to_send in pm_against.items():
         try:
