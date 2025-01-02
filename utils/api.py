@@ -293,6 +293,106 @@ class APIRoutes:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+    async def POST_send_priority_dm(
+            self,
+            authorization: Annotated[str | None, Header()],
+            request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        json_data = await request.json()
+
+        guild = self.bot.get_guild(json_data["guild_id"]) or await self.bot.fetch_guild(json_data["guild_id"])
+        guild_name = guild.name
+        user_id = json_data["user_id"]
+        member = guild.get_member(user_id)
+        if not member:
+            try:
+                member = await guild.fetch_member(user_id)
+            except discord.HTTPException:
+                return HTTPException(status_code=404, detail="Member not found")
+        if json_data["status"].lower() == "accepted":
+            embed = discord.Embed(
+                title="<:success:1163149118366040106> Priority Request Accepted",
+                description=f"Your priority request is **{guild.name}** has been accepted!",
+                color=GREEN_COLOR
+            ).add_field(
+                name="Priority Information",
+                value=f"> **Reason:** {json_data['reason']}\n> **Time:** {td_format(datetime.timedelta(seconds=int(json_data['priority_time'])))}",
+                inline=False
+            )
+        else:
+            embed = discord.Embed(
+                title="Priority Request Denied",
+                description=f"Your priority request in **{guild_name}** has been denied. You can request a new one [here](https://ermbot.xyz/{guild.id}/request).",
+                color=BLANK_COLOR
+            )
+        try:
+            await member.send(embed=embed)
+        except discord.HTTPException:
+            return HTTPException(status_code=400, detail="Member cannot be direct messaged.")
+
+    async def POST_send_priority(
+            self,
+            authorization: Annotated[str | None, Header()],
+            request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        json_data = await request.json()
+        channel_id = json_data["channel_id"]
+        try:
+            channel = await self.bot.fetch_channel(channel_id)
+        except discord.HTTPException:
+            return HTTPException(status_code=404, detail="Channel not found")
+
+        if not channel:
+            return HTTPException(status_code=404, detail="Channel not found")
+
+        embed = discord.Embed(
+            title="New Priority Received",
+            description=f"We have received a new priority request from **<@{json_data['username']}>** ({json_data['user_id']})",
+            color=BLANK_COLOR
+        )
+
+        to_usernames = []
+        for item in json_data["players"]:
+            user = await self.bot.roblox.get_user(item)
+            to_usernames.append(user.name)
+
+        embed.add_field(
+            name="Priority Information",
+            value=(
+                f"> **Content:** {json_data['content']}\n"
+                f"> **Players:** {', '.join(to_usernames)}\n"
+                f"> **Link:** [Click here]({json_data['panel_link']})"
+            ),
+            inline=False
+        )
+
+        embed.timestamp = datetime.datetime.now()
+
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(channel.guild.id)})
+        mentioned_roles = priority_settings["mentioned_roles"]
+        content = ", ".join([f"<@&{role}>" for role in mentioned_roles])
+        try:
+            await channel.send(content, embed=embed, allowed_mentions=discord.AllowedMentions.all())
+        except discord.HTTPException:
+            return HTTPException(status_code=404, detail="Channel not found")
+
+        return {
+            "op": 1,
+            "code": 200
+        }
+
     async def POST_send_loa(
         self,
         authorization: Annotated[str | None, Header()],

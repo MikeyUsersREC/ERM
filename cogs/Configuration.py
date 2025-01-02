@@ -15,7 +15,8 @@ from menus import (
     YesNoColourMenu,
     NextView, BasicConfiguration, LOAConfiguration, ShiftConfiguration, RAConfiguration,
     PunishmentsConfiguration, GameSecurityConfiguration, GameLoggingConfiguration, AntipingConfiguration,
-    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement, ERMCommandLog, WhitelistVehiclesManagement
+    ActivityNoticeManagement, PunishmentManagement, ShiftLoggingManagement, ERMCommandLog, WhitelistVehiclesManagement,
+    PriorityRequestConfiguration
 )
 from utils.paginators import CustomPage, SelectPagination
 from utils.utils import require_settings, generator, log_command_usage
@@ -35,10 +36,7 @@ class Configuration(commands.Cog):
     )
     @is_management()
     async def _setup(self, ctx: commands.Context):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Setup")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Setup")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Setup")
         bot = self.bot
         from utils.constants import base_configuration
         current_settings = None
@@ -491,10 +489,7 @@ class Configuration(commands.Cog):
         bot = self.bot
         settings = await bot.settings.find_by_id(ctx.guild.id)
 
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Config")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Config")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Config")
 
         basic_settings_view = BasicConfiguration(bot, ctx.author.id, [
             (
@@ -776,9 +771,31 @@ class Configuration(commands.Cog):
             ]
         )
 
+        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(ctx.guild.id)})
+
+        priority_requests = PriorityRequestConfiguration(
+            bot,
+            ctx.author.id,
+            [
+                (
+                    "Blacklisted Roles",
+                    [discord.utils.get(ctx.guild.roles, id=int(role)) for role in (priority_settings or {}).get("blacklisted_roles") or [0]]
+                ),
+                (
+                    "Mentioned Roles",
+                    [discord.utils.get(ctx.guild.roles, id=int(role)) for role in (priority_settings or {}).get("mentioned_roles") or [0]]
+                ),
+                (
+                    "Priority Channel",
+                    [discord.utils.get(ctx.guild.channels, id=channel) if (
+                        channel := ((priority_settings or {}).get("channel_id"))) else 0]
+                )
+            ]
+        )
+
         pages = []
 
-        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view, erm_command_log_view]):
+        for index, view in enumerate([basic_settings_view, loa_configuration_view, shift_management_view, ra_view, roblox_punishments, security_view, logging_view, antiping_view, erlc_view, erm_command_log_view, priority_requests]):
             corresponding_embeds = [
                 discord.Embed(
                     title="Basic Settings",
@@ -882,6 +899,15 @@ class Configuration(commands.Cog):
                         "**ERM Log Channel:** This channel is where ERM will log all administrative commands and configuration changes made by Admin & Management Roles. This is useful for auditing purposes, ensuring transparency, and detecting any potential abuse of administrative privileges. This is a critical part of ERM and should be enabled for all servers using ERM.\n\n"
                         "All commands such as Duty Admin, LOA Admin, RA Admin, Server Manage, Config, etc., as well as nearly all configuration changes, will be logged in this channel."
                     )
+                ),
+                discord.Embed(
+                    title="Priority Requests",
+                    color=blank_color,
+                    description=(
+                        "**Blacklisted Roles:** These are the roles which are unable to use the ERM Priority Request system. They will not be able to submit priority requests if they have any of these roles.\n\n"
+                        "**Mentioned Roles:** When a priority request is submitted, these roles will be mentioned in the accompanying message advising staff in regards to the priority request.\n\n"
+                        "**Priority Channel:** This channel will be where priority requests are submitted, and where the message advising staff in regards to the priority request will be sent."
+                    )
                 )
 
             ]
@@ -924,10 +950,7 @@ class Configuration(commands.Cog):
     @is_management()
     @require_settings()
     async def server_management(self, ctx: commands.Context):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Server Manage")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Server Manage")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Server Manage")
 
         embeds = [
             discord.Embed(

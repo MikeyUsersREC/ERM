@@ -69,7 +69,7 @@ class OnShiftStart(commands.Cog):
             except discord.HTTPException:
                 pass
 
-        if nickname_prefix is not None:
+        if nickname_prefix not in [None, "", "none"]:
             try:
                 await staff_member.edit(nick=f"{nickname_prefix}{(staff_member.nick or staff_member.display_name)}")
             except discord.HTTPException:

@@ -22,7 +22,7 @@ class ERLC(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-
+    @staticmethod
     def is_server_linked():
         async def predicate(ctx: commands.Context):
             guild_id = ctx.guild.id
@@ -125,10 +125,7 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"ERLC Link")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(
@@ -302,7 +299,6 @@ class ERLC(commands.Cog):
         status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
         embed2 = discord.Embed(
-            title="Online Staff Members",
             color=BLANK_COLOR
         )
         embed2.set_author(
@@ -331,14 +327,17 @@ class ERLC(commands.Cog):
             key_maps.get('Server Moderator', [])
         ]
         new_keymap = dict(zip(new_maps, new_vals))
-
+        embed2.title = f"Online Staff Members [{sum([len(i) for i in new_vals])}]"
         for key, value in new_keymap.items():
-            if (value := '\n'.join([f'> [{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value])) not in ['', '\n']:
+            if value:
+                value_length = len(value)
+                value = '\n'.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in value])
                 embed2.add_field(
-                    name=f'{key}',
+                    name=f'{key} [{value_length}]',
                     value=value,
                     inline=False
                 )
+
 
         if len(embed2.fields) == 0:
             embed2.description = "> There are no online staff members."
@@ -548,7 +547,7 @@ class ERLC(commands.Cog):
     )
     @is_staff()
     @is_server_linked()
-    async def server_players(self, ctx: commands.Context):
+    async def server_players(self, ctx: commands.Context, filter: typing.Optional[str] = None):
         guild_id = int(ctx.guild.id)
         # status: ServerStatus = await self.bot.prc_api.get_server_status(guild_id)
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
@@ -567,20 +566,32 @@ class ERLC(commands.Cog):
             else:
                 staff.append(item)
 
+        if filter not in [None, ""]:
+            actual_players_copy = []
+            for item in actual_players:
+                if item.username.lower().startswith(filter.lower()):
+                    actual_players_copy.append(item)
+            actual_players = actual_players_copy
+            staff_copy = []
+            for item in staff:
+                if item.username.lower().startswith(filter.lower()):
+                    staff_copy.append(item)
+            staff = staff_copy
+
         embed2.description += (
-            f"**Server Staff [{len(staff)}]**\n" + 
-            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff])
+            f"**Server Staff [{len(staff)}]**\n" +
+            (', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in staff]) or "> No players in this category.")
         )
         
         
         embed2.description += (
             f"\n\n**Online Players [{len(actual_players)}]**\n" +
-            ', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players])
+            (', '.join([f'[{plr.username} ({plr.team})](https://roblox.com/users/{plr.id}/profile)' for plr in actual_players]) or "> No players in this category.")
         )
         
         embed2.description += (
             f"\n\n**Queue [{len(queue)}]**\n" +
-            ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue])
+            (', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in queue]) or "> No players in this category.")
         )
 
         embed2.set_author(
@@ -603,6 +614,51 @@ class ERLC(commands.Cog):
                 f"\n\n**Queue [{len(queue)}]**\n" +
                 ', '.join([f'{plr.username}' for plr in queue])
             )
+
+        await ctx.send(embed=embed2)
+
+    @server.command(
+        name="teams",
+        description="See all players in the server, grouped by team."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def server_teams(self, ctx: commands.Context, filter:typing.Optional[str] = None):
+        guild_id = int(ctx.guild.id)
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        embed2 = discord.Embed(
+            title=f"Server Players by Team [{len(players)}]",
+            color=BLANK_COLOR,
+            description=""
+        )
+    
+        teams = {}
+        for plr in players:
+            if filter and not plr.username.lower().startswith(filter.lower()):
+                continue
+            if plr.team not in teams:
+                teams[plr.team] = []
+            teams[plr.team].append(plr)
+
+        team_order = ["Police", "Sheriff", "Fire", "DOT", "Civilian"]
+        for team in team_order:
+            if team in teams:
+                team_players = teams[team]
+            embed2.description += (
+                f"**{team} [{len(team_players)}]**\n" +
+                ', '.join([f'[{plr.username}](https://roblox.com/users/{plr.id}/profile)' for plr in team_players]) +
+                "\n\n"
+            )
+        if embed2.description.strip() == "":
+            embed2.description = "> There are no players in-game."
+
+        embed2.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon
+        )
+
+        if len(embed2.description) > 3999:
+            embed2.description = "> The list is too long to display."
 
         await ctx.send(embed=embed2)
 

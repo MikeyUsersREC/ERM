@@ -387,7 +387,7 @@ class ActivityCoreCommands:
             if not current_notice:
                 return await respond(
                     embed=discord.Embed(
-                        title="<:error:1164666124496019637> No Active Notice",
+                        title="No Active Notice",
                         description="This staff member has no active notice."
                     )
                 )
@@ -395,7 +395,7 @@ class ActivityCoreCommands:
             current_time = int(datetime.datetime.now().timestamp())
             await self.bot.loas.db.update_one(
                 {"_id": current_notice["_id"]},
-                {"$set": {"expiry": current_time}}
+                {"$set": {"expiry": current_time, "expired": True}}
             )
 
             return await respond(
@@ -771,10 +771,7 @@ class StaffManagement(commands.Cog):
         member="Who's RA would you like to administrate? Specify a Discord user."
     )
     async def ra_admin(self, ctx, member: discord.Member):
-        try:
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
-        except:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"RA Admin: {member}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
     @commands.guild_only()
@@ -845,10 +842,7 @@ class StaffManagement(commands.Cog):
         member="Who's LOA would you like to administrate? Specify a Discord user."
     )
     async def loa_admin(self, ctx, member: discord.Member):
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"LOA Admin: {member}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"LOA Admin: {member}")
 
         return await self.core_commands.core_command_admin(ctx, 'loa', member)
 

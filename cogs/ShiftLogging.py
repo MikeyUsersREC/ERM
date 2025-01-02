@@ -232,10 +232,7 @@ class ShiftLogging(commands.Cog):
                             pass
 
         shift = await self.bot.shift_management.get_current_shift(member, ctx.guild.id)
-        if isinstance(ctx, commands.Context):
-            await log_command_usage(self.bot,ctx.guild, ctx.author, f"Duty Admin for {member.name}")
-        else:
-            await log_command_usage(self.bot,ctx.guild, ctx.user, f"Duty Admin for {member.name}")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Duty Admin for {member.name}")
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({
             "UserID": member.id,
             "Guild": ctx.guild.id,
@@ -981,8 +978,8 @@ class ShiftLogging(commands.Cog):
                     )
 
         my_data = None
-
-        members = {m.id: m for m in ctx.guild.members}  # Cache guild members
+        member_list = await ctx.guild.chunk()
+        members = {m.id: m for m in member_list}  # Cache guild members
 
         for index, i in enumerate(sorted_staff):
             member = members.get(i["id"])
@@ -1114,7 +1111,7 @@ class ShiftLogging(commands.Cog):
                                   or m.guild_permissions.manage_guild
                           )
                           and not m.bot,
-                ctx.guild.members,
+                member_list,
             )
         )
         for member in perm_staff:
@@ -1181,6 +1178,8 @@ class ShiftLogging(commands.Cog):
         for list_item in data:
             for item in list_item:
                 combined.append(item)
+        if buffer == "":
+            buffer += "No data to display."
 
         bbytes = buffer.encode("utf-8", "ignore")
 

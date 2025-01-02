@@ -63,6 +63,9 @@ class Punishments(commands.Cog):
     )
     @app_commands.describe(reason="What is your reason for punishing this user?")
     async def punish(self, ctx, user: str, type: str, *, reason: str):
+        if type.lower() == "warn":
+            type = "Warning"
+
         settings = await self.bot.settings.find_by_id(ctx.guild.id) or {}
         if not settings:
             return await ctx.send(
@@ -245,6 +248,7 @@ class Punishments(commands.Cog):
                 url=thumbnail
             )
         )
+
         if 'autoban' in flags:
             try:
                 await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.username))
