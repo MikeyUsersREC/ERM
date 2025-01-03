@@ -60,10 +60,6 @@ class OnPunishment(commands.Cog):
             logging.error(f"Moderator with ID {warning.moderator_id} not found.")
             return
 
-        if not moderator:
-            logging.error(f"Moderator with ID {warning.moderator_id} not found in guild {guild.id}.")
-            return
-        
         roblox_client: Client = Client()
         roblox_user = await roblox_client.get_user(warning.user_id)
         thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails(
@@ -78,7 +74,17 @@ class OnPunishment(commands.Cog):
                 
         if channel is not None:
             try:
+                shift = await self.bot.shift_management.get_current_shift(moderator, guild.id)
                 warned_discord_id = await get_discord_id_by_roblox_id(self, warning.user_id)
+                
+                if shift is not None:
+                    moderations = shift.get('Moderations', [])
+                    moderations.append(objectid)
+                    doc = {
+                        "_id": shift['_id'],
+                        "Moderations": moderations
+                    }
+                    await self.bot.shift_management.shifts.update_by_id(doc)
             except Exception as e:
                 logging.error(f"Error getting warned discord ID: {e}")
 
@@ -104,6 +110,10 @@ class OnPunishment(commands.Cog):
                             f"> **Reason:** {warning.reason}\n"
                         )
                     ).set_thumbnail(url=thumbnail)
+                    #view = discord.ui.View()
+                    #view.add_item(discord.ui.Button(label="Appeal Moderation", url=f"https://ermbot.xyz/{guild.id}/{warning.snowflake}/appeal"))
+                    #await user_to_dm.send(embed=embed, view=view)
+                    #Will add this back in once Noah has the appeal system ready
                     await user_to_dm.send(embed=embed)
                     logging.info(f"Sent DM to user {warned_discord_id} about punishment.")
             except Exception as e:

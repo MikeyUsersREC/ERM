@@ -217,6 +217,8 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     for log in sorted(player_logs):
         if log.timestamp <= last_timestamp:
             continue
+        if log.timestamp < bot.start_time:
+            continue
         if log.type == 'join':
             new_join_ids.append(log.user_id)
 

@@ -18,6 +18,10 @@ from utils.prc_api import ServerStatus, Player
 import utils.prc_api as prc_api
 import requests
 import json
+import re
+from fuzzywuzzy import fuzz
+from discord.ext.commands import Context
+import logging
 
 
 class ArgumentMockingInstance:
@@ -679,3 +683,28 @@ async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Litera
                 color=RED_COLOR
             ).set_footer(text=f"Private Server: {server_status.join_key}")
                                )
+
+def map_permissions(permission: str):
+    permissions = {
+        "Actions Management": 0,
+        "Actions Staff": 1,
+        "Activity Management": 2,
+        "Activity Staff": 3,
+        "LOA/RA Management": 4,
+        "LOA/RA Staff": 5,
+        "Configuration Management": 6,
+        "Configuration Staff": 7,
+        "Custom Commands Management": 8,
+        "Custom Commands Staff": 9,
+        "ERLC Management": 10,
+        "ERLC Staff": 11,
+        "Game Logging": 12,
+        "Punishment Management": 13,
+        "Punishment Staff": 14,
+        "Reminders Management": 15,
+        "Reminders Staff": 16,
+        "Roblox Search": 17,
+        "Shift Management": 18,
+        "Shift Staff": 19,
+    }
+    return permissions.get(permission, "Unknown")
