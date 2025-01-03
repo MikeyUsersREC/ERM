@@ -8195,8 +8195,8 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
                 value="This is where you can configure the auto kick/ban feature for ER:LC.",
                 inline=False
             ).add_field(
-                name="Discord Check Message",
-                value="This message is sent to in-game users when a Discord Check is performed with bot if user is not found in server.",
+                name="Discord Checks",
+                value="This is where you can configure the Discord Check message that is sent to in-game users when a Discord Check is performed with bot if user is not found in server and automated alert is sent to the channel.",
                 inline=False
             ),
             view=view,
@@ -8283,10 +8283,63 @@ class MoreOptions(discord.ui.View):
         )
 
     @discord.ui.button(
-        label="Discord Check Message",
+        label="Discord Checks",
         row=0
     )
     async def discord_check(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False: return
+
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+
+        view = DiscordCheck(self.bot, interaction.guild.id, sett)
+        embed = discord.Embed(
+            title="Discord Check Setup",
+            description="This is where you can configure the Discord Check message that is sent to in-game users when a Discord Check is performed with bot if user is not found in server.",
+            color=BLANK_COLOR
+        ).set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
+
+
+class DiscordCheck(discord.ui.View):
+    def __init__(self, bot, guild_id, sett):
+        super().__init__(timeout=900.0)
+        self.bot = bot
+        self.guild_id = guild_id
+        self.sett = sett
+
+        self.discord_check_message_button = discord.ui.Button(
+            label="Set Discord Check Message",
+            style=discord.ButtonStyle.secondary,
+            row=0
+        )
+
+        self.add_item(self.discord_check_message_button)
+        self.discord_check_message_button.callback = self.discord_check_message_button
+
+        default_channel = (
+            discord.utils.get(self.bot.get_guild(self.guild_id).channels, id=self.sett.get('ERLC', {}).get('discord_checks', {}).get('channel', 0))
+        )
+        self.discord_check_channel = discord.ui.ChannelSelect(
+            placeholder="Discord Check Channel",
+            max_values=1,
+            min_values=0,
+            channel_types=[discord.ChannelType.text],
+            default_values=[default_channel] if default_channel else []
+            )
+
+        self.add_item(self.discord_check_channel)
+        self.discord_check_channel.callback = self.discord_check_channel_callback
+
+
+    async def discord_check_message_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
         if val is False:
             return
@@ -8298,7 +8351,7 @@ class MoreOptions(discord.ui.View):
         if not sett:
             return
         try:
-            default_message = sett['ERLC']['discord_checks']["message"]
+            default_message = sett.get('ERLC', {}).get('discord_checks', {}).get('message', "")
         except KeyError:
             default_message = "You were not found in our discord server. Please contact any mod/admin."
         modal = CustomModal(
@@ -8327,7 +8380,7 @@ class MoreOptions(discord.ui.View):
         if not sett.get('ERLC'):
             sett['ERLC'] = {}
         try:
-            sett['ERLC']['discord_checks']["message"] = modal.message.value
+            sett['ERLC']['discord_checks']['message'] = modal.message.value
         except KeyError:
             try:
                 sett['ERLC']['discord_checks'] = {
@@ -8341,6 +8394,34 @@ class MoreOptions(discord.ui.View):
                 }
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Check Message Set: {modal.message.value}")
+
+    async def discord_check_channel_callback(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        val = await self.interaction_check(interaction)
+        if val is False: return
+
+        guild_id = interaction.guild.id
+        bot = self.bot
+
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett:
+            return
+
+        try:
+            sett['ERLC']['discord_checks']['channel'] = select.values[0].id
+        except KeyError:
+            try:
+                sett['ERLC']['discord_checks'] = {
+                    "channel": select.values[0].id
+                }
+            except KeyError:
+                sett['ERLC'] = {
+                    'discord_checks': {
+                        'channel': select.values[0].id
+                    }
+                }
+        await bot.settings.update_by_id(sett)
+        await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Check Channel Set: <#{select.values[0].id}>")
+
 class AutoLogging(discord.ui.View):
     def __init__(self,bot,sett):
         super().__init__(timeout=600.0)
