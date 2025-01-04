@@ -283,7 +283,8 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                                 name="Player Information",
                                                 value=f"> **Username:** [{user.name}](https://roblox.com/users/{user_id}/profile)\n> **User ID:** {user_id}\n> **Reason:** {', '.join(reasons)}"
                                             ).set_thumbnail(url=avatar_url),
-                                            view=view
+                                            view=view,
+                                            allowed_mentions=discord.AllowedMentions.all()
                                         )
                                         
                                         if settings['ERLC']['avatar_check'].get('message'):
