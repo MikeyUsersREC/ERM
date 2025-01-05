@@ -174,6 +174,10 @@ class Configuration(commands.Cog):
                 discord.SelectOption(
                     label=":",
                     description="Use ':' as your custom prefix."
+                ),
+                discord.SelectOption(
+                    label="-",
+                    description="Use '-' as your custom prefix."
                 )
             ])
         prefix = prefix_view.children[0]
@@ -516,7 +520,7 @@ class Configuration(commands.Cog):
                     ['CUSTOM_CONF', {
                         '_FIND_BY_LABEL': True
                     }],
-                    settings['customisation'].get('prefix') if settings['customisation'].get('prefix') in ['!', '>', '?', ':'] else None
+                    settings['customisation'].get('prefix') if settings['customisation'].get('prefix') in ['!', '>', '?', ':', '-'] else None
                 ]
 
             )
