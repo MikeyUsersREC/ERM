@@ -147,6 +147,7 @@ class Bot(commands.AutoShardedBot):
 
             self.panel_db = self.mongo["UserIdentity"]
             self.priority_settings = Document(self.panel_db, "PrioritySettings")
+            self.staff_requests = Document(self.panel_db, "StaffRequests")
 
             self.start_time = time.time()
             self.shift_management = ShiftManagement(self.db, "shift_management")
