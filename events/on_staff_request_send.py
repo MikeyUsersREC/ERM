@@ -81,3 +81,6 @@ class OnStaffRequestSend(commands.Cog):
             view=AcknowledgeStaffRequest(o_id)
         )
 
+async def setup(bot):
+    await bot.add_cog(OnStaffRequestSend(bot))
+
