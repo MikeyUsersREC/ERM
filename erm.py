@@ -175,7 +175,7 @@ class Bot(commands.AutoShardedBot):
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
+            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default=None))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
