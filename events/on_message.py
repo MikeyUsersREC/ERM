@@ -160,7 +160,7 @@ class OnMessage(commands.Cog):
                                             name="ERM Discord Checks Results",
                                             icon_url=message.guild.icon
                                         )
-                                        await message.add_reaction("<:check1:1265051543204266014>")
+                                        await message.add_reaction("<:check:1163142000271429662>")
                                         view = ViewRawButton(matching_member, players_not_found)
                                         msg = await matching_member.send(embed=embed, view=view)
         
