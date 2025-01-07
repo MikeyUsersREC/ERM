@@ -524,7 +524,7 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs):
         if log.type == 'join':
             user_id = log.user_id
             if user_id in bot.kicked_users[guild_id]:
-                kick_timestamp = bot.kicke_users[guild_id][user_id]
+                kick_timestamp = bot.kicked_users[guild_id][user_id]
                 if (log.timestamp - kick_timestamp) <= time_limit:
                     rejoined_users.append(user_id)
                 # remove the user from the kicked list after
