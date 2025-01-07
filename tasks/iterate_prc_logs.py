@@ -236,7 +236,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     if new_join_ids and settings.get('ERLC', {}).get('avatar_check', {}).get('channel'):
         enabled = settings.get('ERLC', {}).get('avatar_check', {}).get("enabled", True)
         if not enabled:
-            return
+            return embeds, latest_timestamp
 
         async with aiohttp.ClientSession() as session:
             try:
@@ -253,16 +253,30 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                 has_blacklisted_items = False
                                 blacklisted_reasons = []
                                 
+                                # Debug logging
+                                logging.info(f"Processing user {user_id}")
+                                logging.info(f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
+                                
                                 # Check for blacklisted items
                                 blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])
                                 if blacklisted_items:
-                                    for item in result.get('current_items', []):
-                                        if item['id'] in blacklisted_items:
+                                    current_items = result.get('current_items', [])
+                                    logging.info(f"Current items: {[item['id'] for item in current_items]}")
+                                    
+                                    for item in current_items:
+                                        if str(item['id']) in map(str, blacklisted_items):  # Convert both to strings for comparison
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
+                                            logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
                                 
-                                if (is_unrealistic and not any(item in (settings.get('ERLC', {}).get('unrealistic_items_whitelist', []) or []) 
-                                             for item in result.get('unrealistic_item_ids', []))) or has_blacklisted_items:
+                                unrealistic_check = (
+                                    is_unrealistic and 
+                                    not any(str(item) in map(str, settings.get('ERLC', {}).get('unrealistic_items_whitelist', [])) 
+                                          for item in result.get('unrealistic_item_ids', []))
+                                )
+                                
+                                if unrealistic_check or has_blacklisted_items:
+                                    logging.info(f"Avatar check failed - Unrealistic: {unrealistic_check}, Has blacklisted items: {has_blacklisted_items}")
                                     
                                     reasons = result.get('reasons', []) + blacklisted_reasons
                                     
@@ -274,8 +288,9 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                             user = await bot.roblox.get_user(int(user_id))
                                             avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
                                             avatar_url = avatar[0].image_url
-                                        except:
-                                            return
+                                        except Exception as e:
+                                            logging.error(f"Error fetching user data: {e}")
+                                            return embeds, latest_timestamp
                                         
                                         view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
                                         await channel.send(
@@ -295,12 +310,12 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                         if settings['ERLC']['avatar_check'].get('message'):
                                             await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
             except Exception as e:
-                    error_id = error_gen()
-                    with push_scope() as scope:
-                        scope.set_tag("error_id", error_id)
-                        scope.level = "error"
-
-                        capture_exception(e)
+                error_id = error_gen()
+                logging.error(f"Error in avatar check: {e}")
+                with push_scope() as scope:
+                    scope.set_tag("error_id", error_id)
+                    scope.level = "error"
+                    capture_exception(e)
 
     return embeds, latest_timestamp
 
