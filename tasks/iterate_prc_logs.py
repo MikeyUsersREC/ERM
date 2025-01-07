@@ -1,10 +1,12 @@
 import re
+from typing import List
 import discord
 from discord.ext import commands, tasks
 import time
 import logging
 import asyncio
 import aiohttp
+import pytz
 import roblox
 import datetime
 
@@ -131,6 +133,9 @@ async def iterate_prc_logs(bot):
                         if embeds:
                             subtasks.append(send_log_batch(channels['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
+
+                    if erlc_settings.get("kick_timer", {}).get("enabled", False):
+                        await handle_kick_timer(bot, settings, guild.id, player_logs)
 
                     if subtasks:
                         await asyncio.gather(*subtasks, return_exceptions=True)
@@ -490,3 +495,58 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all()
         )
+
+
+async def handle_kick_timer(bot, settings, guild_id, player_logs):
+    """Handle kick timer logic using command logs"""
+    kick_timer_settings = settings["ERLC"]["kick_timer"]
+    punishment = kick_timer_settings.get("punishment", "ban")
+    time_limit = kick_timer_settings.get("time", 1800)  # default to 30 minutes if not set
+
+    if not hasattr(bot, 'kicked_users'):
+        bot.kicked_users = {}
+
+    if guild_id not in bot.kicked_users:
+        bot.kicked_users[guild_id] = {}
+
+    command_logs = await bot.prc_api.fetch_server_logs(guild_id)
+
+    for log in command_logs:
+        if ':kick' in log.command:
+            # extract the username from the command
+            parts = log.command.split()
+            if len(parts) > 1:
+                kicked_username = parts[1]
+                bot.kicked_users[guild_id][kicked_username] = log.timestamp
+
+    rejoined_users = []  # list of user IDs who rejoined within the time limit
+    for log in player_logs:
+        if log.type == 'join':
+            user_id = log.user_id
+            if user_id in bot.kicked_users[guild_id]:
+                kick_timestamp = bot.kicke_users[guild_id][user_id]
+                if (log.timestamp - kick_timestamp) <= time_limit:
+                    rejoined_users.append(user_id)
+                # remove the user from the kicked list after
+                del bot.kicked_users[guild_id][user_id]
+
+    if rejoined_users:
+        if punishment == "ban":
+            await bot.prc_api.run_command(guild_id, f":ban {','.join(map(str, rejoined_users))}")
+        else:
+            await bot.prc_api.run_command(guild_id, f":kick {','.join(map(str, rejoined_users))}")
+
+        # log moderation actions
+        for user_id in rejoined_users:
+            user = await bot.roblox.get_user(int(user_id))
+            user_name = user.name
+            await bot.punishments.insert_warning(
+                staff_id=978662093408591912,
+                staff_name="ERM Systems",
+                user_id=user_id,
+                user_name=user_name,
+                guild_id=guild_id,
+                reason="Rejoined within kick timer",
+                moderation_type=punishment,
+                time_epoch=int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            )
