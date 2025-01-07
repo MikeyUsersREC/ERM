@@ -122,6 +122,29 @@ class GameLogging(commands.Cog):
                         color=BLANK_COLOR
                     )
                 )
+
+
+        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": ctx.guild.id})
+        if staff_requests.get("min_staff") is not None and staff_requests.get("min_staff") > 0:
+            if staff_clocked_in >= staff_requests.get("min_staff", 0):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Minimum Staff",
+                        description=f"**{staff_requests.get('min_staff')}** members of staff are required to be in-game for a Staff Request!",
+                        color=BLANK_COLOR
+                    )
+                )
+
+        if staff_requests.get("max_staff") is not None and staff_requests.get("max_staff") > 0:
+            if staff_clocked_in < staff_requests.get("max_staff", 0):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Maximum Staff",
+                        description="There are more than the maximum number of staff online for a Staff Request!",
+                        color=BLANK_COLOR
+                    )
+                )
+
         document = {
             "user_id": ctx.author.id,
             "guild_id": ctx.guild.id,

@@ -42,7 +42,7 @@ class OnStaffRequestSend(commands.Cog):
                 players_ingame = len(players)
                 staff_ingame = len(list(filter(lambda x: x.permission != "Player", players)))
 
-        staff_clocked_in = await self.bot.shift_management.db.count_documents({"EndEpoch": 0, "Guild": guild_id})
+        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": guild_id})
 
         guild = self.bot.get_guild(guild_id) or await self.bot.fetch_guild(guild_id)
         user = guild.get_member(user_id) or await self.bot.fetch_user(user_id)
@@ -78,7 +78,7 @@ class OnStaffRequestSend(commands.Cog):
             ', '.join(["<@&{0}>".format(role) for role in mentioned_roles]),
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all(),
-            view=AcknowledgeStaffRequest(o_id)
+            view=AcknowledgeStaffRequest(self.bot, o_id)
         )
 
 async def setup(bot):

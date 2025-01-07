@@ -4467,13 +4467,14 @@ class RoleQuotaManagement(discord.ui.View):
         self.stop()
 
 class AcknowledgeStaffRequest(discord.ui.View):
-    def __init__(self, o_id: ObjectId):
-        super().__init__()
+    def __init__(self, bot: commands.Bot, o_id: ObjectId):
+        super().__init__(timeout=None)
+        self.bot = bot
         self.o_id = o_id
 
     @discord.ui.button(label="Acknowledge", style=discord.ButtonStyle.secondary)
     async def acknowledge(self, interaction: discord.Interaction, button: discord.ui.Button):
-        document = await interaction.bot.staff_requests.find_one({"_id": self.o_id})
+        document = await self.bot.staff_requests.db.find_one({"_id": self.o_id})
         if interaction.user.id in document["acked"]:
             return await interaction.response.send_message(
                 embed=discord.Embed(
@@ -4484,13 +4485,14 @@ class AcknowledgeStaffRequest(discord.ui.View):
                 ephemeral=True
             )
         document["acked"].append(interaction.user.id)
+        await self.bot.staff_requests.db.update_one({"_id": document["_id"]}, {"$set": {"acked": document["acked"]}})
         embed = interaction.message.embeds[0]
-        if embed.fields[-1].name == "Acknowledgements":
+        if embed.fields[-1].name.startswith("Acknowledgements"):
             index = len(embed.fields) - 1
-            embed.set_field_at(index, value="\n".join(["> <@{}>".format(u) for u in document["acked"]]))
+            embed.set_field_at(index, name="Acknowledgements [{}]".format(len(document["acked"])), value="\n".join(["> <@{}>".format(u) for u in document["acked"]]))
         else:
             embed.add_field(
-                name="Acknowledgements",
+                name="Acknowledgements [1]",
                 value="\n".join(["> <@{}>".format(u) for u in document["acked"]]),
                 inline=False
             )
