@@ -126,7 +126,7 @@ class GameLogging(commands.Cog):
 
         staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": ctx.guild.id})
         if staff_requests.get("min_staff") is not None and staff_requests.get("min_staff") > 0:
-            if staff_clocked_in >= staff_requests.get("min_staff", 0):
+            if staff_clocked_in <= staff_requests.get("min_staff", 0):
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Minimum Staff",
@@ -136,7 +136,7 @@ class GameLogging(commands.Cog):
                 )
 
         if staff_requests.get("max_staff") is not None and staff_requests.get("max_staff") > 0:
-            if staff_clocked_in < staff_requests.get("max_staff", 0):
+            if staff_clocked_in > staff_requests.get("max_staff", 0):
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Maximum Staff",
