@@ -293,6 +293,25 @@ class APIRoutes:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+    async def POST_send_staff_request(
+            self,
+            authorization: Annotated[str | None, Header()],
+            request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        json_data = await request.json()
+        staff_request_id = json_data["document_id"]
+        self.bot.dispatch("staff_request_send", ObjectId(staff_request_id))
+        return {
+            "op": 1,
+            "code": 200
+        }
+
     async def POST_send_priority_dm(
             self,
             authorization: Annotated[str | None, Header()],
@@ -333,6 +352,10 @@ class APIRoutes:
             )
         try:
             await member.send(embed=embed)
+            return {
+                "op": 1,
+                "code": 200
+            }
         except discord.HTTPException:
             return HTTPException(status_code=400, detail="Member cannot be direct messaged.")
 

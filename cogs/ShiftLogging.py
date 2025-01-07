@@ -444,22 +444,18 @@ class ShiftLogging(commands.Cog):
             #print("Attribute Error")
             return
         #if author is on duty then bypass the limit
-        shift_cursor = self.bot.shift_management.shifts.db.find({"Guild": ctx.guild.id, "EndEpoch": 0})
-        shifts = await shift_cursor.to_list(length=None)
+        shift_zero = [i async for i in self.bot.shift_management.shifts.db.find({"Guild": ctx.guild.id, "EndEpoch": 0, "UserID": ctx.author.id})]
 
-        if ctx.author.id not in [i['UserID'] for i in shifts]:
-            if on_duty_staff == maximum_staff and maximum_staff != 0:
-                await ctx.send(
+        if len(shift_zero) == 0:
+            if on_duty_staff >= maximum_staff and maximum_staff != 0:
+                return await ctx.send(
                     embed=discord.Embed(
                         title="Staff Limit Reached",
-                        description="The maximum amount of staff members on duty has been reached. Please wait until a staff member logs off.",
+                        description="The maximum amount of staff members on duty has been reached.",
                         color=BLANK_COLOR
                     )
                 )
-                return
-        else:
-            pass
-        
+
         shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         # view = ModificationSelectMenu(ctx.author.id)
         previous_shifts = [i async for i in self.bot.shift_management.shifts.db.find({

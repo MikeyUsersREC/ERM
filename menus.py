@@ -4466,6 +4466,41 @@ class RoleQuotaManagement(discord.ui.View):
         self.value = "delete"
         self.stop()
 
+class AcknowledgeStaffRequest(discord.ui.View):
+    def __init__(self, o_id: ObjectId):
+        super().__init__()
+        self.o_id = o_id
+
+    @discord.ui.button(label="Acknowledge", style=discord.ButtonStyle.secondary)
+    async def acknowledge(self, interaction: discord.Interaction, button: discord.ui.Button):
+        document = await interaction.bot.staff_requests.find_one({"_id": self.o_id})
+        if interaction.user.id in document["acked"]:
+            return await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Already Acknowledged",
+                    description="You have already acknowledged this Staff Request.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+        document["acked"].append(interaction.user.id)
+        embed = interaction.message.embeds[0]
+        if embed.fields[-1].name == "Acknowledgements":
+            index = len(embed.fields) - 1
+            embed.set_field_at(index, value="\n".join(["> <@{}>".format(u) for u in document["acked"]]))
+        else:
+            embed.add_field(
+                name="Acknowledgements",
+                value="\n".join(["> <@{}>".format(u) for u in document["acked"]]),
+                inline=False
+            )
+        
+        await interaction.response.defer(thinking=False)
+        await interaction.message.edit(
+            embed=embed,
+            view=self
+        )
+
 
 class BackNextView(discord.ui.View):
     def __init__(self, user_id: int):
