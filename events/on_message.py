@@ -658,7 +658,7 @@ class OnMessage(commands.Cog):
             doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
             doc['_id'] = ctx.guild.id
             await bot.ics.update_by_id(doc)
-            return                                    
+        return                                    
 
         
     
