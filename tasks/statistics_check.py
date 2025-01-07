@@ -9,10 +9,10 @@ from utils import prc_api
 from utils.prc_api import Player, ServerStatus
 from utils.utils import fetch_get_channel
 
-async def update_channel(guild, channel_id, stat, placeholders):
+async def update_channel(guild, stat_config, placeholders):
     try:
-        format_string = stat["format"]
-        channel_id = int(channel_id)
+        channel_id = stat_config["channel"]
+        format_string = stat_config["format"]
         channel = await fetch_get_channel(guild, channel_id)
         if channel:
             for key, value in placeholders.items():
@@ -22,8 +22,7 @@ async def update_channel(guild, channel_id, stat, placeholders):
         else:
             logging.error(f"Channel {channel_id} not found in guild {guild.id}")
     except Exception as e:
-        logging.error(f"Failed to update channel {channel_id} in guild {guild.id}: {e}", exc_info=True)
-
+        logging.error(f"Failed to update channel in guild {guild.id}: {e}", exc_info=True)
 
 @tasks.loop(seconds=45, reconnect=True)
 async def statistics_check(bot):
@@ -70,8 +69,8 @@ async def statistics_check(bot):
             "queue": queue
         }
 
-        tasks = [update_channel(guild, channel_id, stat_value, placeholders) for channel_id, stat_value in
-                 statistics.items()]
+        tasks = [update_channel(guild, stat_value, placeholders) 
+            for stat_name, stat_value in statistics.items()]
         await asyncio.gather(*tasks)
 
     end_time = time.time()
