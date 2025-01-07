@@ -6728,6 +6728,48 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
             view=view,
             ephemeral=True
         )
+    
+    @discord.ui.button(
+        label="Webhook Discord Checks",
+        row=3
+    )
+    async def webhook_discord_checks(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        webhook_discord_checks = settings.get('ERLC', {}).get('webhook_discord_checks',{}).get('status', None)
+        webhook_channel_id = settings.get('ERLC', {}).get('webhook_discord_checks',{}).get('webhook_channel_id', None)
+        capitalized_webhook_discord_checks = webhook_discord_checks.title()
+        
+        embed = discord.Embed(
+            title="Webhook Discord Checks",
+            description="*This module allows staff members to run :view all ingame and ERM will direct message the staff member if they are not in the discord server.*\n\n",
+            color=BLANK_COLOR
+            
+        )
+        embed.add_field(
+            name="Webhook Discord Checks",
+            value=f"{capitalized_webhook_discord_checks}",
+            inline=True
+        )
+        embed.add_field(
+            name="Webhook Channel",
+            value=f"<#{webhook_channel_id}>",
+            inline=True
+        )
+        
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+        )
+        view = WebhookDiscordChecksConfiguration(self.bot, interaction, webhook_discord_checks)
+
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
 
 class AutomaticShiftConfiguration(discord.ui.View):
     def __init__(self, bot, sustained_interaction: Interaction, shift_types: list, auto_data: dict):
@@ -6963,6 +7005,102 @@ class WelcomeMessagingConfiguration(discord.ui.View):
             sett['ERLC'] = {}
         sett['ERLC']['welcome_message'] = self.welcome_message
         await self.bot.settings.update_by_id(sett)
+
+class WebhookDiscordChecksConfiguration(discord.ui.View):
+    def __init__(self, bot, sustained_interaction: discord.Interaction, webhook_discord_checks: bool):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.sustained_interaction = sustained_interaction
+        self.webhook_discord_checks = webhook_discord_checks
+
+        self.webhook_channel = discord.ui.ChannelSelect(
+            placeholder="Command Logs Channel",
+            min_values=1,
+            max_values=1
+        )
+        self.webhook_channel.callback = lambda interaction: self.webhook_channel_callback(interaction, self.webhook_channel)
+        self.enable_disable_dcchecks = discord.ui.Select(
+            placeholder="Enable/Disable Webhook Discord Checks",
+            options=[
+                discord.SelectOption(label="Enabled", value="enabled"),
+                discord.SelectOption(label="Disabled", value="disabled"),
+            ],
+            row=1
+        )
+        self.enable_disable_dcchecks.callback = lambda interaction: self.webhook_enable_disable_dcchecks_callback(interaction, self.enable_disable_dcchecks)
+
+        self.add_item(self.webhook_channel)
+        self.add_item(self.enable_disable_dcchecks)
+
+    async def webhook_channel_callback(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        try:
+            value = await self.interaction_check(interaction)
+            if not value:
+                return
+
+            await interaction.response.defer()
+
+            guild_id = interaction.guild.id
+            sett = await self.bot.settings.find_by_id(guild_id)
+            if not sett.get('ERLC'):
+                sett['ERLC'] = {"webhook_discord_checks": {}}
+
+            if 'webhook_discord_checks' not in sett['ERLC']:
+                sett['ERLC']['webhook_discord_checks'] = {}
+
+            sett['ERLC']['webhook_discord_checks']['webhook_channel_id'] = select.values[0].id
+
+            await self.bot.settings.update_by_id(sett)
+
+            message = interaction.message.embeds[0]
+            if len(message.fields) > 1:
+                message.set_field_at(1, name="Webhook Channel", value=select.values[0].mention, inline=True)
+            else:
+                message.add_field(name="Webhook Channel", value=select.values[0].mention, inline=True)
+
+            await interaction.edit_original_response(embed=message)
+
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Check Channel: {select.values[0].mention}")
+
+        except Exception as e:
+            print(f"Error in webhook_channel_callback: {e}")
+            await interaction.followup.send("An error occurred while updating the webhook channel.", ephemeral=True)
+
+    async def webhook_enable_disable_dcchecks_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+        try:
+            value = await self.interaction_check(interaction)
+            if not value:
+                return
+
+            await interaction.response.defer()
+
+            guild_id = interaction.guild.id
+            sett = await self.bot.settings.find_by_id(guild_id)
+
+            if not sett.get('ERLC'):
+                sett['ERLC'] = {"webhook_discord_checks": {}}
+
+            if 'webhook_discord_checks' not in sett['ERLC']:
+                sett['ERLC']['webhook_discord_checks'] = {}
+
+            sett['ERLC']['webhook_discord_checks']['status'] = select.values[0]
+
+            await self.bot.settings.update_by_id(sett)
+            capitalized_status = select.values[0].title()
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Checks: {select.values[0]}")
+
+            message = interaction.message.embeds[0]
+            message.set_field_at(0, name="Webhook Discord Checks", value=capitalized_status, inline=True)
+
+            await interaction.edit_original_response(embed=message)
+            await config_change_log(self.bot, interaction.guild, interaction.user, f"Discord Checks: {select.values[0]}")
+
+        except Exception as e:
+            print(f"Error in webhook_enable_disable_dcchecks_callback: {e}")
+            await interaction.followup.send("An error occurred while updating the Discord Checks status.", ephemeral=True)
+
+
+    
 class WhitelistVehiclesManagement(discord.ui.View):
     def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
@@ -10459,3 +10597,24 @@ class AvatarCheckView(discord.ui.View):
                 ),
                 ephemeral=True
             )
+
+class ViewRawButton(discord.ui.View):
+    def __init__(self, matching_member, players_not_found):
+        super().__init__()
+        self.matching_member = matching_member
+        self.players_not_found = players_not_found
+
+    @discord.ui.button(label="View Raw", style=discord.ButtonStyle.gray, custom_id="view_raw")
+    async def view_raw(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.matching_member.id:
+            number_of_players = len(self.players_not_found)
+            if number_of_players == 0:
+                await interaction.response.send_message("All players are within the Discord server.", ephemeral=True)
+                return
+            embed=discord.Embed(title="Players Not Found in Discord", description=f"`{', '.join(self.players_not_found)}`", color=BLANK_COLOR)
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message("You do not have permission to view this.", ephemeral=True)

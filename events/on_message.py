@@ -7,6 +7,7 @@ import aiohttp
 import discord
 import num2words
 import roblox
+import re
 from decouple import config
 from discord.ext import commands
 from reactionmenu import Page, ViewButton, ViewMenu, ViewSelect
@@ -18,7 +19,7 @@ from utils.utils import (
     interpret_content,
     interpret_embed
 )
-from menus import CustomSelectMenu, GameSecurityActions
+from menus import CustomSelectMenu, GameSecurityActions, ViewRawButton
 from utils.timestamp import td_format
 from utils.utils import get_guild_icon, get_prefix, invis_embed
 
@@ -90,6 +91,81 @@ class OnMessage(commands.Cog):
             remote_command_channel = dataset["ERLC"]["remote_commands"]["webhook_channel"] if dataset["ERLC"]["remote_commands"].get("webhook_channel", None) else None
             # print(f"Remote commands: {remote_command_channel}")
 
+        if dataset and dataset.get('ERLC', {}).get('webhook_discord_checks', {}).get('status') == 'enabled':
+                webhook_channel_id = dataset['ERLC']['webhook_discord_checks'].get('webhook_channel_id')
+                if webhook_channel_id and message.channel.id == webhook_channel_id:
+                    if message.embeds:
+                        embed = message.embeds[0]
+                        description = embed.description
+                        
+                        if description and ":view" in description:
+                            username_match = re.search(r"\[(.+?):\d+\]\(https://www\.roblox\.com/users/\d+/profile\)", description) # Gets the user who ran it
+                            if username_match:
+                                username = username_match.group(1)
+                                matching_member = None
+                                for member in message.guild.members:
+                                    if username.lower() in member.display_name.lower():
+                                        matching_member = member
+                                        break
+
+                                if not matching_member:
+                                    return
+
+                                if not matching_member.dm_channel:
+                                    try:
+                                        await matching_member.create_dm()
+                                    except discord.Forbidden:
+                                        return
+
+                                player_matches = re.search(r"used the command: `:view (.+?)`", description) # Gets the people in the view all command
+                                if player_matches:
+                                    players = player_matches.group(1).split(", ")
+                                    players_found = []
+                                    player_not_found_numbers = []
+                                    players_not_found = []
+                                    found_counter = 1 
+                                    not_found_counter = 1  
+
+                                    for player in players:
+                                        matching_player = None
+                                        for member in message.guild.members:
+                                            if player.lower() in member.display_name.lower():
+                                                matching_player = member
+                                                break
+
+                                        if matching_player:
+                                            players_found.append(f"**{found_counter}.** {player} - {matching_player.mention}")
+                                            found_counter += 1 
+                                        else:
+                                            player_not_found_numbers.append(f"**{not_found_counter}.** {player}")
+                                            players_not_found.append(player)
+                                            not_found_counter += 1 
+                                            
+                                    
+                                    if len(players) > 1:  
+                                        embed = discord.Embed(
+                                            color=BLANK_COLOR
+                                        )
+                                        embed.add_field(
+                                            name="Players Found in Discord",
+                                            value="\n".join(players_found) if players_found else "None",
+                                            inline=False
+                                        )
+                                        embed.add_field(
+                                            name="Players Not Found in Discord",
+                                            value="\n".join(player_not_found_numbers) if player_not_found_numbers else "None",
+                                            inline=False
+                                        )
+                                        embed.set_author(
+                                            name="ERM Discord Checks Results",
+                                            icon_url=message.guild.icon
+                                        )
+                                        await message.add_reaction("<:check1:1265051543204266014>")
+                                        view = ViewRawButton(matching_member, players_not_found)
+                                        msg = await matching_member.send(embed=embed, view=view)
+        
+        
+        
         if "game_security" in dataset.keys():
             if "enabled" in dataset["game_security"].keys():
                 if (
@@ -582,8 +658,9 @@ class OnMessage(commands.Cog):
             doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
             doc['_id'] = ctx.guild.id
             await bot.ics.update_by_id(doc)
-            
-        return
+            return                                    
+
+        
     
 async def setup(bot):
     await bot.add_cog(OnMessage(bot))
