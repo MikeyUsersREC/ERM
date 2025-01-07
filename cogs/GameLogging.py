@@ -109,7 +109,7 @@ class GameLogging(commands.Cog):
                 )
             )
 
-        last_submitted_staff_request = [i async for i in self.bot.staff_requests.find({"user_id": ctx.author.id, "guild_id": ctx.guild.id}).sort({"_id": -1}).limit(1)]
+        last_submitted_staff_request = [i async for i in self.bot.staff_requests.db.find({"user_id": ctx.author.id, "guild_id": ctx.guild.id}).sort({"_id": -1}).limit(1)]
         if len(last_submitted_staff_request) != 0:
             last_submitted_staff_request = last_submitted_staff_request[0]
             document_id: ObjectId = last_submitted_staff_request["_id"]
