@@ -6730,23 +6730,22 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         )
     
     @discord.ui.button(
-        label="Webhook Discord Checks",
-        row=3
-    )
+    label="Webhook Discord Checks",
+    row=3)
     async def webhook_discord_checks(self, interaction: discord.Interaction, button: discord.ui.Button):
         val = await self.interaction_check(interaction)
         if val is False:
             return
         settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        webhook_discord_checks = settings.get('ERLC', {}).get('webhook_discord_checks',{}).get('status', None)
-        webhook_channel_id = settings.get('ERLC', {}).get('webhook_discord_checks',{}).get('webhook_channel_id', None)
-        capitalized_webhook_discord_checks = webhook_discord_checks.title()
+        webhook_discord_checks = settings.get('ERLC', {}).get('webhook_discord_checks', {}).get('status', None)
+        webhook_channel_id = settings.get('ERLC', {}).get('webhook_discord_checks', {}).get('webhook_channel_id', None)
+        
+        capitalized_webhook_discord_checks = webhook_discord_checks.title() if webhook_discord_checks is not None else "Disabled"
         
         embed = discord.Embed(
             title="Webhook Discord Checks",
             description="*This module allows staff members to run :view all ingame and ERM will direct message the staff member if they are not in the discord server.*\n\n",
             color=BLANK_COLOR
-            
         )
         embed.add_field(
             name="Webhook Discord Checks",
@@ -6755,7 +6754,7 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         )
         embed.add_field(
             name="Webhook Channel",
-            value=f"<#{webhook_channel_id}>",
+            value=f"<#{webhook_channel_id}>" if webhook_channel_id else "Not Set",
             inline=True
         )
         
