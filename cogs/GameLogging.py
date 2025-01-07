@@ -132,7 +132,7 @@ class GameLogging(commands.Cog):
             "created_at": datetime.datetime.now(tz=pytz.UTC),
             "acked": []
         }
-        result = await self.bot.staff_requests.insert_one(document)
+        result = await self.bot.staff_requests.db.insert_one(document)
         o_id = result.inserted_id
         self.bot.dispatch("staff_request_send", o_id)
         await ctx.send(
