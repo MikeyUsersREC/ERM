@@ -9,12 +9,11 @@ from utils import prc_api
 from utils.prc_api import Player, ServerStatus
 from utils.utils import fetch_get_channel
 
-async def update_channel(guild, stat_config, placeholders):
+async def update_channel(guild, channel_id, stat_config, placeholders):
     try:
-        channel_id = stat_config["channel"]
-        format_string = stat_config["format"]
-        channel = await fetch_get_channel(guild, channel_id)
+        channel = await fetch_get_channel(guild, int(channel_id))
         if channel:
+            format_string = stat_config["format"]
             for key, value in placeholders.items():
                 format_string = format_string.replace(f"{{{key}}}", str(value))
             await channel.edit(name=format_string)
@@ -69,8 +68,8 @@ async def statistics_check(bot):
             "queue": queue
         }
 
-        tasks = [update_channel(guild, stat_value, placeholders) 
-            for stat_name, stat_value in statistics.items()]
+        tasks = [update_channel(guild, channel_id, stat_config, placeholders) 
+            for channel_id, stat_config in statistics.items()]
         await asyncio.gather(*tasks)
 
     end_time = time.time()
