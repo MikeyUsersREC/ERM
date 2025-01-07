@@ -709,7 +709,7 @@ class ShiftLogging(commands.Cog):
 
             if (
                 len((embeds[-1].description or "").splitlines()) >= 16
-                and ctx.author.id not in added_staff
+                and member.id not in added_staff
             ):
                 embed = discord.Embed(
                     title="Active Shifts", color=BLANK_COLOR

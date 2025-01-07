@@ -16,6 +16,7 @@ from tasks.process_scheduled_pms import process_scheduled_pms
 from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
+from tasks.sync_weather import sync_weather
 
 from utils.log_tracker import LogTracker
 from utils.mongo import Document
@@ -229,6 +230,7 @@ class Bot(commands.AutoShardedBot):
             check_whitelisted_car.start(bot)
             change_status.start(bot)
             process_scheduled_pms.start(bot)
+            sync_weather.start(bot)
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):

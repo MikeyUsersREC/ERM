@@ -4989,7 +4989,11 @@ class BasicConfiguration(AssociationConfigurationView):
         discord.SelectOption(
             label=":",
             description="Use ':' as your custom prefix."
-        )
+        ),
+        discord.SelectOption(
+            label="-",
+            description="Use '-' as your custom prefix."
+        ),
     ], max_values=1)
     async def prefix_select(self, interaction: discord.Interaction, select: discord.ui.Select):
         value = await self.interaction_check(interaction)
