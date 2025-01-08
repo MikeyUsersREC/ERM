@@ -10459,3 +10459,38 @@ class AvatarCheckView(discord.ui.View):
                 ),
                 ephemeral=True
             )
+
+
+class APIKeyConfirmation(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=600.0)
+        self.user_id = user_id
+        self.value = None
+
+    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
+        if interaction.user.id == self.user_id:
+            return True
+        await interaction.response.send_message(embed=discord.Embed(
+            title="Not Permitted", 
+            description="You are not permitted to interact with these buttons.",
+            color=blank_color
+        ), ephemeral=True)
+        return False
+
+    @discord.ui.button(label="Yes", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.value = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        self.stop()
+
+    @discord.ui.button(label="No", style=discord.ButtonStyle.danger) 
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(thinking=False)
+        self.value = False 
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        self.stop()
