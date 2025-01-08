@@ -16,6 +16,7 @@ from tasks.process_scheduled_pms import process_scheduled_pms
 from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
+from tasks.sync_weather import sync_weather
 from tasks.discord_checks import discord_checks
 
 from utils.log_tracker import LogTracker
@@ -147,6 +148,7 @@ class Bot(commands.AutoShardedBot):
 
             self.panel_db = self.mongo["UserIdentity"]
             self.priority_settings = Document(self.panel_db, "PrioritySettings")
+            self.staff_requests = Document(self.panel_db, "StaffRequests")
 
             self.start_time = time.time()
             self.shift_management = ShiftManagement(self.db, "shift_management")
@@ -230,6 +232,7 @@ class Bot(commands.AutoShardedBot):
             change_status.start(bot)
             process_scheduled_pms.start(bot)
             discord_checks.start(bot)
+            sync_weather.start(bot)
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):

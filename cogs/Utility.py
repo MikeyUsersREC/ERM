@@ -1,13 +1,16 @@
 import datetime
 import logging
+import aiohttp
+import os
+from decouple import config
 
 import discord
 from discord import app_commands
 from discord.app_commands import AppCommandGroup
 from discord.ext import commands
 
-from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu
-from utils.constants import BLANK_COLOR
+from menus import LinkView, CustomSelectMenu, MultiPaginatorMenu, APIKeyConfirmation
+from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.timestamp import td_format
 from utils.utils import invis_embed, failure_embed, require_settings
 from erm import is_staff, is_management
@@ -189,6 +192,100 @@ class Utility(commands.Cog):
             embed=embed
         )
 
+    @commands.hybrid_group(name="api")
+    async def api(self, ctx):
+        pass
+
+    @commands.guild_only()
+    @api.command(
+        name="generate",
+        description="Generate an API key for your server",
+        extras={"category": "Utility"},
+    )
+    @is_management()
+    @require_settings()
+    async def api_generate(self, ctx: commands.Context):
+        view = APIKeyConfirmation(ctx.author.id)
+        msg = await ctx.send(
+            embed=discord.Embed(
+                title="Generate API Key",
+                description="Are you sure you want to generate an API key? This will invalidate any existing keys.",
+                color=BLANK_COLOR
+            ),
+            view=view,
+            ephemeral=isinstance(ctx.interaction, discord.Interaction)
+        )
+        
+        await view.wait()
+        if not view.value:
+            return
+            
+        api_url = f"{config('OPENERM_API_URL')}/api/v1/auth/token"
+        auth_token = config('OPENERM_AUTH_TOKEN')
+        full_url = f"{api_url}?guild_id={ctx.guild.id}&auth_token={auth_token}"
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(full_url) as response:
+                    
+                    response_text = await response.text()
+                    
+                    if response.status == 200:
+                        api_key = response_text
+                        
+                        if isinstance(ctx.interaction, discord.Interaction):
+                            await ctx.send(
+                                embed=discord.Embed(
+                                    title="API Key Generated",
+                                    description="Here is your API key. Please save it somewhere safe - we won't show it again.",
+                                    color=BLANK_COLOR
+                                ).add_field(
+                                    name="API Key", 
+                                    value=f"```{api_key}```"
+                                ),
+                                ephemeral=True
+                            )
+                        else:
+                            await ctx.author.send(
+                                embed=discord.Embed(
+                                    title="API Key Generated",
+                                    description="Here is your API key. Please save it somewhere safe - we won't show it again.",
+                                    color=BLANK_COLOR
+                                ).add_field(
+                                    name="API Key", 
+                                    value=f"```{api_key}```"
+                                )
+                            )
+                            await msg.edit(
+                                embed=discord.Embed(
+                                    title="<:success:1163149118366040106> API Key Generated",
+                                    description="I have successfully generated an API key and sent it to your DMs!",
+                                    color=GREEN_COLOR
+                                ),
+                                view=None
+                            )
+                    else:
+                        error_msg = f"API returned non-200 status: {response.status}"
+                        logging.error(error_msg)
+                        await ctx.send(
+                            embed=discord.Embed(
+                                title="Error",
+                                description="Failed to generate API key. Please try again later.",
+                                color=BLANK_COLOR
+                            ),
+                            ephemeral=isinstance(ctx.interaction, discord.Interaction)
+                        )
+            except aiohttp.ClientError as e:
+                error_msg = f"API request failed: {str(e)}"
+                logging.error(error_msg)
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Error",
+                        description="Failed to connect to API. Please try again later.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=isinstance(ctx.interaction, discord.Interaction)
+                )
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))

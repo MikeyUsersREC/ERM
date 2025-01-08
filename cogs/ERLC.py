@@ -514,7 +514,7 @@ class ERLC(commands.Cog):
             username = "[PLACEHOLDER]"
         
         if not user_id and username:
-            user_id = "999999999999999999999999"
+            user_id = "99999"
         old_embed = copy.copy(embed)
         embeds = [embed]
         for log in bans:
@@ -642,6 +642,7 @@ class ERLC(commands.Cog):
 
         team_order = ["Police", "Sheriff", "Fire", "DOT", "Civilian"]
         for team in team_order:
+            team_players = []
             if team in teams:
                 team_players = teams[team]
             embed2.description += (

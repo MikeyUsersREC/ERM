@@ -1,10 +1,12 @@
 import re
+from typing import List
 import discord
 from discord.ext import commands, tasks
 import time
 import logging
 import asyncio
 import aiohttp
+import pytz
 import roblox
 import datetime
 
@@ -132,6 +134,9 @@ async def iterate_prc_logs(bot):
                             subtasks.append(send_log_batch(channels['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
 
+                    if erlc_settings.get("kick_timer", {}).get("enabled", False):
+                        await handle_kick_timer(bot, settings, guild.id, player_logs)
+
                     if subtasks:
                         await asyncio.gather(*subtasks, return_exceptions=True)
 
@@ -233,7 +238,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     if new_join_ids and settings.get('ERLC', {}).get('avatar_check', {}).get('channel'):
         enabled = settings.get('ERLC', {}).get('avatar_check', {}).get("enabled", True)
         if not enabled:
-            return
+            return embeds, latest_timestamp
 
         async with aiohttp.ClientSession() as session:
             try:
@@ -250,16 +255,30 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                 has_blacklisted_items = False
                                 blacklisted_reasons = []
                                 
+                                # Debug logging
+                                logging.info(f"Processing user {user_id}")
+                                logging.info(f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
+                                
                                 # Check for blacklisted items
                                 blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])
                                 if blacklisted_items:
-                                    for item in result.get('current_items', []):
-                                        if item['id'] in blacklisted_items:
+                                    current_items = result.get('current_items', [])
+                                    logging.info(f"Current items: {[item['id'] for item in current_items]}")
+                                    
+                                    for item in current_items:
+                                        if str(item['id']) in map(str, blacklisted_items):  # Convert both to strings for comparison
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
+                                            logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
                                 
-                                if (is_unrealistic and not any(item in (settings.get('ERLC', {}).get('unrealistic_items_whitelist', []) or []) 
-                                             for item in result.get('unrealistic_item_ids', []))) or has_blacklisted_items:
+                                unrealistic_check = (
+                                    is_unrealistic and 
+                                    not any(str(item) in map(str, settings.get('ERLC', {}).get('unrealistic_items_whitelist', [])) 
+                                          for item in result.get('unrealistic_item_ids', []))
+                                )
+                                
+                                if unrealistic_check or has_blacklisted_items:
+                                    logging.info(f"Avatar check failed - Unrealistic: {unrealistic_check}, Has blacklisted items: {has_blacklisted_items}")
                                     
                                     reasons = result.get('reasons', []) + blacklisted_reasons
                                     
@@ -271,8 +290,9 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                             user = await bot.roblox.get_user(int(user_id))
                                             avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
                                             avatar_url = avatar[0].image_url
-                                        except:
-                                            return
+                                        except Exception as e:
+                                            logging.error(f"Error fetching user data: {e}")
+                                            return embeds, latest_timestamp
                                         
                                         view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
                                         await channel.send(
@@ -285,18 +305,19 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                                 name="Player Information",
                                                 value=f"> **Username:** [{user.name}](https://roblox.com/users/{user_id}/profile)\n> **User ID:** {user_id}\n> **Reason:** {', '.join(reasons)}"
                                             ).set_thumbnail(url=avatar_url),
-                                            view=view
+                                            view=view,
+                                            allowed_mentions=discord.AllowedMentions.all()
                                         )
                                         
                                         if settings['ERLC']['avatar_check'].get('message'):
                                             await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
             except Exception as e:
-                    error_id = error_gen()
-                    with push_scope() as scope:
-                        scope.set_tag("error_id", error_id)
-                        scope.level = "error"
-
-                        capture_exception(e)
+                error_id = error_gen()
+                logging.error(f"Error in avatar check: {e}")
+                with push_scope() as scope:
+                    scope.set_tag("error_id", error_id)
+                    scope.level = "error"
+                    capture_exception(e)
 
     return embeds, latest_timestamp
 
@@ -491,3 +512,58 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all()
         )
+
+
+async def handle_kick_timer(bot, settings, guild_id, player_logs):
+    """Handle kick timer logic using command logs"""
+    kick_timer_settings = settings["ERLC"]["kick_timer"]
+    punishment = kick_timer_settings.get("punishment", "ban")
+    time_limit = kick_timer_settings.get("time", 1800)  # default to 30 minutes if not set
+
+    if not hasattr(bot, 'kicked_users'):
+        bot.kicked_users = {}
+
+    if guild_id not in bot.kicked_users:
+        bot.kicked_users[guild_id] = {}
+
+    command_logs = await bot.prc_api.fetch_server_logs(guild_id)
+
+    for log in command_logs:
+        if ':kick' in log.command:
+            # extract the username from the command
+            parts = log.command.split()
+            if len(parts) > 1:
+                kicked_username = parts[1]
+                bot.kicked_users[guild_id][kicked_username] = log.timestamp
+
+    rejoined_users = []  # list of user IDs who rejoined within the time limit
+    for log in player_logs:
+        if log.type == 'join':
+            user_id = log.user_id
+            if user_id in bot.kicked_users[guild_id]:
+                kick_timestamp = bot.kicked_users[guild_id][user_id]
+                if (log.timestamp - kick_timestamp) <= time_limit:
+                    rejoined_users.append(user_id)
+                # remove the user from the kicked list after
+                del bot.kicked_users[guild_id][user_id]
+
+    if rejoined_users:
+        if punishment == "ban":
+            await bot.prc_api.run_command(guild_id, f":ban {','.join(map(str, rejoined_users))}")
+        else:
+            await bot.prc_api.run_command(guild_id, f":kick {','.join(map(str, rejoined_users))}")
+
+        # log moderation actions
+        for user_id in rejoined_users:
+            user = await bot.roblox.get_user(int(user_id))
+            user_name = user.name
+            await bot.punishments.insert_warning(
+                staff_id=978662093408591912,
+                staff_name="ERM Systems",
+                user_id=user_id,
+                user_name=user_name,
+                guild_id=guild_id,
+                reason="Rejoined within kick timer",
+                moderation_type=punishment,
+                time_epoch=int(datetime.datetime.now(tz=pytz.UTC).timestamp())
+            )

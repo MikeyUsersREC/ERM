@@ -2,10 +2,11 @@ import datetime
 
 import discord
 import pytz
+from bson import ObjectId
 from discord import app_commands
 from discord.ext import commands
 
-from erm import is_staff
+from erm import is_staff, admin_predicate, management_predicate, staff_predicate
 from menus import CustomModalView, UserSelect
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.timestamp import td_format
@@ -32,6 +33,139 @@ class GameLogging(commands.Cog):
             return False
 
         return True
+
+    @commands.guild_only()
+    @commands.hybrid_group(
+        name="staff",
+        description="Request more staff to be in-game!",
+        extras={"category": "Game Logging"}
+    )
+    async def staff(self, ctx: commands.Context):
+        pass
+
+    @staff.command(
+        name="request",
+        description="Send a Staff Request to get more staff in-game!",
+        extras={"category": "Game Logging"}
+    )
+    @app_commands.describe(
+        reason="Reason for your Staff Request!"
+    )
+    @require_settings()
+    async def staff_request(self, ctx: commands.Context, reason: str):
+        settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        game_logging = settings.get("game_logging", {})
+        if game_logging == {}:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Configured",
+                    description="Game Logging is not configured within this server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        staff_requests = game_logging.get("staff_requests", {})
+        if staff_requests == {}:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Configured",
+                    description="Staff Requests is not configured within this server.",
+                    color=BLANK_COLOR
+                )
+            )
+        enabled = staff_requests.get("enabled", False)
+        if not enabled:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Staff Requests are not enabled within this server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        permission_level = staff_requests.get("permission_level", 4)
+        has_permission = True
+        if permission_level == 3:
+            if not await admin_predicate(ctx):
+                has_permission = False
+            else:
+                has_permission = True
+        if permission_level == 2:
+            if not await management_predicate(ctx):
+                has_permission = False
+            else:
+                has_permission = True
+        if permission_level == 1:
+            if not await staff_predicate(ctx):
+                has_permission = False
+            else:
+                has_permission = True
+        if not has_permission:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Permitted",
+                    description=f"You are missing the **{ {1: 'Staff', 2: 'Management', 3: 'Admin'}.get(permission_level) }** permission to make a Staff Request.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        last_submitted_staff_request = [i async for i in self.bot.staff_requests.db.find({"user_id": ctx.author.id, "guild_id": ctx.guild.id}).sort({"_id": -1}).limit(1)]
+        if len(last_submitted_staff_request) != 0:
+            last_submitted_staff_request = last_submitted_staff_request[0]
+            document_id: ObjectId = last_submitted_staff_request["_id"]
+            timestamp = document_id.generation_time.timestamp()
+            if timestamp + staff_requests.get("cooldown", 0) > datetime.datetime.now(tz=pytz.UTC).timestamp():
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Cooldown",
+                        description="You are on cooldown from making Staff Requests.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+
+        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": ctx.guild.id})
+        if staff_requests.get("min_staff") is not None and staff_requests.get("min_staff") > 0:
+            if staff_clocked_in <= staff_requests.get("min_staff", 0):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Minimum Staff",
+                        description=f"**{staff_requests.get('min_staff')}** members of staff are required to be in-game for a Staff Request!",
+                        color=BLANK_COLOR
+                    )
+                )
+
+        if staff_requests.get("max_staff") is not None and staff_requests.get("max_staff") > 0:
+            if staff_clocked_in > staff_requests.get("max_staff", 0):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Maximum Staff",
+                        description="There are more than the maximum number of staff online for a Staff Request!",
+                        color=BLANK_COLOR
+                    )
+                )
+
+        document = {
+            "user_id": ctx.author.id,
+            "guild_id": ctx.guild.id,
+            "username": ctx.author.name,
+            "avatar": ctx.author.avatar.url.split("/")[-1].split(".")[0],
+            "reason": reason,
+            "active": True,
+            "created_at": datetime.datetime.now(tz=pytz.UTC),
+            "acked": []
+        }
+        result = await self.bot.staff_requests.db.insert_one(document)
+        o_id = result.inserted_id
+        self.bot.dispatch("staff_request_send", o_id)
+        await ctx.send(
+            embed=discord.Embed(
+                title="<:success:1163149118366040106> Sent Staff Request",
+                description="Your Staff Request has been sent successfully.",
+                color=GREEN_COLOR
+            )
+        )
+        
 
     @commands.guild_only()
     @commands.hybrid_group(
