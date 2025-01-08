@@ -224,7 +224,7 @@ class Bot(commands.AutoShardedBot):
             check_loa.start(bot)
             iterate_ics.start(bot)
             # GDPR.start()
-            iterate_prc_logs.start(bot)
+            # iterate_prc_logs.start(bot)
             statistics_check.start(bot)
             tempban_checks.start(bot)
             check_whitelisted_car.start(bot)
