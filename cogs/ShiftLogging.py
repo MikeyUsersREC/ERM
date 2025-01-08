@@ -447,7 +447,7 @@ class ShiftLogging(commands.Cog):
         shift_zero = [i async for i in self.bot.shift_management.shifts.db.find({"Guild": ctx.guild.id, "EndEpoch": 0, "UserID": ctx.author.id})]
 
         if len(shift_zero) == 0:
-            if on_duty_staff >= maximum_staff and maximum_staff != 0:
+            if (on_duty_staff) >= (maximum_staff or 0) and (maximum_staff or 0) != 0:
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Staff Limit Reached",
@@ -455,6 +455,7 @@ class ShiftLogging(commands.Cog):
                         color=BLANK_COLOR
                     )
                 )
+
 
         shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
         # view = ModificationSelectMenu(ctx.author.id)
