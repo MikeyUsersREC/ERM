@@ -9,6 +9,7 @@ import aiohttp
 import pytz
 import roblox
 import datetime
+from decouple import config
 
 from sentry_sdk import push_scope, capture_exception
 
@@ -241,7 +242,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                    'https://avatar-checking.jxselinxe.workers.dev/internal/check_avatars',
+                    config("AVATAR_CHECK_URL"),
                     json={'robloxIds': new_join_ids},
                     timeout=10
                 ) as resp:
