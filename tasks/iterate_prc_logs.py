@@ -252,34 +252,34 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                 is_unrealistic = result.get('unrealistic', False)
                                 has_blacklisted_items = False
                                 blacklisted_reasons = []
-                                
+
                                 # Debug logging
                                 logging.info(f"Processing user {user_id}")
                                 logging.info(f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
-                                
+
                                 # Check for blacklisted items
                                 blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])
                                 if blacklisted_items:
                                     current_items = result.get('current_items', [])
                                     logging.info(f"Current items: {[item['id'] for item in current_items]}")
-                                    
+
                                     for item in current_items:
                                         if str(item['id']) in map(str, blacklisted_items):  # Convert both to strings for comparison
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
                                             logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
-                                
+
                                 unrealistic_check = (
-                                    is_unrealistic and 
-                                    not any(str(item) in map(str, settings.get('ERLC', {}).get('unrealistic_items_whitelist', [])) 
+                                    is_unrealistic and
+                                    not any(str(item) in map(str, settings.get('ERLC', {}).get('unrealistic_items_whitelist', []))
                                           for item in result.get('unrealistic_item_ids', []))
                                 )
-                                
+
                                 if unrealistic_check or has_blacklisted_items:
                                     logging.info(f"Avatar check failed - Unrealistic: {unrealistic_check}, Has blacklisted items: {has_blacklisted_items}")
-                                    
+
                                     reasons = result.get('reasons', []) + blacklisted_reasons
-                                    
+
                                     channel_id = settings['ERLC']['avatar_check']['channel']
                                     guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
                                     channel = await fetch_get_channel(guild, channel_id)
@@ -291,7 +291,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                         except Exception as e:
                                             logging.error(f"Error fetching user data: {e}")
                                             return embeds, latest_timestamp
-                                        
+
                                         view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
                                         await channel.send(
                                             content=', '.join([f'<@&{role}>' for role in settings['ERLC']['avatar_check'].get('mentioned_roles', [])]),
@@ -306,7 +306,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                             view=view,
                                             allowed_mentions=discord.AllowedMentions.all()
                                         )
-                                        
+
                                         if settings['ERLC']['avatar_check'].get('message'):
                                             await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
             except Exception as e:
@@ -379,7 +379,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
     min_count_for_compute = team_restrictions.get("min_players", 0)
     if min_count_for_compute >= len(players):
         return
-    
+
     enabled = team_restrictions.get("enabled", True)
     if not enabled:
         return
@@ -393,12 +393,12 @@ async def check_team_restrictions(bot, settings, guild_id, players):
             if roles == []:
                 continue
             actual_roles = [discord.utils.get(all_roles, id=r) for r in roles]
-            members = []
+            members = set()
             for item in actual_roles:
-                for member in item.members:
-                    if member not in members:
-                        members.append(member)
+                [members.update(member.id) for member in item.members]
+
             for plr in plrs:
+                members = [guild.get_member(m) or await guild.fetch_member(m) for m in members]
                 is_found = await is_username_found(plr.username, members)
                 if not is_found:
                     do_load = restriction["load_player"]
