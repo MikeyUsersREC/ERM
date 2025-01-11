@@ -61,7 +61,12 @@ async def discord_checks(bot):
             '$match': {
                 'ERLC': {'$exists': True},
                 '$or': [
-                    {'ERLC.discord_checks.channel': {'$type': 'long', '$ne': 0}}
+                    {'ERLC.discord_checks.channel': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.discord_checks.should_warn': {'$type': 'bool'}},
+                    {'ERLC.discord_checks.should_load': {'$type': 'bool'}},
+                    {'ERLC.discord_checks.kick_after_infractions': {'$type': 'long'}},
+                    {'ERLC.discord_checks.mentioned_roles': {'$type': 'array'}},
+                    {'ERLC.discord_checks.message': {'$type': 'string'}}
                 ]
             }
         },
@@ -93,7 +98,12 @@ async def discord_checks(bot):
             '$match': {
                 'ERLC': {'$exists': True},
                 '$or': [
-                    {'ERLC.discord_checks.channel': {'$type': 'long', '$ne': 0}}
+                    {'ERLC.discord_checks.channel': {'$type': 'long', '$ne': 0}},
+                    {'ERLC.discord_checks.should_warn': {'$type': 'bool'}},
+                    {'ERLC.discord_checks.should_load': {'$type': 'bool'}},
+                    {'ERLC.discord_checks.kick_after_infractions': {'$type': 'long'}},
+                    {'ERLC.discord_checks.mentioned_roles': {'$type': 'array'}},
+                    {'ERLC.discord_checks.message': {'$type': 'string'}}
                 ]
             }
         },
