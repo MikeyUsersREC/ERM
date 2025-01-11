@@ -468,18 +468,20 @@ async def run_command(bot, guild_id, username, message):
             break
 
 
-def is_whitelisted(vehicle_name, whitelisted_vehicle):
+def is_whitelisted(vehicle_name: str, whitelisted_vehicle: str) -> bool:
+    """
+    Check if a vehicle matches a whitelisted vehicle pattern.
+    Handles year matching and fuzzy name matching.
+    """
     vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
     whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
-    if vehicle_year_match and whitelisted_year_match:
-        vehicle_year = vehicle_year_match.group()
-        whitelisted_year = whitelisted_year_match.group()
-        if vehicle_year != whitelisted_year:
-            return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
-    return False
+    if not (vehicle_year_match and whitelisted_year_match):
+        return False
+    if vehicle_year_match.group() != whitelisted_year_match.group():
+        return False
+    vehicle_base = vehicle_name[:vehicle_year_match.start()].strip().lower()
+    whitelisted_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip().lower()
+    return fuzz.ratio(vehicle_base, whitelisted_base) > 80
 
 
 
