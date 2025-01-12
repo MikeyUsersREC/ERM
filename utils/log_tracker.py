@@ -1,4 +1,5 @@
 from collections import defaultdict
+from discord.ext import commands
 
 class LogTracker:
     def __init__(self, bot: commands.Bot):
