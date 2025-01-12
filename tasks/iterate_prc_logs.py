@@ -663,43 +663,60 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs):
         bot.kicked_users[guild_id] = {}
 
     command_logs = await bot.prc_api.fetch_server_logs(guild_id)
+    current_time = int(datetime.datetime.now(tz=pytz.UTC).timestamp())
 
     for log in command_logs:
-        if ':kick' in log.command:
-            # extract the username from the command
-            parts = log.command.split()
+        if ':kick' in log.command.lower():
+            parts = log.command.split(None, 1)
             if len(parts) > 1:
-                kicked_username = parts[1]
-                bot.kicked_users[guild_id][kicked_username] = log.timestamp
+                kicked_users = parts[1].split(',')
+                for kicked_user in kicked_users:
+                    kicked_user = kicked_user.strip()
+                    if kicked_user:
+                        bot.kicked_users[guild_id][kicked_user] = log.timestamp
 
-    rejoined_users = []  # list of user IDs who rejoined within the time limit
+    bot.kicked_users[guild_id] = {
+        user: timestamp
+        for user, timestamp in bot.kicked_users[guild_id].items()
+        if current_time - timestamp <= time_limit
+    }
+
+    rejoined_users = []
     for log in player_logs:
         if log.type == 'join':
-            user_id = log.user_id
-            if user_id in bot.kicked_users[guild_id]:
-                kick_timestamp = bot.kicked_users[guild_id][user_id]
+            username = log.username
+            if username in bot.kicked_users[guild_id]:
+                kick_timestamp = bot.kicked_users[guild_id][username]
                 if (log.timestamp - kick_timestamp) <= time_limit:
-                    rejoined_users.append(user_id)
-                # remove the user from the kicked list after
-                del bot.kicked_users[guild_id][user_id]
+                    rejoined_users.append((username, log.user_id))
+                    logging.warning(f"User {username} rejoined within kick timer! Time since kick: {log.timestamp - kick_timestamp}s")
 
     if rejoined_users:
-        if punishment == "ban":
-            await bot.prc_api.run_command(guild_id, f":ban {','.join(map(str, rejoined_users))}")
+        user_ids = [user_id for _, user_id in rejoined_users]
+        if punishment.lower() == "ban":
+            try:
+                await bot.prc_api.run_command(guild_id, f":ban {','.join(map(str, user_ids))}")
+                logging.info(f"Banned users for rejoining too quickly: {user_ids}")
+            except Exception as e:
+                logging.error(f"Failed to ban users: {e}")
         else:
-            await bot.prc_api.run_command(guild_id, f":kick {','.join(map(str, rejoined_users))}")
+            try:
+                await bot.prc_api.run_command(guild_id, f":kick {','.join(map(str, user_ids))}")
+                logging.info(f"Kicked users for rejoining too quickly: {user_ids}")
+            except Exception as e:
+                logging.error(f"Failed to kick users: {e}")
 
-        # log moderation actions
-        for user_id in rejoined_users:
-            user = await bot.roblox.get_user(int(user_id))
-            user_name = user.name
-            await bot.punishments.insert_warning(
-                staff_id=978662093408591912,
-                staff_name="ERM Systems",
-                user_id=user_id,
-                user_name=user_name,
-                guild_id=guild_id,
-                reason="Rejoined within kick timer",
-                moderation_type=punishment,
-                time_epoch=int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-            )
+        for username, user_id in rejoined_users:
+            try:
+                await bot.punishments.insert_warning(
+                    staff_id=978662093408591912,
+                    staff_name="ERM Systems",
+                    user_id=user_id,
+                    user_name=username,
+                    guild_id=guild_id,
+                    reason="Rejoined within kick timer",
+                    moderation_type=punishment,
+                    time_epoch=current_time
+                )
+            except Exception as e:
+                logging.error(f"Failed to insert warning for {username}: {e}")
