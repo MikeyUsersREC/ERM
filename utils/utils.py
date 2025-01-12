@@ -103,6 +103,25 @@ async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
         return await bot.bloxlink.get_roblox_info(roblox_user.id)
 
 
+
+async def staff_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
+    if guild_settings:
+        if "role" in guild_settings["staff_management"].keys():
+            if guild_settings["staff_management"]["role"] != "":
+                if isinstance(guild_settings["staff_management"]["role"], list):
+                    for role in guild_settings["staff_management"]["role"]:
+                        if role in [role.id for role in member.roles]:
+                            return True
+                elif isinstance(guild_settings["staff_management"]["role"], int):
+                    if guild_settings["staff_management"]["role"] in [
+                        role.id for role in member.roles
+                    ]:
+                        return True
+    if member.guild_permissions.manage_messages or member.guild_permissions.administrator:
+        return True
+    return False
+
 def time_converter(parameter: str) -> int:
     conversions = {
         ("s", "seconds", " seconds"): 1,
@@ -118,6 +137,7 @@ def time_converter(parameter: str) -> int:
             if parameter[(len(parameter) - len(alias)):].lower() == alias.lower():
                 alias_found = parameter[(len(parameter) - len(alias)):]
                 number = parameter.split(alias_found)[0]
+                number = number.replace("-", "") # prevent those negative times!
                 if not number.strip()[-1].isdigit():
                     continue
                 return int(number.strip()) * multiplier

@@ -6741,9 +6741,7 @@ class AutomaticShiftConfiguration(discord.ui.View):
 
     def toggle_button_styling(self):
         for item in self.children:
-            if item.label == "Toggle Automatic Shifts":
-                item.style = discord.ButtonStyle.green if self.auto_data.get('enabled') is True else discord.ButtonStyle.danger
-            elif item.label == "Change Shift Type":
+            if item.label == "Change Shift Type":
                 item.disabled = True if (len(self.shift_types) == 0 and self.auto_data.get('shift_type') == 'Default') else False
 
     @discord.ui.button(

@@ -40,7 +40,7 @@ class OnStaffRequestSend(commands.Cog):
 
             if len(players) > 0:
                 players_ingame = len(players)
-                staff_ingame = len(list(filter(lambda x: x.permission != "Player", players)))
+                staff_ingame = len(list(filter(lambda x: x.permission != "Normal", players)))
 
         staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": guild_id})
 

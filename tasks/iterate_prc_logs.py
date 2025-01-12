@@ -13,7 +13,8 @@ from decouple import config
 
 from sentry_sdk import push_scope, capture_exception
 
-from utils.utils import fetch_get_channel, error_gen
+from utils.prc_api import JoinLeaveLog, Player
+from utils.utils import fetch_get_channel, error_gen, staff_check
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
@@ -67,6 +68,7 @@ async def iterate_prc_logs(bot):
                         {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
                         {'ERLC.player_logs': {'$type': 'long', '$ne': 0}},
                         {"ERLC.welcome_message": {"$exists": True}},
+                        {"ERLC.automatic_shifts.enabled": {"$eq": True}},
                         {"ERLC.team_restrictions": {"$exists": True}}
                     ]
                 }
@@ -104,8 +106,9 @@ async def iterate_prc_logs(bot):
                     channels = {k: await fetch_get_channel(guild, v) for k, v in channels.items() if v}
                     has_welcome_message = bool(erlc_settings.get("welcome_message", False))
                     has_team_restrictions = bool(erlc_settings.get("team_restrictions"))
+                    has_automatic_shifts = bool(erlc_settings.get("automatic_shifts", {}))
 
-                    if not channels and not has_welcome_message and not has_team_restrictions:
+                    if not channels and not has_welcome_message and not has_team_restrictions and not has_automatic_shifts:
                         return
 
                     kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
@@ -121,6 +124,12 @@ async def iterate_prc_logs(bot):
                         await check_team_restrictions(bot, settings, guild.id,
                                                       await bot.prc_api.get_server_players(guild.id))
 
+                    if has_automatic_shifts:
+                        last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'automatic_shifts')
+                        latest_timestamp = await check_automatic_shifts(bot, settings, guild.id, player_logs,
+                                                                        last_timestamp)
+                        bot.log_tracker.update_timestamp(guild.id, "automatic_shifts", latest_timestamp)
+
                     if 'kill_logs' in channels and kill_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'kill_logs')
                         embeds, latest_timestamp = process_kill_logs(kill_logs, last_timestamp)
@@ -130,7 +139,8 @@ async def iterate_prc_logs(bot):
 
                     if 'player_logs' in channels and player_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'player_logs')
-                        embeds, latest_timestamp = await process_player_logs(bot, settings, guild.id, player_logs, last_timestamp)
+                        embeds, latest_timestamp = await process_player_logs(bot, settings, guild.id, player_logs,
+                                                                             last_timestamp)
                         if embeds:
                             subtasks.append(send_log_batch(channels['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
@@ -242,9 +252,9 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                    config("AVATAR_CHECK_URL"),
-                    json={'robloxIds': new_join_ids},
-                    timeout=10
+                        config("AVATAR_CHECK_URL"),
+                        json={'robloxIds': new_join_ids},
+                        timeout=10
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
@@ -256,28 +266,33 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
 
                                 # Debug logging
                                 logging.info(f"Processing user {user_id}")
-                                logging.info(f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
+                                logging.info(
+                                    f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
 
                                 # Check for blacklisted items
-                                blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])
+                                blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get(
+                                    'blacklisted_items', [])
                                 if blacklisted_items:
                                     current_items = result.get('current_items', [])
                                     logging.info(f"Current items: {[item['id'] for item in current_items]}")
 
                                     for item in current_items:
-                                        if str(item['id']) in map(str, blacklisted_items):  # Convert both to strings for comparison
+                                        if str(item['id']) in map(str,
+                                                                  blacklisted_items):  # Convert both to strings for comparison
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
                                             logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
 
                                 unrealistic_check = (
-                                    is_unrealistic and
-                                    not any(str(item) in map(str, settings.get('ERLC', {}).get('unrealistic_items_whitelist', []))
-                                          for item in result.get('unrealistic_item_ids', []))
+                                        is_unrealistic and
+                                        not any(str(item) in map(str, settings.get('ERLC', {}).get(
+                                            'unrealistic_items_whitelist', []))
+                                                for item in result.get('unrealistic_item_ids', []))
                                 )
 
                                 if unrealistic_check or has_blacklisted_items:
-                                    logging.info(f"Avatar check failed - Unrealistic: {unrealistic_check}, Has blacklisted items: {has_blacklisted_items}")
+                                    logging.info(
+                                        f"Avatar check failed - Unrealistic: {unrealistic_check}, Has blacklisted items: {has_blacklisted_items}")
 
                                     reasons = result.get('reasons', []) + blacklisted_reasons
 
@@ -287,15 +302,19 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                     if channel:
                                         try:
                                             user = await bot.roblox.get_user(int(user_id))
-                                            avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user], type=roblox.thumbnails.AvatarThumbnailType.headshot)
+                                            avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails([user],
+                                                                                                            type=roblox.thumbnails.AvatarThumbnailType.headshot)
                                             avatar_url = avatar[0].image_url
                                         except Exception as e:
                                             logging.error(f"Error fetching user data: {e}")
                                             return embeds, latest_timestamp
 
-                                        view = AvatarCheckView(bot, user_id, settings['ERLC']['avatar_check'].get('message', ''))
+                                        view = AvatarCheckView(bot, user_id,
+                                                               settings['ERLC']['avatar_check'].get('message', ''))
                                         await channel.send(
-                                            content=', '.join([f'<@&{role}>' for role in settings['ERLC']['avatar_check'].get('mentioned_roles', [])]),
+                                            content=', '.join([f'<@&{role}>' for role in
+                                                               settings['ERLC']['avatar_check'].get('mentioned_roles',
+                                                                                                    [])]),
                                             embed=discord.Embed(
                                                 title="Unrealistic Avatar Detected",
                                                 description="We have detected that a player in your server has an unrealistic avatar.",
@@ -309,7 +328,8 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                         )
 
                                         if settings['ERLC']['avatar_check'].get('message'):
-                                            await bot.scheduled_pm_queue.put((guild_id, user.name, settings['ERLC']['avatar_check']['message']))
+                                            await bot.scheduled_pm_queue.put(
+                                                (guild_id, user.name, settings['ERLC']['avatar_check']['message']))
             except Exception as e:
                 error_id = error_gen()
                 logging.error(f"Error in avatar check: {e}")
@@ -357,6 +377,123 @@ async def send_welcome_message(bot, settings, guild_id, player_logs, last_timest
     except prc_api.ResponseFailure:
         pass
     return sorted(player_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
+
+async def check_automatic_shifts(bot, settings, guild_id, join_logs, ts: int) -> int:
+    logging.info(f"Checking automatic shifts for server {guild_id}")
+    automatic_shifts = settings["ERLC"].get("automatic_shifts", {}) or {}
+    try:
+        guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
+    except:
+        return sorted(join_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
+    if automatic_shifts in [{}, None]:
+        return sorted(join_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
+    if automatic_shifts["enabled"] is False:
+        return sorted(join_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
+    try:
+        players = await bot.prc_api.get_server_players(guild_id)
+    except Exception as e:
+        logging.info(f"Skipping {guild_id} (automatic shifts) because of exc: {e}")
+        return sorted(join_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
+
+    new_players: list[Player] = list(filter(lambda x: x.permission != "Normal", players))
+    joins: list[JoinLeaveLog] = list(filter(lambda x: x.type == "join", join_logs))
+    leaves: list[JoinLeaveLog] = list(filter(lambda x: x.type == "leave", join_logs))
+    # quick check
+    temp_linked = []
+    for item in leaves:
+        oauth2_user = await bot.oauth2_users.db.find_one({"roblox_id": int(item.user_id)})
+        if oauth2_user:
+            temp_linked.append(oauth2_user["discord_id"])
+    discordid_to_shift = {x["UserID"]: x async for x in bot.shift_management.shifts.db.find({"Guild": guild.id, "Type": automatic_shifts.get("type", "Default") or "Default", "EndEpoch": 0})}
+    for item in temp_linked:
+        if item in discordid_to_shift:
+            shift = discordid_to_shift[item]
+            await bot.shift_management.end_shift(
+                shift["_id"], guild.id
+            )
+            member = guild.get_member(int(item))
+            if not member:
+                try:
+                    member = await guild.fetch_member(int(item))
+                except discord.HTTPException:
+                    pass
+            if not member:
+                continue
+
+            try:
+                await member.send(
+                    embed=discord.Embed(
+                        title=f"<:success:1163149118366040106> Shift Ended",
+                        description=f"Your shift has automatically been ended in the server **{guild.name}**.",
+                        color=GREEN_COLOR
+                    )
+                )
+            except Exception as e:
+                pass
+
+    new_data = []
+    username_to_player = {x.username: x for x in new_players}
+    for item in joins:
+        if item.username not in username_to_player.keys():
+            continue
+        player_obj = username_to_player[item.username]
+        if item.timestamp > ts:
+            new_data.append(
+                {
+                    "Username": item.username,
+                    "UserID": item.user_id,
+                    "Permission": player_obj.permission,
+                    "Timestamp": item.timestamp
+                }
+            )
+
+    linked_users = []
+    for item in new_data:
+        uid = item["UserID"]
+        doc = await bot.oauth2_users.db.find_one({"roblox_id": int(uid)})
+        if doc is not None:
+            discord_uid = doc["discord_id"]
+            consent_doc = await bot.consent.db.find_one({"_id": discord_uid}) or {"automatic_shifts": True}
+            if consent_doc.get("automatic_shifts", True) is True:
+                member = guild.get_member(discord_uid)
+                if not member:
+                    try:
+                        member = await guild.fetch_member(discord_uid)
+                    except:
+                        pass
+                if not member:
+                    continue
+                linked_users.append(member)
+
+    staff_members = []
+    for item in linked_users:
+        if await staff_check(bot, guild, item) is True:
+            staff_members.append(item)
+
+    for item in staff_members:
+        if await bot.shift_management.get_current_shift(item, guild.id) is None:
+            oid = await bot.shift_management.add_shift_by_user(
+                item,
+                automatic_shifts.get("type", "Default") or "Default",
+                [],
+                guild.id
+            )
+            try:
+                await item.send(
+                    embed=discord.Embed(
+                        title=f"<:success:1163149118366040106> Shift Started",
+                        description=f"Your shift has automatically been started in the server **{guild.name}**.",
+                        color=GREEN_COLOR
+                    )
+                )
+            except Exception as e:
+                pass
+
+    return sorted(join_logs, key=lambda x: x.timestamp, reverse=True)[0].timestamp
 
 
 async def check_team_restrictions(bot, settings, guild_id, players):

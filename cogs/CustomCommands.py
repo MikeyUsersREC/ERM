@@ -71,7 +71,7 @@ class CustomCommands(commands.Cog):
                 name=f"{item['name']}",
                 value=f"> **Name:** {item['name']}\n"
                       f"> **Command ID:** `{item['id']}`\n"
-                      f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else 'Unknown')}",
+                      f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else '1')}",
                 inline=False,
             )
 
@@ -187,12 +187,13 @@ class CustomCommands(commands.Cog):
                     )
                 )
                 status = False
+            data = {}
             try:
                 data = {
                     "name": name,
                     "id": existing_command_data["id"],
                     "message": existing_command_data["message"],
-                    "author": existing_command_data["author"]
+                    "author": existing_command_data.get("author", "1")
                 }
             except KeyError:
                 await new_msg.edit(
