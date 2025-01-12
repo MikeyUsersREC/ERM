@@ -122,10 +122,6 @@ class Bot(commands.AutoShardedBot):
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
         self.view_state_manager: ViewStateManager = ViewStateManager()
-        self.scheduled_pm_queue = asyncio.Queue()
-        self.pm_counter = {}
-        self.team_restrictions_infractions = {}  # Guild ID => [ { Username: Count } ]
-        self.log_tracker = LogTracker()
 
         global setup
         if not self.setup_status:
@@ -150,6 +146,12 @@ class Bot(commands.AutoShardedBot):
             self.staff_requests = Document(self.panel_db, "StaffRequests")
 
             self.start_time = time.time()
+
+            self.log_tracker = LogTracker(self)
+            self.scheduled_pm_queue = asyncio.Queue()
+            self.pm_counter = {}
+            self.team_restrictions_infractions = {}  # Guild ID => [ { Username: Count } ]
+            
             self.shift_management = ShiftManagement(self.db, "shift_management")
             self.errors = Errors(self.db, "errors")
             self.loas = ActivityNotices(self.db, "leave_of_absences")
