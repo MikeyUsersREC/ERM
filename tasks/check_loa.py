@@ -58,15 +58,14 @@ async def check_loa(bot):
                                 "accepted": True,
                                 "expired": False,
                                 "denied": False,
+                                "type": loaObject["type"],
                             }
                         )
                         should_remove_roles = True
                         async for doc in docs:
-                            if doc["type"] == loaObject["type"]:
-                                if not doc["expired"]:
-                                    if not doc == loaObject:
-                                        should_remove_roles = False
-                                        break
+                            if not doc == loaObject:
+                                should_remove_roles = False
+                                break
 
                         if should_remove_roles:
                             for role in roles:

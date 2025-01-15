@@ -184,6 +184,21 @@ class Punishments(commands.Cog):
             datetime.datetime.now(tz=pytz.UTC).timestamp()
         )
 
+        current_shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+        is_online = bool(current_shift)
+        if is_online:
+            await self.bot.shift_management.shifts.db.update_one(
+                {
+                    "_id": current_shift["_id"]
+                },
+                {
+                    "$push": {
+                        "Moderations": oid
+                    }
+                }
+            )
+
+
         self.bot.dispatch('punishment', oid)
 
         warning: WarningItem = await self.bot.punishments.fetch_warning(oid)

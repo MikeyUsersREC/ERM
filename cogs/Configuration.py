@@ -91,10 +91,14 @@ class Configuration(commands.Cog):
             self.bot.view_state_manager[secret_key] = view
 
         async def discard_unlock_override(interaction: discord.Interaction):
+            if interaction.user != ctx.author:
+                return
             await interaction.response.defer()
 
         async def check_unlock_override(interaction: discord.Interaction):
             view = get_active_view_state()
+            if interaction.user != ctx.author:
+                return
             # if view is None:
             #     return
             await interaction.response.defer()
@@ -149,7 +153,7 @@ class Configuration(commands.Cog):
         admin_roles = RoleSelect(ctx.author.id).children[0]
         admin_roles.row = 1
         admin_roles.placeholder = "Admin Roles"
-        admin_roles.callback = check_unlock_override
+        admin_roles.callback = discard_unlock_override
         admin_roles.min_values = 0
 
         management_roles = RoleSelect(ctx.author.id).children[0]
@@ -188,6 +192,8 @@ class Configuration(commands.Cog):
 
 
         async def stop_override(interaction: discord.Interaction):
+            if interaction.user != ctx.author:
+                return
             await interaction.response.defer()
             get_active_view_state().stop()
 
