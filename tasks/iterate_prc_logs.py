@@ -131,8 +131,6 @@ async def iterate_prc_logs(bot):
                     if 'player_logs' in channels and player_logs:
                         last_timestamp = bot.log_tracker.get_last_timestamp(guild.id, 'player_logs')
                         embeds, latest_timestamp = await process_player_logs(bot, settings, guild.id, player_logs, last_timestamp)
-                        player_logs_channel = await fetch_get_channel(guild, erlc_settings.get('player_logs'))
-                        await handle_shifts(bot, guild, player_logs, latest_timestamp, player_logs_channel)
                         if embeds:
                             subtasks.append(send_log_batch(channels['player_logs'], embeds))
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
