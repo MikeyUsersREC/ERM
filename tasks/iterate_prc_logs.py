@@ -215,49 +215,6 @@ def process_kill_logs(kill_logs, last_timestamp):
 
     return embeds, latest_timestamp
 
-async def get_staff_roles(guild, settings):
-    staff_roles = []
-    if settings["staff_management"].get("role"):
-        if isinstance(settings["staff_management"]["role"], int):
-            staff_roles.append(settings["staff_management"]["role"])
-        elif isinstance(settings["staff_management"]["role"], list):
-            staff_roles.extend(settings["staff_management"]["role"])
-
-    if settings["staff_management"].get("management_role"):
-        if isinstance(settings["staff_management"]["management_role"], int):
-            staff_roles.append(settings["staff_management"]["management_role"])
-        elif isinstance(settings["staff_management"]["management_role"], list):
-            staff_roles.extend(settings["staff_management"]["management_role"])
-
-    staff_roles = [guild.get_role(role) for role in staff_roles if guild.get_role(role)]
-    return staff_roles
-
-async def handle_shifts(bot, guild, player_logs, current_timestamp, player_logs_channel):
-    '''Handle automatic shifts based on player logs'''
-    settings = await bot.settings.find_by_id(guild.id)
-    automatic_shifts_enabled = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('enabled', False)
-    automatic_shift_type = ((settings.get('ERLC', {}) or {}).get('automatic_shifts', {}) or {}).get('shift_type', '')
-
-    staff_roles = await get_staff_roles(guild, settings)
-    perm_staff = [member for member in guild.members if member.guild_permissions.manage_messages or member.guild_permissions.manage_guild or member.guild_permissions.administrator and not member.bot]
-
-    roblox_to_discord = {int((await bot.oauth2_users.db.find_one({"discord_id": member.id}) or {}).get("roblox_id", 0)): member for member in perm_staff}
-
-    if player_logs_channel:
-        for item in player_logs:
-            if (current_timestamp - item.timestamp) > 90:
-                continue
-
-            if item.user_id in roblox_to_discord:
-                if automatic_shifts_enabled:
-                    consent_item = await bot.consent.find_by_id(roblox_to_discord[item.user_id].id)
-                    if (consent_item or {}).get('auto_shifts', True):
-                        shift = await bot.shift_management.get_current_shift(roblox_to_discord[item.user_id], guild.id)
-                        if item.type == 'join' and not shift:
-                            await bot.shift_management.add_shift_by_user(roblox_to_discord[item.user_id], automatic_shift_type, [], guild.id, timestamp=item.timestamp)
-                        elif item.type == 'leave' and shift:
-                            await bot.shift_management.end_shift(shift['_id'], guild.id, timestamp=item.timestamp)
-
 async def process_player_logs(bot, settings, guild_id, player_logs, last_timestamp):
     """Process player logs and return embeds"""
     embeds = []
