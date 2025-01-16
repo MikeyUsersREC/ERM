@@ -3,12 +3,13 @@ import re
 import discord
 import roblox
 from discord.ext import commands
+from roblox.thumbnails import AvatarThumbnailType  # Add this import
 
 import logging
 from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
-from menus import ReloadView
+from menus import ReloadView, RefreshConfirmation
 import copy
 from utils.constants import *
 from utils.prc_api import Player, ServerStatus, KillLog, JoinLeaveLog, CommandLog, ResponseFailure
@@ -787,6 +788,108 @@ class ERLC(commands.Cog):
             icon_url=ctx.guild.icon
         )
         await msg.edit(embed=embed)
+
+    @server.command(
+        name="refresh",
+        description="Refresh a player in the ERLC server."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def refresh(self, ctx: commands.Context, user: discord.Member = None):
+        settings = await self.bot.settings.find_by_id(ctx.guild.id) or {}
+        erlc_settings = settings.get('ERLC', {})
+        if not erlc_settings.get('allow_player_refresh', False):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Enabled",
+                    description="Player refresh is not enabled in this server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        if user is None:
+            user = ctx.author
+
+        guild_id = ctx.guild.id
+        roblox_user = await self.bot.bloxlink.find_roblox(user.id)
+        if not roblox_user or not (roblox_user or {}).get('robloxID'):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find user",
+                    description="I couldn't find your ROBLOX user. Please make sure that you're verified with Bloxlink.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        roblox_info = await self.bot.bloxlink.get_roblox_info(roblox_user['robloxID'])
+        username = roblox_info.get('name')
+
+        if not username:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find username",
+                    description="I could not find this user's ROBLOX username.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        client = roblox.Client()
+        roblox_player = await client.get_user_by_username(username)
+        thumbnails = await client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], 
+            type=AvatarThumbnailType.headshot
+        )
+        thumbnail_url = thumbnails[0].image_url
+
+        embed = discord.Embed(
+            title="Confirm Refresh", 
+            description=f"Is this your account? If not, be sure to set a new primary account with Bloxlink.",
+            color=BLANK_COLOR
+        )
+        embed.set_thumbnail(url=thumbnail_url)
+        embed.add_field(
+            name="Account Information",
+            value=(
+                f"> **Username:** {username}\n"
+                f"> **User ID:** {roblox_user['robloxID']}\n"
+                f"> **Discord:** {user.mention}\n"
+            )
+        )
+
+        view = RefreshConfirmation(ctx.author.id)
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
+
+        await view.wait()
+        if not view.value:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="Cancelled",
+                    description="Refresh has been cancelled.",
+                    color=BLANK_COLOR
+                ),
+                view=None
+            )
+
+        command_response = await self.bot.prc_api.run_command(guild_id, f":refresh {username}")
+        if command_response[0] == 200:
+            await msg.edit(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully Refreshed",
+                    description=f"Successfully refreshed {username} in-game.",
+                    color=GREEN_COLOR
+                ),
+                view=None
+            )
+        else:
+            await msg.edit(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description="This command has not been sent to the server successfully.",
+                    color=BLANK_COLOR
+                ),
+                view=None
+            )
 
 async def setup(bot):
     await bot.add_cog(ERLC(bot))
