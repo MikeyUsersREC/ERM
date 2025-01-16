@@ -791,11 +791,10 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="refresh",
-        description="Refresh a player in the ERLC server."
+        description="Refresh the author in the ERLC server."
     )
-    @is_staff()
     @is_server_linked()
-    async def refresh(self, ctx: commands.Context, user: discord.Member = None):
+    async def refresh(self, ctx: commands.Context):
         settings = await self.bot.settings.find_by_id(ctx.guild.id) or {}
         erlc_settings = settings.get('ERLC', {})
         if not erlc_settings.get('allow_player_refresh', False):
@@ -806,10 +805,9 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
-        if user is None:
-            user = ctx.author
-
+    
+        user = ctx.author
+    
         guild_id = ctx.guild.id
         roblox_user = await self.bot.bloxlink.find_roblox(user.id)
         if not roblox_user or not (roblox_user or {}).get('robloxID'):
@@ -820,10 +818,10 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
+    
         roblox_info = await self.bot.bloxlink.get_roblox_info(roblox_user['robloxID'])
         username = roblox_info.get('name')
-
+    
         if not username:
             return await ctx.send(
                 embed=discord.Embed(
@@ -832,17 +830,17 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
+    
         client = roblox.Client()
         roblox_player = await client.get_user_by_username(username)
         thumbnails = await client.thumbnails.get_user_avatar_thumbnails(
-            [roblox_player], 
+            [roblox_player],
             type=AvatarThumbnailType.headshot
         )
         thumbnail_url = thumbnails[0].image_url
-
+    
         embed = discord.Embed(
-            title="Confirm Refresh", 
+            title="Confirm Refresh",
             description=f"Is this your account? If not, be sure to set a new primary account with Bloxlink.",
             color=BLANK_COLOR
         )
@@ -855,11 +853,11 @@ class ERLC(commands.Cog):
                 f"> **Discord:** {user.mention}\n"
             )
         )
-
+    
         view = RefreshConfirmation(ctx.author.id)
         msg = await ctx.send(embed=embed, view=view)
         view.message = msg
-
+    
         await view.wait()
         if not view.value:
             return await msg.edit(
@@ -870,7 +868,7 @@ class ERLC(commands.Cog):
                 ),
                 view=None
             )
-
+    
         command_response = await self.bot.prc_api.run_command(guild_id, f":refresh {username}")
         if command_response[0] == 200:
             await msg.edit(
@@ -890,6 +888,7 @@ class ERLC(commands.Cog):
                 ),
                 view=None
             )
+
 
 async def setup(bot):
     await bot.add_cog(ERLC(bot))
