@@ -17,6 +17,7 @@ from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
+from tasks.discord_checks import discord_checks
 
 from utils.log_tracker import LogTracker
 from utils.mongo import Document
@@ -177,7 +178,7 @@ class Bot(commands.AutoShardedBot):
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
+            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default=None))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
@@ -232,6 +233,7 @@ class Bot(commands.AutoShardedBot):
             check_whitelisted_car.start(bot)
             change_status.start(bot)
             process_scheduled_pms.start(bot)
+            discord_checks.start(bot)
             sync_weather.start(bot)
             logging.info("Setup_hook complete! All tasks are now running!")
 
@@ -402,6 +404,33 @@ async def management_predicate(ctx):
 def is_management():
     return commands.check(management_predicate)
 
+async def advance_check(bot_obj, guild, member, permission):
+    if member.guild_permissions.administrator:
+        return True
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
+    if guild_settings and "advance_perm" in guild_settings:
+        member_roles = [str(role.id) for role in member.roles]
+        for role_id in member_roles:
+            if role_id in guild_settings["advance_perm"]:
+                if guild_settings["advance_perm"][role_id] == permission:
+                    return True
+    
+    if await management_check(bot_obj, guild, member):
+        return True
+    
+    if await admin_check(bot_obj, guild, member):
+        return True
+
+    return False
+
+async def advance_predicate(ctx, permission):
+    if ctx.guild is None:
+        return True
+    else:
+        return await advance_check(ctx.bot, ctx.guild, ctx.author, permission)
+
+def advance_perm(permission):
+    return commands.check(lambda ctx: advance_predicate(ctx, permission))
 
 async def check_privacy(bot: Bot, guild: int, setting: str):
     privacySettings = await bot.privacy.find_by_id(guild)

@@ -462,7 +462,7 @@ class ActivityCoreCommands:
             )
 
 
-    async def core_command_request(self, ctx: commands.Context, request_type_object: str, duration: str, reason: str, return_bypass = None, override_victim = None):
+    async def core_command_request(self, ctx: commands.Context, request_type_object: str, duration: str, reason: str, return_bypass = None, override_victim = None, starting: str = None):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings.get('staff_management') or not settings.get('staff_management', {}).get(
                 f'{request_type_object.lower()}_role', None) or not settings.get('staff_management', {}).get('enabled'):
@@ -522,6 +522,9 @@ class ActivityCoreCommands:
             )
 
         current_timestamp = int(datetime.datetime.now().timestamp())
+        if starting:
+            start_after_seconds = time_converter(starting)
+            current_timestamp += start_after_seconds
 
         expiry_timestamp = current_timestamp + duration_seconds
 
@@ -640,6 +643,82 @@ class ActivityCoreCommands:
             await ctx.send(
                 embed=embeds[0]
             )
+     
+    async def core_command_view(self, ctx: commands.Context, request_type_object: str):
+        settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        if not settings.get('staff_management') or not settings.get('staff_management', {}).get(f'{request_type_object.lower()}_role', None):
+            await ctx.send(
+            embed=discord.Embed(
+                    title="Not Enabled",
+                    description=f"{request_type_object.upper()} Requests are not enabled on this server.",
+                    color=BLANK_COLOR
+            )
+            )
+            return
+    
+        request_upper = request_type_object.upper()
+    
+        all_requests = []
+        async for item in self.bot.loas.db.find({
+            "guild_id": ctx.guild.id,
+            "user_id": ctx.author.id,
+            "type": request_upper
+        }):
+            all_requests.append(item)
+
+        def setup_embed() -> discord.Embed:
+            embed = discord.Embed(
+                title="Activity Notices",
+                color=BLANK_COLOR
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
+            return embed
+        
+        embeds = []
+        for item in all_requests:
+            if len(embeds) == 0:
+                embeds.append(setup_embed())
+            if len(embeds[-1].fields) > 4:
+                embeds.append(setup_embed())
+            embeds[-1].add_field(
+                name=f"{item['type']}",
+                value=(
+                    f"> **Reason:** {item['reason']}\n"
+                    f"> **Started At:** <t:{int(item.get('started_at', int(item['_id'].split('_')[2])))}>\n"
+                    f"> **Ended At:** <t:{int(item['expiry'])}>"
+                ),
+                inline=False
+            )
+        pages = [
+            CustomPage(
+                embeds=[embed],
+                identifier=str(index + 1)
+            ) for index, embed in enumerate(embeds)
+        ]
+        if len(pages) == 0:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="No Activity Notices",
+                    description="There were no active Activity Notices found.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        if len(pages) != 1:
+            paginator = SelectPagination(ctx.author.id, pages=pages)
+            await ctx.channel.send(
+                embed=embeds[0],
+                view=paginator
+            )
+
+        else:
+            await ctx.channel.send(
+                embed=embeds[0],
+            )
+
 
 class StaffManagement(commands.Cog):
     def __init__(self, bot):
@@ -676,8 +755,9 @@ class StaffManagement(commands.Cog):
     @is_staff()
     @app_commands.describe(time="How long are you going to be on RA for? (s/m/h/d)")
     @app_commands.describe(reason="What is your reason for going on RA?")
-    async def ra_request(self, ctx, time, *, reason):
-        await self.core_commands.core_command_request(ctx, 'ra', time, reason)
+    @app_commands.describe(starting="When would you like to start your RA? (s/m/h/d)")
+    async def ra_request(self, ctx, time, *, reason,starting: str = None):
+        await self.core_commands.core_command_request(ctx, 'ra', time, reason, starting=starting)
 
     @commands.guild_only()
     @ra.command(
@@ -694,6 +774,17 @@ class StaffManagement(commands.Cog):
         await log_command_usage(self.bot,ctx.guild, ctx.author, f"RA Admin: {member}")
         await self.core_commands.core_command_admin(ctx, 'ra', member)
 
+    @commands.guild_only()
+    @ra.command(
+        name="view",
+        description="View your active RA",
+        extras={"category": "Staff Management"},
+        with_app_command=True,
+    )
+    @is_staff()
+    async def ra_view(self, ctx):
+        await self.core_commands.core_command_view(ctx, 'ra')
+
     @commands.hybrid_group(
         name="loa",
         description="File a Leave of Absence request",
@@ -705,6 +796,16 @@ class StaffManagement(commands.Cog):
     async def loa(self, ctx, time, *, reason):
         await ctx.invoke(self.bot.get_command("loa request"), time=time, reason=reason)
 
+    @commands.guild_only()
+    @loa.command(
+        name="view",
+        description="View your active LOA",
+        extras={"category": "Staff Management"},
+        with_app_command=True,
+    )
+    @is_staff()
+    async def loa_view(self, ctx):
+        await self.core_commands.core_command_view(ctx, 'loa')
 
     @loa.command(
         name="active",
@@ -725,8 +826,9 @@ class StaffManagement(commands.Cog):
     @is_staff()
     @app_commands.describe(time="How long are you going to be on LoA for? (s/m/h/d)")
     @app_commands.describe(reason="What is your reason for going on LoA?")
-    async def loa_request(self, ctx, time, *, reason):
-        await self.core_commands.core_command_request(ctx, 'loa', time, reason)
+    @app_commands.describe(starting="When would you like to start your LOA? (s/m/h/d)")
+    async def loa_request(self, ctx, time, *, reason, starting: str = None):
+        await self.core_commands.core_command_request(ctx, 'loa', time, reason, starting=starting)
 
     @commands.guild_only()
     @loa.command(
