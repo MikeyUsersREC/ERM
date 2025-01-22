@@ -10,7 +10,6 @@ from utils.utils import interpret_content, interpret_embed
 async def iterate_ics(bot):
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
-    # print('ICS')
     async for item in bot.ics.db.find({}):
         try:
             guild = await bot.fetch_guild(item['guild'])
