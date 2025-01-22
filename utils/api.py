@@ -753,19 +753,27 @@ class APIRoutes:
         json_data = await request.json()
         guild_id = json_data.get("guild")
         user_id = json_data.get("user")
+    
         if not guild_id or not user_id:
-            return HTTPException(status_code=400, detail="Invalid guild")
-
-        try:
-            guild = await self.bot.fetch_guild(guild_id)
-        except (discord.Forbidden, discord.HTTPException):
-            return HTTPException(status_code=400, detail="Invalid guild")
-
-        try:
-            user = await guild.fetch_member(user_id)
-        except (discord.Forbidden, discord.HTTPException):
-            return {"permission_level": 0}
-
+            raise HTTPException(status_code=400, detail="Invalid guild or user ID")
+    
+        guild = None
+        user = None
+    
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+            except (discord.Forbidden, discord.HTTPException):
+                raise HTTPException(status_code=400, detail="Invalid guild")
+    
+        user = guild.get_member(user_id)
+        if not user:
+            try:
+                user = await guild.fetch_member(user_id)
+            except (discord.Forbidden, discord.HTTPException):
+                return {"permission_level": 0}
+    
         permission_level = 0
         if await management_check(self.bot, guild, user):
             permission_level = 2
@@ -773,8 +781,7 @@ class APIRoutes:
             permission_level = 3
         elif await staff_check(self.bot, guild, user):
             permission_level = 1
-
-
+    
         return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):

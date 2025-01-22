@@ -60,8 +60,9 @@ class OnShiftStart(commands.Cog):
         if not staff_member:
             return
 
+        guild_roles = await guild.fetch_roles()
         for role in (assigned_roles or []):
-            discord_role: discord.Role = guild.get_role(role)
+            discord_role: discord.Role = discord.utils.get(guild_roles, id=role)
             if discord_role is None:
                 continue
             try:

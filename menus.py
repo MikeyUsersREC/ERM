@@ -10492,3 +10492,48 @@ class APIKeyConfirmation(discord.ui.View):
             item.disabled = True
         await interaction.message.edit(view=self)
         self.stop()
+
+
+class RefreshConfirmation(discord.ui.View):
+    def __init__(self, author_id: int):
+        super().__init__(timeout=30.0)
+        self.value = None
+        self.author_id = author_id
+
+    @discord.ui.button(label="Yes", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ), ephemeral=True)
+        await interaction.response.defer()
+        self.value = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        self.stop()
+
+    @discord.ui.button(label="No", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            return await interaction.response.send_message(embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color
+            ), ephemeral=True)
+        await interaction.response.defer()
+        self.value = False
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+        self.stop()
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        try:
+            await self.message.edit(view=self)
+        except:
+            pass
