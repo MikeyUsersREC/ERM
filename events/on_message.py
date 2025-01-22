@@ -172,7 +172,8 @@ class OnMessage(commands.Cog):
                                                         url=thumbnail
                                                     )
                                                     view = GameSecurityActions(bot)
-
+                                                    if not "kicked" in raw_content:
+                                                        view.enable_reflective_action()
 
                                                     pings = []
                                                     pings = [(message.guild.get_role(role_id)).mention if message.guild.get_role(role_id) else None for role_id in dataset.get('game_security', {}).get('role', [])]

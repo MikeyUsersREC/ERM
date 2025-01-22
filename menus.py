@@ -6177,6 +6177,13 @@ class GameSecurityActions(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
 
+    def enable_reflective_action(self):
+        # enables the button that allows for unbanning all affected users
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                if item.label == "Unban Affected Players":
+                    item.disabled = False
+
     @discord.ui.button(
         label="Mark as Justified",
         style=discord.ButtonStyle.success
