@@ -14,7 +14,7 @@ from datamodels.ServerKeys import ServerKey
 class ResponseFailure(Exception):
     detail: str | None
     status_code: int
-    json_data: str
+    json_data: dict
 
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
@@ -90,7 +90,7 @@ class ActiveVehicle(BaseDataClass):
     vehicle: str
 
 class ServerLinkNotFound(commands.CheckFailure):
-    pass
+    code: int = 0
 
 class PRCApiClient:
     def __init__(self, bot, base_url: str, api_key: str):

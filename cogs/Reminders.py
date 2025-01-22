@@ -58,7 +58,7 @@ class Reminders(commands.Cog):
                 f"> **Name:** {reminder['name']}\n"
                 f"> **ID:** {reminder['id']}\n"
                 f"> **Interval:** {td_format(datetime.timedelta(seconds=reminder['interval']))}\n"
-                f"> **ERLC Integration:** {'<:check:1163142000271429662>' if reminder.get('integration') is not None else '<:xmark:1166139967920164915>'}\n"
+                f"> **ER:LC Integration:** {'<:check:1163142000271429662>' if reminder.get('integration') is not None else '<:xmark:1166139967920164915>'}\n"
                 f"> **Paused:** {'<:check:1163142000271429662>' if reminder.get('paused') is True else '<:xmark:1166139967920164915>'}"
             ),
             inline=False
@@ -160,7 +160,7 @@ class Reminders(commands.Cog):
                         f"> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
                         f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
                         f"> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}\n"
-                        f"> **ERLC Integration Enabled:** {dataset.get('integration') is not None}"
+                        f"> **ER:LC Integration Enabled:** {dataset.get('integration') is not None}"
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),
                     color=BLANK_COLOR
@@ -223,7 +223,7 @@ class Reminders(commands.Cog):
                         f"> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
                         f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
                         f"> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}\n"
-                        f"> **ERLC Integration Enabled:** {dataset.get('integration') is not None}"
+                        f"> **ER:LC Integration Enabled:** {dataset.get('integration') is not None}"
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),
                     color=BLANK_COLOR

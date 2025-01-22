@@ -133,13 +133,30 @@ class OnCommandError(commands.Cog):
             return
 
         if isinstance(error, ServerLinkNotFound):
-            await ctx.send(
-                embed=discord.Embed(
-                    title="Not Linked",
-                    description="This server does not have an ER:LC server connected. \nTo link your ER:LC server, run **/erlc link**.",
-                    color=BLANK_COLOR
-                ).set_footer(text=error_id)
-            )
+            if error.code == 9999:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="API Versioning Change",
+                        description="Due to a new change with PRC's Private Server API, in order to use API features, the private server has to be __fully restarted__. If there is no one in-game, a player has to join the game for the API features to work effectively.\n\nIf the server is currently active, when all users leave the game and when one person joins back, the API features will begin working again.\n\nSorry for the inconvenience,\nERM Team",
+                        color=BLANK_COLOR
+                    ).set_footer(text=f"{error.code} | {error_id}")
+                )
+            elif error.code == 2222:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Not Linked",
+                        description="This server does not have an ER:LC server connected. \nTo link your ER:LC server, run **/erlc link**.",
+                        color=BLANK_COLOR
+                    ).set_footer(text=error_id)
+                )
+            else:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="API Fatal Error",
+                        description="The PRC API encountered a fatal error which has resulted in us being unable to fetch ER:LC data.",
+                        color=BLANK_COLOR
+                    ).set_footer(text=f"{error.code} | {error_id}")
+                )
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
                 scope.set_tag("guild_id", ctx.guild.id)

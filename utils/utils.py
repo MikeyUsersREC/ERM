@@ -267,8 +267,8 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
 
         string = string.replace("{onduty}", str(onduty))
 
-        #### CUSTOM ERLC VARS
-        # Fetch whether they should even be allowed to use ERLC vars
+        #### CUSTOM ER:LC VARS
+        # Fetch whether they should even be allowed to use ER:LC vars
         if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
             return string  # end here no point
 

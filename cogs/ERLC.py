@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 import discord
 import roblox
@@ -31,7 +32,13 @@ class ERLC(commands.Cog):
             try:
                 await ctx.bot.prc_api.get_server_status(guild_id)
             except prc_api.ResponseFailure as exc:
-                raise prc_api.ServerLinkNotFound(str(exc))
+                error = prc_api.ServerLinkNotFound()
+                try:
+                    print(exc.json_data)
+                    error.code = exc.json_data.get("code")
+                except json.JSONDecodeError:
+                    pass
+                raise error
             return True
         return commands.check(predicate)
 
@@ -46,7 +53,7 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="message",
-        description="Send a Message to your ERLC server with ERM!"
+        description="Send a Message to your ER:LC server with ERM!"
     )
     @is_staff()
     @is_server_linked()
@@ -79,7 +86,7 @@ class ERLC(commands.Cog):
         
     @server.command(
         name="hint",
-        description="Send a Hint to your ERLC server with ERM!"
+        description="Send a Hint to your ER:LC server with ERM!"
     )
     @is_staff()
     @is_server_linked()
@@ -109,7 +116,7 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="link",
-        description="Link your ERLC server with ERM!",
+        description="Link your ER:LC server with ERM!",
         extras={'ignoreDefer': True}
     )
     @is_management()
@@ -117,7 +124,7 @@ class ERLC(commands.Cog):
         key='Your PRC Server Key - check your server settings for details'
     )
     async def server_link(self, ctx: commands.Context, key: str):
-        await log_command_usage(self.bot,ctx.guild, ctx.author, f"ERLC Link")
+        await log_command_usage(self.bot,ctx.guild, ctx.author, f"ER:LC Link")
         status: int | ServerStatus = await self.bot.prc_api.send_test_request(key)
         if isinstance(status, int):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(
@@ -137,7 +144,7 @@ class ERLC(commands.Cog):
             await (ctx.send if not ctx.interaction else ctx.interaction.response.send_message)(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Successfully Changed",
-                    description="I have changed the Server Key successfully. You can now run ERLC commands on your server.",
+                    description="I have changed the Server Key successfully. You can now run ER:LC commands on your server.",
                     color=GREEN_COLOR
                 ),
                 ephemeral=True
@@ -147,11 +154,11 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="command",
-        description="Send a direct command to your ERLC server, under \"Remote Server Management\"",
+        description="Send a direct command to your ER:LC server, under \"Remote Server Management\"",
         extras={'ephemeral': True}
     )
     @app_commands.describe(
-        command="The command to send to your ERLC server"
+        command="The command to send to your ER:LC server"
     )
     @is_management()
     @is_server_linked()
@@ -277,7 +284,7 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="staff",
-        description="See the online staff members in your ERLC server!"
+        description="See the online staff members in your ER:LC server!"
     )
     @is_staff()
     @is_server_linked()
@@ -753,7 +760,7 @@ class ERLC(commands.Cog):
             )
 
         embed = discord.Embed(
-            title="Players in ERLC Not in Discord",
+            title="Players in ER:LC Not in Discord",
             color=BLANK_COLOR,
             description=""
         )
@@ -791,7 +798,7 @@ class ERLC(commands.Cog):
 
     @server.command(
         name="refresh",
-        description="Refresh the author in the ERLC server."
+        description="Refresh the author in the ER:LC server."
     )
     @is_server_linked()
     async def refresh(self, ctx: commands.Context):
