@@ -5284,12 +5284,29 @@ class ShiftConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Role", row=2, max_values=25)
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Role", row=2, max_values=25, min_values=0)
     async def shift_role_select(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
         value = await self.interaction_check(interaction)
         if not value: return
+
+        # secvuln: prevention
+        highest_role_pos = max([i.position for i in interaction.user.roles])
+        compared_role_pos = max([role.position for role in select.values])
+        if interaction.user.id != interaction.guild.owner_id and highest_role_pos <= compared_role_pos:
+            # we're not allowing this ...
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Security Concern",
+                    description="You cannot choose an On-Duty role that is higher than your maximum role.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+            select.default_values = list(filter(lambda x: x.position < highest_role_pos, select.values))
+            await interaction.message.edit(view=self)
+            return
 
         await interaction.response.defer()
         guild_id = interaction.guild.id
@@ -5448,7 +5465,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                     f"> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
                     f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
                     f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
-                    f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
+                    f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
                 ),
                 color=BLANK_COLOR
             )
@@ -5510,7 +5527,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                     f"> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
                     f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
                     f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
-                    f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
+                    f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
                 ),
                 color=BLANK_COLOR
             )
@@ -6210,7 +6227,6 @@ class GameSecurityActions(discord.ui.View):
         await interaction.response.defer(ephemeral=True, thinking=False)
 
         command_response = await bot.prc_api.run_command(interaction.guild.id, f":unadmin {user_id}")
-        await asyncio.sleep(6)
         cr_2 = await bot.prc_api.run_command(interaction.guild.id, f":unmod {user_id}")
 
         for item in self.children:
@@ -6236,10 +6252,51 @@ class GameSecurityActions(discord.ui.View):
                 ephemeral=True
             )
 
+    @discord.ui.button(
+        label="Unban Affected Players",
+        style=discord.ButtonStyle.secondary,
+        row=0,
+        disabled=False
+    )
+    async def unban_affected_players(self, interaction: discord.Interaction, button: discord.ui.View):
+        bot = self.bot
+        guild = interaction.guild
+        field1 = interaction.message.embeds[0].fields[1]
+
+        users_ids = []
+        affected_players = [i.strip() for i in field1.value.split("]:**")[1].split("\n")[0].split(", ")]
+        print(affected_players)
+        users = [await bot.roblox.get_user_by_username(item) for item in affected_players]
+        print(users)
+        for item in users:
+            if item is not None:
+                users_ids.append(str(item.id))
+
+        await interaction.response.defer(ephemeral=True, thinking=False)
+        command_response = await bot.prc_api.run_command(interaction.guild.id, f":unban {','.join(users_ids)}")
+
+        if command_response[0] == 200:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Unbanned Affected Players",
+                    description=f"This command has been sent to the server.\n\n-# **Command Executed:** `:unban {','.join(users_ids)}`",
+                    color=GREEN_COLOR
+                )
+            )
+        else:
+            return await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Not Executed ({command_response[0]})",
+                    description=f"This command has not been executed successfully.\n\n-# **Attempted Command:** `:unban {','.join(users_ids)}`",
+                    color=BLANK_COLOR
+                )
+            )
+
 
     @discord.ui.button(
         label="Kick Abuser",
         style=discord.ButtonStyle.secondary,
+        row=1,
         disabled=True
     )
     async def kick_abuser(self, interaction: discord.Interaction, button: discord.ui.View):
@@ -6258,8 +6315,7 @@ class GameSecurityActions(discord.ui.View):
                     title="<:success:1163149118366040106> Kicked Abuser",
                     description="This command has been sent to the server. They should now be removed from the server.",
                     color=GREEN_COLOR
-                ),
-                ephemeral=True
+                )            
             )
         else:
             return await interaction.followup.send(
@@ -6267,14 +6323,14 @@ class GameSecurityActions(discord.ui.View):
                     title=f"Not Executed ({command_response[0]})",
                     description="These commands have not been executed successfully. Try again.",
                     color=BLANK_COLOR
-                ),
-                ephemeral=True
+                )
             )
 
 
     @discord.ui.button(
         label="Ban Abuser",
         style=discord.ButtonStyle.secondary,
+        row=1,
         disabled=True
     )
     async def ban_abuser(self, interaction: discord.Interaction, button: discord.ui.View):
@@ -6292,8 +6348,7 @@ class GameSecurityActions(discord.ui.View):
                     title="<:success:1163149118366040106> Banned Abuser",
                     description="This command has been sent to the server. They should now be removed from the server.",
                     color=GREEN_COLOR
-                ),
-                ephemeral=True
+                )
             )
         else:
             return await interaction.followup.send(
@@ -6301,8 +6356,7 @@ class GameSecurityActions(discord.ui.View):
                     title=f"Not Executed ({command_response[0]})",
                     description="These commands have not been executed successfully. Try again.",
                     color=BLANK_COLOR
-                ),
-                ephemeral=True
+                )
             )
 
     
@@ -8425,7 +8479,7 @@ class ShiftTypeCreator(discord.ui.View):
                 f"> **Nickname Prefix:** {self.dataset.get('nickname') or 'Not set'}\n"
                 f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
                 f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('access_roles', [])]) or 'Not set'}\n\n\n"
-                f"*Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type.*"
+                f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
             ),
             color=BLANK_COLOR
         )
@@ -8447,10 +8501,32 @@ class ShiftTypeCreator(discord.ui.View):
 
         await message.edit(embed=embed, view=self)
 
-    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Roles", row=0, max_values=25)
-    async def mentioned_roles_select(
+    @discord.ui.select(cls=discord.ui.RoleSelect, placeholder="On-Duty Role", row=0, max_values=25) # changed to On-Duty Role for parity with the other select
+    async def on_duty_roles(
             self, interaction: discord.Interaction, select: discord.ui.RoleSelect
     ):
+        # secvuln: prevention
+        highest_role_pos = max([i.position for i in interaction.user.roles])
+        compared_role_pos = max([role.position for role in select.values])
+        if interaction.user.id != interaction.guild.owner_id and highest_role_pos < compared_role_pos:
+            # we're not allowing this ...
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="Security Concern",
+                    description="You cannot choose an On-Duty Role that is higher than your maximum role.",
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
+            )
+            old_select = select
+            select.default_values = list(filter(lambda x: x.position < highest_role_pos, select.values))
+            try:
+                await self.refresh_ui(interaction.message)
+            except discord.NotFound:
+                await self.refresh_ui(await self.restored_interaction.original_response())
+            return
+
+
         await interaction.response.defer()
 
         self.dataset['role'] = [i.id for i in select.values]

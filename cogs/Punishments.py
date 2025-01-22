@@ -25,7 +25,7 @@ from menus import (
     RequestDataView,
     CustomExecutionButton,
     UserSelect,
-    YesNoMenu, ManagementOptions, ManageTypesView, PunishmentTypeCreator, PunishmentModifier,
+    YesNoMenu, ManagementOptions, ManageTypesView, PunishmentTypeCreator, PunishmentModifier, CustomModal,
 )
 from utils.AI import AI
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
@@ -565,7 +565,7 @@ class Punishments(commands.Cog):
                 icon_url=ctx.guild.icon,
             )
 
-            embed.set_footer(text="Click 'Mark as Complete' then, enter BOLO ID.")
+            embed.set_footer(text="Click 'Mark as Complete' or 'Deny BOLO' and enter the BOLO ID.")
 
             embeds.append(embed)
 
@@ -582,7 +582,6 @@ class Punishments(commands.Cog):
                     )
 
                     embeds.append(new_embed)
-                   # # # print("new embed")
 
                 warning: WarningItem = await bot.punishments.fetch_warning(entry['_id'])
 
@@ -599,9 +598,7 @@ class Punishments(commands.Cog):
 
 
             async def task(interaction: discord.Interaction, _):
-                view = CustomModalView(
-                    ctx.author.id,
-                    "Mark as Complete",
+                modal = CustomModal(
                     "Mark as Complete",
                     [
                         (
@@ -612,81 +609,119 @@ class Punishments(commands.Cog):
                             ),
                         )
                     ],
+                    {
+                        "ephemeral": True,
+                        "thinking": True
+                    }
                 )
 
-                await interaction.response.send_message(
-                    view=view,
-                    embed=discord.Embed(
-                        title="Mark As Complete",
-                        description="What BOLO would you like to mark as complete?",
-                        color=BLANK_COLOR
-                    ),
-                    ephemeral=True
-                )
-                timeout = await view.wait()
+                await interaction.response.send_modal(modal)
+                timeout = await modal.wait()
                 if timeout:
                     return
-               # # # print(bolos)
-                if view.modal.bolo:
-                    id = view.modal.bolo.value
-
-                    try:
-                        id = int(id)
-                    except ValueError:
-                        return await msg.edit(
-                            embed=discord.Embed(
-                                title="Invalid Identifier",
-                                description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                                color=BLANK_COLOR
-                            )
-                        )
-
-                    matching_docs = []
-                    matching_docs.append(
-                        await bot.punishments.get_warning_by_snowflake(id)
-                    )
-
-                    if len(matching_docs) == 0:
-                        return await msg.edit(
-                            embed=discord.Embed(
-                                title="Invalid Identifier",
-                                description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                                color=BLANK_COLOR
-                            )
-                        )
-                    elif matching_docs[0] == None:
-                        return await msg.edit(
-                            embed=discord.Embed(
-                                title="Invalid Identifier",
-                                description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                                color=BLANK_COLOR
-                            )
-                        )
-
-                    doc = matching_docs[0]
-
-                    await bot.punishments.insert_warning(
-                        ctx.author.id,
-                        ctx.author.name,
-                        doc["UserID"],
-                        doc["Username"],
-                        ctx.guild.id,
-                        f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {doc['Reason']} made by {doc['Moderator']} ({doc['ModeratorID']})",
-                        "Ban",
-                        datetime.datetime.now(tz=pytz.UTC).timestamp(),
-                    )
-
-                    await bot.punishments.remove_warning_by_snowflake(id)
-
-                    await (await interaction.original_response()).edit(
+                try:
+                    id = int(modal.bolo.value)
+                except ValueError:
+                    return await modal.interaction.followup.send(
                         embed=discord.Embed(
-                            title="<:success:1163149118366040106> Completed BOLO",
-                            description="This BOLO has been marked as complete successfully.",
-                            color=GREEN_COLOR
-                        ),
-                        view=None
+                            title="Invalid Identifier",
+                            description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
+                            color=BLANK_COLOR
+                        )
                     )
+
+                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warnings_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
+
+                if len(matching_docs) == 0:
+                    return await modal.interaction.followup.send(
+                        embed=discord.Embed(
+                            title="Invalid Identifier",
+                            description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
+                            color=BLANK_COLOR
+                        )
+                    )
+
+                doc = matching_docs[0]
+
+                await bot.punishments.insert_warning(
+                    ctx.author.id,
+                    ctx.author.name,
+                    doc["UserID"],
+                    doc["Username"],
+                    ctx.guild.id,
+                    f"BOLO marked as complete by {ctx.author} ({ctx.author.id}). Original BOLO Reason was {doc['Reason']} made by {doc['Moderator']} ({doc['ModeratorID']})",
+                    "Ban",
+                    datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                )
+
+                await bot.punishments.remove_warning_by_snowflake(id)
+
+                await modal.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Completed BOLO",
+                        description="This BOLO has been marked as complete successfully.",
+                        color=GREEN_COLOR
+                    )
+                )
+                return
+
+            async def deny_task(interaction: discord.Interaction, _):
+                modal = CustomModal(
+                    "Mark as Denied",
+                    [
+                        (
+                            "bolo",
+                            discord.ui.TextInput(
+                                placeholder="The ID for the BOLO you are marking as denied",
+                                label="BOLO ID",
+                            ),
+                        )
+                    ],
+                    {
+                        "ephemeral": True,
+                        "thinking": True
+                    }
+                )
+
+                await interaction.response.send_modal(modal)
+                timeout = await modal.wait()
+                if timeout:
                     return
+                try:
+                    id = int(modal.bolo.value)
+                except ValueError:
+                    return await modal.interaction.followup.send(
+                        embed=discord.Embed(
+                            title="Invalid Identifier",
+                            description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
+                            color=BLANK_COLOR
+                        )
+                    )
+
+                # bro i just realised someone could use this to erase a non-bolo...
+                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warnings_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
+
+                if len(matching_docs) == 0:
+                    return await modal.interaction.followup.send(
+                        embed=discord.Embed(
+                            title="Invalid Identifier",
+                            description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
+                            color=BLANK_COLOR
+                        )
+                    )
+
+                doc = matching_docs[0]
+
+                await bot.punishments.remove_warning_by_snowflake(id)
+
+                await modal.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="<:success:1163149118366040106> Denied BOLO",
+                        description="This BOLO has been marked as denied successfully.\nIt has been erased from the active BOLO list.",
+                        color=GREEN_COLOR
+                    )
+                )
+                return
 
             for embed in embeds:
                 embed.title += " [{}]".format(len(bolos))
@@ -698,6 +733,14 @@ class Punishments(commands.Cog):
                     "Mark as Complete",
                     discord.ButtonStyle.secondary,
                     func=task
+                )
+            )
+            view.add_item(
+                CustomExecutionButton(
+                    ctx.author.id,
+                    "Deny BOLO",
+                    discord.ButtonStyle.danger,
+                    func=deny_task
                 )
             )
 
