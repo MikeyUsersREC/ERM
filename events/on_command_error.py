@@ -141,7 +141,7 @@ class OnCommandError(commands.Cog):
                         color=BLANK_COLOR
                     ).set_footer(text=f"{error.code} | {error_id}")
                 )
-            elif error.code == 2222:
+            elif error.code in [2000, 2001, 2002]:
                 await ctx.send(
                     embed=discord.Embed(
                         title="Not Linked",
