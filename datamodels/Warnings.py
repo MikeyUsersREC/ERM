@@ -231,6 +231,7 @@ class Warnings(Document):
                     warning_type is None,
                     moderator_id is None,
                     user_id is None,
+                    snowflake is None
                 ]
         ):
             return ValueError("At least one argument must be provided.")
