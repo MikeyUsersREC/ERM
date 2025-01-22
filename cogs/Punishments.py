@@ -630,7 +630,7 @@ class Punishments(commands.Cog):
                         )
                     )
 
-                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warnings_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
+                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warning_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
 
                 if len(matching_docs) == 0:
                     return await modal.interaction.followup.send(
@@ -699,7 +699,7 @@ class Punishments(commands.Cog):
                     )
 
                 # bro i just realised someone could use this to erase a non-bolo...
-                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warnings_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
+                matching_docs = list(filter(lambda x: x is not None, [await bot.punishments.find_warning_by_spec(snowflake=id, warning_type="BOLO", guild_id=interaction.guild.id)]))
 
                 if len(matching_docs) == 0:
                     return await modal.interaction.followup.send(
