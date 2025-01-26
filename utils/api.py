@@ -1365,7 +1365,7 @@ class APIRoutes:
             member, {"guild": guild, "shift": associated_shift}
         )
 
-    async def GET_guild(
+    async def POST_guild(
         self,
         authorization: Annotated[str | None, Header()],
         guild_id: int
