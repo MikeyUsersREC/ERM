@@ -1365,8 +1365,40 @@ class APIRoutes:
             member, {"guild": guild, "shift": associated_shift}
         )
 
-
-
+    async def GET_guild(
+        self,
+        authorization: Annotated[str | None, Header()],
+        guild_id: int
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        guild = self.bot.get_guild(guild_id)
+        
+        if not guild:
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+            except discord.NotFound:
+                raise HTTPException(status_code=404, detail="Guild not found")
+            except discord.Forbidden:
+                raise HTTPException(status_code=403, detail="Bot does not have access to this guild")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error fetching guild: {str(e)}")
+        
+        guild_data = {
+            "id": guild.id,
+            "name": guild.name,
+            "member_count": guild.member_count,
+            "owner_id": guild.owner_id,
+            "icon_url": str(guild.icon.url) if guild.icon else None,
+            "features": guild.features,
+            "created_at": int(guild.created_at.timestamp())
+        }
+        
+        return guild_data
 
 api = FastAPI()
 
