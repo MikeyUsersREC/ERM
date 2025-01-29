@@ -30,7 +30,14 @@ class Utility(commands.Cog):
     async def staff_sync(self, ctx: commands.Context, discord_id: int, roblox_id: int):
         from bson import ObjectId
         from datamodels.StaffConnections import StaffConnection
-
+        roblox_user = await self.bot.roblox.get_user(roblox_id)
+        discord_connection = await self.bot.staff_connections.get_connection(discord_id=discord_id)
+        roblox_connection = await self.bot.staff_connections.get_connection(roblox_id=roblox_id)
+        if discord_connection or roblox_connection:
+            if discord_connection:
+                await self.bot.staff_connections.delete_connection(discord_connection)
+            if roblox_connection:
+                await self.bot.staff_connections.delete_connection(roblox_connection)
         await self.bot.staff_connections.insert_connection(
             StaffConnection(
                 roblox_id=roblox_id,
@@ -38,7 +45,6 @@ class Utility(commands.Cog):
                 document_id=ObjectId()
             )
         )
-        roblox_user = await self.bot.roblox.get_user(roblox_id)
         await ctx.send(
             embed=discord.Embed(
                 title="Staff Sync",

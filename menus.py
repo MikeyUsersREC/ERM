@@ -7486,6 +7486,11 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"RDM Alert Channel Set: <#{select.values[0].id}>")
 
+class WelcomeConfiguration(AssociationConfigurationView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
     @discord.ui.select(placeholder="PM on Warning", row=2, options=[
         discord.SelectOption(
             label='Enabled',
@@ -7777,6 +7782,7 @@ class WelcomeMessagingConfiguration(discord.ui.View):
             sett['ERLC'] = {}
         sett['ERLC']['welcome_message'] = self.welcome_message
         await self.bot.settings.update_by_id(sett)
+
 class WhitelistVehiclesManagement(discord.ui.View):
     def __init__(self, bot, guild_id, enable_vehicle_restrictions=None, whitelisted_vehicles_roles=None, whitelisted_vehicle_alert_channel=0, whitelisted_vehicles=None, associated_defaults=None, alert_message=None):
         super().__init__(timeout=900.0)
@@ -8099,209 +8105,317 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         await bot.settings.update_by_id(sett)
         await config_change_log(self.bot, interaction.guild, interaction.user, f"Kill Logs Channel Set: <#{select.values[0].id}>")
 
-    @discord.ui.button(
-        label='RDM Alerts',
-        row=3
-    )
-    async def more_options(self, interaction: discord.Interaction, button: discord.Button):
-        val = await self.interaction_check(interaction)
-        if val is False:
-            return
-        sett = await self.bot.settings.find_by_id(interaction.guild.id)
-        new_view = ExtendedERLCConfiguration(self.bot, interaction.user.id, [
-            (
-                "RDM Mentionables",
-                [discord.utils.get(interaction.guild.roles,
-                                   id=i) for i in (sett.get('ERLC', {}).get('rdm_mentionables') or [])]
-            ),
-            (
-                "RDM Alert Channel",
-                [discord.utils.get(interaction.guild.channels,
-                                   id=sett.get('ERLC', {}).get('rdm_channel'))]
-            )
-        ])
-        await interaction.response.send_message(view=new_view, ephemeral=True)
-
-    @discord.ui.button(
-        label="Automatic Shifts",
-        row=3
-    )
-    async def automatic_shifts(self, interaction: discord.Interaction, button: discord.ui.Button):
-        val = await self.interaction_check(interaction)
-        if val is False:
-            return
-
-        settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        auto_shift_data = settings.get('ERLC', {}).get('automatic_shifts', {
-            "enabled": False,
-            "shift_type": "Default"
-        })
-
-        embed = discord.Embed(
-            title="Automatic Shifts",
-            description="",
-            color=BLANK_COLOR
+    @discord.ui.select(placeholder="More Options", row=3, options=[
+        discord.SelectOption(
+            label="RDM Alerts",
+            value="rdm_alerts",
+            description="Alerts for RDM actions in-game."
+        ),
+        discord.SelectOption(
+            label="Automatic Shifts",
+            value="automatic_shifts",
+            description="Automatically start staff shifts after joining in-game."
+        ),
+        discord.SelectOption(
+            label="Remote ERM Commands",
+            value="remote_commands",
+            description="Allows server staff to run ERM Commands from in-game."
+        ),
+        discord.SelectOption(
+            label="Vehicle Restrictions",
+            value="vehicle_restrictions",
+            description="Whitelisted vehicles for your server."
+        ),
+        discord.SelectOption(
+            label="Welcome Module",
+            value="welcome_module",
+            description="Sends player a welcome message as soon they join your in-game server"
+        ),
+        discord.SelectOption(
+            label="ER:LC Statistics",
+            value="erlc_statistics",
+            description="Automatically Update ER:LC Statistics using Voice Channels."
+        ),
+        discord.SelectOption(
+            label="Auto Kick/Ban Logging",
+            value="auto_kick_ban_log",
+            description="Allows for automatic logging of kick/ban events."
+        ),
+        discord.SelectOption(
+            label="Discord Checks",
+            value="discord_checks",
+            description="Allows for automatic Discord Checks to be performed."
         )
-        for key, value in auto_shift_data.items():
-            embed.description += f"**{key.replace('_', ' ').title()}:** {(value or 'Default') if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
-
-        embed.set_author(
-            name=interaction.guild.name,
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
-        )
-        shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
-        view = AutomaticShiftConfiguration(self.bot, interaction, shift_types, auto_shift_data)
-
-        await interaction.response.send_message(
-            embed=embed,
-            view=view,
-            ephemeral=True
-        )
-
-
-    @discord.ui.button(
-        label="Remote ERM Commands",
-        row=3
-    )
-    async def remote_commands(self, interaction: discord.Interaction, button: discord.ui.Button):
-        val = await self.interaction_check(interaction)
-        if val is False:
+    ], max_values=1)
+    async def more_options(self, interaction: discord.Interaction, select: discord.ui.Select):
+        value = await self.interaction_check(interaction)
+        if not value:
             return
 
-        settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        auto_shift_data = settings.get('ERLC', {}).get('remote_commands', {
-            "webhook_channel": None
-        })
-
-        embed = discord.Embed(
-            title="Remote Commands",
-            description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
-            color=BLANK_COLOR
-        )
-        for key, value in auto_shift_data.items():
-            embed.description += f"**{key.replace('_', ' ').title()}:** {'<#' + str(value) + '>' if isinstance(value, int) else 'None'}\n"
-
-        embed.set_author(
-            name=interaction.guild.name,
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
-        )
-        shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
-        view = RemoteCommandConfiguration(self.bot, interaction, shift_types, auto_shift_data)
-
-        await interaction.response.send_message(
-            embed=embed,
-            view=view,
-            ephemeral=True
-        )
-
-    @discord.ui.button(
-        label="Vehicle Restrictions",
-        row=3
-    )
-    async def vehicle_restrictions(self, interaction: discord.Interaction, button: discord.ui.Button):
-        val = await self.interaction_check(interaction)
-        if val is False:
-            return
-        
-        settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        enable_vehicle_restrictions = settings.get('ERLC', {}).get('vehicle_restrictions',{}).get('enabled', False)
-        if not enable_vehicle_restrictions:
-            enable_vehicle_restrictions =  settings.get('ERLC', {}).get('enable_vehicle_restrictions', False)
-        vehicle_restrictions_roles = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('roles', [])
-        if not vehicle_restrictions_roles:
-            vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
-        vehicle_restrictions_channel = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('channel', 0)
-        if not vehicle_restrictions_channel:
-            vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
-        vehicle_restrictions_cars = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
-        if not vehicle_restrictions_cars:
-            vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
-        alert_message = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
-        if not alert_message:
-            alert_message = settings.get('ERLC', {}).get('alert_message', "")
-        
-        view = WhitelistVehiclesManagement(
-            self.bot,
-            interaction.guild.id,
-            enable_vehicle_restrictions=enable_vehicle_restrictions,
-            whitelisted_vehicles_roles=vehicle_restrictions_roles,
-            whitelisted_vehicle_alert_channel=vehicle_restrictions_channel,
-            whitelisted_vehicles=vehicle_restrictions_cars,
-            alert_message=alert_message
-        )
-        embed = discord.Embed(
-                    title="Whitelisted Vehicles",
-                    color=blank_color,
-                    description=" "
-                ).add_field(
-                    name="Enable/Disable Vehicle Restrictions",
-                    value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
-                ).add_field(
-                    name="Whitelisted Vehicles Roles",
-                    value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.",
-                    inline=False
-                ).add_field(
-                    name="Whitelisted Vehicle Alert Channel",
-                    value="This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times.",
-                    inline=False
-                ).add_field(
-                    name="Whitelisted Vehicles",
-                    value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game.",
-                    inline=False
-                ).add_field(
-                    name="Alert Message",
-                    value="This is the message that is sent to the roblox player if they are caught using a whitelisted vehicle without the correct roles.",
-                    inline=False
-                ).add_field(
-                    name="Current Roles",
-                    value=", ".join([f"<@&{i}>" for i in vehicle_restrictions_roles]) if vehicle_restrictions_roles else "None",
-                ).add_field(
-                    name="Current Channel",
-                    value=f"<#{vehicle_restrictions_channel}>" if vehicle_restrictions_channel else "None",
-                ).add_field(
-                    name="Current Whitelisted Vehicles",
-                    value=", ".join(vehicle_restrictions_cars) if vehicle_restrictions_cars else "None",
-                ).add_field(
-                    name="Alert Message",
-                    value=alert_message if alert_message else "None",
+        if select.values[0] == "rdm_alerts":
+            sett = await self.bot.settings.find_by_id(interaction.guild.id)
+            new_view = ExtendedERLCConfiguration(self.bot, interaction.user.id, [
+                (
+                    "RDM Mentionables",
+                    [discord.utils.get(interaction.guild.roles,
+                                    id=i) for i in (sett.get('ERLC', {}).get('rdm_mentionables') or [])]
+                ),
+                (
+                    "RDM Alert Channel",
+                    [discord.utils.get(interaction.guild.channels,
+                                    id=sett.get('ERLC', {}).get('rdm_channel'))]
                 )
-        await interaction.response.send_message(
-            embed = embed,
-            view=view,
-            ephemeral=True
-    )
+            ])
+            await interaction.response.send_message(view=new_view, ephemeral=True)
 
-    @discord.ui.button(
-        label="More Features",
-        row=3
-    )
-    async def more_features(self, interaction: discord.Interaction, button: discord.ui.Button):
-        val = await self.interaction_check(interaction)
-        if val is False:
-            return
-        sett = await self.bot.settings.find_by_id(interaction.guild.id)
-        view = MoreOptions(self.bot, interaction.guild.id)
-        await interaction.response.send_message(
+        elif select.values[0] == "automatic_shifts":
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            auto_shift_data = settings.get('ERLC', {}).get('automatic_shifts', {
+                "enabled": False,
+                "shift_type": "Default"
+            })
+
             embed = discord.Embed(
-                title="More Features",
+                title="Automatic Shifts",
                 description="",
                 color=BLANK_COLOR
+            )
+            for key, value in auto_shift_data.items():
+                embed.description += f"**{key.replace('_', ' ').title()}:** {(value or 'Default') if isinstance(value, str) else ('<:check:1163142000271429662>' if value is True else '<:xmark:1166139967920164915>')}\n"
+
+            embed.set_author(
+                name=interaction.guild.name,
+                icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+            )
+            shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
+            view = AutomaticShiftConfiguration(self.bot, interaction, shift_types, auto_shift_data)
+
+            await interaction.response.send_message(
+                embed=embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == "remote_commands":
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            auto_shift_data = settings.get('ERLC', {}).get('remote_commands', {
+                "webhook_channel": None
+            })
+
+            embed = discord.Embed(
+                title="Remote Commands",
+                description="This channel is where the bot will read the command log webhooks from the game server. This is used for remote commands.\n\n",
+                color=BLANK_COLOR
+            )
+            for key, value in auto_shift_data.items():
+                embed.description += f"**{key.replace('_', ' ').title()}:** {'<#' + str(value) + '>' if isinstance(value, int) else 'None'}\n"
+
+            embed.set_author(
+                name=interaction.guild.name,
+                icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+            )
+            shift_types = (settings.get('shift_types', {}) or {}).get('types', []) or []
+            view = RemoteCommandConfiguration(self.bot, interaction, shift_types, auto_shift_data)
+
+            await interaction.response.send_message(
+                embed=embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == "vehicle_restrictions":
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+            
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            enable_vehicle_restrictions = settings.get('ERLC', {}).get('vehicle_restrictions',{}).get('enabled', False)
+            if not enable_vehicle_restrictions:
+                enable_vehicle_restrictions =  settings.get('ERLC', {}).get('enable_vehicle_restrictions', False)
+            vehicle_restrictions_roles = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('roles', [])
+            if not vehicle_restrictions_roles:
+                vehicle_restrictions_roles = settings.get('ERLC', {}).get('whitelisted_vehicles_roles', [])
+            vehicle_restrictions_channel = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('channel', 0)
+            if not vehicle_restrictions_channel:
+                vehicle_restrictions_channel = settings.get('ERLC', {}).get('whitelisted_vehicle_alert_channel', 0)
+            vehicle_restrictions_cars = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('cars', [])
+            if not vehicle_restrictions_cars:
+                vehicle_restrictions_cars = settings.get('ERLC', {}).get('whitelisted_vehicles', [])
+            alert_message = settings.get('ERLC', {}).get('vehicle_restrictions', {}).get('message', "")
+            if not alert_message:
+                alert_message = settings.get('ERLC', {}).get('alert_message', "")
+            view = WhitelistVehiclesManagement(
+                self.bot,
+                interaction.guild.id,
+                enable_vehicle_restrictions=enable_vehicle_restrictions,
+                whitelisted_vehicles_roles=vehicle_restrictions_roles,
+                whitelisted_vehicle_alert_channel=vehicle_restrictions_channel,
+                whitelisted_vehicles=vehicle_restrictions_cars,
+                alert_message=alert_message
+            )
+            embed = discord.Embed(
+                title="Whitelisted Vehicles",
+                color=blank_color,
+                description=" "
             ).add_field(
-                name="ER:LC Statistics Updates",
-                value="This is where you can configure the statistics updates for ER:LC.",
+                name="Enable/Disable Vehicle Restrictions",
+                value=f"If enabled, users will be alerted if they use a whitelisted vehicle without the correct roles.\n**Current Status:** {'Enabled' if enable_vehicle_restrictions else 'Disabled'}",
+            ).add_field(
+                name="Whitelisted Vehicles Roles",
+                value="These roles are given to those who are allowed to drive whitelisted cars in your server. They allow users to drive exotics in-game without any alerts.",
                 inline=False
             ).add_field(
-                name="Auto Kick/Ban Logging",
-                value="This is where you can configure the auto kick/ban feature for ER:LC.",
+                name="Whitelisted Vehicle Alert Channel",
+                value="This channel is where alerts are sent for staff if someone ignores the in-game message about using an exotic car more than 3 times.",
                 inline=False
             ).add_field(
-                name="Discord Checks",
-                value="This is where you can configure the Discord Check message that is sent to in-game users when a Discord Check is performed with bot if user is not found in server and automated alert is sent to the channel.",
+                name="Whitelisted Vehicles",
+                value="These are the vehicles that are whitelisted for use in your server. If a user is not in the whitelisted roles, they will be alerted if they use these vehicles in-game.",
                 inline=False
-            ),
-            view=view,
-            ephemeral=True
-        )
+            ).add_field(
+                name="Alert Message",
+                value="This is the message that is sent to the roblox player if they are caught using a whitelisted vehicle without the correct roles.",
+                inline=False
+            ).add_field(
+                name="Current Roles",
+                value=", ".join([f"<@&{i}>" for i in vehicle_restrictions_roles]) if vehicle_restrictions_roles else "None",
+            ).add_field(
+                name="Current Channel",
+                value=f"<#{vehicle_restrictions_channel}>" if vehicle_restrictions_channel else "None",
+            ).add_field(
+                name="Current Whitelisted Vehicles",
+                value=", ".join(vehicle_restrictions_cars) if vehicle_restrictions_cars else "None",
+            ).add_field(
+                name="Alert Message",
+                value=alert_message if alert_message else "None",
+            )
+            await interaction.response.send_message(
+                embed = embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == "welcome_module":
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+
+            settings = await self.bot.settings.find_by_id(interaction.guild.id)
+            welcome_message = settings.get('ERLC', {}).get('welcome_message', "")
+            view = WelcomeMessagingConfiguration(self.bot, interaction, welcome_message)
+            embed = discord.Embed(
+                title="Welcome Messaging",
+                color=blank_color,
+                description=" "
+            ).add_field(
+                name="Welcome Message",
+                value="This is the message that is sent to the roblox player when they join your server.",
+                inline=False
+            ).add_field(
+                name="Current Message",
+                value=welcome_message if welcome_message else "None",
+            )
+            await interaction.response.send_message(
+                embed = embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == 'erlc_statistics':
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+
+            view = ERLCStats(self.bot,interaction.user.id,interaction.guild.id)
+            sett = await self.bot.settings.find_by_id(interaction.guild.id)
+            if not sett:
+                return
+            if not sett.get('ERLC'):
+                sett['ERLC'] = {}
+            try:
+                statistics = sett.get('ERLC', {}).get('statistics', {})
+            except KeyError:
+                statistics = {}
+
+            embed=discord.Embed(
+                title="ER:LC Statistics",
+                description="",
+                    color=BLANK_COLOR
+            ).set_author(
+                name=interaction.guild.name,
+                icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+            )
+            if statistics.items not in [None, {}]:
+                for key, value in statistics.items():
+                    embed.description += f"**Channel:** <#{key}>\n> **Format:** `{value.get('format', 'None')}`\n"
+            else:
+                embed.description = "No Statistics Channels Set"
+            await interaction.response.send_message(
+                embed = embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == 'auto_kick_ban_log':
+            val = await self.interaction_check(interaction)
+            if val is False:
+                return
+            sett = await self.bot.settings.find_by_id(interaction.guild.id)
+            if not sett:
+                return
+            if not sett.get('ERLC'):
+                sett['ERLC'] = {
+                    'auto_kick_ban': {
+                        'channel': 0
+                    }
+                }
+            view = AutoLogging(self.bot,sett)
+            embed=discord.Embed(
+                title="Auto Kick/Ban",
+                description=" ",
+                color=BLANK_COLOR
+            ).add_field(
+                name="Kick/Ban Webhook Channel",
+                value="This is the channel where all automatic kick/ban logs are sent to via ERLC and ERM automatically logs punishment.",
+            ).set_author(
+                name=interaction.guild.name,
+                icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+            )
+            await interaction.response.send_message(
+                embed = embed,
+                view=view,
+                ephemeral=True
+            )
+
+        elif select.values[0] == 'discord_checks':
+            val = await self.interaction_check(interaction)
+            if val is False: return
+
+            sett = await self.bot.settings.find_by_id(interaction.guild.id)
+
+            view = DiscordCheck(self.bot, interaction.guild.id, sett)
+            embed = discord.Embed(
+                title="Discord Check Setup",
+                description="This is where you can configure the Discord Check message that is sent to in-game users when a Discord Check is performed with bot if user is not found in server.",
+                color=BLANK_COLOR
+            ).set_author(
+                name=interaction.guild.name,
+                icon_url=interaction.guild.icon.url if interaction.guild.icon else ''
+            )
+            await interaction.response.send_message(
+                embed=embed,
+                view=view,
+                ephemeral=True
+            )
+
 class MoreOptions(discord.ui.View):
     def __init__(self, bot, guild_id):
         super().__init__(timeout=900.0)
@@ -8327,6 +8441,7 @@ class MoreOptions(discord.ui.View):
             statistics = sett.get('ERLC', {}).get('statistics', {})
         except KeyError:
             statistics = {}
+            
 
         embed=discord.Embed(
             title="ER:LC Statistics",
