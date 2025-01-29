@@ -8314,13 +8314,9 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             embed = discord.Embed(
                 title="Welcome Messaging",
                 color=blank_color,
-                description=" "
+                description="_This module allows for a message to appear to players of your server when they initially join your server._"
             ).add_field(
-                name="Welcome Message",
-                value="This is the message that is sent to the roblox player when they join your server.",
-                inline=False
-            ).add_field(
-                name="Current Message",
+                name="Welcome Message:",
                 value=welcome_message if welcome_message else "None",
             )
             await interaction.response.send_message(
