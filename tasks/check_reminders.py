@@ -7,6 +7,8 @@ import datetime
 from menus import CompleteReminder
 from utils import prc_api
 from utils.constants import BLANK_COLOR
+import aiohttp
+from decouple import config
 
 
 @tasks.loop(minutes=1)
@@ -84,14 +86,30 @@ async def check_reminders(bot):
 
                         if not view:
                             await channel.send(" ".join(roles), embed=embed,
-                                               allowed_mentions=discord.AllowedMentions(
-                                                   replied_user=True, everyone=True, roles=True, users=True
-                                               ))
+                                allowed_mentions=discord.AllowedMentions(
+                                    replied_user=True, everyone=True, roles=True, users=True
+                                ))
                         else:
                             await channel.send(" ".join(roles), embed=embed, view=view,
-                                               allowed_mentions=discord.AllowedMentions(
-                                                   replied_user=True, everyone=True, roles=True, users=True
-                                               ))
+                                allowed_mentions=discord.AllowedMentions(
+                                    replied_user=True, everyone=True, roles=True, users=True
+                                ))
+
+                        try:
+                            panel_url_var = config("PANEL_API_URL")
+                            if panel_url_var not in ["", None]:
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.post(
+                                        f"{panel_url_var}/Internal/{channel.guild.id}/TriggerReminder",
+                                        headers={
+                                            "Authorization": config('INTERNAL_API_AUTH'),
+                                            "Content-Type": "application/json"
+                                        },
+                                        json={"message": item['message']}):
+                                        pass
+                        except:
+                            pass
+
                 except Exception as e:
                     # print(e)
                     pass
