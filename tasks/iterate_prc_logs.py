@@ -11,13 +11,12 @@ import roblox
 import datetime
 from decouple import config
 
-from sentry_sdk import push_scope, capture_exception
-
 from utils.prc_api import JoinLeaveLog, Player
 from utils.utils import fetch_get_channel, error_gen, staff_check
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
+from utils.username_check import UsernameChecker
 
 
 @tasks.loop(seconds=90, reconnect=True)
@@ -153,11 +152,6 @@ async def iterate_prc_logs(bot):
 
                 except Exception as e:
                     error_id = error_gen()
-                    with push_scope() as scope:
-                        scope.set_tag("error_id", error_id)
-                        scope.level = "error"
-
-                        capture_exception(e)
                 logging.error(f"Error processing guild {items['_id']}: {error_id}")
 
         async for items in bot.settings.db.aggregate(pipeline):
@@ -229,6 +223,55 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     embeds = []
     latest_timestamp = last_timestamp
     new_join_ids = []
+    
+    username_checker = UsernameChecker()
+
+    unrealistic_check = settings.get('ERLC', {}).get('unrealistic_username_check', {})
+    if unrealistic_check.get('enabled'):
+        for log in sorted(player_logs):
+            if log.timestamp <= last_timestamp or log.type != 'join':
+                continue
+                
+            if username_checker.is_unrealistic(log.username):
+                try:
+                    channel_id = unrealistic_check.get('channel')
+                    if not channel_id:
+                        continue
+                        
+                    guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
+                    channel = await fetch_get_channel(guild, channel_id)
+                    if not channel:
+                        continue
+
+                    user = await bot.roblox.get_user(int(log.user_id))
+                    avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails(
+                        [user], 
+                        type=roblox.thumbnails.AvatarThumbnailType.headshot
+                    )
+                    avatar_url = avatar[0].image_url if avatar else None
+
+                    embed = discord.Embed(
+                        title="Suspicious Username Detected",
+                        description="A player with a potentially problematic username has joined the server.",
+                        color=0xFF0000
+                    )
+                    embed.add_field(
+                        name="Player Information",
+                        value=f"> **Username:** [{log.username}](https://roblox.com/users/{log.user_id}/profile)\n"
+                              f"> **User ID:** {log.user_id}\n"
+                              f"> **Reason:** Username appears to use confusing character patterns"
+                    )
+                    if avatar_url:
+                        embed.set_thumbnail(url=avatar_url)
+
+                    mentions = [f'<@&{role}>' for role in unrealistic_check.get('mentioned_roles', [])]
+                    await channel.send(
+                        content=' '.join(mentions) if mentions else None,
+                        embed=embed,
+                        allowed_mentions=discord.AllowedMentions.all()
+                    )
+                except Exception as e:
+                    logging.error(f"Error processing unrealistic username alert: {e}")
 
     for log in sorted(player_logs):
         if log.timestamp <= last_timestamp:
@@ -264,12 +307,10 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                 has_blacklisted_items = False
                                 blacklisted_reasons = []
 
-                                # Debug logging
                                 logging.info(f"Processing user {user_id}")
                                 logging.info(
                                     f"Blacklisted items configured: {settings.get('ERLC', {}).get('avatar_check', {}).get('blacklisted_items', [])}")
 
-                                # Check for blacklisted items
                                 blacklisted_items = settings.get('ERLC', {}).get('avatar_check', {}).get(
                                     'blacklisted_items', [])
                                 if blacklisted_items:
@@ -278,7 +319,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
 
                                     for item in current_items:
                                         if str(item['id']) in map(str,
-                                                                  blacklisted_items):  # Convert both to strings for comparison
+                                                                  blacklisted_items): 
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
                                             logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
@@ -333,10 +374,6 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
             except Exception as e:
                 error_id = error_gen()
                 logging.error(f"Error in avatar check: {e}")
-                with push_scope() as scope:
-                    scope.set_tag("error_id", error_id)
-                    scope.level = "error"
-                    capture_exception(e)
 
     return embeds, latest_timestamp
 
