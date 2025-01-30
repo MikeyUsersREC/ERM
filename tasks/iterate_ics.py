@@ -31,13 +31,13 @@ async def iterate_ics(bot):
             status = None
 
         if not isinstance(status, ServerStatus):
-            continue 
+            continue  # Invalid key
 
         try:
             queue: int = await bot.prc_api.get_server_queue(guild.id, minimal=True)
             players: list[Player] = await bot.prc_api.get_server_players(guild.id)
         except prc_api.ResponseFailure:
-            continue
+            continue # fuck knows why
 
         mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
         admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
@@ -59,37 +59,21 @@ async def iterate_ics(bot):
         # print(json.dumps(new_data, indent=4))
 
         if new_data != item['data']:
-            await bot.ics.db.update_one(
-                {"_id": item["_id"]},
-                {"$set": {"data": new_data}}
-            )
-
+            # Updated data
             for arr in item['associated_messages']:
-                channel_id, message_id = arr[0], arr[1]
-                
-                channel = guild.get_channel(channel_id)
-                if not channel:
-                    try:
-                        channel = await guild.fetch_channel(channel_id)
-                    except discord.HTTPException:
-                        continue
-
-                message = None
+                channel, message_id = arr[0], arr[1]
                 try:
-                    message = channel.get_partial_message(message_id)
-                    await message.fetch()
-                except (discord.NotFound, discord.HTTPException):
+                    channel = await guild.fetch_channel(channel)
+                    message = await channel.fetch_message(message_id)
+                except discord.HTTPException:
                     continue
 
-                try:
-                    await message.edit(
-                        content=await interpret_content(bot, await bot.get_context(message), channel,
-                                                     selected['message']['content'], item['_id']),
-                        embeds=[
-                            (await interpret_embed(bot, await bot.get_context(message), channel, embed,
-                                               item['_id'])) for embed in selected['message']['embeds']
-                        ] if selected['message']['embeds'] is not None else []
-                    )
-                except discord.HTTPException as e:
-                    print(f"Failed to edit message: {e}") 
+                if not message or not channel:
+                    continue
 
+                await message.edit(content=await interpret_content(bot, await bot.get_context(message), channel,
+                                                                   selected['message']['content'], item['_id']),
+                                   embeds=[
+                                       (await interpret_embed(bot, await bot.get_context(message), channel, embed,
+                                                              item['_id'])) for embed in selected['message']['embeds']
+                                   ] if selected['message']['embeds'] is not None else [])
