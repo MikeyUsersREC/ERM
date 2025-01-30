@@ -12,7 +12,7 @@ import datetime
 from decouple import config
 
 from utils.prc_api import JoinLeaveLog, Player
-from utils.utils import fetch_get_channel, error_gen, staff_check
+from utils.utils import fetch_get_channel, staff_check
 from utils import prc_api
 from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
@@ -151,8 +151,7 @@ async def iterate_prc_logs(bot):
                         await asyncio.gather(*subtasks, return_exceptions=True)
 
                 except Exception as e:
-                    error_id = error_gen()
-                logging.error(f"Error processing guild {items['_id']}: {error_id}")
+                    logging.error(f"Error processing guild")
 
         async for items in bot.settings.db.aggregate(pipeline):
             tasks.append(process_guild(items))
@@ -372,7 +371,6 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                             await bot.scheduled_pm_queue.put(
                                                 (guild_id, user.name, settings['ERLC']['avatar_check']['message']))
             except Exception as e:
-                error_id = error_gen()
                 logging.error(f"Error in avatar check: {e}")
 
     return embeds, latest_timestamp
