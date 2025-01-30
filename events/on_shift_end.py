@@ -150,7 +150,7 @@ class OnShiftEnd(commands.Cog):
                 )
         if shift_reports_enabled:          
             embed = discord.Embed(
-                title="Shift Report",
+                title=f"Shift Report for {guild.name}",
                 color=BLANK_COLOR
             ).add_field(
                 name="Shift Information",

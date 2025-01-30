@@ -10642,6 +10642,28 @@ class AdministratedShiftMenu(discord.ui.View):
                     await log_channel.send(
                         embed=embed
                     )
+                    user_embed = discord.Embed(
+                        title=f"Shift Time Added in {interaction.guild.name}",
+                        description=(
+                            f"> **Shift Type:** {self.shift_type}\n"
+                            f"> **Time Added:** {td_format(datetime.timedelta(seconds=converted))}"
+                        ),
+                        color=0x2F3136
+                    ).add_field(
+                        name="Added By:",
+                        value=f"> {interaction.user.mention}"
+                    ).add_field(
+                        name="New Total Shift Time:",
+                        value=f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n",
+                        inline=False
+                    ).set_thumbnail(
+                        url=interaction.guild.icon
+                    )
+                    member = await interaction.guild.fetch_member(self.target_id)
+                    try:
+                        await member.send(embed=user_embed)
+                    except:
+                        pass
             await asyncio.sleep(0.02)
             # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
@@ -10708,6 +10730,28 @@ class AdministratedShiftMenu(discord.ui.View):
                     await log_channel.send(
                         embed=embed
                     )
+                    user_embed = discord.Embed(
+                        title=f"Shift Time Subtracted in {interaction.guild.name}",
+                        description=(
+                            f"> **Shift Type:** {self.shift_type}\n"
+                            f"> **Time Subtracted:** {td_format(datetime.timedelta(seconds=converted))}"
+                        ),
+                        color=0x2F3136
+                    ).add_field(
+                        name="Subtracted By:",
+                        value=f"> {interaction.user.mention}"
+                    ).add_field(
+                        name="New Total Shift Time:",
+                        value=f"> **Total Shift Duration:** {td_format(datetime.timedelta(seconds=sum([get_elapsed_time(item) for item in previous_shifts])))}\n",
+                        inline=False
+                    ).set_thumbnail(
+                        url=interaction.guild.icon
+                    )
+                    member = await interaction.guild.fetch_member(self.target_id)
+                    try:
+                        await member.send(embed=user_embed)
+                    except:
+                        pass
             await asyncio.sleep(0.02)
             # # print(t(t(t(t(self.state)
             if self.state not in ["void", "off"]:
