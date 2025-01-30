@@ -350,28 +350,26 @@ async def management_check(bot_obj, guild, member):
     return False
 
 async def admin_check(bot_obj, guild, member):
-    guild_settings = await bot_obj.settings.find_by_id(guild.id)
-    if guild_settings:
-        if "admin_role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["admin_role"] != "":
-                if isinstance(guild_settings["staff_management"]["admin_role"], list):
-                    for role in guild_settings["staff_management"]["admin_role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(guild_settings["staff_management"]["admin_role"], int):
-                    if guild_settings["staff_management"]["admin_role"] in [role.id for role in member.roles]:
-                        return True
-        if "management_role" in guild_settings["staff_management"].keys():
-            if guild_settings["staff_management"]["management_role"] != "":
-                if isinstance(guild_settings["staff_management"]["management_role"], list):
-                    for role in guild_settings["staff_management"]["management_role"]:
-                        if role in [role.id for role in member.roles]:
-                            return True
-                elif isinstance(guild_settings["staff_management"]["management_role"], int):
-                    if guild_settings["staff_management"]["management_role"] in [role.id for role in member.roles]:
-                        return True
     if member.guild_permissions.administrator:
         return True
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
+    if guild_settings:
+        if guild_settings.get("staff_management", {}).get("management_role", "") != "":
+            if isinstance(guild_settings["staff_management"]["management_role"], list):
+                for role in guild_settings["staff_management"]["management_role"]:
+                    if role in [role.id for role in member.roles]:
+                        return True
+            elif isinstance(guild_settings["staff_management"]["management_role"], int):
+                if guild_settings["staff_management"]["management_role"] in [role.id for role in member.roles]:
+                    return True
+        if guild_settings.get("staff_management", {}).get("admin_role", "") != "":
+            if isinstance(guild_settings["staff_management"]["admin_role"], list):
+                for role in guild_settings["staff_management"]["admin_role"]:
+                    if role in [role.id for role in member.roles]:
+                        return True
+            elif isinstance(guild_settings["staff_management"]["admin_role"], int):
+                if guild_settings["staff_management"]["admin_role"] in [role.id for role in member.roles]:
+                    return True
     return False
 
 
