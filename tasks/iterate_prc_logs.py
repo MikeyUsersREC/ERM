@@ -151,7 +151,7 @@ async def iterate_prc_logs(bot):
                         await asyncio.gather(*subtasks, return_exceptions=True)
 
                 except Exception as e:
-                    logging.error(f"Error processing guild")
+                    logging.warning("error processing guild")
 
         async for items in bot.settings.db.aggregate(pipeline):
             tasks.append(process_guild(items))
