@@ -16,8 +16,12 @@ async def update_channel(guild, channel_id, stat_config, placeholders):
             format_string = stat_config["format"]
             for key, value in placeholders.items():
                 format_string = format_string.replace(f"{{{key}}}", str(value))
-            await channel.edit(name=format_string)
-            logging.info(f"Updated channel {channel_id} in guild {guild.id}")
+            
+            if channel.name != format_string:
+                await channel.edit(name=format_string)
+                logging.info(f"Updated channel {channel_id} in guild {guild.id}")
+            else:
+                logging.debug(f"Skipped update for channel {channel_id} in guild {guild.id} - no changes needed")
         else:
             logging.error(f"Channel {channel_id} not found in guild {guild.id}")
     except Exception as e:
@@ -28,18 +32,16 @@ async def statistics_check(bot):
     initial_time = time.time()
     async for guild_data in bot.settings.db.find({"ERLC.statistics": {"$exists": True}}):
         guild_id = guild_data['_id']
-
         try:
             guild = await bot.fetch_guild(guild_id)
         except discord.errors.NotFound:
             continue
-
+            
         settings = await bot.settings.find_by_id(guild_id)
         if not settings or "ERLC" not in settings or "statistics" not in settings["ERLC"]:
             continue
-
+            
         statistics = settings["ERLC"]["statistics"]
-
         try:
             players: list[Player] = await bot.prc_api.get_server_players(guild_id)
             status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
@@ -47,7 +49,7 @@ async def statistics_check(bot):
         except prc_api.ResponseFailure:
             logging.error(f"PRC ResponseFailure for guild {guild_id}")
             continue
-
+            
         on_duty = await bot.shift_management.shifts.db.count_documents({'Guild': guild_id, 'EndEpoch': 0})
         moderators = len(list(filter(lambda x: x.permission == 'Server Moderator', players)))
         admins = len(list(filter(lambda x: x.permission == 'Server Administrator', players)))
@@ -55,8 +57,8 @@ async def statistics_check(bot):
         current_player = status.current_players
         join_code = status.join_key
         max_players = status.max_players
-        logging.info(f"Updating statistics for guild {guild_id}")
-
+        
+        logging.info(f"Processing statistics for guild {guild_id}")
         placeholders = {
             "onduty": on_duty,
             "staff": staff_ingame,
@@ -67,10 +69,10 @@ async def statistics_check(bot):
             "max_players": max_players,
             "queue": queue
         }
-
+        
         tasks = [update_channel(guild, channel_id, stat_config, placeholders) 
-            for channel_id, stat_config in statistics.items()]
+                for channel_id, stat_config in statistics.items()]
         await asyncio.gather(*tasks)
-
+        
     end_time = time.time()
     logging.warning(f"Event statistics_check took {end_time - initial_time} seconds")
