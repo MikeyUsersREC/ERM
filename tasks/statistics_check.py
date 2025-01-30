@@ -27,7 +27,7 @@ async def update_channel(guild, channel_id, stat_config, placeholders):
     except Exception as e:
         logging.error(f"Failed to update channel in guild {guild.id}: {e}", exc_info=True)
 
-@tasks.loop(seconds=45, reconnect=True)
+@tasks.loop(minutes=15, reconnect=True)
 async def statistics_check(bot):
     initial_time = time.time()
     async for guild_data in bot.settings.db.find({"ERLC.statistics": {"$exists": True}}):
