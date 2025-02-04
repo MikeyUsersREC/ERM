@@ -4,6 +4,7 @@ from pprint import pformat
 import discord
 from discord import HTTPException
 from discord.ext import commands
+from copy import deepcopy
 
 from erm import check_privacy, generator, is_management
 from utils.constants import blank_color, BLANK_COLOR
@@ -41,8 +42,7 @@ class Configuration(commands.Cog):
         from utils.constants import base_configuration
         current_settings = None
         # del base_configuration['_id']
-        modifications = {"_id": ctx.guild.id, **base_configuration}
-        modifications['_id'] = ctx.guild.id
+        modifications = {"_id": ctx.guild.id, **deepcopy(base_configuration)} # we create a deep copy because we don't want to modify the base configuration
         msg = None
 
         current_settings = await bot.settings.find_by_id(ctx.guild.id)
