@@ -110,7 +110,12 @@ async def iterate_prc_logs(bot):
                     if not channels and not has_welcome_message and not has_team_restrictions and not has_automatic_shifts:
                         return
 
-                    kill_logs, player_logs = await fetch_logs_with_retry(guild.id, bot)
+                    kill_logs, player_logs, command_logs = await fetch_logs_with_retry(guild.id, bot)
+                    current_time = int(time.time())
+                    
+                    if command_logs:
+                        await save_new_logs(bot, guild.id, command_logs, current_time)
+                    
                     subtasks = []
 
                     if has_welcome_message:
@@ -145,13 +150,13 @@ async def iterate_prc_logs(bot):
                             bot.log_tracker.update_timestamp(guild.id, 'player_logs', latest_timestamp)
 
                     if erlc_settings.get("kick_timer", {}).get("enabled", False):
-                        await handle_kick_timer(bot, settings, guild.id, player_logs)
+                        await handle_kick_timer(bot, settings, guild.id, player_logs, command_logs)
 
                     if subtasks:
                         await asyncio.gather(*subtasks, return_exceptions=True)
 
                 except Exception as e:
-                    logging.warning("error processing guild")
+                    logging.warning(f"error processing guild: {e}")
 
         async for items in bot.settings.db.aggregate(pipeline):
             tasks.append(process_guild(items))
@@ -174,14 +179,51 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
         try:
             kill_logs = await bot.prc_api.fetch_kill_logs(guild_id)
             player_logs = await bot.prc_api.fetch_player_logs(guild_id)
-            return kill_logs, player_logs
+            command_logs = await bot.prc_api.fetch_server_logs(guild_id)
+            return kill_logs, player_logs, command_logs
         except prc_api.ResponseFailure as e:
             if e.status_code == 429 and attempt < retries - 1:
                 retry_after = float(e.response.get('retry_after', 5))
                 await asyncio.sleep(retry_after)
                 continue
             raise
-    return None, None
+    return None, None, None
+
+
+async def save_new_logs(bot, guild_id, command_logs, current_time):
+    """Save new command logs to the database by updating existing documents"""
+    last_saved = await bot.saved_logs.find_by_id(guild_id)
+    
+    last_timestamp = last_saved["timestamp"] if last_saved else 0
+    cutoff_time = current_time - 10800
+    
+    new_logs = [
+        {
+            "username": log.username,
+            "user_id": log.user_id,
+            "timestamp": log.timestamp,
+            "is_automated": log.is_automated,
+            "command": log.command
+        }
+        for log in command_logs
+        if log.timestamp > last_timestamp and log.timestamp > cutoff_time
+    ]
+    
+    if new_logs:
+        if last_saved:
+            # Filter both existing and new logs to remove old ones
+            existing_logs = [log for log in last_saved.get("logs", []) if log["timestamp"] > cutoff_time]
+            await bot.saved_logs.update({
+                "_id": guild_id,
+                "timestamp": current_time,
+                "logs": existing_logs + new_logs
+            })
+        else:
+            await bot.saved_logs.insert({
+                "_id": guild_id,
+                "timestamp": current_time,
+                "logs": new_logs
+            })
 
 
 async def send_log_batch(channel, embeds):
@@ -685,7 +727,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
         )
 
 
-async def handle_kick_timer(bot, settings, guild_id, player_logs):
+async def handle_kick_timer(bot, settings, guild_id, player_logs, command_logs):
     """Handle kick timer logic using command logs"""
     kick_timer_settings = settings["ERLC"]["kick_timer"]
     punishment = kick_timer_settings.get("punishment", "ban")
@@ -696,8 +738,6 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs):
 
     if guild_id not in bot.kicked_users:
         bot.kicked_users[guild_id] = {}
-
-    command_logs = await bot.prc_api.fetch_server_logs(guild_id)
 
     for log in command_logs:
         if ':kick' in log.command:
