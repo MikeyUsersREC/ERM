@@ -27,14 +27,27 @@ class Actions(commands.Cog):
     )
     @is_admin()
     async def actions_manage(self, ctx: commands.Context):
-        embed = discord.Embed(
-            title="Actions",
-            color=BLANK_COLOR
-        )
         await log_command_usage(self.bot,ctx.guild, ctx.author, f"Actions Manage")
         actions = [i async for i in self.bot.db.actions.find({'Guild': ctx.guild.id})]
+
+        embeds = []
+        current_embed = discord.Embed(
+            title="Actions",
+            color=BLANK_COLOR
+        ).set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon
+        )
+
         for item in actions:
-            embed.add_field(
+            if len(current_embed.fields) >= 5:
+                embeds.append(current_embed)
+                current_embed = discord.Embed(
+                    title="Actions (cont.)",
+                    color=BLANK_COLOR
+                )
+
+            current_embed.add_field(
                 name=item['ActionName'],
                 value=(
                     f"> **Name:** {item['ActionName']}\n"
@@ -43,17 +56,19 @@ class Actions(commands.Cog):
                 ),
                 inline=False
             )
-        if len(embed.fields) == 0:
-            embed.add_field(
+
+        if len(current_embed.fields) == 0:
+            current_embed.add_field(
                 name="No Actions",
                 value="> There are no actions in this server.",
                 inline=False
             )
+
+        embeds.append(current_embed)
         
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
         view = ManageActions(self.bot, ctx.author.id)
         await ctx.send(
-            embed=embed,
+            embeds=embeds,
             view=view
         )
         timeout = await view.wait()
