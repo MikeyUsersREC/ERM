@@ -15,6 +15,7 @@ from utils.utils import (
     require_settings,
     log_command_usage
 )
+from utils.paginators import SelectPagination, CustomPage
 
 
 class Reminders(commands.Cog):
@@ -41,72 +42,99 @@ class Reminders(commands.Cog):
         if reminder_data is None:
             reminder_data = {"_id": ctx.guild.id, "reminders": []}
 
-        embed = discord.Embed(
-            title="Reminders",
-            color=BLANK_COLOR
-        )
-        embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        )
-        embed.set_thumbnail(
-            url=ctx.guild.icon
-        )
-        [embed.add_field(
-            name=f"{reminder['name']}",
-            value=(
-                f"> **Name:** {reminder['name']}\n"
-                f"> **ID:** {reminder['id']}\n"
-                f"> **Interval:** {td_format(datetime.timedelta(seconds=reminder['interval']))}\n"
-                f"> **ER:LC Integration:** {'<:check:1163142000271429662>' if reminder.get('integration') is not None else '<:xmark:1166139967920164915>'}\n"
-                f"> **Paused:** {'<:check:1163142000271429662>' if reminder.get('paused') is True else '<:xmark:1166139967920164915>'}"
-            ),
-            inline=False
-        ) for reminder in reminder_data["reminders"]]
+        embed_list = []
 
-        if len(embed.fields) == 0:
+        for i in range(0, len(reminder_data["reminders"]), 3):
+            embed = discord.Embed(
+                title="Reminders",
+                color=BLANK_COLOR
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
+            embed.set_thumbnail(
+                url=ctx.guild.icon
+            )
+
+            chunk = reminder_data["reminders"][i:i+3]
+            for reminder in chunk:
+                embed.add_field(
+                    name=f"{reminder['name']}",
+                    value=(
+                        f"> **Name:** {reminder['name']}\n"
+                        f"> **ID:** {reminder['id']}\n"
+                        f"> **Interval:** {td_format(datetime.timedelta(seconds=reminder['interval']))}\n"
+                        f"> **ER:LC Integration:** {'<:check:1163142000271429662>' if reminder.get('integration') is not None else '<:xmark:1166139967920164915>'}\n"
+                        f"> **Paused:** {'<:check:1163142000271429662>' if reminder.get('paused') is True else '<:xmark:1166139967920164915>'}"
+                    ),
+                    inline=False
+                )
+            embed_list.append(embed)
+
+        if not embed_list:
+            embed = discord.Embed(
+                title="Reminders",
+                color=BLANK_COLOR
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
+            embed.set_thumbnail(
+                url=ctx.guild.icon
+            )
             embed.add_field(
                 name="No Reminders",
                 value="This server has no reminders."
             )
+            embed_list.append(embed)
 
-        view = ManageReminders(ctx.author.id)
+        manage_view = ManageReminders(ctx.author.id)
 
-        msg = await ctx.reply(
-            embed=embed,
-            view=view,
-        )
-        await view.wait()
-        if view.value == "pause":
-            reminder = view.modal.id_value.value
+        pages = []
+        for index, embed in enumerate(embed_list):
+            combined_view = discord.ui.View(timeout=None)
+            for item in manage_view.children:
+                combined_view.add_item(item)
+                
+            page = CustomPage(
+                embeds=[embed],
+                identifier=f"Page {index + 1}" if index != 0 else 'Reminders',
+                view=combined_view
+            )
+            pages.append(page)
 
+        if len(pages) == 1:
+            msg = await ctx.reply(
+                embed=embed_list[0],
+                view=manage_view
+            )
+        else:
+            paginator = SelectPagination(ctx.author.id, pages)
+            view_page = paginator.get_current_view()
+            msg = await ctx.reply(
+                embed=pages[0].embeds[0],
+                view=view_page
+            )
+
+        await manage_view.wait()
+        if manage_view.value == "pause":
+            reminder = manage_view.modal.id_value.value
             for index, item in enumerate(reminder_data["reminders"]):
                 if item["id"] == int(reminder if all(n for n in reminder if n.isdigit()) else 0):
-                    if item.get("paused") is True:
-                        item["paused"] = False
-                        reminder_data["reminders"][index] = item
-                        await bot.reminders.upsert(reminder_data)
-                        return await msg.edit(
-                            embed=discord.Embed(
-                                title="<:success:1163149118366040106> Reminder Resumed",
-                                description="Your reminder has been resumed!",
-                                color=GREEN_COLOR
-                            ),
-                            view=None,
-                        )
-                    else:
-                        item["paused"] = True
-                        reminder_data["reminders"][index] = item
-                        await bot.reminders.upsert(reminder_data)
-                        return await msg.edit(
-                            embed=discord.Embed(
-                                title="<:success:1163149118366040106> Reminder Paused",
-                                description="Your reminder has been paused!",
-                                color=GREEN_COLOR
-                            ),
-                            view=None,
-                        )
-
+                    item["paused"] = not item.get("paused", False)
+                    reminder_data["reminders"][index] = item
+                    await bot.reminders.upsert(reminder_data)
+                    return await msg.edit(
+                        embed=discord.Embed(
+                            title=f"<:success:1163149118366040106> Reminder {'Paused' if item['paused'] else 'Resumed'}",
+                            description=f"Your reminder has been {'paused' if item['paused'] else 'resumed'}!",
+                            color=GREEN_COLOR
+                        ),
+                        view=None,
+                    )
+            
             return await msg.edit(
                 embed=discord.Embed(
                     title='Invalid Reminder',
@@ -116,8 +144,8 @@ class Reminders(commands.Cog):
                 view=None,
             )
 
-        if view.value == "edit":
-                id = view.modal.identifier.value
+        elif manage_view.value == "edit":
+                id = manage_view.modal.identifier.value
                 dataset = None
                 for item in reminder_data["reminders"]:
                     if item["id"] == int(id if all(n for n in id if n.isdigit()) else 0):
@@ -184,37 +212,38 @@ class Reminders(commands.Cog):
                     view=None
                 )
                 return
-        if view.value == "create":
-                time_arg = view.modal.time.value
-                message = view.modal.content.value
-                name = view.modal.name.value
-                try:
-                    new_time = time_converter(time_arg)
-                except ValueError:
-                    return await msg.edit(
-                        embed=discord.Embed(
-                            title='Invalid Time',
-                            description="You did not enter a valid time.",
-                            color=BLANK_COLOR
-                        ),
-                        view=None,
-                    )
+        elif manage_view.value == "create":
+            time_arg = manage_view.modal.time.value
+            message = manage_view.modal.content.value
+            name = manage_view.modal.name.value
+            try:
+                new_time = time_converter(time_arg)
+            except ValueError:
+                return await msg.edit(
+                    embed=discord.Embed(
+                        title='Invalid Time',
+                        description="You did not enter a valid time.",
+                        color=BLANK_COLOR
+                    ),
+                    view=None,
+                )
 
 
-                dataset = {
-                        "id": next(generator),
-                        "name": name,
-                        "interval": new_time,
-                        "completion_ability": None,
-                        "message": message,
-                        "channel": None,
-                        "role": [],
-                        "lastTriggered": 0,
-                        "paused": False
-                    }
+            dataset = {
+                    "id": next(generator),
+                    "name": name,
+                    "interval": new_time,
+                    "completion_ability": None,
+                    "message": message,
+                    "channel": None,
+                    "role": [],
+                    "lastTriggered": 0,
+                    "paused": False
+                }
 
-                view = ReminderCreationToolkit(ctx.author.id, dataset, "create")
-                await msg.edit(embed=discord.Embed(
+            view = ReminderCreationToolkit(ctx.author.id, dataset, "create")
+            await msg.edit(
+                embed=discord.Embed(
                     title="Reminder Creation",
                     description=(
                         f"> **Name:** {dataset['name']}\n"
@@ -227,27 +256,29 @@ class Reminders(commands.Cog):
                         f"\n\n**Content:**\n{dataset['message']}"
                     ),
                     color=BLANK_COLOR
-                ), view=view)
-                await view.wait()
-                if view.cancelled is True:
-                    return
+                ),
+                view=view
+            )
+            await view.wait()
+            if view.cancelled is True:
+                return
 
-                reminder_data["reminders"].append(
-                    view.dataset
-                )
+            reminder_data["reminders"].append(
+                view.dataset
+            )
 
-                await bot.reminders.upsert(reminder_data)
-                await msg.edit(
-                    embed=discord.Embed(
-                        title="<:success:1163149118366040106> Reminder Created",
-                        description="Your reminder has been created!",
-                        color=GREEN_COLOR
-                    ),
-                    view=None
-                )
+            await bot.reminders.upsert(reminder_data)
+            await msg.edit(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Reminder Created",
+                    description="Your reminder has been created!",
+                    color=GREEN_COLOR
+                ),
+                view=None
+            )
 
-        elif view.value == "delete":
-            name = view.modal.id_value.value
+        elif manage_view.value == "delete":
+            name = manage_view.modal.id_value.value
             for item in reminder_data["reminders"]:
                 if item["id"] == int(name if all(n for n in name if n.isdigit()) else 0):
                     reminder_data["reminders"].remove(item)
