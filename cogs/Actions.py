@@ -9,6 +9,7 @@ from menus import ManageActions
 from discord import app_commands
 from utils.autocompletes import action_autocomplete
 from utils.utils import interpret_content, interpret_embed, log_command_usage
+from utils.paginators import SelectPagination, CustomPage
 
 class Actions(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -27,39 +28,79 @@ class Actions(commands.Cog):
     )
     @is_admin()
     async def actions_manage(self, ctx: commands.Context):
-        embed = discord.Embed(
-            title="Actions",
-            color=BLANK_COLOR
-        )
-        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Actions Manage")
+        await log_command_usage(self.bot, ctx.guild, ctx.author, f"Actions Manage")
         actions = [i async for i in self.bot.db.actions.find({'Guild': ctx.guild.id})]
-        for item in actions:
-            embed.add_field(
-                name=item['ActionName'],
-                value=(
-                    f"> **Name:** {item['ActionName']}\n"
-                    f"> **ID:** `{item['ActionID']}`\n"
-                    f"> **Triggered:** {item['Triggers']}"
-                ),
-                inline=False
+        embed_list = []
+        for i in range(0, len(actions), 3):
+            embed = discord.Embed(
+                title="Actions",
+                color=BLANK_COLOR
             )
-        if len(embed.fields) == 0:
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
+            
+            chunk = actions[i:i+3]
+            for item in chunk:
+                embed.add_field(
+                    name=item['ActionName'],
+                    value=(
+                        f"> **Name:** {item['ActionName']}\n"
+                        f"> **ID:** `{item['ActionID']}`\n"
+                        f"> **Triggered:** {item['Triggers']}"
+                    ),
+                    inline=False
+                )
+            embed_list.append(embed)
+
+        if not embed_list:
+            embed = discord.Embed(
+                title="Actions",
+                color=BLANK_COLOR
+            )
+            embed.set_author(
+                name=ctx.guild.name,
+                icon_url=ctx.guild.icon
+            )
             embed.add_field(
                 name="No Actions",
                 value="> There are no actions in this server.",
                 inline=False
             )
-        
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
-        view = ManageActions(self.bot, ctx.author.id)
-        await ctx.send(
-            embed=embed,
-            view=view
-        )
-        timeout = await view.wait()
+            embed_list.append(embed)
+
+        manage_view = ManageActions(self.bot, ctx.author.id)
+        pages = []
+        for index, embed in enumerate(embed_list):
+            combined_view = discord.ui.View(timeout=None)
+            for item in manage_view.children:
+                combined_view.add_item(item)
+                
+            page = CustomPage(
+                embeds=[embed],
+                identifier=f"Page {index + 1}" if index != 0 else 'Actions',
+                view=combined_view
+            )
+            pages.append(page)
+
+        if len(pages) == 1:
+            await ctx.send(
+                embed=embed_list[0],
+                view=manage_view
+            )
+        else:
+            paginator = SelectPagination(ctx.author.id, pages)
+            view_page = paginator.get_current_view()
+            await ctx.send(
+                embed=pages[0].embeds[0],
+                view=view_page
+            )
+
+        timeout = await manage_view.wait()
         if timeout:
             return
-        
+
 
     @actions.command(
         name="execute",
