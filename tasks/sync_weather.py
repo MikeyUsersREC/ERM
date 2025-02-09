@@ -6,7 +6,7 @@ from decouple import config
 
 from utils.prc_api import ResponseFailure
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(minutes=2, reconnect=True)
 async def sync_weather(bot):
     try:
         logging.info("Starting weather sync task...")

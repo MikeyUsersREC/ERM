@@ -111,6 +111,40 @@ class OnShiftEnd(commands.Cog):
             ]:
                 custom += 1
 
+        mods = shift.moderations if shift.moderations else []
+        all_moderation_items = [
+            await self.bot.punishments.find_warning_by_spec(
+                guild.id, identifier=moderation
+            )
+            for moderation in mods
+        ]
+        moderations = len(all_moderation_items)
+        warnings = 0
+        kicks = 0
+        bans = 0
+        bolos = 0
+        custom = 0
+
+        for moderation in all_moderation_items:
+            if moderation is None:
+                continue
+            if moderation["Type"] == "Warning":
+                warnings += 1
+            elif moderation["Type"] == "Kick":
+                kicks += 1
+            elif moderation["Type"] == "Ban":
+                bans += 1
+            elif moderation["Type"] == "BOLO" or moderation['Type'] == "Bolo":
+                bolos += 1
+            elif moderation["Type"] not in [
+                "Warning",
+                "Kick",
+                "Ban",
+                "BOLO",
+                "Bolo",
+            ]:
+                custom += 1
+
         if channel is not None:
             await channel.send(embed=discord.Embed(
                 title="Shift Ended",
@@ -176,4 +210,3 @@ class OnShiftEnd(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(OnShiftEnd(bot))
-

@@ -63,6 +63,7 @@ from datamodels.ProhibitedUseKeys import ProhibitedUseKeys
 from datamodels.PendingOAuth2 import PendingOAuth2
 from datamodels.OAuth2Users import OAuth2Users
 from datamodels.IntegrationCommandStorage import IntegrationCommandStorage
+from datamodels.SavedLogs import SavedLogs
 from menus import CompleteReminder, LOAMenu, RDMActions
 from utils.viewstatemanger import ViewStateManager
 from utils.bloxlink import Bloxlink
@@ -134,7 +135,7 @@ class Bot(commands.AutoShardedBot):
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                self.db = self.mongo["erm"]
+                self.db = self.mongo["alpha"]
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
@@ -173,6 +174,7 @@ class Bot(commands.AutoShardedBot):
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
+            self.saved_logs = SavedLogs(self.db, "saved_logs")
 
             self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
@@ -225,10 +227,10 @@ class Bot(commands.AutoShardedBot):
             bot.is_synced = True
             check_reminders.start(bot)
             check_loa.start(bot)
-            iterate_ics.start(bot)
+            # iterate_ics.start(bot)
             # GDPR.start()
             iterate_prc_logs.start(bot)
-            statistics_check.start(bot)
+            # statistics_check.start(bot)
             tempban_checks.start(bot)
             check_whitelisted_car.start(bot)
             change_status.start(bot)

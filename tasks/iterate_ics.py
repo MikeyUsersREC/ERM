@@ -77,4 +77,3 @@ async def iterate_ics(bot):
                                        (await interpret_embed(bot, await bot.get_context(message), channel, embed,
                                                               item['_id'])) for embed in selected['message']['embeds']
                                    ] if selected['message']['embeds'] is not None else [])
-
