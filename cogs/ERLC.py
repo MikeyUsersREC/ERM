@@ -224,7 +224,6 @@ class ERLC(commands.Cog):
         name="info",
         description="Get information about the current players in your ER:LC server."
     )
-    @is_staff()
     @is_server_linked()
     async def server_info(self, ctx: commands.Context):
         guild_id = ctx.guild.id
