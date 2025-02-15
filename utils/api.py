@@ -189,7 +189,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail="Error adding roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
 
             # Remove roles
             if roles_to_remove:
@@ -198,7 +198,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail="Error removing roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
 
             return 200
                 
@@ -275,7 +275,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail="Error adding roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
 
             # Remove roles
             if roles_to_remove:
@@ -284,7 +284,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail="Error removing roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
 
             return 200
                 
