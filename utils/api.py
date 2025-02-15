@@ -189,7 +189,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail="Error adding roles: {str(e)}")
 
             # Remove roles
             if roles_to_remove:
@@ -198,7 +198,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail="Error removing roles: {str(e)}")
 
             return 200
                 
@@ -275,7 +275,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail="Error adding roles: {str(e)}")
 
             # Remove roles
             if roles_to_remove:
@@ -284,7 +284,7 @@ class APIRoutes:
                 except discord.Forbidden:
                     raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail="Error removing roles: {str(e)}")
 
             return 200
                 
@@ -1399,6 +1399,420 @@ class APIRoutes:
         }
         
         return guild_data
+
+    async def POST_issue_infraction(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        try:
+            json_data = await request.json()
+            user_id = int(json_data["user_id"])
+            guild_id = int(json_data["guild_id"])
+            original_infraction_type = json_data["infraction_type"]
+            reason = json_data.get("reason", "No reason provided")
+            issuer_id = json_data.get("issuer_id")
+            
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+                
+            settings = await self.bot.settings.find_by_id(guild_id)
+            if not settings or "infractions" not in settings:
+                raise HTTPException(status_code=404, detail="No infraction settings found")
+
+            infraction_config = next(
+                (inf for inf in settings["infractions"]["infractions"] 
+                if inf["name"] == original_infraction_type),
+                None
+            )
+            if not infraction_config:
+                raise HTTPException(status_code=404, detail=f"Infraction type {original_infraction_type} not found in settings")
+
+            try:
+                member = await guild.fetch_member(user_id)
+                username = member.name
+            except:
+                username = "Unknown User"
+
+            try:
+                issuer = await guild.fetch_member(issuer_id)
+                issuer_username = issuer.name
+            except:
+                issuer_username = "Unknown Issuer"
+
+            will_escalate = False
+            existing_count = 0
+            if infraction_config.get("escalation"):
+                threshold = infraction_config["escalation"].get("threshold", 0)
+                next_infraction = infraction_config["escalation"].get("next_infraction")
+                
+                if threshold and next_infraction:
+                    existing_count = await self.bot.db.infractions.count_documents({
+                        "user_id": user_id,
+                        "guild_id": guild_id,
+                        "type": original_infraction_type,
+                        "revoked": {"$ne": True}
+                    })
+
+                    if (existing_count + 1) >= threshold:
+                        original_infraction_type = next_infraction
+                        will_escalate = True
+                        reason = f"{reason}\n\nEscalated from {original_infraction_type} after reaching {existing_count + 1} infractions"
+
+            infraction_doc = {
+                "user_id": user_id,
+                "username": username,
+                "guild_id": guild_id,
+                "type": original_infraction_type,
+                "reason": reason,
+                "timestamp": datetime.datetime.now().timestamp(),
+                "issuer_id": issuer_id,
+                "issuer_username": issuer_username,
+                "escalated": will_escalate,
+                "escalation_count": existing_count + 1 if will_escalate else None
+            }
+
+            result = await self.bot.db.infractions.insert_one(infraction_doc)
+            infraction_doc["_id"] = result.inserted_id
+
+            self.bot.dispatch('infraction_create', infraction_doc)
+
+            return {
+                "status": "success",
+                "infraction_id": str(result.inserted_id),
+                "escalated": will_escalate,
+                "type": original_infraction_type
+            }
+
+        except Exception as e:
+            logger.error(f"Error issuing infraction: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+    async def POST_revoke_infraction(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        try:
+            json_data = await request.json()
+            infraction_id = json_data.get("infraction_id")
+            if not infraction_id:
+                raise HTTPException(status_code=400, detail="Missing infraction_id")
+
+            infraction = await self.bot.db.infractions.find_one({"_id": ObjectId(infraction_id)})
+            if not infraction:
+                raise HTTPException(status_code=404, detail="Infraction not found")
+
+            guild = self.bot.get_guild(infraction["guild_id"])
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            member = guild.get_member(infraction["user_id"])
+            if not member:
+                try:
+                    member = await guild.fetch_member(infraction["user_id"])
+                except:
+                    raise HTTPException(status_code=404, detail="Member not found")
+
+            roles_modified = False
+            
+            if "temp_roles_removed" in infraction:
+                roles_to_add = []
+                for role_id in infraction["temp_roles_removed"]:
+                    role = guild.get_role(int(role_id))
+                    if role and role not in member.roles:
+                        roles_to_add.append(role)
+                if roles_to_add:
+                    await member.add_roles(*roles_to_add, reason="Infraction revoked - restoring removed roles")
+                    roles_modified = True
+
+            if "temp_roles_added" in infraction:
+                roles_to_remove = []
+                for role_id in infraction["temp_roles_added"]:
+                    role = guild.get_role(int(role_id))
+                    if role and role in member.roles:
+                        roles_to_remove.append(role)
+                if roles_to_remove:
+                    await member.remove_roles(*roles_to_remove, reason="Infraction revoked - removing added roles")
+                    roles_modified = True
+
+            await self.bot.db.infractions.update_one(
+                {"_id": ObjectId(infraction_id)},
+                {
+                    "$set": {
+                        "revoked": True,
+                        "revoked_at": datetime.datetime.now().timestamp(),
+                        "roles_reverted": roles_modified
+                    }
+                }
+            )
+
+            return {
+                "status": "success",
+                "roles_modified": roles_modified,
+                "infraction_id": infraction_id
+            }
+
+        except Exception as e:
+            logger.error(f"Error revoking infraction: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+    async def POST_get_infraction_wave_preview(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+    
+        try:
+            json_data = await request.json()
+            guild_id = int(json_data["guild_id"])
+            infract_type = json_data.get("infract_type")
+            quota_period = int(json_data.get("period", 7 * 24 * 60 * 60))
+            omit_loas = json_data.get("omit_loas", False)
+
+            settings = await self.bot.settings.find_by_id(guild_id)
+            if not settings:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail="Guild not found")
+
+            staff_roles = settings.get('staff_management', {}).get('role', [])
+            role_quotas = settings.get('shift_management', {}).get('role_quotas', [])
+            general_quota = settings.get('shift_management', {}).get('quota', 0)
+
+            if not staff_roles:
+                raise HTTPException(status_code=400, detail="No staff roles configured")
+
+            end_time = datetime.datetime.now(tz=pytz.UTC).timestamp()
+            start_time = end_time - quota_period
+
+            active_loas = set()
+            if omit_loas:
+                current_time = datetime.datetime.now(tz=pytz.UTC).timestamp()
+                async for loa in self.bot.loas.db.find({
+                    "guild_id": guild_id,
+                    "accepted": True,
+                    "denied": False,
+                    "expired": False,
+                    "voided": False,
+                    "expiry": {"$gt": current_time}
+                }):
+                    active_loas.add(loa["user_id"])
+
+            all_staff = {}
+            for role_id in staff_roles:
+                role = guild.get_role(role_id)
+                if role:
+                    for member in role.members:
+                        if member.id not in all_staff:
+                            if omit_loas and member.id in active_loas:
+                                all_staff[member.id] = {
+                                    "user_id": member.id,
+                                    "username": member.name,
+                                    "shift_time": 0,
+                                    "required_quota": 0,
+                                    "met_quota": True,
+                                    "infraction_type": None,
+                                    "skipped_loa": True
+                                }
+                                continue
+
+                            required_quota = general_quota
+                            for role_quota in role_quotas:
+                                if role_quota['role'] in [r.id for r in member.roles]:
+                                    required_quota = role_quota['quota']
+                                    break
+                            
+                            all_staff[member.id] = {
+                                "user_id": member.id,
+                                "username": member.name,
+                                "shift_time": 0,
+                                "required_quota": required_quota,
+                                "met_quota": False,
+                                "infraction_type": infract_type,
+                                "skipped_loa": False
+                            }
+
+            async for shift_doc in self.bot.shift_management.shifts.db.find({
+                "Guild": guild_id,
+                "EndEpoch": {"$gt": start_time, "$lt": end_time}
+            }):
+                member_id = shift_doc["UserID"]
+                if member_id in all_staff:
+                    shift_time = get_elapsed_time(shift_doc)
+                    if shift_time < 100_000_000:
+                        all_staff[member_id]["shift_time"] += shift_time
+                        all_staff[member_id]["met_quota"] = all_staff[member_id]["shift_time"] >= all_staff[member_id]["required_quota"]
+                        if all_staff[member_id]["met_quota"]:
+                            all_staff[member_id]["infraction_type"] = None
+
+            results = list(all_staff.values())
+            skipped_loas = len([r for r in results if r.get("skipped_loa", False)])
+
+            return {
+                "preview": {
+                    "total_users": len(results),
+                    "users_below_quota": len([r for r in results if not r["met_quota"]]),
+                    "users_above_quota": len([r for r in results if r["met_quota"] and not r.get("skipped_loa", False)]),
+                    "users_skipped_loa": skipped_loas,
+                    "period_start": start_time,
+                    "period_end": end_time,
+                },
+                "users": results
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating infraction wave preview: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+    async def POST_start_infraction_wave(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        try:
+            json_data = await request.json()
+            guild_id = int(json_data["guild_id"])
+            infract_violators = json_data.get("infract_violators", False)
+            infract_type = json_data.get("infract_type")
+            issuer_id = json_data.get("issuer_id")
+            quota_period = int(json_data.get("period", 7 * 24 * 60 * 60))
+
+            preview_request = Request(scope={"type": "http"})
+            preview_request._json = json_data
+
+            # Get preview first
+            preview_results = await self.POST_get_infraction_wave_preview(
+                authorization=authorization,
+                request=preview_request
+            )
+
+            if not infract_violators:
+                return {
+                    "message": "Dry run completed",
+                    "would_infract": len([u for u in preview_results["users"] if not u["met_quota"]]),
+                    "preview": preview_results
+                }
+
+            infractions_issued = 0
+            for user in preview_results["users"]:
+                if not user["met_quota"] and not user.get("skipped_loa", False):
+                    try:
+                        infraction_request = Request(scope={"type": "http"})
+                        infraction_request._json = {
+                            "user_id": user["user_id"],
+                            "guild_id": guild_id,
+                            "infraction_type": infract_type,
+                            "issuer_id": issuer_id,
+                            "reason": f"Failed to meet quota requirement of {td_format(datetime.timedelta(seconds=user['required_quota']))} (Achieved: {td_format(datetime.timedelta(seconds=user['shift_time']))})"
+                        }
+                        
+                        await self.POST_issue_infraction(
+                            authorization=authorization,
+                            request=infraction_request
+                        )
+                        infractions_issued += 1
+                        await asyncio.sleep(0.5)
+                    except Exception as e:
+                        logger.error(f"Failed to issue infraction for user {user['user_id']}: {e}")
+
+            return {
+                "message": "Infraction wave completed",
+                "infractions_issued": infractions_issued,
+                "preview": preview_results
+            }
+
+        except Exception as e:
+            logger.error(f"Error running infraction wave: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+    async def POST_search_guild_members(
+        self,
+        authorization: Annotated[str | None, Header()],
+        request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+    
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+
+        try:
+            json_data = await request.json()
+            guild_id = int(json_data.get("guild_id"))
+            query = json_data.get("query")
+            limit = min(int(json_data.get("limit", 1000)), 1000)
+            
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                try:
+                    guild = await self.bot.fetch_guild(guild_id)
+                except discord.NotFound:
+                    raise HTTPException(status_code=404, detail="Guild not found")
+
+            if not guild.chunked:
+                await guild.chunk()
+
+            matching_members = []
+            for member in guild.members:
+                name_matches = query.lower() in member.name.lower()
+                nick_matches = member.nick and query.lower() in member.nick.lower()
+                
+                if name_matches or nick_matches:
+                    member_data = {
+                        "user": {
+                            "id": str(member.id),
+                            "username": member.name,
+                            "discriminator": member.discriminator,
+                            "global_name": member.global_name,
+                            "avatar": str(member.avatar.url) if member.avatar else None,
+                        },
+                        "nick": member.nick,
+                        "roles": [str(role.id) for role in member.roles],
+                        "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+                        "premium_since": member.premium_since.isoformat() if member.premium_since else None,
+                        "pending": member.pending,
+                        "communication_disabled_until": member.timed_out_until.isoformat() if member.timed_out_until else None
+                    }
+                    matching_members.append(member_data)
+
+                if len(matching_members) >= limit:
+                    break
+
+            return {
+                "members": matching_members[:limit],
+                "total": len(matching_members)
+            }
+
+        except Exception as e:
+            logger.error(f"Error searching members: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 api = FastAPI()
 
