@@ -10,6 +10,7 @@ from collections import defaultdict
 from tasks.iterate_ics import iterate_ics
 from tasks.check_loa import check_loa
 from tasks.check_reminders import check_reminders
+from tasks.check_infractions import check_infractions
 from tasks.iterate_prc_logs import iterate_prc_logs
 from tasks.tempban_checks import tempban_checks
 from tasks.process_scheduled_pms import process_scheduled_pms
@@ -134,7 +135,7 @@ class Bot(commands.AutoShardedBot):
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
             if environment == "DEVELOPMENT":
-                self.db = self.mongo["alpha"]
+                self.db = self.mongo["erm"]
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
@@ -217,7 +218,8 @@ class Bot(commands.AutoShardedBot):
             if not bot.is_synced:  # check if slash commands have been synced
                 bot.tree.copy_global_to(guild=discord.Object(id=987798554972143728))
             if environment == "DEVELOPMENT":
-                await bot.tree.sync(guild=discord.Object(id=987798554972143728))
+                pass
+                # await bot.tree.sync(guild=discord.Object(id=987798554972143728))
             else:
                 pass
                 # Prevent auto syncing
@@ -226,7 +228,7 @@ class Bot(commands.AutoShardedBot):
             bot.is_synced = True
             check_reminders.start(bot)
             check_loa.start(bot)
-            # iterate_ics.start(bot)
+            iterate_ics.start(bot)
             # GDPR.start()
             iterate_prc_logs.start(bot)
             # statistics_check.start(bot)
@@ -235,6 +237,7 @@ class Bot(commands.AutoShardedBot):
             change_status.start(bot)
             process_scheduled_pms.start(bot)
             sync_weather.start(bot)
+            check_infractions.start(bot)
             logging.info("Setup_hook complete! All tasks are now running!")
 
             async for document in self.views.db.find({}):
