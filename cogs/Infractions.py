@@ -116,9 +116,8 @@ class Infractions(commands.Cog):
     )
     @is_staff()
     @require_settings()
-    @app_commands.autocomplete(user=user_autocomplete)
-    @app_commands.describe(user="What's their username? You can mention a Discord user, or provide a username.")
-    async def infractions(self, ctx, user: str):
+    @app_commands.describe(user="The user to check infractions for")
+    async def infractions(self, ctx, user: discord.Member):
         """View a user's infractions"""
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings:
@@ -139,7 +138,7 @@ class Infractions(commands.Cog):
                 )
             )
 
-        if user != str(ctx.author.id) and user != ctx.author.mention:
+        if user.id != ctx.author.id:
             if not await management_predicate(ctx):
                 return await ctx.send(
                     embed=discord.Embed(
@@ -149,31 +148,7 @@ class Infractions(commands.Cog):
                     )
                 )
 
-        target_id = None
-        if user.isdigit():
-            target_id = int(user)
-        elif user.startswith('<@') and user.endswith('>'):
-            target_id = int(user.strip('<@!>'))
-        else:
-            members = []
-            async for member in ctx.guild.fetch_members(limit=None):
-                if user.lower() in member.name.lower():
-                    members.append(member)
-            
-            if len(members) == 1:
-                target_id = members[0].id
-            else:
-                roblox_user = await get_roblox_by_username(user, self.bot, ctx)
-                if roblox_user and not roblox_user.get('errors'):
-                    target_id = roblox_user['id']
-                else:
-                    return await ctx.send(
-                        embed=discord.Embed(
-                            title="User Not Found",
-                            description="Could not find a user with that name.",
-                            color=BLANK_COLOR
-                        )
-                    )
+        target_id = user.id
 
         infractions = []
         async for infraction in self.bot.db.infractions.find({
@@ -327,6 +302,7 @@ class Infractions(commands.Cog):
                     will_escalate = True
                     reason = f"{reason}\n\nEscalated from {original_type} after reaching {existing_count + 1} infractions"
 
+        # Create infraction document
         infraction_doc = {
             "user_id": target_id,
             "username": target_name,
