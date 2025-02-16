@@ -11,7 +11,7 @@ import roblox
 from utils.constants import RED_COLOR, BLANK_COLOR
 from utils.prc_api import Player
 from utils import prc_api
-from utils.utils import is_whitelisted, run_command
+from utils.utils import is_whitelisted, run_command, get_player_avatar_url
 
 @tasks.loop(minutes=8, reconnect=True)
 async def check_whitelisted_car(bot):
