@@ -14,6 +14,28 @@ class Infractions(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def check_manager_role(self, ctx):
+        """Helper method to check if user has manager role from settings"""
+        settings = await self.bot.settings.find_by_id(ctx.guild.id)
+        if not settings or "infractions" not in settings:
+            return False
+            
+        manager_roles = settings["infractions"].get("manager_roles", [])
+        return any(role.id in manager_roles for role in ctx.author.roles)
+
+    @commands.hybrid_group(name="infractions")
+    @is_staff()
+    async def infractions(self, ctx):
+        """Base command for infractions"""
+        if ctx.invoked_subcommand is None:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Invalid Subcommand",
+                    description="Please specify a valid subcommand.",
+                    color=BLANK_COLOR
+                )
+            )
+
     @commands.guild_only()
     @commands.hybrid_command(
         name="myinfractions",
@@ -109,16 +131,27 @@ class Infractions(commands.Cog):
             await ctx.send(embed=embeds[0])
 
     @commands.guild_only()
-    @commands.hybrid_command(
-        name="infractions",
+    @infractions.command(
+        name="view",
         description="View a user's infractions", 
         extras={"category": "Infractions"}
     )
     @is_staff()
     @require_settings()
     @app_commands.describe(user="The user to check infractions for")
-    async def infractions(self, ctx, user: discord.Member):
+    async def infractions_view(self, ctx, user: discord.Member):
         """View a user's infractions"""
+        if user.id != ctx.author.id:
+            has_manager_role = await self.check_manager_role(ctx)
+            if not has_manager_role and not await management_predicate(ctx):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Permission Denied",
+                        description="You need management permissions to view other users' infractions.",
+                        color=BLANK_COLOR
+                    )
+                )
+
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings:
             return await ctx.send(
@@ -137,16 +170,6 @@ class Infractions(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
-        if user.id != ctx.author.id:
-            if not await management_predicate(ctx):
-                return await ctx.send(
-                    embed=discord.Embed(
-                        title="Permission Denied",
-                        description="You need management permissions to view other users' infractions.",
-                        color=BLANK_COLOR
-                    )
-                )
 
         target_id = user.id
 
@@ -232,18 +255,30 @@ class Infractions(commands.Cog):
             await ctx.send(embed=embeds[0])
 
     @commands.guild_only()
-    @commands.hybrid_command(name="infract")
-    @is_staff()
-    @is_management()
-    @require_settings()
-    @app_commands.autocomplete(type=infraction_type_autocomplete)
-    @app_commands.describe(type="The type of infraction to give.")
-    @app_commands.describe(
-        user="The user to issue an infraction to"
+    @infractions.command(
+        name="issue",
+        description="Issue an infraction to a user"
     )
-    @app_commands.describe(reason="What is your reason for giving this infraction?")
-    async def infract(self, ctx, user: discord.Member, type: str, *, reason: str):
+    @is_staff()
+    @require_settings() 
+    @app_commands.autocomplete(type=infraction_type_autocomplete)
+    @app_commands.describe(
+        type="The type of infraction to give",
+        user="The user to issue an infraction to",
+        reason="What is your reason for giving this infraction?"
+    )
+    async def infractions_issue(self, ctx, user: discord.Member, type: str, *, reason: str):
         """Issue an infraction to a user"""
+        has_manager_role = await self.check_manager_role(ctx)
+        if not has_manager_role and not await management_predicate(ctx):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Permission Denied", 
+                    description="You need management permissions or your infractions manager permission to issue infractions.",
+                    color=BLANK_COLOR
+                )
+            )
+
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings:
             return await ctx.send(
@@ -375,6 +410,88 @@ class Infractions(commands.Cog):
                 inline=False
             )
         )
+
+    @infractions.command(
+        name="revoke",
+        description="Revoke an infraction using its ID"
+    )
+    @is_staff()
+    @require_settings()
+    @app_commands.describe(
+        infraction_id="The ID of the infraction to revoke"
+    )
+    async def infractions_revoke(self, ctx, infraction_id: str):
+        """Revoke an infraction"""
+        has_manager_role = await self.check_manager_role(ctx)
+        if not has_manager_role and not await management_predicate(ctx):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Permission Denied",
+                    description="You need management permissions to revoke infractions.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        try:
+            from bson import ObjectId
+            infraction = await self.bot.db.infractions.find_one({"_id": ObjectId(infraction_id)})
+            if not infraction:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Not Found",
+                        description="No infraction was found with that ID.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            if infraction["guild_id"] != ctx.guild.id:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Not Found",
+                        description="No infraction was found with that ID in this server.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            if infraction.get("revoked", False):
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Already Revoked",
+                        description="This infraction has already been revoked.",
+                        color=BLANK_COLOR
+                    )
+                )
+
+            await self.bot.db.infractions.update_one(
+                {"_id": ObjectId(infraction_id)},
+                {"$set": {
+                    "revoked": True,
+                    "revoked_at": datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                    "revoked_by": ctx.author.id
+                }}
+            )
+
+            infraction["revoked"] = True
+            infraction["revoked_at"] = datetime.datetime.now(tz=pytz.UTC).timestamp()
+            infraction["revoked_by"] = ctx.author.id
+            self.bot.dispatch('infraction_revoke', infraction)
+
+            await ctx.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Infraction Revoked",
+                    description="Successfully revoked the infraction!",
+                    color=discord.Color.green()
+                )
+            )
+
+        except Exception as e:
+            await ctx.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"An error occurred while revoking the infraction: {str(e)}",
+                    color=BLANK_COLOR
+                )
+            )
 
 async def setup(bot):
     await bot.add_cog(Infractions(bot))
