@@ -1535,53 +1535,28 @@ class APIRoutes:
             if not infraction:
                 raise HTTPException(status_code=404, detail="Infraction not found")
 
-            guild = self.bot.get_guild(infraction["guild_id"])
-            if not guild:
-                raise HTTPException(status_code=404, detail="Guild not found")
+            if infraction.get("revoked", False):
+                raise HTTPException(status_code=400, detail="Infraction already revoked")
 
-            member = guild.get_member(infraction["user_id"])
-            if not member:
-                try:
-                    member = await guild.fetch_member(infraction["user_id"])
-                except:
-                    raise HTTPException(status_code=404, detail="Member not found")
-
-            roles_modified = False
-            
-            if "temp_roles_removed" in infraction:
-                roles_to_add = []
-                for role_id in infraction["temp_roles_removed"]:
-                    role = guild.get_role(int(role_id))
-                    if role and role not in member.roles:
-                        roles_to_add.append(role)
-                if roles_to_add:
-                    await member.add_roles(*roles_to_add, reason="Infraction revoked - restoring removed roles")
-                    roles_modified = True
-
-            if "temp_roles_added" in infraction:
-                roles_to_remove = []
-                for role_id in infraction["temp_roles_added"]:
-                    role = guild.get_role(int(role_id))
-                    if role and role in member.roles:
-                        roles_to_remove.append(role)
-                if roles_to_remove:
-                    await member.remove_roles(*roles_to_remove, reason="Infraction revoked - removing added roles")
-                    roles_modified = True
-
+            # Update the infraction
             await self.bot.db.infractions.update_one(
                 {"_id": ObjectId(infraction_id)},
-                {
-                    "$set": {
-                        "revoked": True,
-                        "revoked_at": datetime.datetime.now().timestamp(),
-                        "roles_reverted": roles_modified
-                    }
-                }
+                {"$set": {
+                    "revoked": True,
+                    "revoked_at": datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                    "revoked_by": json_data.get("revoked_by", 0)
+                }}
             )
+
+            infraction["revoked"] = True
+            infraction["revoked_at"] = datetime.datetime.now(tz=pytz.UTC).timestamp()
+            infraction["revoked_by"] = json_data.get("revoked_by", 0)
+
+            # Dispatch the event
+            self.bot.dispatch('infraction_revoke', infraction)
 
             return {
                 "status": "success",
-                "roles_modified": roles_modified,
                 "infraction_id": infraction_id
             }
 
@@ -1726,7 +1701,6 @@ class APIRoutes:
             preview_request = Request(scope={"type": "http"})
             preview_request._json = json_data
 
-            # Get preview first
             preview_results = await self.POST_get_infraction_wave_preview(
                 authorization=authorization,
                 request=preview_request
@@ -1845,7 +1819,7 @@ class ServerAPI(commands.Cog):
     async def start_server(self):
         try:
             api.include_router(APIRoutes(self.bot).router)
-            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
+            self.config = uvicorn.Config("utils.api:api", port=5123, log_level="info", host="0.0.0.0")
             self.server = uvicorn.Server(self.config)
             await self.server.serve()
         except Exception as e:
