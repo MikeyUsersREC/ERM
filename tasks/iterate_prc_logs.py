@@ -740,41 +740,56 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs, command_logs):
         bot.kicked_users[guild_id] = {}
 
     for log in command_logs:
-        if ':kick' in log.command:
-            # extract the username from the command
-            parts = log.command.split()
+        if ':kick' in log.command.lower():
+            parts = log.command.split(None, 1)
             if len(parts) > 1:
-                kicked_username = parts[1]
-                bot.kicked_users[guild_id][kicked_username] = log.timestamp
+                kicked_users = parts[1].split(',')
+                for username in kicked_users:
+                    username = username.strip()
+                    if username:
+                        bot.kicked_users[guild_id][username.lower()] = log.timestamp
 
-    rejoined_users = []  # list of user IDs who rejoined within the time limit
+    rejoined_users = []
+    current_time = int(time.time())
+    
     for log in player_logs:
         if log.type == 'join':
-            user_id = log.user_id
-            if user_id in bot.kicked_users[guild_id]:
-                kick_timestamp = bot.kicked_users[guild_id][user_id]
-                if (log.timestamp - kick_timestamp) <= time_limit:
-                    rejoined_users.append(user_id)
-                # remove the user from the kicked list after
-                del bot.kicked_users[guild_id][user_id]
+            username_lower = log.username.lower()
+            if username_lower in bot.kicked_users[guild_id]:
+                kick_timestamp = bot.kicked_users[guild_id][username_lower]
+                if (current_time - kick_timestamp) <= time_limit:
+                    rejoined_users.append(log.username)
+                    logging.warning(f"Found rejoin within timer: {log.username} (Kicked at: {kick_timestamp}, Rejoined at: {current_time})")
+                del bot.kicked_users[guild_id][username_lower]
 
     if rejoined_users:
+        usernames_str = ','.join(rejoined_users)
+        logging.warning(f"Executing {punishment} for rejoined users: {usernames_str}")
+        
         if punishment == "ban":
-            await bot.prc_api.run_command(guild_id, f":ban {','.join(map(str, rejoined_users))}")
+            try:
+                await bot.prc_api.run_command(guild_id, f":ban {usernames_str}")
+            except Exception as e:
+                logging.error(f"Failed to ban users: {e}")
         else:
-            await bot.prc_api.run_command(guild_id, f":kick {','.join(map(str, rejoined_users))}")
+            try:
+                await bot.prc_api.run_command(guild_id, f":kick {usernames_str}")
+            except Exception as e:
+                logging.error(f"Failed to kick users: {e}")
 
-        # log moderation actions
-        for user_id in rejoined_users:
-            user = await bot.roblox.get_user(int(user_id))
-            user_name = user.name
-            await bot.punishments.insert_warning(
-                staff_id=978662093408591912,
-                staff_name="ERM Systems",
-                user_id=user_id,
-                user_name=user_name,
-                guild_id=guild_id,
-                reason="Rejoined within kick timer",
-                moderation_type=punishment,
-                time_epoch=int(datetime.datetime.now(tz=pytz.UTC).timestamp())
-            )
+        for username in rejoined_users:
+            try:
+                user_data = next((log for log in player_logs if log.username.lower() == username.lower()), None)
+                if user_data:
+                    await bot.punishments.insert_warning(
+                        staff_id=978662093408591912,
+                        staff_name="ERM Systems",
+                        user_id=user_data.user_id,
+                        user_name=username,
+                        guild_id=guild_id,
+                        reason="Rejoined within kick timer",
+                        moderation_type=punishment,
+                        time_epoch=current_time
+                    )
+            except Exception as e:
+                logging.error(f"Failed to log punishment for {username}: {e}")
