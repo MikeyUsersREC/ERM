@@ -1592,7 +1592,7 @@ class APIRoutes:
 
             staff_roles = settings.get('staff_management', {}).get('role', [])
             role_quotas = settings.get('shift_management', {}).get('role_quotas', [])
-            general_quota = settings.get('shift_management', {}).get('quota', 0)
+            general_quota = settings.get('shift_management', {}).get('quota') or 0
 
             if not staff_roles:
                 raise HTTPException(status_code=400, detail="No staff roles configured")
