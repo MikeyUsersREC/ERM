@@ -1449,22 +1449,41 @@ class APIRoutes:
 
             will_escalate = False
             existing_count = 0
+            current_type = original_infraction_type
+
             if infraction_config.get("escalation"):
-                threshold = infraction_config["escalation"].get("threshold", 0)
-                next_infraction = infraction_config["escalation"].get("next_infraction")
-                
-                if threshold and next_infraction:
+                while True:
+                    threshold = infraction_config["escalation"].get("threshold", 0)
+                    next_infraction = infraction_config["escalation"].get("next_infraction")
+                    
+                    if not threshold or not next_infraction:
+                        break
+
                     existing_count = await self.bot.db.infractions.count_documents({
                         "user_id": user_id,
                         "guild_id": guild_id,
-                        "type": original_infraction_type,
+                        "type": current_type,
                         "revoked": {"$ne": True}
                     })
 
                     if (existing_count + 1) >= threshold:
-                        original_infraction_type = next_infraction
+                        next_config = next(
+                            (inf for inf in settings["infractions"]["infractions"] 
+                            if inf["name"] == next_infraction),
+                            None
+                        )
+                        if not next_config:
+                            break
+
+                        current_type = next_infraction
                         will_escalate = True
-                        reason = f"{reason}\n\nEscalated from {original_infraction_type} after reaching {existing_count + 1} infractions"
+                        infraction_config = next_config
+                    else:
+                        break
+
+            if will_escalate:
+                original_infraction_type = current_type
+                reason = f"{reason}\n\nEscalated from {original_infraction_type} after reaching threshold"
 
             infraction_doc = {
                 "user_id": user_id,
