@@ -59,6 +59,13 @@ class OnInfractionCreate(commands.Cog):
                 return
 
             # Set up variables for replacements
+            issuer = None
+            if issuer_id := infraction_doc.get('issuer_id'):
+                try:
+                    issuer = guild.get_member(issuer_id) or await guild.fetch_member(issuer_id)
+                except:
+                    pass
+
             variables = {
                 "{user}": member.mention,
                 "{user.name}": member.name,
@@ -66,10 +73,12 @@ class OnInfractionCreate(commands.Cog):
                 "{user.tag}": str(member),
                 "{guild}": guild.name,
                 "{guild.id}": str(guild.id),
+                "{guild.icon}": str(guild.icon.url) if guild.icon else "",
                 "{reason}": infraction_doc["reason"],
                 "{type}": infraction_doc["type"],
                 "{issuer}": f"<@{infraction_doc.get('issuer_id', '0')}>",
                 "{issuer.id}": str(infraction_doc.get('issuer_id', '0')),
+                "{issuer.name}": issuer.name if issuer else "Unknown",
                 "{timestamp}": f"<t:{int(datetime.datetime.now().timestamp())}:F>",
                 "{timestamp.short}": f"<t:{int(datetime.datetime.now().timestamp())}:f>",
                 "{timestamp.relative}": f"<t:{int(datetime.datetime.now().timestamp())}:R>",
