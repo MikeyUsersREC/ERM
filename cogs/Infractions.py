@@ -113,7 +113,6 @@ class Infractions(commands.Cog):
                     f"> **Status:** {'Revoked' if infraction.get('revoked', False) else 'Active'}"
                 ),
                 inline=False
-                ephemeral=True
             )
 
         pages = [
@@ -239,7 +238,6 @@ class Infractions(commands.Cog):
                     f"> **Status:** {'Revoked' if infraction.get('revoked', False) else 'Active'}"
                 ),
                 inline=False
-                ephemeral=True
             )
 
         pages = [
@@ -413,8 +411,8 @@ class Infractions(commands.Cog):
                     + (f"> **Escalated:** Yes (from {original_type})" if will_escalate else "")
                 ),
                 inline=False
-                ephemeral=True
-            )
+            ),
+            ephemeral=True
         )
 
     @infractions.command(
