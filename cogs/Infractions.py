@@ -78,7 +78,8 @@ class Infractions(commands.Cog):
                     title="No Infractions",
                     description="You have no infractions.",
                     color=BLANK_COLOR
-                )
+                ),
+                ephemeral=True
             )
 
         def setup_embed() -> discord.Embed:
@@ -112,6 +113,7 @@ class Infractions(commands.Cog):
                     f"> **Status:** {'Revoked' if infraction.get('revoked', False) else 'Active'}"
                 ),
                 inline=False
+                ephemeral=True
             )
 
         pages = [
@@ -186,7 +188,8 @@ class Infractions(commands.Cog):
                     title="No Infractions",
                     description=f"{'You have' if target_id == ctx.author.id else 'This user has'} no infractions.",
                     color=BLANK_COLOR
-                )
+                ),
+                ephemeral=True
             )
 
         def setup_embed() -> discord.Embed:
@@ -236,6 +239,7 @@ class Infractions(commands.Cog):
                     f"> **Status:** {'Revoked' if infraction.get('revoked', False) else 'Active'}"
                 ),
                 inline=False
+                ephemeral=True
             )
 
         pages = [
@@ -313,7 +317,8 @@ class Infractions(commands.Cog):
                     title="Invalid Type",
                     description="This infraction type does not exist.",
                     color=BLANK_COLOR
-                )
+                ),
+                ephemeral=True
             )
 
         will_escalate = False
@@ -408,6 +413,7 @@ class Infractions(commands.Cog):
                     + (f"> **Escalated:** Yes (from {original_type})" if will_escalate else "")
                 ),
                 inline=False
+                ephemeral=True
             )
         )
 
