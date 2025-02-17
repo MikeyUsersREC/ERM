@@ -236,9 +236,9 @@ class Bot(commands.AutoShardedBot):
             bot.is_synced = True
             check_reminders.start(bot)
             check_loa.start(bot)
-            iterate_ics.start(bot)
+            # iterate_ics.start(bot)
             # GDPR.start()
-            iterate_prc_logs.start(bot)
+            # iterate_prc_logs.start(bot)
             # statistics_check.start(bot)
             tempban_checks.start(bot)
             check_whitelisted_car.start(bot)
