@@ -23,6 +23,9 @@ from utils.timestamp import td_format
 from utils.utils import tokenGenerator, system_code_gen
 import logging
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 logger = logging.getLogger(__name__)
 
 class Identification(BaseModel):
@@ -1815,45 +1818,51 @@ class ServerAPI(commands.Cog):
         self.bot = bot
         self.server = None
         self.server_task = None
+        self.server_thread = None
+        self.thread_pool = ThreadPoolExecutor(max_workers=1)
+        self._shutdown_event = threading.Event()
 
-    async def start_server(self):
+    def run_server_in_thread(self):
+        """Run the uvicorn server in a separate thread"""
         try:
             api.include_router(APIRoutes(self.bot).router)
-            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
-            self.server = uvicorn.Server(self.config)
-            await self.server.serve()
+            config = uvicorn.Config(
+                "utils.api:api", 
+                port=5000, 
+                log_level="info", 
+                host="0.0.0.0",
+                loop="none"
+            )
+            self.server = uvicorn.Server(config)
+            self.server.run()
         except Exception as e:
-            logger.error(f"Server error: {e}")
-            await asyncio.sleep(5)
-            self.server_task = asyncio.create_task(self.start_server())
+            logger.error(f"Server thread error: {e}")
+            if not self._shutdown_event.is_set():
+                self.restart_server()
 
-    async def stop_server(self):
-        try:
-            if self.server:
-                await self.server.shutdown()
-            else:
-                logger.info("Server was not running")
-        except Exception as e:
-            logger.error(f"Error stopping server: {e}")
+    def restart_server(self):
+        """Restart the server in a new thread"""
+        if self.server_thread and self.server_thread.is_alive():
+            return
+        
+        self.server_thread = threading.Thread(
+            target=self.run_server_in_thread,
+            daemon=True
+        )
+        self.server_thread.start()
 
     async def cog_load(self) -> None:
-        self.server_task = asyncio.create_task(self.start_server())
-        self.server_task.add_done_callback(self.server_error_handler)
-
-    def server_error_handler(self, future: asyncio.Future):
-        try:
-            future.result()
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f"Unhandled server error: {e}")
-            self.server_task = asyncio.create_task(self.start_server())
+        self.restart_server()
 
     async def cog_unload(self) -> None:
         try:
-            if self.server_task:
-                self.server_task.cancel()
-            await self.stop_server()
+            self._shutdown_event.set()
+            if self.server:
+                self.server.should_exit = True
+            if self.thread_pool:
+                self.thread_pool.shutdown(wait=False)
+            if self.server_thread:
+                self.server_thread.join(timeout=5.0)
         except Exception as e:
             logger.error(f"Error during cog unload: {e}")
 
