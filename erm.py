@@ -529,5 +529,8 @@ async def main():
             capture_exception(e)
 
 
+def run():
+    asyncio.run(main())
+
 if __name__ == "__main__":
     asyncio.run(main())
