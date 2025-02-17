@@ -7,6 +7,8 @@ from pkgutil import iter_modules
 import re
 from collections import defaultdict
 
+import newrelic
+
 from tasks.iterate_ics import iterate_ics
 from tasks.check_loa import check_loa
 from tasks.check_reminders import check_reminders
@@ -18,6 +20,7 @@ from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
+from utils.ECC import ECC
 
 from utils.log_tracker import LogTracker
 from utils.mongo import Document
@@ -134,6 +137,11 @@ class Bot(commands.AutoShardedBot):
                 )
             )
             self.mongo = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
+            ecc = ECC()
+            self.ecc = ecc
+            self.ecc_info = await ecc.get_token_information()
+
+            environment = self.ecc_info["InstanceType"]
             if environment == "DEVELOPMENT":
                 self.db = self.mongo["erm"]
             elif environment == "PRODUCTION":
@@ -271,7 +279,6 @@ bot.is_synced = False
 bot.shift_management_disabled = False
 bot.punishments_disabled = False
 bot.bloxlink_api_key = bloxlink_api_key
-environment = config("ENVIRONMENT", default="DEVELOPMENT")
 internal_command_storage = {}
 
 def running():
@@ -469,24 +476,6 @@ async def staff_field(bot: Bot, embed, query):
 
 bot.warning_json_to_mongo = warning_json_to_mongo
 
-# include environment variables
-if environment == "PRODUCTION":
-    bot_token = config("PRODUCTION_BOT_TOKEN")
-    logging.info("Using production token...")
-elif environment == "DEVELOPMENT":
-    try:
-        bot_token = config("DEVELOPMENT_BOT_TOKEN")
-    except decouple.UndefinedValueError:
-        bot_token = ""
-    logging.info("Using development token...")
-elif environment == "ALPHA":
-    try:
-        bot_token = config('ALPHA_BOT_TOKEN')
-    except decouple.UndefinedValueError:
-        bot_token = ""
-    logging.info('Using ERM V4 Alpha token...')
-else:
-    raise Exception("Invalid environment")
 try:
     mongo_url = config("MONGO_URL", default=None)
 except decouple.UndefinedValueError:
@@ -519,18 +508,21 @@ credentials_dict = {
     "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=""),
 }
 
-def run():
-    sentry_sdk.init(
-        dsn=sentry_url,
-        traces_sample_rate=1.0,
-        integrations=[PyMongoIntegration()],
-        _experiments={
-            "profiles_sample_rate": 1.0,
-        },
-    )
+async def main():
+    ecc = ECC()
+    ecc_info = await ecc.get_token_information()
+    decrypted_token = ecc.decrypt_token(ecc_info["EncryptedToken"])
 
+    sentry_sdk.init(
+            dsn=sentry_url,
+            traces_sample_rate=1.0,
+            integrations=[PyMongoIntegration()],
+            _experiments={
+                "profiles_sample_rate": 1.0,
+            },
+    )
     try:
-        bot.run(bot_token)
+        await bot.start(decrypted_token)
     except Exception as e:
         with sentry_sdk.isolation_scope() as scope:
             scope.level = "error"
@@ -538,4 +530,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    asyncio.run(main())

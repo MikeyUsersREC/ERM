@@ -26,3 +26,4 @@ gspread_asyncio
 fuzzywuzzy
 python-Levenshtein
 newrelic
+pycryptodome
