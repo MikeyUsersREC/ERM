@@ -23,11 +23,9 @@ class OnInfractionRevoke(commands.Cog):
 
             member = guild.get_member(infraction["user_id"])
             if member:
-                roles_modified = False
-                
-                if "temp_roles_removed" in infraction:
+                if "roles_removed" in infraction:
                     roles_to_add = []
-                    for role_id in infraction["temp_roles_removed"]:
+                    for role_id in infraction["roles_removed"]:
                         role = guild.get_role(int(role_id))
                         if role and role not in member.roles:
                             roles_to_add.append(role)
@@ -38,9 +36,9 @@ class OnInfractionRevoke(commands.Cog):
                         except discord.HTTPException as e:
                             logger.error(f"Failed to restore roles for {member.id}: {e}")
 
-                if "temp_roles_added" in infraction:
+                if "roles_added" in infraction:
                     roles_to_remove = []
-                    for role_id in infraction["temp_roles_added"]:
+                    for role_id in infraction["roles_added"]:
                         role = guild.get_role(int(role_id))
                         if role and role in member.roles:
                             roles_to_remove.append(role)
@@ -49,7 +47,7 @@ class OnInfractionRevoke(commands.Cog):
                             await member.remove_roles(*roles_to_remove, reason="Infraction revoked - removing added roles")
                             roles_modified = True
                         except discord.HTTPException as e:
-                            logger.error(f"Failed to remove temporary roles for {member.id}: {e}")
+                            logger.error(f"Failed to remove added roles for {member.id}: {e}")
 
                 infraction_config = next(
                     (inf for inf in settings["infractions"]["infractions"] 
