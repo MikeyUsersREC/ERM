@@ -228,20 +228,10 @@ class Bot(commands.AutoShardedBot):
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
             bot.is_synced = True
-            check_reminders.start(bot)
-            check_loa.start(bot)
-            iterate_ics.start(bot)
-            # GDPR.start()
-            iterate_prc_logs.start(bot)
-            # statistics_check.start(bot)
-            tempban_checks.start(bot)
-            check_whitelisted_car.start(bot)
-            change_status.start(bot)
-            process_scheduled_pms.start(bot)
-            sync_weather.start(bot)
-            check_infractions.start(bot)
-            logging.info("Setup_hook complete! All tasks are now running!")
-
+            
+            # we do this so the bot can get a cache of things before we spam discord with fetches
+            asyncio.create_task(self.start_tasks())
+            
             async for document in self.views.db.find({}):
                 if document["view_type"] == "LOAMenu":
                     for index, item in enumerate(document["args"]):
@@ -257,6 +247,23 @@ class Bot(commands.AutoShardedBot):
                         LOAMenu(*document["args"]), message_id=document["message_id"]
                     )
             self.setup_status = True
+
+    async def start_tasks(self):
+        logging.info("Starting tasks after 10 minute delay...")
+        await asyncio.sleep(600)  # 10 mins
+        check_reminders.start(bot)
+        check_loa.start(bot)
+        iterate_ics.start(bot)
+        # GDPR.start()
+        iterate_prc_logs.start(bot)
+        # statistics_check.start(bot)
+        tempban_checks.start(bot)
+        check_whitelisted_car.start(bot)
+        change_status.start(bot)
+        process_scheduled_pms.start(bot)
+        sync_weather.start(bot)
+        check_infractions.start(bot)
+        logging.info("All tasks are now running!")
 
 
 bot = Bot(
@@ -541,3 +548,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+``` 
