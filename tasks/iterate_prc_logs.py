@@ -19,7 +19,7 @@ from menus import AvatarCheckView
 from utils.username_check import UsernameChecker
 
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(minutes=10, reconnect=True)
 async def iterate_prc_logs(bot):
     try:
         server_count = await bot.settings.db.aggregate([
