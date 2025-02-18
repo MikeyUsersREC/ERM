@@ -7,6 +7,7 @@ from pkgutil import iter_modules
 import re
 from collections import defaultdict
 
+from datamodels.Whitelabel import Whitelabel
 from tasks.iterate_ics import iterate_ics
 from tasks.check_loa import check_loa
 from tasks.check_reminders import check_reminders
@@ -175,6 +176,7 @@ class Bot(commands.AutoShardedBot):
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
             self.saved_logs = SavedLogs(self.db, "saved_logs")
+            self.whitelabel = Whitelabel(self.db, "whitelabel")
 
             self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
             self.oauth2_users = OAuth2Users(self.db, "oauth2")

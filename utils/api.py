@@ -10,6 +10,9 @@ from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Header, HTTPException, Request
 from discord.ext import commands
 import discord
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
 from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
 from typing import Annotated
 from decouple import config
@@ -1809,6 +1812,39 @@ class APIRoutes:
 
 api = FastAPI()
 
+from fastapi import Request
+
+
+class MyMiddleware:
+    def __init__(
+            self,
+            bot: commands.Bot,
+    ):
+        self.bot = bot
+
+    async def __call__(self, request: Request, call_next):
+        guild_id = ""
+        try:
+            request_json = await request.json()
+            guild_id = int(request_json.get("guild_id") or request_json.get("guild") or request_json.get("GuildID"))
+
+            doc = self.bot.whitelabel.find_by_id(guild_id)
+            if not doc:
+                raise Exception("doc not found")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.request(
+                    method=request.method,
+                    url=request.url._url.replace(request.url._url.split("https://")[1].split("/")[0], doc["hostname"]),
+                    body=request.body,
+                    headers=request.headers
+                ) as resp:
+                    resp_body = await resp.read()
+                    return Response(content=resp_body, status_code=resp.status, headers=resp.headers)
+        except:
+            response = await call_next(request)
+            return response
+
 
 class ServerAPI(commands.Cog):
     def __init__(self, bot):
@@ -1818,6 +1854,8 @@ class ServerAPI(commands.Cog):
 
     async def start_server(self):
         try:
+            middleware = MyMiddleware(bot=self.bot)
+            api.add_middleware(BaseHTTPMiddleware, dispatch=middleware)
             api.include_router(APIRoutes(self.bot).router)
             self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
             self.server = uvicorn.Server(self.config)
