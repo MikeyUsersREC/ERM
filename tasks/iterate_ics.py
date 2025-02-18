@@ -12,7 +12,7 @@ async def iterate_ics(bot):
     # and the relevant storage data.
     async for item in bot.ics.db.find({}):
         try:
-            guild = await bot.fetch_guild(item['guild'])
+            guild = await bot.get_guild(item['guild'])
         except discord.HTTPException:
             continue
 
@@ -63,8 +63,8 @@ async def iterate_ics(bot):
             for arr in item['associated_messages']:
                 channel, message_id = arr[0], arr[1]
                 try:
-                    channel = await guild.fetch_channel(channel)
-                    message = await channel.fetch_message(message_id)
+                    channel = await guild.get_channel(channel)
+                    message = await channel.get_partial_message(message_id)
                 except discord.HTTPException:
                     continue
 
