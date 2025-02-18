@@ -19,7 +19,7 @@ from menus import AvatarCheckView
 from utils.username_check import UsernameChecker
 
 
-@tasks.loop(seconds=90, reconnect=True)
+@tasks.loop(minutes=5, reconnect=True)
 async def iterate_prc_logs(bot):
     try:
         server_count = await bot.settings.db.aggregate([
@@ -87,11 +87,12 @@ async def iterate_prc_logs(bot):
             }
         ]
 
-        semaphore = asyncio.Semaphore(20)  # Limit concurrent API requests to 20
+        semaphore = asyncio.Semaphore(10)
         tasks = []
 
         async def process_guild(items):
             async with semaphore:
+                await asyncio.sleep(0.15)  # 150ms delay between each server
                 try:
                     guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(items['_id'])
                     settings = await bot.settings.find_by_id(guild.id)
