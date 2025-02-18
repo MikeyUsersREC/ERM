@@ -19,7 +19,7 @@ from menus import AvatarCheckView
 from utils.username_check import UsernameChecker
 
 
-@tasks.loop(minutes=10, reconnect=True)
+@tasks.loop(minutes=7, reconnect=True)
 async def iterate_prc_logs(bot):
     try:
         server_count = await bot.settings.db.aggregate([
@@ -92,7 +92,7 @@ async def iterate_prc_logs(bot):
 
         async def process_guild(items):
             async with semaphore:
-                await asyncio.sleep(0.15)  # 150ms delay between each server
+                await asyncio.sleep(0.25)  # we need to slow things down a bit for discord
                 try:
                     guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(items['_id'])
                     settings = await bot.settings.find_by_id(guild.id)
