@@ -6,7 +6,7 @@ from utils.prc_api import ServerStatus, Player
 from utils.utils import interpret_content, interpret_embed
 
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(minutes=15, reconnect=True)
 async def iterate_ics(bot):
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
