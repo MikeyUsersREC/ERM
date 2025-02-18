@@ -5,7 +5,7 @@ import time
 import datetime
 import pytz
 
-@tasks.loop(minutes=1, reconnect=True)
+@tasks.loop(minutes=10, reconnect=True)
 async def tempban_checks(bot):
     # This will check for expired time bans
     # and for servers which have this feature enabled
@@ -35,7 +35,9 @@ async def tempban_checks(bot):
         "Type": "Temporary Ban"
     }):
         try:
-            await bot.fetch_guild(punishment_item['Guild'])
+            guild = bot.get_guild(punishment_item['Guild'])
+            if guild is None:
+                guild = await bot.fetch_guild(punishment_item['Guild'])
         except discord.HTTPException:
             continue
 
