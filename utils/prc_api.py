@@ -119,13 +119,15 @@ class PRCApiClient:
                 internal_server_key = internal_server_key.key
         else:
             internal_server_key = key
-
-
-        async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers={
-            "Authorization": self.api_key,
+        
+        headers = {
             "User-Agent": "Application",
-            "Server-Key": internal_server_key
-        }, json=data or {}) as response:
+            "Server-Key": internal_server_key,
+        }
+        if self.api_key:
+            headers["Authorization"] = self.api_key
+
+        async with self.session.request(method, url=f"{self.base_url}{endpoint}", headers=headers, json=data or {}) as response:
             # if response.status == 403:
             #     await self.bot.prohibited.insert({
             #         "_id": ObjectId(),
