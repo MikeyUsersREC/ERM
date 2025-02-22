@@ -289,7 +289,7 @@ class PRCApiClient:
             if response_json == []:
                 return []
             return [BanItem(
-                user_id=int(user_id),
+                user_id=int(user_id) if user_id.isdigit() else 0,
                 username=username
             ) for user_id, username in response_json.items()]
         else:
