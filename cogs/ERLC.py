@@ -66,6 +66,7 @@ class ERLC(commands.Cog):
         name="link",
         description="Link your Maple County server with ERM!"
     )
+    @is_management()
     async def mc_link(self, ctx: commands.Context, *, server_name: str):
         # get the linked roblox user
         roblox_id = 0
