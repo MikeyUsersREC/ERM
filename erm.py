@@ -7,6 +7,7 @@ from pkgutil import iter_modules
 import re
 from collections import defaultdict
 
+from datamodels.MapleKeys import MapleKeys
 from datamodels.Whitelabel import Whitelabel
 from tasks.iterate_ics import iterate_ics
 from tasks.check_loa import check_loa
@@ -21,6 +22,7 @@ from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
 
 from utils.log_tracker import LogTracker
+from utils.mc_api import MCApiClient
 from utils.mongo import Document
 
 try:
@@ -171,6 +173,10 @@ class Bot(commands.AutoShardedBot):
             self.punishments = Warnings(self)
             self.settings = Settings(self.db, "settings")
             self.server_keys = ServerKeys(self.db, "server_keys")
+
+            self.maple_county = self.mongo["MapleCounty"]
+            self.mc_keys = MapleKeys(self.maple_county, "Auth")
+
             self.staff_connections = StaffConnections(self.db, "staff_connections")
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
             self.actions = Actions(self.db, "actions")
@@ -183,6 +189,7 @@ class Bot(commands.AutoShardedBot):
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
+            self.mc_api = MCApiClient(self, base_url=config("MC_API_URL"), api_key=config("MC_API_KEY"))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]

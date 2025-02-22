@@ -90,6 +90,11 @@ class ActiveVehicle(BaseDataClass):
     vehicle: str
 
 class ServerLinkNotFound(commands.CheckFailure):
+    def __init__(self, platform: typing.Optional[str]):
+        self.platform = platform
+        super().__init__()
+
+    platform: str = "erlc"
     code: int = 0
 
 class PRCApiClient:

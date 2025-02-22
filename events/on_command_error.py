@@ -19,7 +19,7 @@ class OnCommandError(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener("on_command_error")
+    # @commands.Cog.listener("on_command_error")
     async def on_command_error(self, ctx, error):
         bot = self.bot
         error_id = error_gen()
@@ -133,6 +133,10 @@ class OnCommandError(commands.Cog):
             return
 
         if isinstance(error, ServerLinkNotFound):
+            aliases = {
+                "mc": "Maple County",
+                "erlc": "ER:LC",
+            }
             if error.code == 9999:
                 await ctx.send(
                     embed=discord.Embed(
@@ -141,11 +145,11 @@ class OnCommandError(commands.Cog):
                         color=BLANK_COLOR
                     ).set_footer(text=f"{error.code} | {error_id}")
                 )
-            elif error.code in [2000, 2001, 2002]:
+            elif error.code in [2000, 2001, 2002, 401]:
                 await ctx.send(
                     embed=discord.Embed(
                         title="Not Linked",
-                        description="This server does not have an ER:LC server connected. \nTo link your ER:LC server, run **/erlc link**.",
+                        description=f"This server does not have an {aliases[error.platform]} server connected. \nTo link your {aliases[error.platform]} server, run **/{error.platform} link**.",
                         color=BLANK_COLOR
                     ).set_footer(text=error_id)
                 )
@@ -153,7 +157,7 @@ class OnCommandError(commands.Cog):
                 await ctx.send(
                     embed=discord.Embed(
                         title="API Fatal Error",
-                        description="The PRC API encountered a fatal error which has resulted in us being unable to fetch ER:LC data.",
+                        description=f"The {aliases[error.platform]} API encountered a fatal error which has resulted in us being unable to fetch {aliases[error.platform]} data.",
                         color=BLANK_COLOR
                     ).set_footer(text=f"{error.code} | {error_id}")
                 )

@@ -23,7 +23,9 @@ class ServerKeys(Document):
         )
 
     async def insert_server_key(self, guild_id: int, key: str):
-        await self.insert({
-            "_id": guild_id,
-            "key": key
-        })
+        await self.upsert(
+            {
+                '_id': guild_id,
+                'key': key
+            }
+        )
