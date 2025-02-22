@@ -98,7 +98,7 @@ class ERLC(commands.Cog):
             return await ctx.send(
                 embed=discord.Embed(
                     title="Server Not Found",
-                    description="We could not find a server you own under the server name provided.",
+                    description="We could not find a server you own under the server name provided. Make sure you are linked with ERM by running `/link` in any server.",
                     color=BLANK_COLOR
                 )
             )
