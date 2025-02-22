@@ -19,7 +19,7 @@ class OnCommandError(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # @commands.Cog.listener("on_command_error")
+    @commands.Cog.listener("on_command_error")
     async def on_command_error(self, ctx, error):
         bot = self.bot
         error_id = error_gen()

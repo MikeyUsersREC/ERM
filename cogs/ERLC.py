@@ -63,7 +63,8 @@ class ERLC(commands.Cog):
         pass
 
     @mc.command(
-        name="link"
+        name="link",
+        description="Link your Maple County server with ERM!"
     )
     async def mc_link(self, ctx: commands.Context, *, server_name: str):
         # get the linked roblox user
@@ -86,11 +87,20 @@ class ERLC(commands.Cog):
         else:
             roblox_id = oauth2_user['roblox_id']
 
-        server_token = await self.bot.mc_api.authorize(
-            roblox_id,
-            server_name,
-            ctx.guild.id
-        )
+        try:
+            server_token = await self.bot.mc_api.authorize(
+                roblox_id,
+                server_name,
+                ctx.guild.id
+            )
+        except prc_api.ResponseFailure: # yes, this is correct.
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Server Not Found",
+                    description="We could not find a server you own under the server name provided.",
+                    color=BLANK_COLOR
+                )
+            )
 
         await ctx.send(
             embed=discord.Embed(
