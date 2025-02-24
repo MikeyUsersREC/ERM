@@ -548,9 +548,11 @@ def run():
     try:
         bot.run(bot_token)
     except Exception as e:
-        with sentry_sdk.isolation_scope() as scope:
-            scope.level = "error"
-            capture_exception(e)
+        raise e # sentry got ratelimited guys
+
+        # with sentry_sdk.isolation_scope() as scope:
+        #     scope.level = "error"
+        #     capture_exception(e)
 
 
 if __name__ == "__main__":
