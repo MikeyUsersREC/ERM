@@ -1,4 +1,5 @@
 import discord
+from decouple import config
 from discord.ext import commands, tasks
 
 from utils import prc_api
@@ -10,7 +11,12 @@ from utils.utils import interpret_content, interpret_embed
 async def iterate_ics(bot):
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
-    async for item in bot.ics.db.find({}):
+
+    filter_map = {"guild": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "guild": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
+    async for item in bot.ics.db.find(filter_map):
         try:
             guild = await bot.get_guild(item['guild'])
         except discord.HTTPException:

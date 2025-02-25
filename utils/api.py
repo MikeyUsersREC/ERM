@@ -26,6 +26,7 @@ from utils.timestamp import td_format
 from utils.utils import tokenGenerator, system_code_gen
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 class Identification(BaseModel):
@@ -1825,17 +1826,20 @@ class MyMiddleware:
     async def __call__(self, request: Request, call_next):
         guild_id = ""
         try:
+            if config("ENVIRONMENT") == "CUSTOM":
+                raise Exception("We're already redirected.")
+
             request_json = await request.json()
             guild_id = int(request_json.get("guild_id") or request_json.get("guild") or request_json.get("GuildID"))
 
-            doc = self.bot.whitelabel.find_by_id(guild_id)
+            doc = self.bot.whitelabel.db.find_one({"GuildID": str(guild_id)})
             if not doc:
                 raise Exception("doc not found")
 
             async with aiohttp.ClientSession() as session:
                 async with session.request(
                     method=request.method,
-                    url=request.url._url.replace(request.url._url.split("https://")[1].split("/")[0], doc["hostname"]),
+                    url=request.url._url.replace(request.url._url.split("https://")[1].split("/")[0], f'core-{guild_id}.erlc.site'),
                     body=request.body,
                     headers=request.headers
                 ) as resp:
@@ -1857,7 +1861,7 @@ class ServerAPI(commands.Cog):
             middleware = MyMiddleware(bot=self.bot)
             api.add_middleware(BaseHTTPMiddleware, dispatch=middleware)
             api.include_router(APIRoutes(self.bot).router)
-            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="info", host="0.0.0.0")
+            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="debug", host="0.0.0.0")
             self.server = uvicorn.Server(self.config)
             await self.server.serve()
         except Exception as e:

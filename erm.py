@@ -143,6 +143,8 @@ class Bot(commands.AutoShardedBot):
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
                 self.db = self.mongo['alpha']
+            elif environment == "CUSTOM":
+                self.db = self.mongo["erm"]
             else:
                 raise Exception("Invalid environment")
 
@@ -182,7 +184,7 @@ class Bot(commands.AutoShardedBot):
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
             self.saved_logs = SavedLogs(self.db, "saved_logs")
-            self.whitelabel = Whitelabel(self.db, "whitelabel")
+            self.whitelabel = Whitelabel(self.mongo['ERMProcessing'], "Instances")
 
             self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
@@ -257,7 +259,7 @@ class Bot(commands.AutoShardedBot):
 
     async def start_tasks(self):
         logging.info("Starting tasks after 10 minute delay...")
-        await asyncio.sleep(600)  # 10 mins
+        # await asyncio.sleep(600)  # 10 mins
         check_reminders.start(bot)
         check_loa.start(bot)
         iterate_ics.start(bot)
@@ -272,6 +274,9 @@ class Bot(commands.AutoShardedBot):
         check_infractions.start(bot)
         logging.info("All tasks are now running!")
 
+
+if config("ENVIRONMENT") == "CUSTOM":
+    Bot.__bases__ = (commands.Bot,)
 
 bot = Bot(
     command_prefix=get_prefix,
@@ -301,6 +306,38 @@ def running():
 
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
+    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+        if ctx.guild.id != int(config("CUSTOM_GUILD_ID")):
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+                raise Exception(f"Guild not permitted to use this bot: {ctx.guild.id}")
+
+    guild_id = ctx.guild.id
+    doc = await bot.whitelabel.db.find_one({"GuildID": guild_id})
+    if doc:
+        # must be a whitelabel instance. are we the whitelabel instance?
+        if environment == "CUSTOM" and int(config("CUSTOM_GUILD_ID")) == guild_id:
+            pass # we are the whitelabel instance, we're fine.
+        else:
+            # we aren't the whitelabel instance!
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="There is a whitelabel bot already i",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            raise Exception("Whitelabel bot already in use")
+
     internal_command_storage[ctx] = datetime.datetime.now(tz=pytz.UTC).timestamp()
     if ctx.command:
         if ctx.command.extras.get("ephemeral") is True:
@@ -309,6 +346,7 @@ async def AutoDefer(ctx: commands.Context):
         if ctx.command.extras.get("ignoreDefer") is True:
             return
         await ctx.defer()
+
 
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):
@@ -322,6 +360,22 @@ async def loggingCommandExecution(ctx: commands.Context):
     else:
         logging.info("Command could not be found in internal context storage. Please report.")
     del internal_command_storage[ctx]
+
+@bot.event
+async def on_message(message): # DO NOT COG - process commands does not work as intended whilst in cogs
+    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+        if message.guild.id != int(config("CUSTOM_GUILD_ID")):
+            ctx = await bot.get_context(message)
+            if ctx.command:
+                await message.reply(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
+                        color=BLANK_COLOR
+                    )
+                )
+                return
+    await bot.process_commands(message)
 
 
 client = roblox.Client()
@@ -501,6 +555,9 @@ elif environment == "ALPHA":
     except decouple.UndefinedValueError:
         bot_token = ""
     logging.info('Using ERM V4 Alpha token...')
+elif environment == "CUSTOM":
+    bot_token = config("CUSTOM_BOT_TOKEN")
+    logging.info("Using custom bot token...")
 else:
     raise Exception("Invalid environment")
 try:

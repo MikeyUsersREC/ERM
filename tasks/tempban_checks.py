@@ -1,5 +1,7 @@
 import discord
 import logging
+
+from decouple import config
 from discord.ext import commands, tasks
 import time
 import datetime
@@ -27,12 +29,16 @@ async def tempban_checks(bot):
     # time registration.
 
     cached_servers = {}
+    filter_map = {"Guild": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "Guild": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
     initial_time = time.time()
     async for punishment_item in bot.punishments.db.find({
         "Epoch": {"$gt": 1709164800},
         "CheckExecuted": {"$exists": False},
         "UntilEpoch": {"$lt": int(datetime.datetime.now(tz=pytz.UTC).timestamp())},
-        "Type": "Temporary Ban"
+        "Type": "Temporary Ban",
+        **filter_map
     }):
         try:
             guild = bot.get_guild(punishment_item['Guild'])

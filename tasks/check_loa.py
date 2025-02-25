@@ -1,6 +1,7 @@
 import datetime
 
 import discord
+from decouple import config
 from discord.ext import commands, tasks
 
 from utils.constants import RED_COLOR, BLANK_COLOR
@@ -8,13 +9,17 @@ from utils.constants import RED_COLOR, BLANK_COLOR
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa(bot):
+    filter_map = {"guild_id": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "guild_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
     try:
         loas = bot.loas
 
-        async for loaObject in bot.loas.db.find({}):
+        async for loaObject in bot.loas.db.find(filter_map):
             if (
                 datetime.datetime.now().timestamp() > loaObject["expiry"]
-                and loaObject["expired"] == False
+                and loaObject["expired"] is False
             ):
                 if loaObject["accepted"] is True:
                     loaObject["expired"] = True

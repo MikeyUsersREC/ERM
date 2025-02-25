@@ -21,6 +21,9 @@ from utils.username_check import UsernameChecker
 
 @tasks.loop(minutes=7, reconnect=True)
 async def iterate_prc_logs(bot):
+    chosen_filter = ({"CUSTOM": {"_id": int(config("CUSTOM_GUILD_ID", default=0))}, "_": {
+                        "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]
+                    }}}["CUSTOM" if config("ENVIRONMENT") == "CUSTOM" else "_"])
     try:
         server_count = await bot.settings.db.aggregate([
             {
@@ -31,8 +34,10 @@ async def iterate_prc_logs(bot):
                         {'ERLC.kill_logs': {'$type': 'long', '$ne': 0}},
                         {'ERLC.player_logs': {'$type': 'long', '$ne': 0}},
                         {"ERLC.welcome_message": {"$exists": True}},
+                        {"ERLC.automatic_shifts.enabled": {"$eq": True}},
                         {"ERLC.team_restrictions": {"$exists": True}}
-                    ]
+                    ],
+                    **chosen_filter
                 }
             },
             {
@@ -69,7 +74,10 @@ async def iterate_prc_logs(bot):
                         {"ERLC.welcome_message": {"$exists": True}},
                         {"ERLC.automatic_shifts.enabled": {"$eq": True}},
                         {"ERLC.team_restrictions": {"$exists": True}}
-                    ]
+                    ],
+                    **({"CUSTOM": {"_id": config("CUSTOM_GUILD_ID", default=0)}, "_": {
+                        "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]
+                    }}}["CUSTOM" if config("ENVIRONMENT") == "CUSTOM" else "_"])
                 }
             },
             {
@@ -94,6 +102,9 @@ async def iterate_prc_logs(bot):
             async with semaphore:
                 await asyncio.sleep(0.25)  # we need to slow things down a bit for discord
                 try:
+                    if config("ENVIRONMENT") == "CUSTOM":
+                        if items["_id"] != config("CUSTOM_GUILD_ID", default=0):
+                            return
                     guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(items['_id'])
                     settings = await bot.settings.find_by_id(guild.id)
                     erlc_settings = settings.get('ERLC', {})
@@ -113,10 +124,10 @@ async def iterate_prc_logs(bot):
 
                     kill_logs, player_logs, command_logs = await fetch_logs_with_retry(guild.id, bot)
                     current_time = int(time.time())
-                    
+
                     if command_logs:
                         await save_new_logs(bot, guild.id, command_logs, current_time)
-                    
+
                     subtasks = []
 
                     if has_welcome_message:
@@ -194,10 +205,10 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
 async def save_new_logs(bot, guild_id, command_logs, current_time):
     """Save new command logs to the database by updating existing documents"""
     last_saved = await bot.saved_logs.find_by_id(guild_id)
-    
+
     last_timestamp = last_saved["timestamp"] if last_saved else 0
     cutoff_time = current_time - 10800
-    
+
     new_logs = [
         {
             "username": log.username,
@@ -209,7 +220,7 @@ async def save_new_logs(bot, guild_id, command_logs, current_time):
         for log in command_logs
         if log.timestamp > last_timestamp and log.timestamp > cutoff_time
     ]
-    
+
     if new_logs:
         if last_saved:
             # Filter both existing and new logs to remove old ones
@@ -265,7 +276,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
     embeds = []
     latest_timestamp = last_timestamp
     new_join_ids = []
-    
+
     username_checker = UsernameChecker()
 
     unrealistic_check = settings.get('ERLC', {}).get('unrealistic_username_check', {})
@@ -273,13 +284,13 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
         for log in sorted(player_logs):
             if log.timestamp <= last_timestamp or log.type != 'join':
                 continue
-                
+
             if username_checker.is_unrealistic(log.username):
                 try:
                     channel_id = unrealistic_check.get('channel')
                     if not channel_id:
                         continue
-                        
+
                     guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
                     channel = await fetch_get_channel(guild, channel_id)
                     if not channel:
@@ -287,7 +298,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
 
                     user = await bot.roblox.get_user(int(log.user_id))
                     avatar = await bot.roblox.thumbnails.get_user_avatar_thumbnails(
-                        [user], 
+                        [user],
                         type=roblox.thumbnails.AvatarThumbnailType.headshot
                     )
                     avatar_url = avatar[0].image_url if avatar else None
@@ -361,7 +372,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
 
                                     for item in current_items:
                                         if str(item['id']) in map(str,
-                                                                  blacklisted_items): 
+                                                                  blacklisted_items):
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(f"Using a blacklisted item: {item['name']}")
                                             logging.info(f"Found blacklisted item: {item['id']} - {item['name']}")
@@ -752,7 +763,7 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs, command_logs):
 
     rejoined_users = []
     current_time = int(time.time())
-    
+
     for log in player_logs:
         if log.type == 'join':
             username_lower = log.username.lower()
@@ -766,7 +777,7 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs, command_logs):
     if rejoined_users:
         usernames_str = ','.join(rejoined_users)
         logging.warning(f"Executing {punishment} for rejoined users: {usernames_str}")
-        
+
         if punishment == "ban":
             try:
                 await bot.prc_api.run_command(guild_id, f":ban {usernames_str}")
