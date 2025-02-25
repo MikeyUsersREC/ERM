@@ -8,6 +8,9 @@ from utils.prc_api import ResponseFailure
 
 @tasks.loop(minutes=2, reconnect=True)
 async def sync_weather(bot):
+    chosen_filter = ({"CUSTOM": {"_id": int(config("CUSTOM_GUILD_ID", default=0))}, "_": {
+                        "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]
+                    }}}["CUSTOM" if config("ENVIRONMENT") == "CUSTOM" else "_"])
     try:
         logging.info("Starting weather sync task...")
         
@@ -20,7 +23,8 @@ async def sync_weather(bot):
                         {'ERLC.weather.sync_time': True},
                         {'ERLC.weather.sync_weather': True}
                     ],
-                    'ERLC.weather.location': {'$exists': True, '$ne': ''}
+                    'ERLC.weather.location': {'$exists': True, '$ne': ''},
+                    **chosen_filter
                 }
             },
             {
@@ -56,6 +60,11 @@ async def sync_weather(bot):
             async for guild_data in bot.settings.db.aggregate(pipeline):
                 processed += 1
                 guild_id = guild_data['_id']
+
+                if config("ENVIRONMENT") == "CUSTOM":
+                    if guild_id != config("CUSTOM_GUILD_ID", default=0):
+                        continue
+
                 weather_settings = guild_data['ERLC']['weather']
                 location = weather_settings['location']
 

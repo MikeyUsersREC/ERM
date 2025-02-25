@@ -3,6 +3,7 @@ import re
 import time
 import discord
 import pytz
+from decouple import config
 from discord.ext import commands, tasks
 import logging
 import asyncio
@@ -13,13 +14,22 @@ from utils.prc_api import Player
 from utils import prc_api
 from utils.utils import is_whitelisted, run_command
 
-@tasks.loop(minutes=8, reconnect=True)
+@tasks.loop(minutes=10, reconnect=True)
 async def check_whitelisted_car(bot):
+    filter_map = {"_id": int(config('CUSTOM_GUILD_ID', default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
     initial_time = time.time()
     logging.info("Starting check_whitelisted_car task")
-    
+
+    base = {"ERLC.vehicle_restrictions.enabled": True}
+
+    for key, value in filter_map.items():
+        base[key] = value
+
     pipeline = [
-        {"$match": {"ERLC.vehicle_restrictions.enabled": True}},
+        {"$match": base},
         {"$lookup": {
             "from": "server_keys",
             "localField": "_id",

@@ -1,11 +1,13 @@
 import discord
 import logging
+
+from decouple import config
 from discord.ext import commands, tasks
 import time
 import datetime
 import pytz
 
-@tasks.loop(minutes=1, reconnect=True)
+@tasks.loop(minutes=10, reconnect=True)
 async def tempban_checks(bot):
     # This will check for expired time bans
     # and for servers which have this feature enabled
@@ -27,15 +29,21 @@ async def tempban_checks(bot):
     # time registration.
 
     cached_servers = {}
+    filter_map = {"Guild": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "Guild": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
     initial_time = time.time()
     async for punishment_item in bot.punishments.db.find({
         "Epoch": {"$gt": 1709164800},
         "CheckExecuted": {"$exists": False},
         "UntilEpoch": {"$lt": int(datetime.datetime.now(tz=pytz.UTC).timestamp())},
-        "Type": "Temporary Ban"
+        "Type": "Temporary Ban",
+        **filter_map
     }):
         try:
-            await bot.fetch_guild(punishment_item['Guild'])
+            guild = bot.get_guild(punishment_item['Guild'])
+            if guild is None:
+                guild = await bot.fetch_guild(punishment_item['Guild'])
         except discord.HTTPException:
             continue
 

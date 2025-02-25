@@ -7,6 +7,8 @@ from pkgutil import iter_modules
 import re
 from collections import defaultdict
 
+from datamodels.MapleKeys import MapleKeys
+from datamodels.Whitelabel import Whitelabel
 from tasks.iterate_ics import iterate_ics
 from tasks.check_loa import check_loa
 from tasks.check_reminders import check_reminders
@@ -20,6 +22,7 @@ from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
 
 from utils.log_tracker import LogTracker
+from utils.mc_api import MCApiClient
 from utils.mongo import Document
 
 try:
@@ -140,6 +143,8 @@ class Bot(commands.AutoShardedBot):
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
                 self.db = self.mongo['alpha']
+            elif environment == "CUSTOM":
+                self.db = self.mongo["erm"]
             else:
                 raise Exception("Invalid environment")
 
@@ -170,17 +175,23 @@ class Bot(commands.AutoShardedBot):
             self.punishments = Warnings(self)
             self.settings = Settings(self.db, "settings")
             self.server_keys = ServerKeys(self.db, "server_keys")
+
+            self.maple_county = self.mongo["MapleCounty"]
+            self.mc_keys = MapleKeys(self.maple_county, "Auth")
+
             self.staff_connections = StaffConnections(self.db, "staff_connections")
             self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
             self.saved_logs = SavedLogs(self.db, "saved_logs")
+            self.whitelabel = Whitelabel(self.mongo['ERMProcessing'], "Instances")
 
             self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
             self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
+            self.mc_api = MCApiClient(self, base_url=config("MC_API_URL"), api_key=config("MC_API_KEY"))
             self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
@@ -226,20 +237,10 @@ class Bot(commands.AutoShardedBot):
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
             bot.is_synced = True
-            check_reminders.start(bot)
-            check_loa.start(bot)
-            iterate_ics.start(bot)
-            # GDPR.start()
-            iterate_prc_logs.start(bot)
-            # statistics_check.start(bot)
-            tempban_checks.start(bot)
-            check_whitelisted_car.start(bot)
-            change_status.start(bot)
-            process_scheduled_pms.start(bot)
-            sync_weather.start(bot)
-            check_infractions.start(bot)
-            logging.info("Setup_hook complete! All tasks are now running!")
-
+            
+            # we do this so the bot can get a cache of things before we spam discord with fetches
+            asyncio.create_task(self.start_tasks())
+            
             async for document in self.views.db.find({}):
                 if document["view_type"] == "LOAMenu":
                     for index, item in enumerate(document["args"]):
@@ -256,6 +257,26 @@ class Bot(commands.AutoShardedBot):
                     )
             self.setup_status = True
 
+    async def start_tasks(self):
+        logging.info("Starting tasks after 10 minute delay...")
+        # await asyncio.sleep(600)  # 10 mins
+        check_reminders.start(bot)
+        check_loa.start(bot)
+        iterate_ics.start(bot)
+        # GDPR.start()
+        iterate_prc_logs.start(bot)
+        # statistics_check.start(bot)
+        tempban_checks.start(bot)
+        check_whitelisted_car.start(bot)
+        change_status.start(bot)
+        process_scheduled_pms.start(bot)
+        sync_weather.start(bot)
+        check_infractions.start(bot)
+        logging.info("All tasks are now running!")
+
+
+if config("ENVIRONMENT") == "CUSTOM":
+    Bot.__bases__ = (commands.Bot,)
 
 bot = Bot(
     command_prefix=get_prefix,
@@ -285,6 +306,38 @@ def running():
 
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
+    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+        if ctx.guild.id != int(config("CUSTOM_GUILD_ID")):
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+                raise Exception(f"Guild not permitted to use this bot: {ctx.guild.id}")
+
+    guild_id = ctx.guild.id
+    doc = await bot.whitelabel.db.find_one({"GuildID": guild_id})
+    if doc:
+        # must be a whitelabel instance. are we the whitelabel instance?
+        if environment == "CUSTOM" and int(config("CUSTOM_GUILD_ID")) == guild_id:
+            pass # we are the whitelabel instance, we're fine.
+        else:
+            # we aren't the whitelabel instance!
+            if ctx.interaction:
+                await ctx.interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="There is a whitelabel bot already i",
+                        color=BLANK_COLOR
+                    ),
+                    ephemeral=True
+                )
+            raise Exception("Whitelabel bot already in use")
+
     internal_command_storage[ctx] = datetime.datetime.now(tz=pytz.UTC).timestamp()
     if ctx.command:
         if ctx.command.extras.get("ephemeral") is True:
@@ -293,6 +346,7 @@ async def AutoDefer(ctx: commands.Context):
         if ctx.command.extras.get("ignoreDefer") is True:
             return
         await ctx.defer()
+
 
 @bot.after_invoke
 async def loggingCommandExecution(ctx: commands.Context):
@@ -306,6 +360,22 @@ async def loggingCommandExecution(ctx: commands.Context):
     else:
         logging.info("Command could not be found in internal context storage. Please report.")
     del internal_command_storage[ctx]
+
+@bot.event
+async def on_message(message): # DO NOT COG - process commands does not work as intended whilst in cogs
+    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+        if message.guild.id != int(config("CUSTOM_GUILD_ID")):
+            ctx = await bot.get_context(message)
+            if ctx.command:
+                await message.reply(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
+                        color=BLANK_COLOR
+                    )
+                )
+                return
+    await bot.process_commands(message)
 
 
 client = roblox.Client()
@@ -485,6 +555,9 @@ elif environment == "ALPHA":
     except decouple.UndefinedValueError:
         bot_token = ""
     logging.info('Using ERM V4 Alpha token...')
+elif environment == "CUSTOM":
+    bot_token = config("CUSTOM_BOT_TOKEN")
+    logging.info("Using custom bot token...")
 else:
     raise Exception("Invalid environment")
 try:
@@ -532,9 +605,11 @@ def run():
     try:
         bot.run(bot_token)
     except Exception as e:
-        with sentry_sdk.isolation_scope() as scope:
-            scope.level = "error"
-            capture_exception(e)
+        raise e # sentry got ratelimited guys
+
+        # with sentry_sdk.isolation_scope() as scope:
+        #     scope.level = "error"
+        #     capture_exception(e)
 
 
 if __name__ == "__main__":

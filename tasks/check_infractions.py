@@ -1,5 +1,7 @@
 import discord
 import logging
+
+from decouple import config
 from discord.ext import commands, tasks
 import time
 import datetime
@@ -11,8 +13,11 @@ async def check_infractions(bot):
     try:
         current_time = datetime.datetime.now(tz=pytz.UTC).timestamp()
         initial_time = time.time()
+        filter_map = {"guild_id": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "guild_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+        }
 
-        async for infraction in bot.db.infractions.find({"temp_roles_expire_at": {"$exists": True}}):
+        async for infraction in bot.db.infractions.find({"temp_roles_expire_at": {"$exists": True}, **filter_map}):
             if infraction["temp_roles_expire_at"] <= current_time:
                 try:
                     guild = bot.get_guild(infraction["guild_id"])

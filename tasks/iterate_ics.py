@@ -1,4 +1,5 @@
 import discord
+from decouple import config
 from discord.ext import commands, tasks
 
 from utils import prc_api
@@ -6,13 +7,18 @@ from utils.prc_api import ServerStatus, Player
 from utils.utils import interpret_content, interpret_embed
 
 
-@tasks.loop(minutes=5, reconnect=True)
+@tasks.loop(minutes=15, reconnect=True)
 async def iterate_ics(bot):
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
-    async for item in bot.ics.db.find({}):
+
+    filter_map = {"guild": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "guild": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
+    async for item in bot.ics.db.find(filter_map):
         try:
-            guild = await bot.fetch_guild(item['guild'])
+            guild = await bot.get_guild(item['guild'])
         except discord.HTTPException:
             continue
 
@@ -63,8 +69,8 @@ async def iterate_ics(bot):
             for arr in item['associated_messages']:
                 channel, message_id = arr[0], arr[1]
                 try:
-                    channel = await guild.fetch_channel(channel)
-                    message = await channel.fetch_message(message_id)
+                    channel = await guild.get_channel(channel)
+                    message = await channel.get_partial_message(message_id)
                 except discord.HTTPException:
                     continue
 

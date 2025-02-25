@@ -266,7 +266,7 @@ class Punishments(commands.Cog):
 
         if 'autoban' in flags:
             try:
-                await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.username))
+                await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.user_id))
             except:
                 pass
         elif 'autokick' in flags:

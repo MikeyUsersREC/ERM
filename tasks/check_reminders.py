@@ -13,8 +13,12 @@ from decouple import config
 
 @tasks.loop(minutes=1)
 async def check_reminders(bot):
+    filter_map = {"_id": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+            "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
     try:
-        async for guildObj in bot.reminders.db.find({}):
+        async for guildObj in bot.reminders.db.find(filter_map):
             new_go = await bot.reminders.db.find_one(guildObj)
             g_id = new_go['_id']
             for item in new_go["reminders"].copy():

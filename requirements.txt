@@ -25,3 +25,5 @@ pydantic~=2.8.2
 gspread_asyncio
 fuzzywuzzy
 python-Levenshtein
+newrelic
+pycryptodome

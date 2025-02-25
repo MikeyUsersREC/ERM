@@ -90,6 +90,11 @@ class ActiveVehicle(BaseDataClass):
     vehicle: str
 
 class ServerLinkNotFound(commands.CheckFailure):
+    def __init__(self, platform: typing.Optional[str]):
+        self.platform = platform
+        super().__init__()
+
+    platform: str = "erlc"
     code: int = 0
 
 class PRCApiClient:
@@ -284,7 +289,7 @@ class PRCApiClient:
             if response_json == []:
                 return []
             return [BanItem(
-                user_id=int(user_id),
+                user_id=int(user_id) if user_id.isdigit() else 0,
                 username=username
             ) for user_id, username in response_json.items()]
         else:

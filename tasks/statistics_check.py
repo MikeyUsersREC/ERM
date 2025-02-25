@@ -3,6 +3,8 @@ import logging
 
 import discord
 import time
+
+from decouple import config
 from discord.ext import commands, tasks
 
 from utils import prc_api
@@ -29,8 +31,12 @@ async def update_channel(guild, channel_id, stat_config, placeholders):
 
 @tasks.loop(minutes=15, reconnect=True)
 async def statistics_check(bot):
+    filter_map = {"_id": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
+        "_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
+    }
+
     initial_time = time.time()
-    async for guild_data in bot.settings.db.find({"ERLC.statistics": {"$exists": True}}):
+    async for guild_data in bot.settings.db.find({"ERLC.statistics": {"$exists": True}, **filter_map}):
         guild_id = guild_data['_id']
         try:
             guild = await bot.fetch_guild(guild_id)
