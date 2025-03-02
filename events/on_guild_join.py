@@ -36,16 +36,16 @@ class OnGuildJoin(commands.Cog):
 
 
         channel = bot.get_channel(1033021466381398086)
-        embed = discord.Embed(color=0xED4348)
+        embed = discord.Embed(title=guild.name, color=0xED4348)
         embed.description = f"""
-        <:ArrowRightW:1035023450592514048> **Server Name:** {guild.name}
-        <:ArrowRightW:1035023450592514048> **Guild ID:** {guild.id}
-        <:ArrowRightW:1035023450592514048> **Bots:** {len([member for member in guild.members if member.bot == True])}
-        <:ArrowRightW:1035023450592514048> **Member Count:** {guild.member_count}
-        <:ArrowRightW:1035023450592514048> **Guild Count:** {len(bot.guilds)}        
+        > **Server Membercount:** {guild.member_count}
+        > **Bots:** {len([member for member in guild.members if member.bot == True])}
+        > **Guild Count:** {len(bot.guilds)}
+        > **Guild Owner:** <@{guild.owner.id}> `({guild.owner.id})`    
         """
         try:
-            embed.set_footer(icon_url=guild.icon.url, text=guild.name)
+            embed.set_footer(icon_url=guild.icon.url, text=f"Guild ID: {guild.id}")
+            embed.set_thumbnail(url=guild.icon.url)
         except AttributeError:
             pass
         await channel.send(embed=embed)
