@@ -81,7 +81,7 @@ class Search(commands.Cog):
             "ERM Management": 1038597868023447552,
             "ERM Senior Support": 1028848687927013396,
             "ERM Support": 1053417531278364713,
-            "ERM Staff": 988055417907200010
+            "ERM Staff": [988055417907200010, 1036285458780536883]
         }
 
         magic_flags_reverse = {v: k for k, v in magic_flags.items()}  # this is reverse mapping for quick lookup
@@ -306,7 +306,7 @@ class Search(commands.Cog):
             "ERM Management": 1038597868023447552,
             "ERM Senior Support": 1028848687927013396,
             "ERM Support": 1053417531278364713,
-            "ERM Staff": 988055417907200010
+            "ERM Staff": [988055417907200010, 1036285458780536883]
         }
 
         magic_flags_reverse = {v: k for k, v in magic_flags.items()}  # this is reverse mapping for quick lookup
