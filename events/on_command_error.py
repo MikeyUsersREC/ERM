@@ -7,6 +7,7 @@ import httpcore
 import pytz
 import roblox
 from discord.ext import commands
+from discord.ui import Button, View
 from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
 from aiohttp import ClientConnectorSSLError
@@ -224,13 +225,14 @@ class OnCommandError(commands.Cog):
             await ctx.send(
                 embed=discord.Embed(
                     title="<:error:1164666124496019637> Command Failure",
-                    description="The command you were attempting to run failed.\nPlease go to [ERM Support](https://discord.gg/FAC629TzBy) for details.",
+                    description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
                     color=RED_COLOR
                 ).add_field(
                     name="Error ID",
                     value=f"`{error_id}`",
                     inline=False
-                )
+                ),
+                view=View().add_item(Button(label="Contact ERM Support", style=discord.ButtonStyle.link, url="https://discord.gg/FAC629TzBy"))
             )
 
             with push_scope() as scope:
