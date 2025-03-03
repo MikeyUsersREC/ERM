@@ -42,5 +42,6 @@ jobs:
       - name: Run test suite
         env: 
            ENVIRONMENT: "PRODUCTION"
+           PRODUCTION_BOT_TOKEN: ""
         run: |
           pytest
