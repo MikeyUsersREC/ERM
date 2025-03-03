@@ -44,8 +44,8 @@ class OnGuildJoin(commands.Cog):
         > **Guild Owner:** <@{guild.owner.id}> `({guild.owner.id})`    
         """
         try:
-            embed.set_footer(icon_url=guild.icon.url, text=f"Guild ID: {guild.id}")
-            embed.set_thumbnail(url=guild.icon.url)
+            embed.set_footer(icon_url=guild.icon, text=f"Guild ID: {guild.id}")
+            embed.set_thumbnail(url=guild.icon)
         except AttributeError:
             pass
         await channel.send(embed=embed)
