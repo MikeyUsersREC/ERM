@@ -1641,13 +1641,16 @@ class APIRoutes:
                                     required_quota = role_quota['quota']
                                     break
                             
+                            # we need to make sure that users w/ 0 quota met their quota
+                            met_quota = required_quota == 0
+                            
                             all_staff[member.id] = {
                                 "user_id": member.id,
                                 "username": member.name,
                                 "shift_time": 0,
                                 "required_quota": required_quota,
-                                "met_quota": False,
-                                "infraction_type": infract_type,
+                                "met_quota": met_quota,
+                                "infraction_type": None if met_quota else infract_type,
                                 "skipped_loa": False
                             }
 
@@ -1660,7 +1663,10 @@ class APIRoutes:
                     shift_time = get_elapsed_time(shift_doc)
                     if shift_time < 100_000_000:
                         all_staff[member_id]["shift_time"] += shift_time
-                        all_staff[member_id]["met_quota"] = all_staff[member_id]["shift_time"] >= all_staff[member_id]["required_quota"]
+                        all_staff[member_id]["met_quota"] = (
+                            all_staff[member_id]["shift_time"] >= all_staff[member_id]["required_quota"] or 
+                            all_staff[member_id]["required_quota"] == 0
+                        )
                         if all_staff[member_id]["met_quota"]:
                             all_staff[member_id]["infraction_type"] = None
 
