@@ -34,14 +34,10 @@ jobs:
           sudo apt-get install git
 
 
+      # this should work right???
       - name: Install dependencies
         run: |
-          pip3 install num2words discord.py dnspython motor python-dateutil pytz quart python-decouple snowflake-id requests aiohttp sentry_sdk roblox sanic zuid pytest fuzzywuzzy levenshtein typing_extensions
-
-
-      - name: Install later dependencies
-        run: |
-          pip3 install --upgrade reactionmenu jishaku oauth2client gspread sentry_sdk[pymongo]
+          pip3 install -r requirements.txt 
 
       - name: Run test suite
         run: |
