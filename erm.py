@@ -20,6 +20,7 @@ from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
+from utils.emojis import EmojiController
 
 from utils.log_tracker import LogTracker
 from utils.mc_api import MCApiClient
@@ -203,6 +204,9 @@ class Bot(commands.AutoShardedBot):
             EXTERNAL_EXT = ["utils.api"]
             [Extensions.append(i) for i in EXTERNAL_EXT]
 
+            self.emoji_controller = EmojiController(environment, self)
+
+            await self.emoji_controller.prefetch_emojis()
 
             for extension in Extensions:
                 try:
@@ -262,7 +266,7 @@ class Bot(commands.AutoShardedBot):
 
     async def start_tasks(self):
         logging.info("Starting tasks after 10 minute delay...")
-        # await asyncio.sleep(600)  # 10 mins
+        await asyncio.sleep(600)  # 10 mins
         check_reminders.start(bot)
         check_loa.start(bot)
         iterate_ics.start(bot)
