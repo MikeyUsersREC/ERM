@@ -122,7 +122,10 @@ class Bot(commands.AutoShardedBot):
         if user.id == 1165311055728226444:
             return True
         
-        return await super().is_owner(user)
+        if environment != "CUSTOM":
+            return await super().is_owner(user)
+        else:
+            return False
 
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
