@@ -231,8 +231,8 @@ class Bot(commands.AutoShardedBot):
             if environment == "DEVELOPMENT":
                 pass
                 # await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-            else:
-                pass
+            elif environment == "CUSTOM":
+                await self.tree.sync()
                 # Prevent auto syncing
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
