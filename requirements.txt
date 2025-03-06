@@ -1,5 +1,5 @@
 num2words~=0.5.13
-discord.py~=2.4.0
+discord.py
 motor~=3.6.0
 python-dateutil~=2.8.2
 pytz~=2024.1

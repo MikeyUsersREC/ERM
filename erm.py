@@ -20,6 +20,7 @@ from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
+from utils.emojis import EmojiController
 
 from utils.log_tracker import LogTracker
 from utils.mc_api import MCApiClient
@@ -122,7 +123,10 @@ class Bot(commands.AutoShardedBot):
         if user.id == 1165311055728226444:
             return True
         
-        return await super().is_owner(user)
+        if environment != "CUSTOM":
+            return await super().is_owner(user)
+        else:
+            return False
 
     async def setup_hook(self) -> None:
         self.external_http_sessions: list[aiohttp.ClientSession] = []
@@ -200,6 +204,9 @@ class Bot(commands.AutoShardedBot):
             EXTERNAL_EXT = ["utils.api"]
             [Extensions.append(i) for i in EXTERNAL_EXT]
 
+            self.emoji_controller = EmojiController(environment, self)
+
+            await self.emoji_controller.prefetch_emojis()
 
             for extension in Extensions:
                 try:
@@ -231,8 +238,8 @@ class Bot(commands.AutoShardedBot):
             if environment == "DEVELOPMENT":
                 pass
                 # await bot.tree.sync(guild=discord.Object(id=987798554972143728))
-            else:
-                pass
+            elif environment == "CUSTOM":
+                await self.tree.sync()
                 # Prevent auto syncing
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
@@ -259,7 +266,7 @@ class Bot(commands.AutoShardedBot):
 
     async def start_tasks(self):
         logging.info("Starting tasks after 10 minute delay...")
-        # await asyncio.sleep(600)  # 10 mins
+        await asyncio.sleep(600)  # 10 mins
         check_reminders.start(bot)
         check_loa.start(bot)
         iterate_ics.start(bot)
