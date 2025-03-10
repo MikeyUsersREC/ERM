@@ -595,6 +595,7 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
 
         self.__str__.return_value = str(self.emoji)
 
+
 #
 # webhook_instance = discord.Webhook(
 #     data=unittest.mock.MagicMock(), session=unittest.mock.MagicMock()

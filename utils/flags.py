@@ -14,6 +14,7 @@ class PunishOptions(commands.FlagConverter, delimiter="=", prefix="/"):
     ephemeral: bool = False
     noconfirm: bool = False
 
+
 class SearchOptions(commands.FlagConverter, delimiter="=", prefix="/"):
     without_command_execution: bool = False
     ephemeral: bool = False

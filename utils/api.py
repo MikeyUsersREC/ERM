@@ -13,7 +13,15 @@ import discord
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from erm import Bot, management_predicate, is_staff, staff_predicate, staff_check, management_check, admin_check
+from erm import (
+    Bot,
+    management_predicate,
+    is_staff,
+    staff_predicate,
+    staff_check,
+    management_check,
+    admin_check,
+)
 from typing import Annotated
 from decouple import config
 import copy
@@ -28,6 +36,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
 
 class Identification(BaseModel):
     license: typing.Optional[typing.Any]
@@ -56,7 +65,7 @@ class APIRoutes:
         self.bot = bot
         self.router = APIRouter()
         for i in dir(self):
-           # # # print(i)
+            # # # print(i)
             if any(
                 [i.startswith(a) for a in ("GET_", "POST_", "PATCH_", "DELETE_")]
             ) and not i.startswith("_"):
@@ -87,7 +96,7 @@ class APIRoutes:
                     icon = icon.with_format("png")
                     icon = str(icon)
                 except Exception as e:
-                   # # # print(e)
+                    # # # print(e)
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 guilds.append(
@@ -101,7 +110,9 @@ class APIRoutes:
             raise HTTPException(status_code=401, detail="Invalid authorization")
 
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         shard_pings = {}
         for shard_id, shard in self.bot.shards.items():
@@ -109,12 +120,16 @@ class APIRoutes:
 
         return {"shard_pings": shard_pings}
 
-    async def GET_guild_shard(self, authorization: Annotated[str | None, Header()], guild_id: int):
+    async def GET_guild_shard(
+        self, authorization: Annotated[str | None, Header()], guild_id: int
+    ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
 
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         try:
             guild = self.bot.get_guild(guild_id)
@@ -127,16 +142,16 @@ class APIRoutes:
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
     async def POST_approve_application(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         try:
             json_data = await request.json()
             user_id = int(json_data["user"])
@@ -156,30 +171,32 @@ class APIRoutes:
             except discord.NotFound:
                 raise HTTPException(status_code=400, detail="User not found in guild")
             except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
+                raise HTTPException(
+                    status_code=400, detail=f"Error fetching user: {str(e)}"
+                )
 
             embed = discord.Embed(
-                title="<:success:1163149118366040106> Application Accepted",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Application Accepted",
                 description=f"Your application in **{guild.name}** has been accepted. Congratulations!\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
-                color=GREEN_COLOR
+                color=GREEN_COLOR,
             )
-            
+
             try:
                 await user.send(embed=embed)
             except discord.Forbidden:
                 print(f"Could not send DM to user {user_id}")
-            
+
             # Fetch and validate roles
             fetched_roles = await guild.fetch_roles()
             roles_to_add = []
             roles_to_remove = []
-            
+
             # Process roles to add
             for role_id in add_role_ids:
                 role = discord.utils.get(fetched_roles, id=int(role_id))
                 if role:
                     roles_to_add.append(role)
-            
+
             # Process roles to remove
             for role_id in remove_role_ids:
                 role = discord.utils.get(fetched_roles, id=int(role_id))
@@ -189,40 +206,55 @@ class APIRoutes:
             # Add roles
             if roles_to_add:
                 try:
-                    await user.add_roles(*roles_to_add, reason="Application approved - roles added")
+                    await user.add_roles(
+                        *roles_to_add, reason="Application approved - roles added"
+                    )
                 except discord.Forbidden:
-                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                    raise HTTPException(
+                        status_code=403, detail="Bot lacks permission to manage roles"
+                    )
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+                    raise HTTPException(
+                        status_code=400, detail=f"Error adding roles: {str(e)}"
+                    )
 
             # Remove roles
             if roles_to_remove:
                 try:
-                    await user.remove_roles(*roles_to_remove, reason="Application approved - roles removed")
+                    await user.remove_roles(
+                        *roles_to_remove, reason="Application approved - roles removed"
+                    )
                 except discord.Forbidden:
-                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                    raise HTTPException(
+                        status_code=403, detail="Bot lacks permission to manage roles"
+                    )
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+                    raise HTTPException(
+                        status_code=400, detail=f"Error removing roles: {str(e)}"
+                    )
 
             return 200
-                
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid data format: {str(e)}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_deny_application(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         try:
             json_data = await request.json()
             user_id = int(json_data["user"])
@@ -242,30 +274,32 @@ class APIRoutes:
             except discord.NotFound:
                 raise HTTPException(status_code=400, detail="User not found in guild")
             except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Error fetching user: {str(e)}")
+                raise HTTPException(
+                    status_code=400, detail=f"Error fetching user: {str(e)}"
+                )
 
             embed = discord.Embed(
                 title="Application Denied",
                 description=f"Your application in **{guild.name}** has been denied.\n\n**Application Information**\n> **Application Name:** {application_name}\n> **Submitted On:** <t:{submitted_on}>\n> **Note:** {note}",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             )
-            
+
             try:
                 await user.send(embed=embed)
             except discord.Forbidden:
                 print(f"Could not send DM to user {user_id}")
-            
+
             # Fetch and validate roles
             fetched_roles = await guild.fetch_roles()
             roles_to_add = []
             roles_to_remove = []
-            
+
             # Process roles to add
             for role_id in add_role_ids:
                 role = discord.utils.get(fetched_roles, id=int(role_id))
                 if role:
                     roles_to_add.append(role)
-            
+
             # Process roles to remove
             for role_id in remove_role_ids:
                 role = discord.utils.get(fetched_roles, id=int(role_id))
@@ -275,61 +309,76 @@ class APIRoutes:
             # Add roles
             if roles_to_add:
                 try:
-                    await user.add_roles(*roles_to_add, reason="Application denied - roles added")
+                    await user.add_roles(
+                        *roles_to_add, reason="Application denied - roles added"
+                    )
                 except discord.Forbidden:
-                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                    raise HTTPException(
+                        status_code=403, detail="Bot lacks permission to manage roles"
+                    )
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error adding roles: {str(e)}")
+                    raise HTTPException(
+                        status_code=400, detail=f"Error adding roles: {str(e)}"
+                    )
 
             # Remove roles
             if roles_to_remove:
                 try:
-                    await user.remove_roles(*roles_to_remove, reason="Application denied - roles removed")
+                    await user.remove_roles(
+                        *roles_to_remove, reason="Application denied - roles removed"
+                    )
                 except discord.Forbidden:
-                    raise HTTPException(status_code=403, detail="Bot lacks permission to manage roles")
+                    raise HTTPException(
+                        status_code=403, detail="Bot lacks permission to manage roles"
+                    )
                 except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Error removing roles: {str(e)}")
+                    raise HTTPException(
+                        status_code=400, detail=f"Error removing roles: {str(e)}"
+                    )
 
             return 200
-                
+
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid data format: {str(e)}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid data format: {str(e)}"
+            )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_send_staff_request(
-            self,
-            authorization: Annotated[str | None, Header()],
-            request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
 
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         json_data = await request.json()
         staff_request_id = json_data["document_id"]
         self.bot.dispatch("staff_request_send", ObjectId(staff_request_id))
-        return {
-            "op": 1,
-            "code": 200
-        }
+        return {"op": 1, "code": 200}
 
     async def POST_send_priority_dm(
-            self,
-            authorization: Annotated[str | None, Header()],
-            request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
 
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         json_data = await request.json()
 
-        guild = self.bot.get_guild(json_data["guild_id"]) or await self.bot.fetch_guild(json_data["guild_id"])
+        guild = self.bot.get_guild(json_data["guild_id"]) or await self.bot.fetch_guild(
+            json_data["guild_id"]
+        )
         guild_name = guild.name
         user_id = json_data["user_id"]
         member = guild.get_member(user_id)
@@ -340,39 +389,38 @@ class APIRoutes:
                 return HTTPException(status_code=404, detail="Member not found")
         if json_data["status"].lower() == "accepted":
             embed = discord.Embed(
-                title="<:success:1163149118366040106> Priority Request Accepted",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Priority Request Accepted",
                 description=f"Your priority request is **{guild.name}** has been accepted!",
-                color=GREEN_COLOR
+                color=GREEN_COLOR,
             ).add_field(
                 name="Priority Information",
                 value=f"> **Reason:** {json_data['reason']}\n> **Time:** {td_format(datetime.timedelta(seconds=int(json_data['priority_time'])))}",
-                inline=False
+                inline=False,
             )
         else:
             embed = discord.Embed(
                 title="Priority Request Denied",
                 description=f"Your priority request in **{guild_name}** has been denied. You can request a new one [here](https://ermbot.xyz/{guild.id}/request).",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             )
         try:
             await member.send(embed=embed)
-            return {
-                "op": 1,
-                "code": 200
-            }
+            return {"op": 1, "code": 200}
         except discord.HTTPException:
-            return HTTPException(status_code=400, detail="Member cannot be direct messaged.")
+            return HTTPException(
+                status_code=400, detail="Member cannot be direct messaged."
+            )
 
     async def POST_send_priority(
-            self,
-            authorization: Annotated[str | None, Header()],
-            request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
 
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         json_data = await request.json()
         channel_id = json_data["channel_id"]
@@ -387,7 +435,7 @@ class APIRoutes:
         embed = discord.Embed(
             title="New Priority Received",
             description=f"We have received a new priority request from **<@{json_data['username']}>** ({json_data['user_id']})",
-            color=BLANK_COLOR
+            color=BLANK_COLOR,
         )
 
         to_usernames = []
@@ -402,67 +450,73 @@ class APIRoutes:
                 f"> **Players:** {', '.join(to_usernames)}\n"
                 f"> **Link:** [Click here]({json_data['panel_link']})"
             ),
-            inline=False
+            inline=False,
         )
 
         embed.timestamp = datetime.datetime.now()
 
-        priority_settings = await self.bot.priority_settings.db.find_one({"guild_id": str(channel.guild.id)})
+        priority_settings = await self.bot.priority_settings.db.find_one(
+            {"guild_id": str(channel.guild.id)}
+        )
         mentioned_roles = priority_settings["mentioned_roles"]
         content = ", ".join([f"<@&{role}>" for role in mentioned_roles])
         try:
-            await channel.send(content, embed=embed, allowed_mentions=discord.AllowedMentions.all())
+            await channel.send(
+                content, embed=embed, allowed_mentions=discord.AllowedMentions.all()
+            )
         except discord.HTTPException:
             return HTTPException(status_code=404, detail="Channel not found")
 
-        return {
-            "op": 1,
-            "code": 200
-        }
+        return {"op": 1, "code": 200}
 
     async def POST_send_loa(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         json_data = await request.json()
-        s_loa = json_data.get("loa") # OID -> dict { loa spec }
+        s_loa = json_data.get("loa")  # OID -> dict { loa spec }
         s_loa_item = await self.bot.loas.find_by_id(s_loa)
         schema = s_loa_item
-        guild = self.bot.get_guild(schema["guild_id"]) or await self.bot.fetch_guild(schema["guild_id"])
+        guild = self.bot.get_guild(schema["guild_id"]) or await self.bot.fetch_guild(
+            schema["guild_id"]
+        )
         try:
-            author = guild.get_member(schema["user_id"]) or await guild.get_member(schema["user_id"])
+            author = guild.get_member(schema["user_id"]) or await guild.get_member(
+                schema["user_id"]
+            )
         except:
             raise HTTPException(status_code=400, detail="Invalid author")
 
-        request_type = schema['type']
+        request_type = schema["type"]
         settings = await self.bot.settings.find_by_id(guild.id)
-        management_roles = settings.get('staff_management', {}).get('management_role', [])
-        loa_roles = settings.get('staff_management').get(f'{request_type.lower()}_role')
-
-        embed = discord.Embed(
-            title=f"{request_type} Request",
-            color=BLANK_COLOR
+        management_roles = settings.get("staff_management", {}).get(
+            "management_role", []
         )
-        embed.set_author(
-            name=guild.name,
-            icon_url=guild.icon.url if guild.icon else ''
-        )
+        loa_roles = settings.get("staff_management").get(f"{request_type.lower()}_role")
 
-        past_author_notices = [item async for item in self.bot.loas.db.find({
-            "guild_id": guild.id,
-            "user_id": author.id,
-            "accepted": True,
-            "denied": False,
-            "expired": True,
-            "type": request_type.upper()
-        })]
+        embed = discord.Embed(title=f"{request_type} Request", color=BLANK_COLOR)
+        embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else "")
+
+        past_author_notices = [
+            item
+            async for item in self.bot.loas.db.find(
+                {
+                    "guild_id": guild.id,
+                    "user_id": author.id,
+                    "accepted": True,
+                    "denied": False,
+                    "expired": True,
+                    "type": request_type.upper(),
+                }
+            )
+        ]
 
         shifts = []
         storage_item = [
@@ -486,7 +540,7 @@ class APIRoutes:
                 f"> **Past {request_type}s:** {len(past_author_notices)}\n"
                 f"> **Shift Time:** {td_format(datetime.timedelta(seconds=total_seconds))}"
             ),
-            inline=False
+            inline=False,
         )
 
         embed.add_field(
@@ -496,7 +550,7 @@ class APIRoutes:
                 f"> **Reason:** {schema['reason']}\n"
                 f"> **Starts At:** <t:{schema.get('started_at', int(schema['_id'].split('_')[2]))}>\n"
                 f"> **Ends At:** <t:{schema['expiry']}>"
-            )
+            ),
         )
 
         view = LOAMenu(
@@ -505,53 +559,42 @@ class APIRoutes:
             loa_roles,
             schema,
             author.id,
-            (code := system_code_gen())
+            (code := system_code_gen()),
         )
 
         staff_channel = settings.get("staff_management").get("channel")
         staff_channel = discord.utils.get(guild.channels, id=staff_channel)
 
-        msg = await staff_channel.send(
-            embed=embed,
-            view=view
-        )
-        schema['message_id'] = msg.id
+        msg = await staff_channel.send(embed=embed, view=view)
+        schema["message_id"] = msg.id
         await self.bot.views.insert(
             {
                 "_id": code,
-                "args": [
-                    'SELF',
-                    management_roles,
-                    loa_roles,
-                    schema,
-                    author.id,
-                    code
-                ],
-                "view_type": 'LOAMenu',
-                'message_id': msg.id
+                "args": ["SELF", management_roles, loa_roles, schema, author.id, code],
+                "view_type": "LOAMenu",
+                "message_id": msg.id,
             }
         )
-        
+
         ns = copy.copy(schema)
         del ns["_id"]
         await self.bot.loas.db.update_one({"_id": schema["_id"]}, {"$set": ns})
-    
+
         return 200
-            
 
     async def POST_accept_loa(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         json_data = await request.json()
-        s_loa = json_data.get("loa") # oid -> dict { loa spec }
+        s_loa = json_data.get("loa")  # oid -> dict { loa spec }
         accepted_by = json_data.get("accepted_by")
         s_loa_item = await self.bot.loas.find_by_id(s_loa)
         s_loa = s_loa_item
@@ -559,23 +602,27 @@ class APIRoutes:
         # fetch the actual accept roles
         guild_id = s_loa["guild_id"]
         config = await self.bot.settings.find_by_id(guild_id) or {}
-        roles = config.get("staff_management", {}).get(f"{s_loa['type']}_role", []) or []
+        roles = (
+            config.get("staff_management", {}).get(f"{s_loa['type']}_role", []) or []
+        )
 
-        self.bot.dispatch("loa_accept", s_loa=s_loa, role_ids=roles, accepted_by=accepted_by)
+        self.bot.dispatch(
+            "loa_accept", s_loa=s_loa, role_ids=roles, accepted_by=accepted_by
+        )
 
         return 200
-    
+
     async def POST_deny_loa(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         json_data = await request.json()
         s_loa = json_data.get("loa")
         denied_by = json_data.get("denied_by")
@@ -588,65 +635,64 @@ class APIRoutes:
         return 200
 
     async def POST_send_application_wave(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         json_data = await request.json()
         if not json_data.get("Channel"):
             return HTTPException(status_code=400, detail="Bad Format")
-            
+
         channel = await self.bot.fetch_channel(json_data["Channel"])
         embed = discord.Embed(
             title="Application Results",
             description=f"The applications for **{json_data['ApplicationName']}** have been released!\n\n",
-            color=BLANK_COLOR
+            color=BLANK_COLOR,
         )
-        embed_temp = discord.Embed(
-            description="",
-            color=BLANK_COLOR
-        )
+        embed_temp = discord.Embed(description="", color=BLANK_COLOR)
         embeds = [embed]
-        
+
         for item in json_data["Applicants"]:
             new_content = f"<@{item['DiscordID']}>\n> Status: **{item['Status']}**\n> Reason: **{item['Reason']}**\n> Submission Time: <t:{int(item['SubmissionTime'])}>\n\n"
-            
+
             current_desc = embeds[-1].description or ""
             if len(current_desc) + len(new_content) > 4000:
                 new_embed = discord.Embed(description="", color=BLANK_COLOR)
                 embeds.append(new_embed)
-            
+
             embeds[-1].description = (embeds[-1].description or "") + new_content
-            
+
         await channel.send(embeds=embeds)
 
     async def POST_all_members(
-        self,
-        authorization: Annotated[str | None, Header()],
-        guild_id: int
+        self, authorization: Annotated[str | None, Header()], guild_id: int
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         guild = self.bot.get_guild(guild_id)
         if not guild:
             raise HTTPException(status_code=404, detail="Guild not found")
-    
+
         if not guild.chunked:
             try:
                 await guild.chunk(cache=True)
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to fetch all members: {str(e)}")
-    
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to fetch all members: {str(e)}"
+                )
+
         member_data = []
         for member in guild.members:
             voice_state = member.voice
@@ -655,40 +701,46 @@ class APIRoutes:
                 "name": member.name,
                 "nick": member.nick,
                 "roles": [role.id for role in member.roles[1:]],
-                "voice_state": None
+                "voice_state": None,
             }
-            
+
             if voice_state:
                 member_info["voice_state"] = {
-                    "channel_id": voice_state.channel.id if voice_state.channel else None,
-                    "channel_name": voice_state.channel.name if voice_state.channel else None,
+                    "channel_id": (
+                        voice_state.channel.id if voice_state.channel else None
+                    ),
+                    "channel_name": (
+                        voice_state.channel.name if voice_state.channel else None
+                    ),
                 }
-            
+
             member_data.append(member_info)
-    
-        response = {
-            "members": member_data,
-            "total_members": len(member_data)
-        }
-    
+
+        response = {"members": member_data, "total_members": len(member_data)}
+
         return response
-    
+
     async def POST_send_logging(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         json_data = await request.json()
-        await secure_logging(self.bot, json_data["guild_id"], json_data["author_id"], json_data["interpret_type"], json_data["command_string"], json_data["attempted"])
-        return {
-            "message": "Successfully logged!"
-        }
+        await secure_logging(
+            self.bot,
+            json_data["guild_id"],
+            json_data["author_id"],
+            json_data["interpret_type"],
+            json_data["command_string"],
+            json_data["attempted"],
+        )
+        return {"message": "Successfully logged!"}
 
     async def POST_get_staff_guilds(self, request: Request):
         json_data = await request.json()
@@ -696,7 +748,7 @@ class APIRoutes:
         user_id = json_data.get("user")
         if not guild_ids:
             raise HTTPException(status_code=400, detail="No guilds specified")
-    
+
         semaphore = asyncio.Semaphore(5)
 
         async def get_or_fetch(guild: discord.Guild, member_id: int):
@@ -708,7 +760,7 @@ class APIRoutes:
             except:
                 m = None
             return m
-    
+
         async def process_guild(guild_id):
             async with semaphore:
                 guild: discord.Guild = self.bot.get_guild(int(guild_id))
@@ -723,13 +775,15 @@ class APIRoutes:
                     icon = "https://cdn.discordapp.com/embed/avatars/0.png?size=512"
 
                 try:
-                    user = await asyncio.wait_for(get_or_fetch(guild, user_id), timeout=5.0)
+                    user = await asyncio.wait_for(
+                        get_or_fetch(guild, user_id), timeout=5.0
+                    )
                 except (discord.NotFound, asyncio.TimeoutError):
                     return None
 
                 if user is None:
                     return None
-    
+
                 permission_level = 0
                 if await management_check(self.bot, guild, user):
                     permission_level = 2
@@ -746,38 +800,40 @@ class APIRoutes:
                         "permission_level": permission_level,
                     }
                 return None
-    
-        guild_results = await asyncio.gather(*[process_guild(guild_id) for guild_id in guild_ids])
-    
+
+        guild_results = await asyncio.gather(
+            *[process_guild(guild_id) for guild_id in guild_ids]
+        )
+
         guilds = list(filter(lambda x: x is not None, guild_results))
-    
+
         return guilds
 
     async def POST_check_staff_level(self, request: Request):
         json_data = await request.json()
         guild_id = json_data.get("guild")
         user_id = json_data.get("user")
-    
+
         if not guild_id or not user_id:
             raise HTTPException(status_code=400, detail="Invalid guild or user ID")
-    
+
         guild = None
         user = None
-    
+
         guild = self.bot.get_guild(guild_id)
         if not guild:
             try:
                 guild = await self.bot.fetch_guild(guild_id)
             except (discord.Forbidden, discord.HTTPException):
                 raise HTTPException(status_code=400, detail="Invalid guild")
-    
+
         user = guild.get_member(user_id)
         if not user:
             try:
                 user = await guild.fetch_member(user_id)
             except (discord.Forbidden, discord.HTTPException):
                 return {"permission_level": 0}
-    
+
         permission_level = 0
         if await management_check(self.bot, guild, user):
             permission_level = 2
@@ -785,7 +841,7 @@ class APIRoutes:
             permission_level = 3
         elif await staff_check(self.bot, guild, user):
             permission_level = 1
-    
+
         return {"permission_level": permission_level}
 
     async def POST_get_guild_settings(self, request: Request):
@@ -820,10 +876,11 @@ class APIRoutes:
         guild: discord.Guild = self.bot.get_guild(int(guild_id))
         settings = await self.bot.settings.find_by_id(guild.id)
         if not settings:
-            return HTTPException(status_code=404, detail="Guild does not have settings attribute")
+            return HTTPException(
+                status_code=404, detail="Guild does not have settings attribute"
+            )
 
         return settings
-
 
     async def POST_get_guild_roles(self, request: Request):
         json_data = await request.json()
@@ -833,13 +890,10 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Invalid guild")
         guild: discord.Guild = self.bot.get_guild(int(guild_id))
 
-
-
-        return [{
-            "name": role.name,
-            "id": role.id,
-            "color": str(role.color)
-        } for role in guild.roles]
+        return [
+            {"name": role.name, "id": role.id, "color": str(role.color)}
+            for role in guild.roles
+        ]
 
     async def POST_get_guild_channels(self, request: Request):
         json_data = await request.json()
@@ -849,11 +903,10 @@ class APIRoutes:
             return HTTPException(status_code=400, detail="Invalid guild")
         guild: discord.Guild = self.bot.get_guild(int(guild_id))
 
-        return [{
-            "name": channel.name,
-            "id": channel.id,
-            "type": channel.type
-        } for channel in guild.channels]
+        return [
+            {"name": channel.name, "id": channel.id, "type": channel.type}
+            for channel in guild.channels
+        ]
 
     async def POST_get_last_warnings(self, request):
         json_data = await request.json()
@@ -889,7 +942,7 @@ class APIRoutes:
         if has_token:
             if not int(datetime.datetime.now().timestamp()) > has_token["expires_at"]:
                 return has_token
-       # # # print(request)
+        # # # print(request)
         generated = tokenGenerator()
         object = {
             "_id": request.client.host,
@@ -1116,104 +1169,131 @@ class APIRoutes:
         )
 
     async def POST_duty_on_actions(
-            self, authorization: Annotated[str | None, Header()],
-            request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
-        self.bot.dispatch('shift_start', ObjectId(data))
+        self.bot.dispatch("shift_start", ObjectId(data))
         return 200
 
-
-    async def POST_duty_off_actions(self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+    async def POST_duty_off_actions(
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
-        self.bot.dispatch('shift_end', ObjectId(data))
+        self.bot.dispatch("shift_end", ObjectId(data))
         return 200
 
-
-    async def POST_duty_break_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+    async def POST_duty_break_actions(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
-        self.bot.dispatch('break_start', ObjectId(data))
+        self.bot.dispatch("break_start", ObjectId(data))
         return 200
 
-    async def POST_duty_end_break_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+    async def POST_duty_end_break_actions(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
-
-
-        self.bot.dispatch('break_end', ObjectId(data))
+        self.bot.dispatch("break_end", ObjectId(data))
         return 200
 
-    async def POST_duty_voided_actions(self, authorization: Annotated[str | None, Header()], request: Request):
+    async def POST_duty_voided_actions(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
 
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
         dataobject = await self.bot.shift_management.fetch_shift(ObjectId(data))
         guild = await self.bot.fetch_guild(dataobject["Guild"])
-        staff_member = await guild.fetch_member(dataobject['UserID'])
+        staff_member = await guild.fetch_member(dataobject["UserID"])
 
-        self.bot.dispatch('shift_void', staff_member, ObjectId(data))
+        self.bot.dispatch("shift_void", staff_member, ObjectId(data))
         return 200
 
-    async def POST_punishment_logged(self, authorization: Annotated[str | None, Header()], request: Request):
+    async def POST_punishment_logged(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
         if not authorization:
             return HTTPException(status_code=401, detail="Invalid authorization")
 
-        base_auth = await validate_authorization(self.bot, authorization, disable_static_tokens=False)
+        base_auth = await validate_authorization(
+            self.bot, authorization, disable_static_tokens=False
+        )
         # print(base_auth)
         if not base_auth:
             return HTTPException(status_code=401, detail="Invalid authorization")
         data = request.query_params.get("ObjectId")
         if not data:
-            return HTTPException(status_code=400, detail="Didn't provide 'ObjectId' parameter.")
+            return HTTPException(
+                status_code=400, detail="Didn't provide 'ObjectId' parameter."
+            )
 
-        self.bot.dispatch('punishment', ObjectId(data))
+        self.bot.dispatch("punishment", ObjectId(data))
         return 200
+
     async def POST_duty_on(
         self,
         authorization: Annotated[str | None, Header()],
@@ -1299,7 +1379,7 @@ class APIRoutes:
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-        
+
         if not await validate_authorization(
             self.bot, authorization, disable_static_tokens=False
         ):
@@ -1320,7 +1400,7 @@ class APIRoutes:
             guild = self.bot.get_guild(link_string_obj["guild"])
         else:
             data = await request.json()
-            guild = data['guild']
+            guild = data["guild"]
 
         if not guild:
             raise HTTPException(status_code=404, detail="Guild not found")
@@ -1370,28 +1450,32 @@ class APIRoutes:
         )
 
     async def POST_guild(
-        self,
-        authorization: Annotated[str | None, Header()],
-        guild_id: int
+        self, authorization: Annotated[str | None, Header()], guild_id: int
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         guild = self.bot.get_guild(guild_id)
-        
+
         if not guild:
             try:
                 guild = await self.bot.fetch_guild(guild_id)
             except discord.NotFound:
                 raise HTTPException(status_code=404, detail="Guild not found")
             except discord.Forbidden:
-                raise HTTPException(status_code=403, detail="Bot does not have access to this guild")
+                raise HTTPException(
+                    status_code=403, detail="Bot does not have access to this guild"
+                )
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error fetching guild: {str(e)}")
-        
+                raise HTTPException(
+                    status_code=500, detail=f"Error fetching guild: {str(e)}"
+                )
+
         guild_data = {
             "id": guild.id,
             "name": guild.name,
@@ -1399,22 +1483,22 @@ class APIRoutes:
             "owner_id": guild.owner_id,
             "icon_url": str(guild.icon.url) if guild.icon else None,
             "features": guild.features,
-            "created_at": int(guild.created_at.timestamp())
+            "created_at": int(guild.created_at.timestamp()),
         }
-        
+
         return guild_data
 
     async def POST_issue_infraction(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         try:
             json_data = await request.json()
             user_id = int(json_data["user_id"])
@@ -1422,22 +1506,30 @@ class APIRoutes:
             original_infraction_type = json_data["infraction_type"]
             reason = json_data.get("reason", "No reason provided")
             issuer_id = json_data.get("issuer_id")
-            
+
             guild = self.bot.get_guild(guild_id)
             if not guild:
                 raise HTTPException(status_code=404, detail="Guild not found")
-                
+
             settings = await self.bot.settings.find_by_id(guild_id)
             if not settings or "infractions" not in settings:
-                raise HTTPException(status_code=404, detail="No infraction settings found")
+                raise HTTPException(
+                    status_code=404, detail="No infraction settings found"
+                )
 
             infraction_config = next(
-                (inf for inf in settings["infractions"]["infractions"] 
-                if inf["name"] == original_infraction_type),
-                None
+                (
+                    inf
+                    for inf in settings["infractions"]["infractions"]
+                    if inf["name"] == original_infraction_type
+                ),
+                None,
             )
             if not infraction_config:
-                raise HTTPException(status_code=404, detail=f"Infraction type {original_infraction_type} not found in settings")
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Infraction type {original_infraction_type} not found in settings",
+                )
 
             try:
                 member = await guild.fetch_member(user_id)
@@ -1458,23 +1550,30 @@ class APIRoutes:
             if infraction_config.get("escalation"):
                 while True:
                     threshold = infraction_config["escalation"].get("threshold", 0)
-                    next_infraction = infraction_config["escalation"].get("next_infraction")
-                    
+                    next_infraction = infraction_config["escalation"].get(
+                        "next_infraction"
+                    )
+
                     if not threshold or not next_infraction:
                         break
 
-                    existing_count = await self.bot.db.infractions.count_documents({
-                        "user_id": user_id,
-                        "guild_id": guild_id,
-                        "type": current_type,
-                        "revoked": {"$ne": True}
-                    })
+                    existing_count = await self.bot.db.infractions.count_documents(
+                        {
+                            "user_id": user_id,
+                            "guild_id": guild_id,
+                            "type": current_type,
+                            "revoked": {"$ne": True},
+                        }
+                    )
 
                     if (existing_count + 1) >= threshold:
                         next_config = next(
-                            (inf for inf in settings["infractions"]["infractions"] 
-                            if inf["name"] == next_infraction),
-                            None
+                            (
+                                inf
+                                for inf in settings["infractions"]["infractions"]
+                                if inf["name"] == next_infraction
+                            ),
+                            None,
                         )
                         if not next_config:
                             break
@@ -1499,57 +1598,65 @@ class APIRoutes:
                 "issuer_id": issuer_id,
                 "issuer_username": issuer_username,
                 "escalated": will_escalate,
-                "escalation_count": existing_count + 1 if will_escalate else None
+                "escalation_count": existing_count + 1 if will_escalate else None,
             }
 
             result = await self.bot.db.infractions.insert_one(infraction_doc)
             infraction_doc["_id"] = result.inserted_id
 
-            self.bot.dispatch('infraction_create', infraction_doc)
+            self.bot.dispatch("infraction_create", infraction_doc)
 
             return {
                 "status": "success",
                 "infraction_id": str(result.inserted_id),
                 "escalated": will_escalate,
-                "type": original_infraction_type
+                "type": original_infraction_type,
             }
 
         except Exception as e:
             logger.error(f"Error issuing infraction: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_revoke_infraction(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         try:
             json_data = await request.json()
             infraction_id = json_data.get("infraction_id")
             if not infraction_id:
                 raise HTTPException(status_code=400, detail="Missing infraction_id")
 
-            infraction = await self.bot.db.infractions.find_one({"_id": ObjectId(infraction_id)})
+            infraction = await self.bot.db.infractions.find_one(
+                {"_id": ObjectId(infraction_id)}
+            )
             if not infraction:
                 raise HTTPException(status_code=404, detail="Infraction not found")
 
             if infraction.get("revoked", False):
-                raise HTTPException(status_code=400, detail="Infraction already revoked")
+                raise HTTPException(
+                    status_code=400, detail="Infraction already revoked"
+                )
 
             # Update the infraction
             await self.bot.db.infractions.update_one(
                 {"_id": ObjectId(infraction_id)},
-                {"$set": {
-                    "revoked": True,
-                    "revoked_at": datetime.datetime.now(tz=pytz.UTC).timestamp(),
-                    "revoked_by": json_data.get("revoked_by", 0)
-                }}
+                {
+                    "$set": {
+                        "revoked": True,
+                        "revoked_at": datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                        "revoked_by": json_data.get("revoked_by", 0),
+                    }
+                },
             )
 
             infraction["revoked"] = True
@@ -1557,28 +1664,27 @@ class APIRoutes:
             infraction["revoked_by"] = json_data.get("revoked_by", 0)
 
             # Dispatch the event
-            self.bot.dispatch('infraction_revoke', infraction)
+            self.bot.dispatch("infraction_revoke", infraction)
 
-            return {
-                "status": "success",
-                "infraction_id": infraction_id
-            }
+            return {"status": "success", "infraction_id": infraction_id}
 
         except Exception as e:
             logger.error(f"Error revoking infraction: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_get_infraction_wave_preview(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
-    
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
         try:
             json_data = await request.json()
             guild_id = int(json_data["guild_id"])
@@ -1594,9 +1700,9 @@ class APIRoutes:
             if not guild:
                 raise HTTPException(status_code=404, detail="Guild not found")
 
-            staff_roles = settings.get('staff_management', {}).get('role', [])
-            role_quotas = settings.get('shift_management', {}).get('role_quotas', [])
-            general_quota = settings.get('shift_management', {}).get('quota') or 0
+            staff_roles = settings.get("staff_management", {}).get("role", [])
+            role_quotas = settings.get("shift_management", {}).get("role_quotas", [])
+            general_quota = settings.get("shift_management", {}).get("quota") or 0
 
             if not staff_roles:
                 raise HTTPException(status_code=400, detail="No staff roles configured")
@@ -1607,14 +1713,16 @@ class APIRoutes:
             active_loas = set()
             if omit_loas:
                 current_time = datetime.datetime.now(tz=pytz.UTC).timestamp()
-                async for loa in self.bot.loas.db.find({
-                    "guild_id": guild_id,
-                    "accepted": True,
-                    "denied": False,
-                    "expired": False,
-                    "voided": False,
-                    "expiry": {"$gt": current_time}
-                }):
+                async for loa in self.bot.loas.db.find(
+                    {
+                        "guild_id": guild_id,
+                        "accepted": True,
+                        "denied": False,
+                        "expired": False,
+                        "voided": False,
+                        "expiry": {"$gt": current_time},
+                    }
+                ):
                     active_loas.add(loa["user_id"])
 
             all_staff = {}
@@ -1631,19 +1739,19 @@ class APIRoutes:
                                     "required_quota": 0,
                                     "met_quota": True,
                                     "infraction_type": None,
-                                    "skipped_loa": True
+                                    "skipped_loa": True,
                                 }
                                 continue
 
                             required_quota = general_quota
                             for role_quota in role_quotas:
-                                if role_quota['role'] in [r.id for r in member.roles]:
-                                    required_quota = role_quota['quota']
+                                if role_quota["role"] in [r.id for r in member.roles]:
+                                    required_quota = role_quota["quota"]
                                     break
-                            
+
                             # we need to make sure that users w/ 0 quota met their quota
                             met_quota = required_quota == 0
-                            
+
                             all_staff[member.id] = {
                                 "user_id": member.id,
                                 "username": member.name,
@@ -1651,21 +1759,21 @@ class APIRoutes:
                                 "required_quota": required_quota,
                                 "met_quota": met_quota,
                                 "infraction_type": None if met_quota else infract_type,
-                                "skipped_loa": False
+                                "skipped_loa": False,
                             }
 
-            async for shift_doc in self.bot.shift_management.shifts.db.find({
-                "Guild": guild_id,
-                "EndEpoch": {"$gt": start_time, "$lt": end_time}
-            }):
+            async for shift_doc in self.bot.shift_management.shifts.db.find(
+                {"Guild": guild_id, "EndEpoch": {"$gt": start_time, "$lt": end_time}}
+            ):
                 member_id = shift_doc["UserID"]
                 if member_id in all_staff:
                     shift_time = get_elapsed_time(shift_doc)
                     if shift_time < 100_000_000:
                         all_staff[member_id]["shift_time"] += shift_time
                         all_staff[member_id]["met_quota"] = (
-                            all_staff[member_id]["shift_time"] >= all_staff[member_id]["required_quota"] or 
-                            all_staff[member_id]["required_quota"] == 0
+                            all_staff[member_id]["shift_time"]
+                            >= all_staff[member_id]["required_quota"]
+                            or all_staff[member_id]["required_quota"] == 0
                         )
                         if all_staff[member_id]["met_quota"]:
                             all_staff[member_id]["infraction_type"] = None
@@ -1676,29 +1784,39 @@ class APIRoutes:
             return {
                 "preview": {
                     "total_users": len(results),
-                    "users_below_quota": len([r for r in results if not r["met_quota"]]),
-                    "users_above_quota": len([r for r in results if r["met_quota"] and not r.get("skipped_loa", False)]),
+                    "users_below_quota": len(
+                        [r for r in results if not r["met_quota"]]
+                    ),
+                    "users_above_quota": len(
+                        [
+                            r
+                            for r in results
+                            if r["met_quota"] and not r.get("skipped_loa", False)
+                        ]
+                    ),
                     "users_skipped_loa": skipped_loas,
                     "period_start": start_time,
                     "period_end": end_time,
                 },
-                "users": results
+                "users": results,
             }
 
         except Exception as e:
             logger.error(f"Error generating infraction wave preview: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_start_infraction_wave(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         try:
             json_data = await request.json()
@@ -1712,15 +1830,16 @@ class APIRoutes:
             preview_request._json = json_data
 
             preview_results = await self.POST_get_infraction_wave_preview(
-                authorization=authorization,
-                request=preview_request
+                authorization=authorization, request=preview_request
             )
 
             if not infract_violators:
                 return {
                     "message": "Dry run completed",
-                    "would_infract": len([u for u in preview_results["users"] if not u["met_quota"]]),
-                    "preview": preview_results
+                    "would_infract": len(
+                        [u for u in preview_results["users"] if not u["met_quota"]]
+                    ),
+                    "preview": preview_results,
                 }
 
             infractions_issued = 0
@@ -1733,45 +1852,48 @@ class APIRoutes:
                             "guild_id": guild_id,
                             "infraction_type": infract_type,
                             "issuer_id": issuer_id,
-                            "reason": f"Failed to meet quota requirement of {td_format(datetime.timedelta(seconds=user['required_quota']))} (Achieved: {td_format(datetime.timedelta(seconds=user['shift_time']))})"
+                            "reason": f"Failed to meet quota requirement of {td_format(datetime.timedelta(seconds=user['required_quota']))} (Achieved: {td_format(datetime.timedelta(seconds=user['shift_time']))})",
                         }
-                        
+
                         await self.POST_issue_infraction(
-                            authorization=authorization,
-                            request=infraction_request
+                            authorization=authorization, request=infraction_request
                         )
                         infractions_issued += 1
                         await asyncio.sleep(0.5)
                     except Exception as e:
-                        logger.error(f"Failed to issue infraction for user {user['user_id']}: {e}")
+                        logger.error(
+                            f"Failed to issue infraction for user {user['user_id']}: {e}"
+                        )
 
             return {
                 "message": "Infraction wave completed",
                 "infractions_issued": infractions_issued,
-                "preview": preview_results
+                "preview": preview_results,
             }
 
         except Exception as e:
             logger.error(f"Error running infraction wave: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
 
     async def POST_search_guild_members(
-        self,
-        authorization: Annotated[str | None, Header()],
-        request: Request
+        self, authorization: Annotated[str | None, Header()], request: Request
     ):
         if not authorization:
             raise HTTPException(status_code=401, detail="Invalid authorization")
-    
+
         if not await validate_authorization(self.bot, authorization):
-            raise HTTPException(status_code=401, detail="Invalid or expired authorization.")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
 
         try:
             json_data = await request.json()
             guild_id = int(json_data.get("guild_id"))
             query = json_data.get("query")
             limit = min(int(json_data.get("limit", 1000)), 1000)
-            
+
             guild = self.bot.get_guild(guild_id)
             if not guild:
                 try:
@@ -1786,7 +1908,7 @@ class APIRoutes:
             for member in guild.members:
                 name_matches = query.lower() in member.name.lower()
                 nick_matches = member.nick and query.lower() in member.nick.lower()
-                
+
                 if name_matches or nick_matches:
                     member_data = {
                         "user": {
@@ -1798,24 +1920,34 @@ class APIRoutes:
                         },
                         "nick": member.nick,
                         "roles": [str(role.id) for role in member.roles],
-                        "joined_at": member.joined_at.isoformat() if member.joined_at else None,
-                        "premium_since": member.premium_since.isoformat() if member.premium_since else None,
+                        "joined_at": (
+                            member.joined_at.isoformat() if member.joined_at else None
+                        ),
+                        "premium_since": (
+                            member.premium_since.isoformat()
+                            if member.premium_since
+                            else None
+                        ),
                         "pending": member.pending,
-                        "communication_disabled_until": member.timed_out_until.isoformat() if member.timed_out_until else None
+                        "communication_disabled_until": (
+                            member.timed_out_until.isoformat()
+                            if member.timed_out_until
+                            else None
+                        ),
                     }
                     matching_members.append(member_data)
 
                 if len(matching_members) >= limit:
                     break
 
-            return {
-                "members": matching_members[:limit],
-                "total": len(matching_members)
-            }
+            return {"members": matching_members[:limit], "total": len(matching_members)}
 
         except Exception as e:
             logger.error(f"Error searching members: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}"
+            )
+
 
 api = FastAPI()
 
@@ -1824,8 +1956,8 @@ from fastapi import Request
 
 class MyMiddleware:
     def __init__(
-            self,
-            bot: commands.Bot,
+        self,
+        bot: commands.Bot,
     ):
         self.bot = bot
 
@@ -1836,7 +1968,11 @@ class MyMiddleware:
                 raise Exception("We're already redirected.")
 
             request_json = await request.json()
-            guild_id = int(request_json.get("guild_id") or request_json.get("guild") or request_json.get("GuildID"))
+            guild_id = int(
+                request_json.get("guild_id")
+                or request_json.get("guild")
+                or request_json.get("GuildID")
+            )
 
             doc = self.bot.whitelabel.db.find_one({"GuildID": str(guild_id)})
             if not doc:
@@ -1845,12 +1981,17 @@ class MyMiddleware:
             async with aiohttp.ClientSession() as session:
                 async with session.request(
                     method=request.method,
-                    url=request.url._url.replace(request.url._url.split("https://")[1].split("/")[0], f'core-{guild_id}.erlc.site'),
+                    url=request.url._url.replace(
+                        request.url._url.split("https://")[1].split("/")[0],
+                        f"core-{guild_id}.erlc.site",
+                    ),
                     body=request.body,
-                    headers=request.headers
+                    headers=request.headers,
                 ) as resp:
                     resp_body = await resp.read()
-                    return Response(content=resp_body, status_code=resp.status, headers=resp.headers)
+                    return Response(
+                        content=resp_body, status_code=resp.status, headers=resp.headers
+                    )
         except:
             response = await call_next(request)
             return response
@@ -1867,7 +2008,9 @@ class ServerAPI(commands.Cog):
             middleware = MyMiddleware(bot=self.bot)
             api.add_middleware(BaseHTTPMiddleware, dispatch=middleware)
             api.include_router(APIRoutes(self.bot).router)
-            self.config = uvicorn.Config("utils.api:api", port=5000, log_level="debug", host="0.0.0.0")
+            self.config = uvicorn.Config(
+                "utils.api:api", port=5000, log_level="debug", host="0.0.0.0"
+            )
             self.server = uvicorn.Server(self.config)
             await self.server.serve()
         except Exception as e:
@@ -1904,6 +2047,7 @@ class ServerAPI(commands.Cog):
             await self.stop_server()
         except Exception as e:
             logger.error(f"Error during cog unload: {e}")
+
 
 async def setup(bot):
     try:

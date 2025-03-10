@@ -9,9 +9,17 @@ from utils.constants import RED_COLOR, BLANK_COLOR
 
 @tasks.loop(minutes=1, reconnect=True)
 async def check_loa(bot):
-    filter_map = {"guild_id": int(config("CUSTOM_GUILD_ID", default=0))} if config("ENVIRONMENT") == "CUSTOM" else {
-            "guild_id": {"$nin": [int(item["GuildID"]) async for item in bot.whitelabel.db.find({})]}
-    }
+    filter_map = (
+        {"guild_id": int(config("CUSTOM_GUILD_ID", default=0))}
+        if config("ENVIRONMENT") == "CUSTOM"
+        else {
+            "guild_id": {
+                "$nin": [
+                    int(item["GuildID"]) async for item in bot.whitelabel.db.find({})
+                ]
+            }
+        }
+    )
 
     try:
         loas = bot.loas
@@ -87,11 +95,13 @@ async def check_loa(bot):
                                                 pass
                         if member:
                             try:
-                                await member.send(embed=discord.Embed(
-                                    title=f"{loaObject['type']} Expired",
-                                    description=f"Your {loaObject['type']} has expired in **{guild.name}**.",
-                                    color=BLANK_COLOR
-                                ))
+                                await member.send(
+                                    embed=discord.Embed(
+                                        title=f"{loaObject['type']} Expired",
+                                        description=f"Your {loaObject['type']} has expired in **{guild.name}**.",
+                                        color=BLANK_COLOR,
+                                    )
+                                )
                             except discord.Forbidden:
                                 pass
     except ValueError:

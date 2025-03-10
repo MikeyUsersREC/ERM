@@ -6,6 +6,7 @@ from utils.constants import BLANK_COLOR
 
 logger = logging.getLogger(__name__)
 
+
 class OnInfractionRevoke(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -31,10 +32,15 @@ class OnInfractionRevoke(commands.Cog):
                             roles_to_add.append(role)
                     if roles_to_add:
                         try:
-                            await member.add_roles(*roles_to_add, reason="Infraction revoked - restoring removed roles")
+                            await member.add_roles(
+                                *roles_to_add,
+                                reason="Infraction revoked - restoring removed roles",
+                            )
                             roles_modified = True
                         except discord.HTTPException as e:
-                            logger.error(f"Failed to restore roles for {member.id}: {e}")
+                            logger.error(
+                                f"Failed to restore roles for {member.id}: {e}"
+                            )
 
                 if "roles_added" in infraction:
                     roles_to_remove = []
@@ -44,24 +50,38 @@ class OnInfractionRevoke(commands.Cog):
                             roles_to_remove.append(role)
                     if roles_to_remove:
                         try:
-                            await member.remove_roles(*roles_to_remove, reason="Infraction revoked - removing added roles")
+                            await member.remove_roles(
+                                *roles_to_remove,
+                                reason="Infraction revoked - removing added roles",
+                            )
                             roles_modified = True
                         except discord.HTTPException as e:
-                            logger.error(f"Failed to remove added roles for {member.id}: {e}")
+                            logger.error(
+                                f"Failed to remove added roles for {member.id}: {e}"
+                            )
 
                 infraction_config = next(
-                    (inf for inf in settings["infractions"]["infractions"] 
-                    if inf["name"] == infraction["type"]),
-                    None
+                    (
+                        inf
+                        for inf in settings["infractions"]["infractions"]
+                        if inf["name"] == infraction["type"]
+                    ),
+                    None,
                 )
-                
-                if infraction_config and infraction_config.get("remove_ingame_perms", False):
+
+                if infraction_config and infraction_config.get(
+                    "remove_ingame_perms", False
+                ):
                     try:
-                        roblox_info = await self.bot.bloxlink.find_roblox(infraction["user_id"])
+                        roblox_info = await self.bot.bloxlink.find_roblox(
+                            infraction["user_id"]
+                        )
                         if roblox_info and "robloxID" in roblox_info:
                             roblox_id = roblox_info["robloxID"]
                             if member:
-                                await self.bot.prc_api.run_command(guild.id, f":mod {roblox_id}")
+                                await self.bot.prc_api.run_command(
+                                    guild.id, f":mod {roblox_id}"
+                                )
                     except Exception as e:
                         logger.error(f"Failed to restore in-game permissions: {e}")
 
@@ -70,7 +90,7 @@ class OnInfractionRevoke(commands.Cog):
                         embed = discord.Embed(
                             title="Infraction Revoked",
                             description=f"One of your infractions in **{guild.name}** has been revoked.",
-                            color=BLANK_COLOR
+                            color=BLANK_COLOR,
                         )
                         embed.add_field(
                             name="Details",
@@ -80,7 +100,7 @@ class OnInfractionRevoke(commands.Cog):
                                 f"> **Issued:** <t:{int(infraction['timestamp'])}:F>\n"
                                 f"> **Revoked:** <t:{int(infraction['revoked_at'])}:F>"
                             ),
-                            inline=False
+                            inline=False,
                         )
                         await member.send(embed=embed)
                     except discord.HTTPException:
@@ -91,7 +111,7 @@ class OnInfractionRevoke(commands.Cog):
                     embed = discord.Embed(
                         title="Infraction Revoked",
                         color=BLANK_COLOR,
-                        timestamp=datetime.datetime.now()
+                        timestamp=datetime.datetime.now(),
                     )
                     embed.add_field(
                         name="Details",
@@ -103,12 +123,13 @@ class OnInfractionRevoke(commands.Cog):
                             f"> **Revoked By:** <@{infraction['revoked_by']}>\n"
                             f"> **Infraction ID:** `{infraction['_id']}`"
                         ),
-                        inline=False
+                        inline=False,
                     )
                     await log_channel.send(embed=embed)
 
         except Exception as e:
             logger.error(f"Error in infraction revoke handler: {e}")
+
 
 async def setup(bot):
     await bot.add_cog(OnInfractionRevoke(bot))

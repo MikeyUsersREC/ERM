@@ -15,6 +15,7 @@ from utils.timestamp import td_format
 from utils.utils import invis_embed, failure_embed, require_settings
 from erm import is_staff, is_management
 
+
 class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -24,7 +25,7 @@ class Utility(commands.Cog):
         description="Internal Use Command, used for connection staff privileged individuals to their Roblox counterparts.",
         extras={"category": "Utility"},
         hidden=True,
-        with_app_command=False
+        with_app_command=False,
     )
     @commands.has_role(988055417907200010)
     async def staff_sync(self, ctx: commands.Context, discord_id: int, roblox_id: int):
@@ -33,9 +34,7 @@ class Utility(commands.Cog):
 
         await self.bot.staff_connections.insert_connection(
             StaffConnection(
-                roblox_id=roblox_id,
-                discord_id=discord_id,
-                document_id=ObjectId()
+                roblox_id=roblox_id, discord_id=discord_id, document_id=ObjectId()
             )
         )
         roblox_user = await self.bot.roblox.get_user(roblox_id)
@@ -43,7 +42,7 @@ class Utility(commands.Cog):
             embed=discord.Embed(
                 title="Staff Sync",
                 description=f"Successfully synced <@{discord_id}> to {roblox_user.name}",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             )
         )
 
@@ -91,7 +90,7 @@ class Utility(commands.Cog):
         )
 
         embed.set_footer(
-            text= f"Shard {ctx.guild.shard_id if ctx.guild else 0}/{self.bot.shard_count-1}"
+            text=f"Shard {ctx.guild.shard_id if ctx.guild else 0}/{self.bot.shard_count-1}"
         )
         embed.timestamp = datetime.datetime.utcnow()
         embed.set_thumbnail(url=ctx.guild.icon)
@@ -99,45 +98,44 @@ class Utility(commands.Cog):
 
     @commands.hybrid_command(
         name="modpanel",
-        aliases=['panel'],
+        aliases=["panel"],
         description="Get the link to this server's mod panel.",
-        extras={
-            "category": "Website"
-        }
+        extras={"category": "Website"},
     )
     @is_staff()
     @require_settings()
     async def mod_panel(self, ctx: commands.Context):
         guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
-        
+
         await ctx.send(
-            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Moderation Panel using the button below.")
-            .set_author(
-                name=ctx.guild.name, icon_url=guild_icon
+            embed=discord.Embed(
+                color=BLANK_COLOR,
+                description="Visit your server's Moderation Panel using the button below.",
+            ).set_author(name=ctx.guild.name, icon_url=guild_icon),
+            view=LinkView(
+                label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/panel"
             ),
-            view=LinkView(label="Mod Panel", url=f"https://ermbot.xyz/{ctx.guild.id}/panel")
         )
 
     @commands.hybrid_command(
         name="dashboard",
-        aliases=['dash', 'applications'],
+        aliases=["dash", "applications"],
         description="Get the link to manage your server through the dashboard.",
-        extras={
-            "category": "Website"
-        }
+        extras={"category": "Website"},
     )
     @is_management()
     async def dashboard(self, ctx: commands.Context):
         guild_icon = ctx.guild.icon.url if ctx.guild.icon else None
-        
+
         await ctx.send(
-            embed=discord.Embed(color=BLANK_COLOR, description="Visit your server's Dashboard using the button below.")
-            .set_author(
-                name=ctx.guild.name, icon_url=guild_icon
+            embed=discord.Embed(
+                color=BLANK_COLOR,
+                description="Visit your server's Dashboard using the button below.",
+            ).set_author(name=ctx.guild.name, icon_url=guild_icon),
+            view=LinkView(
+                label="Dashboard", url=f"https://ermbot.xyz/{ctx.guild.id}/dashboard"
             ),
-            view=LinkView(label="Dashboard", url=f"https://ermbot.xyz/{ctx.guild.id}/dashboard")
         )
-        
 
     @commands.hybrid_command(
         name="support",
@@ -153,7 +151,7 @@ class Utility(commands.Cog):
             embed=discord.Embed(
                 title="ERM Support",
                 description="You can join the ERM Systems Discord server using the button below.",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             ),
             view=LinkView(label="Support Server", url="https://discord.gg/FAC629TzBy"),
         )
@@ -170,7 +168,7 @@ class Utility(commands.Cog):
         embed = discord.Embed(
             title="About ERM",
             color=BLANK_COLOR,
-            description="ERM is the all-in-one approach to game moderation logging, shift logging and more."
+            description="ERM is the all-in-one approach to game moderation logging, shift logging and more.",
         )
 
         embed.add_field(
@@ -188,9 +186,7 @@ class Utility(commands.Cog):
             name=self.bot.user.name,
             icon_url=self.bot.user.display_avatar.url,
         )
-        await ctx.reply(
-            embed=embed
-        )
+        await ctx.reply(embed=embed)
 
     @commands.hybrid_group(name="api")
     async def api(self, ctx):
@@ -210,59 +206,53 @@ class Utility(commands.Cog):
             embed=discord.Embed(
                 title="Generate API Key",
                 description="Are you sure you want to generate an API key? This will invalidate any existing keys.",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             ),
             view=view,
-            ephemeral=isinstance(ctx.interaction, discord.Interaction)
+            ephemeral=isinstance(ctx.interaction, discord.Interaction),
         )
-        
+
         await view.wait()
         if not view.value:
             return
-            
+
         api_url = f"{config('OPENERM_API_URL')}/api/v1/auth/token"
-        auth_token = config('OPENERM_AUTH_TOKEN')
+        auth_token = config("OPENERM_AUTH_TOKEN")
         full_url = f"{api_url}?guild_id={ctx.guild.id}&auth_token={auth_token}"
-        
+
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(full_url) as response:
-                    
+
                     response_text = await response.text()
-                    
+
                     if response.status == 200:
                         api_key = response_text
-                        
+
                         if isinstance(ctx.interaction, discord.Interaction):
                             await ctx.send(
                                 embed=discord.Embed(
                                     title="API Key Generated",
                                     description="Here is your API key. Please save it somewhere safe - we won't show it again.",
-                                    color=BLANK_COLOR
-                                ).add_field(
-                                    name="API Key", 
-                                    value=f"```{api_key}```"
-                                ),
-                                ephemeral=True
+                                    color=BLANK_COLOR,
+                                ).add_field(name="API Key", value=f"```{api_key}```"),
+                                ephemeral=True,
                             )
                         else:
                             await ctx.author.send(
                                 embed=discord.Embed(
                                     title="API Key Generated",
                                     description="Here is your API key. Please save it somewhere safe - we won't show it again.",
-                                    color=BLANK_COLOR
-                                ).add_field(
-                                    name="API Key", 
-                                    value=f"```{api_key}```"
-                                )
+                                    color=BLANK_COLOR,
+                                ).add_field(name="API Key", value=f"```{api_key}```")
                             )
                             await msg.edit(
                                 embed=discord.Embed(
-                                    title="<:success:1163149118366040106> API Key Generated",
+                                    title=f"{self.bot.emoji_controller.get_emoji('success')} API Key Generated",
                                     description="I have successfully generated an API key and sent it to your DMs!",
-                                    color=GREEN_COLOR
+                                    color=GREEN_COLOR,
                                 ),
-                                view=None
+                                view=None,
                             )
                     else:
                         error_msg = f"API returned non-200 status: {response.status}"
@@ -271,9 +261,9 @@ class Utility(commands.Cog):
                             embed=discord.Embed(
                                 title="Error",
                                 description="Failed to generate API key. Please try again later.",
-                                color=BLANK_COLOR
+                                color=BLANK_COLOR,
                             ),
-                            ephemeral=isinstance(ctx.interaction, discord.Interaction)
+                            ephemeral=isinstance(ctx.interaction, discord.Interaction),
                         )
             except aiohttp.ClientError as e:
                 error_msg = f"API request failed: {str(e)}"
@@ -282,10 +272,11 @@ class Utility(commands.Cog):
                     embed=discord.Embed(
                         title="Error",
                         description="Failed to connect to API. Please try again later.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    ephemeral=isinstance(ctx.interaction, discord.Interaction)
+                    ephemeral=isinstance(ctx.interaction, discord.Interaction),
                 )
+
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))

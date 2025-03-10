@@ -4,6 +4,7 @@ from erm import management_predicate, staff_predicate, management_check, staff_c
 import aiohttp
 from decouple import config
 
+
 class OnMemberUpdate(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -33,21 +34,23 @@ class OnMemberUpdate(commands.Cog):
                     panel_url_var = config("PANEL_API_URL")
                     if panel_url_var in ["", None]:
                         return
-                    
+
                     async with aiohttp.ClientSession() as session:
-                        async with session.get(f"{url_var}/Auth/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}", headers={
-                            "Authorization": config('INTERNAL_API_AUTH')
-                        }):
+                        async with session.get(
+                            f"{url_var}/Auth/UpdatePermissionCache/{before.id}/{before.guild.id}/{after_permission}",
+                            headers={"Authorization": config("INTERNAL_API_AUTH")},
+                        ):
                             pass
 
                         url = f"{panel_url_var}/Internal/UpdatePermissionsCache/{before.guild.id}/{before.id}/{after_permission}"
                         print(f"Sending request to: {url}")
-                        
+
                         async with session.post(url):
                             pass
 
                 except:
                     pass
+
 
 async def setup(bot):
     await bot.add_cog(OnMemberUpdate(bot))

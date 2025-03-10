@@ -9,7 +9,4 @@ class MapleKeys(Document):
         doc = await self.db.find_one({"guildId": guild_id})
         if not doc:
             return None
-        return ServerKey(
-            guild_id=doc['guildId'],
-            key=doc['uniqueToken']
-        )
+        return ServerKey(guild_id=doc["guildId"], key=doc["uniqueToken"])

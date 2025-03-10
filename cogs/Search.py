@@ -13,11 +13,16 @@ import roblox as rbx_api
 
 from datamodels.StaffConnections import StaffConnection
 from datamodels.Warnings import WarningItem
-from erm import check_privacy, is_staff, staff_field, staff_predicate
+from erm import check_privacy, is_staff, staff_predicate
 from utils.autocompletes import user_autocomplete
 from copy import copy
 from utils.constants import BLANK_COLOR
-from utils.utils import invis_embed, failure_embed, get_roblox_by_username, require_settings
+from utils.utils import (
+    invis_embed,
+    failure_embed,
+    get_roblox_by_username,
+    require_settings,
+)
 from utils.paginators import SelectPagination, CustomPage
 
 client = roblox.Client()
@@ -36,9 +41,11 @@ class Search(commands.Cog):
         with_app_command=True,
     )
     @require_settings()
-    async def mywarnings(self, ctx: commands.Context, user: discord.Member = None): # changing this to discord.Member, change back to discord.User in the event of error
+    async def mywarnings(
+        self, ctx: commands.Context, user: discord.Member = None
+    ):  # changing this to discord.Member, change back to discord.User in the event of error
         if user is None:
-           user = ctx.author 
+            user = ctx.author
         guild_id = ctx.guild.id
         if guild_id == 823606319529066548:
             guild_id = 1015622817452138606
@@ -50,20 +57,22 @@ class Search(commands.Cog):
 
         bot = self.bot
         roblox_user = await bot.bloxlink.find_roblox(user.id)
-        if not roblox_user or not (roblox_user or {}).get('robloxID'):
+        if not roblox_user or not (roblox_user or {}).get("robloxID"):
             return await ctx.send(
                 embed=discord.Embed(
                     title="Could not find user",
                     description="I could not find this user's ROBLOX account. Ensure that they are linked with Bloxlink and try again.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
-        roblox_user = roblox_user['robloxID']
+        roblox_user = roblox_user["robloxID"]
 
         client = roblox.Client()
         roblox_player = await client.get_user(roblox_user)
 
-        warnings: list[WarningItem] = await bot.punishments.get_warnings(roblox_player.id, guild_id) or []
+        warnings: list[WarningItem] = (
+            await bot.punishments.get_warnings(roblox_player.id, guild_id) or []
+        )
 
         player_information_embed = discord.Embed(
             title=f"{roblox_player.name}",
@@ -82,15 +91,19 @@ class Search(commands.Cog):
             "ERM Senior Support": 1028848687927013396,
             "ERM Support": 1053417531278364713,
             "ERM Staff": 988055417907200010,
-            "ERM Quality Assurance": 1306431506914218067
+            "ERM Quality Assurance": 1306431506914218067,
         }
 
-        magic_flags_reverse = {v: k for k, v in magic_flags.items()}  # this is reverse mapping for quick lookup
+        magic_flags_reverse = {
+            v: k for k, v in magic_flags.items()
+        }  # this is reverse mapping for quick lookup
 
         g_id = 987798554972143728
         guild: discord.Guild = bot.get_guild(g_id)
         applied_flags = set()  # use set to automatically remove duplicates
-        member: None | StaffConnection = await bot.staff_connections.fetch_by_spec(roblox_id=roblox_player.id)
+        member: None | StaffConnection = await bot.staff_connections.fetch_by_spec(
+            roblox_id=roblox_player.id
+        )
 
         if member:
             try:
@@ -100,12 +113,15 @@ class Search(commands.Cog):
 
             if discord_member:
                 applied_flags.update(
-                    magic_flags_reverse.get(role.id) for role in discord_member.roles if role.id in magic_flags_reverse)
+                    magic_flags_reverse.get(role.id)
+                    for role in discord_member.roles
+                    if role.id in magic_flags_reverse
+                )
 
         applied_flags = list(applied_flags)
-        if (await bot.custom_flags.db.count_documents({
-            "roblox_id": roblox_player.id
-        })) > 0:
+        if (
+            await bot.custom_flags.db.count_documents({"roblox_id": roblox_player.id})
+        ) > 0:
             custom_flags = await bot.custom_flags.get_flags_by_roblox(roblox_player.id)
             for item in custom_flags:
                 applied_flags.insert(0, f"{item.name} {item.emoji or ''}")
@@ -114,9 +130,8 @@ class Search(commands.Cog):
             embed_list[0].add_field(
                 name="Player Flags",
                 inline=False,
-                value=''.join([f"{item}\n" for item in applied_flags])
+                value="".join([f"{item}\n" for item in applied_flags]),
             )
-
 
         embed_list[0].add_field(
             name="Player Information",
@@ -127,7 +142,7 @@ class Search(commands.Cog):
                 f"> **Friend Count:** {await roblox_player.get_friend_count()}\n"
                 f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
-            inline=False
+            inline=False,
         )
 
         if ctx.author == user:
@@ -152,11 +167,10 @@ class Search(commands.Cog):
             moderator_id = user.id if user else ctx.author.id
 
             moderations = [
-                await bot.punishments.fetch_warning(i['_id'])
-                async for i in bot.punishments.db.find({
-                    "ModeratorID": moderator_id,
-                    "Guild": guild_id
-                })
+                await bot.punishments.fetch_warning(i["_id"])
+                async for i in bot.punishments.db.find(
+                    {"ModeratorID": moderator_id, "Guild": guild_id}
+                )
             ]
 
             embed_list[0].add_field(
@@ -169,7 +183,7 @@ class Search(commands.Cog):
                     f"> **BOLOs:** {len(list(filter(lambda x: x.warning_type.upper() == 'BOLO', moderations)))}\n"
                     f"> **Other:** {len(list(filter(lambda x: x.warning_type.upper() not in ['WARNING', 'KICK', 'BAN', 'BOLO'], moderations)))}"
                 ),
-                inline=False
+                inline=False,
             )
         else:
             if user != ctx.author:
@@ -177,12 +191,12 @@ class Search(commands.Cog):
                     embed=discord.Embed(
                         title="No Staff Moderations",
                         description="This user has no moderations that they've handed out, so they cannot be viewed for privacy reasons.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
         def add_warning_field(warning):
-            new_line = '\n'
+            new_line = "\n"
             embed_list[-1].add_field(
                 name=f"{warning['Type']}",
                 inline=False,
@@ -191,7 +205,7 @@ class Search(commands.Cog):
                     f"> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
                     f"> **ID:** `{warning.snowflake}`"
-                )
+                ),
             )
 
         for warning in warnings:
@@ -200,40 +214,43 @@ class Search(commands.Cog):
             if len(embed_list[-1].fields) <= 2:
                 add_warning_field(warning)
             else:
-                new_embed = discord.Embed(
-                    title=embed_list[0].title, color=BLANK_COLOR
-                )
+                new_embed = discord.Embed(title=embed_list[0].title, color=BLANK_COLOR)
                 embed_list.append(new_embed)
                 add_warning_field(warning)
 
-        thumbnails = await client.thumbnails.get_user_avatar_thumbnails([roblox_player],
-                                                                        type=rbx_api.thumbnails.AvatarThumbnailType.headshot)
+        thumbnails = await client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], type=rbx_api.thumbnails.AvatarThumbnailType.headshot
+        )
         thumbnail_url = thumbnails[0].image_url
         for embed in embed_list:
             if len(embed.fields or []) == 0:
                 embed_list.remove(embed)
             embed.set_thumbnail(url=thumbnail_url)
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url
+                name=ctx.author.name, icon_url=ctx.author.display_avatar.url
             )
 
-        pages = [CustomPage(embeds=[embed], identifier=str(index + 1) if index != 0 else 'Player Information') if len(embed.fields) > 0 else None for
-                 index, embed in enumerate(embed_list)]
-        paginator = SelectPagination(ctx.author.id, list(filter(lambda x: x is not None, pages)))
+        pages = [
+            (
+                CustomPage(
+                    embeds=[embed],
+                    identifier=str(index + 1) if index != 0 else "Player Information",
+                )
+                if len(embed.fields) > 0
+                else None
+            )
+            for index, embed in enumerate(embed_list)
+        ]
+        paginator = SelectPagination(
+            self.bot, ctx.author.id, list(filter(lambda x: x is not None, pages))
+        )
 
         # # print(embed_list)
         # [# print(obj) for obj in [embed.to_dict() for embed in embed_list]]
         if len(embed_list) == 1:
-            return await ctx.send(
-                embeds=pages[0].embeds
-            )
+            return await ctx.send(embeds=pages[0].embeds)
 
-        paginator.message = await ctx.send(
-            embeds=pages[0].embeds,
-            view=paginator
-        )
-
+        paginator.message = await ctx.send(embeds=pages[0].embeds, view=paginator)
 
     @commands.guild_only()
     @commands.hybrid_command(
@@ -264,22 +281,26 @@ class Search(commands.Cog):
             "NotManyFriends": "This user has less than 30 friends.",
             # "NotManyGroups": "This user has less than 5 groups.", - Flag has been removed for rate-limiting purposes
             "HasBOLO": "This user has a BOLO active.",
-            "IsBanned": "This user is banned from Roblox."
+            "IsBanned": "This user is banned from Roblox.",
         }
 
         user = query
         roblox_user = await get_roblox_by_username(user, bot, ctx)
-        if roblox_user.get('errors'):
-            return await ctx.send(embed=discord.Embed(
-                title="Could not find player",
-                description="I could not find a ROBLOX player with that corresponding username.",
-                color=BLANK_COLOR
-            ))
+        if roblox_user.get("errors"):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find player",
+                    description="I could not find a ROBLOX player with that corresponding username.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         client = roblox.Client()
-        roblox_player = await client.get_user_by_username(roblox_user['name'])
+        roblox_player = await client.get_user_by_username(roblox_user["name"])
 
-        warnings: list[WarningItem] = await bot.punishments.get_warnings(roblox_player.id, ctx.guild.id) or []
+        warnings: list[WarningItem] = (
+            await bot.punishments.get_warnings(roblox_player.id, ctx.guild.id) or []
+        )
 
         player_information_embed = discord.Embed(
             title=f"{roblox_player.name}",
@@ -293,13 +314,17 @@ class Search(commands.Cog):
 
         alert_maps = {
             "IsBanned": roblox_player.is_banned,
-            "AccountAge": (datetime.datetime.now(tz=pytz.UTC) - roblox_player.created).days < 100,
+            "AccountAge": (
+                datetime.datetime.now(tz=pytz.UTC) - roblox_player.created
+            ).days
+            < 100,
             "NotManyFriends": (await roblox_player.get_friend_count()) < 30,
             # "NotManyGroups": len(await roblox_player.get_group_roles()) < 5, - This flag has been removed for ratelimiting purposes
-            "HasBOLO": "BOLO" in [warning.warning_type.upper() for warning in warnings]
+            "HasBOLO": "BOLO" in [warning.warning_type.upper() for warning in warnings],
         }
-        triggered_alerts = [item[0] for item in list(filter(lambda x: x[1] is True, alert_maps.items()))] or [
-            "NoAlerts"]
+        triggered_alerts = [
+            item[0] for item in list(filter(lambda x: x[1] is True, alert_maps.items()))
+        ] or ["NoAlerts"]
 
         magic_flags = {
             "ERM Team": 1001972346661384302,
@@ -308,15 +333,19 @@ class Search(commands.Cog):
             "ERM Senior Support": 1028848687927013396,
             "ERM Support": 1053417531278364713,
             "ERM Staff": 988055417907200010,
-            "ERM Quality Assurance": 1306431506914218067
+            "ERM Quality Assurance": 1306431506914218067,
         }
 
-        magic_flags_reverse = {v: k for k, v in magic_flags.items()}  # this is reverse mapping for quick lookup
+        magic_flags_reverse = {
+            v: k for k, v in magic_flags.items()
+        }  # this is reverse mapping for quick lookup
 
         guild_id = 987798554972143728
         guild: discord.Guild = bot.get_guild(guild_id)
         applied_flags = set()  # use set to automatically remove duplicates
-        member: None | StaffConnection = await bot.staff_connections.fetch_by_spec(roblox_id=roblox_player.id)
+        member: None | StaffConnection = await bot.staff_connections.fetch_by_spec(
+            roblox_id=roblox_player.id
+        )
 
         if member:
             try:
@@ -326,12 +355,15 @@ class Search(commands.Cog):
 
             if discord_member:
                 applied_flags.update(
-                    magic_flags_reverse.get(role.id) for role in discord_member.roles if role.id in magic_flags_reverse)
+                    magic_flags_reverse.get(role.id)
+                    for role in discord_member.roles
+                    if role.id in magic_flags_reverse
+                )
 
         applied_flags = list(applied_flags)
-        if (await bot.custom_flags.db.count_documents({
-            "roblox_id": roblox_player.id
-        })) > 0:
+        if (
+            await bot.custom_flags.db.count_documents({"roblox_id": roblox_player.id})
+        ) > 0:
             custom_flags = await bot.custom_flags.get_flags_by_roblox(roblox_player.id)
             for item in custom_flags:
                 applied_flags.insert(0, f"{item.name} {item.emoji or ''}")
@@ -340,7 +372,7 @@ class Search(commands.Cog):
             embed_list[0].add_field(
                 name="Player Flags",
                 inline=False,
-                value=''.join([f"{item}\n" for item in applied_flags])
+                value="".join([f"{item}\n" for item in applied_flags]),
             )
 
         # TODO: Flag Interpretation
@@ -354,7 +386,7 @@ class Search(commands.Cog):
                 f"> **Friend Count:** {await roblox_player.get_friend_count()}\n"
                 f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
-            inline=False
+            inline=False,
         )
 
         embed_list[0].add_field(
@@ -380,7 +412,7 @@ class Search(commands.Cog):
 
         # # # print(result)
         def add_warning_field(warning):
-            new_line = '\n'
+            new_line = "\n"
             embed_list[-1].add_field(
                 name=f"{warning['Type']}",
                 inline=False,
@@ -390,46 +422,47 @@ class Search(commands.Cog):
                     f"> **At:** <t:{int(warning.time_epoch)}>\n"
                     f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), new_line) if warning.until_epoch is not None else ""}'
                     f"> **ID:** `{warning.snowflake}`"
-                )
+                ),
             )
 
         for warning in warnings:
             if len(embed_list[-1].fields) <= 2:
                 add_warning_field(warning)
             else:
-                new_embed = discord.Embed(
-                    title=embed_list[0].title, color=BLANK_COLOR
-                )
+                new_embed = discord.Embed(title=embed_list[0].title, color=BLANK_COLOR)
                 embed_list.append(new_embed)
                 add_warning_field(warning)
 
-        thumbnails = await client.thumbnails.get_user_avatar_thumbnails([roblox_player],
-                                                                        type=rbx_api.thumbnails.AvatarThumbnailType.headshot)
+        thumbnails = await client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], type=rbx_api.thumbnails.AvatarThumbnailType.headshot
+        )
         thumbnail_url = thumbnails[0].image_url
         for embed in embed_list:
             if len(embed.fields or []) == 0:
                 embed_list.remove(embed)
             embed.set_thumbnail(url=thumbnail_url)
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url
+                name=ctx.author.name, icon_url=ctx.author.display_avatar.url
             )
 
-        pages = [CustomPage(embeds=[embed], identifier=str(index + 1)) if len(embed.fields) > 0 else None for
-                 index, embed in enumerate(embed_list)]
-        paginator = SelectPagination(ctx.author.id, list(filter(lambda x: x is not None, pages)))
+        pages = [
+            (
+                CustomPage(embeds=[embed], identifier=str(index + 1))
+                if len(embed.fields) > 0
+                else None
+            )
+            for index, embed in enumerate(embed_list)
+        ]
+        paginator = SelectPagination(
+            self.bot, ctx.author.id, list(filter(lambda x: x is not None, pages))
+        )
 
         # # print(embed_list)
         # [# print(obj) for obj in [embed.to_dict() for embed in embed_list]]
         if len(embed_list) == 1:
-            return await ctx.send(
-                embeds=pages[0].embeds
-            )
+            return await ctx.send(embeds=pages[0].embeds)
 
-        paginator.message = await ctx.send(
-            embeds=pages[0].embeds,
-            view=paginator
-        )
+        paginator.message = await ctx.send(embeds=pages[0].embeds, view=paginator)
 
     @commands.hybrid_command(
         name="userid",
@@ -449,23 +482,24 @@ class Search(commands.Cog):
 
         user = query
         roblox_user = await get_roblox_by_username(user, bot, ctx)
-        if roblox_user.get('errors'):
-            return await ctx.send(embed=discord.Embed(
-                title="Could not find player",
-                description="I could not find a ROBLOX player with that corresponding username.",
-                color=BLANK_COLOR
-            ))
+        if roblox_user.get("errors"):
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find player",
+                    description="I could not find a ROBLOX player with that corresponding username.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         client = roblox.Client()
-        roblox_player = await client.get_user_by_username(roblox_user['name'])
-        thumbnails = await client.thumbnails.get_user_avatar_thumbnails([roblox_player], type=rbx_api.thumbnails.AvatarThumbnailType.headshot)
+        roblox_player = await client.get_user_by_username(roblox_user["name"])
+        thumbnails = await client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], type=rbx_api.thumbnails.AvatarThumbnailType.headshot
+        )
         thumbnail = thumbnails[0].image_url
         embed = discord.Embed(title=roblox_player.name, color=BLANK_COLOR)
 
-        embed.set_author(
-            name=ctx.author.name,
-            icon_url=ctx.author.display_avatar.url
-        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
         embed.add_field(
             name="Player Information",
@@ -476,7 +510,7 @@ class Search(commands.Cog):
                 f"> **Presence:** { {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if (presence := await roblox_player.get_presence()) is not None else 'Offline'}\n"
                 f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
-            inline=False
+            inline=False,
         )
 
         embed.add_field(
@@ -486,15 +520,12 @@ class Search(commands.Cog):
                 f"> **Followers:** {await roblox_player.get_follower_count()}\n"
                 f"> **Following:** {await roblox_player.get_following_count()}\n"
                 f"> **Groups:** {len(await roblox_player.get_group_roles())}\n"
-            )
-        )
-        
-        embed.set_thumbnail(url=thumbnail)
-        embed.set_footer(text="Search Module")
-        await ctx.send(
-            embed=embed
+            ),
         )
 
+        embed.set_thumbnail(url=thumbnail)
+        embed.set_footer(text="Search Module")
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

@@ -15,14 +15,16 @@ default_emojis = {
     "ShiftEnded": 1178035088655646880,
 }
 
+
 class EmojiController:
-    def __init__(self, environment, bot):
-        self.environment = environment
+    def __init__(self, bot):
+        self.environment = bot.environment
         self.bot = bot
         self.emojis = {}
 
     async def prefetch_emojis(self):
         if self.environment == "PRODUCTION":
+            self.emojis = default_emojis
             return
 
         application_emojis = await self.bot.fetch_application_emojis()
@@ -30,7 +32,10 @@ class EmojiController:
             if item.endswith(".png"):
                 if item.replace(".png", "") not in [i.name for i in application_emojis]:
                     emoji_name = item.replace(".png", "")
-                    await self.bot.create_application_emoji(name=emoji_name, image=f"assets/emojis/{item}")
+                    image_data = open(f"assets/emojis/{item}", "rb").read()
+                    await self.bot.create_application_emoji(
+                        name=emoji_name, image=image_data
+                    )
 
         new_application_emojis = await self.bot.fetch_application_emojis()
         for emoji in new_application_emojis:

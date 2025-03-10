@@ -32,41 +32,45 @@ class OnStaffRequestSend(commands.Cog):
         staff_ingame = -1
         if is_erlc:
             try:
-                players = await self.bot.prc_api.get_server_players(
-                    guild_id
-                )
+                players = await self.bot.prc_api.get_server_players(guild_id)
             except prc_api.ResponseFailure:
                 players = []
 
             if len(players) > 0:
                 players_ingame = len(players)
-                staff_ingame = len(list(filter(lambda x: x.permission != "Normal", players)))
+                staff_ingame = len(
+                    list(filter(lambda x: x.permission != "Normal", players))
+                )
 
-        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": guild_id})
+        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents(
+            {"EndEpoch": 0, "Guild": guild_id}
+        )
 
         guild = self.bot.get_guild(guild_id) or await self.bot.fetch_guild(guild_id)
         user = guild.get_member(user_id) or await self.bot.fetch_user(user_id)
         newline = "\n"
 
-        embed = discord.Embed(
-            title="Staff Request Received",
-            description="A new staff request has been received from <@{0}> ({0})".format(user_id),
-            color=BLANK_COLOR
-        ).set_thumbnail(
-            url=user.display_avatar.url
-        ).add_field(
-            name="Request Information",
-            value=(
-                f"> **Reason:** {reason}\n"
-                f"> **Requested By:** <@{user_id}>"
-            ),
-            inline=False
-        ).add_field(
-            name="Staff Information",
-            value=(
-                f"{'> **Players In-Game:** {0}{1}'.format(str(players_ingame), newline) if players_ingame > 0 else ''}"
-                f"> **Staff Clocked In:** {staff_clocked_in}\n"
-                f"{'> **Staff In-Game:** {0}{1}'.format(str(staff_ingame), newline) if staff_ingame > 0 else ''}"
+        embed = (
+            discord.Embed(
+                title="Staff Request Received",
+                description="A new staff request has been received from <@{0}> ({0})".format(
+                    user_id
+                ),
+                color=BLANK_COLOR,
+            )
+            .set_thumbnail(url=user.display_avatar.url)
+            .add_field(
+                name="Request Information",
+                value=(f"> **Reason:** {reason}\n" f"> **Requested By:** <@{user_id}>"),
+                inline=False,
+            )
+            .add_field(
+                name="Staff Information",
+                value=(
+                    f"{'> **Players In-Game:** {0}{1}'.format(str(players_ingame), newline) if players_ingame > 0 else ''}"
+                    f"> **Staff Clocked In:** {staff_clocked_in}\n"
+                    f"{'> **Staff In-Game:** {0}{1}'.format(str(staff_ingame), newline) if staff_ingame > 0 else ''}"
+                ),
             )
         )
 
@@ -75,12 +79,12 @@ class OnStaffRequestSend(commands.Cog):
         channel = guild.get_channel(channel_id) or await guild.fetch_channel(channel_id)
 
         await channel.send(
-            ', '.join(["<@&{0}>".format(role) for role in mentioned_roles]),
+            ", ".join(["<@&{0}>".format(role) for role in mentioned_roles]),
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all(),
-            view=AcknowledgeStaffRequest(self.bot, o_id)
+            view=AcknowledgeStaffRequest(self.bot, o_id),
         )
+
 
 async def setup(bot):
     await bot.add_cog(OnStaffRequestSend(bot))
-

@@ -3,21 +3,21 @@ import datetime
 import logging
 import re
 import typing
+
 import aiohttp
 import discord
 import pytz
+import requests
 import roblox.users
-from decouple import config
 from discord import Embed, InteractionResponse, Webhook
 from discord.ext import commands
 from fuzzywuzzy import fuzz
 from snowflake import SnowflakeGenerator
 from zuid import ZUID
+
+import utils.prc_api as prc_api
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.prc_api import ServerStatus, Player
-import utils.prc_api as prc_api
-import requests
-import json
 
 
 class ArgumentMockingInstance:
@@ -45,7 +45,7 @@ def removesuffix(input_string: str, suffix: str):
 
 
 def get_guild_icon(
-        bot: typing.Union[commands.Bot, commands.AutoShardedBot], guild: discord.Guild
+    bot: typing.Union[commands.Bot, commands.AutoShardedBot], guild: discord.Guild
 ):
     if guild.icon is None:
         return bot.user.display_avatar.url
@@ -53,7 +53,9 @@ def get_guild_icon(
         return guild.icon.url
 
 
-async def generalised_interaction_check_failure(responder: InteractionResponse | Webhook | typing.Callable):
+async def generalised_interaction_check_failure(
+    responder: InteractionResponse | Webhook | typing.Callable,
+):
     if isinstance(responder, typing.Callable):
         responder = responder()
 
@@ -62,46 +64,42 @@ async def generalised_interaction_check_failure(responder: InteractionResponse |
             embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=BLANK_COLOR
-            ), ephemeral=True
+                color=BLANK_COLOR,
+            ),
+            ephemeral=True,
         )
     else:
         await responder.send(
             embed=discord.Embed(
                 title="Not Permitted",
                 description="You are not permitted to interact with these buttons.",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             )
         )
 
 
 async def get_roblox_by_username(user: str, bot, ctx: commands.Context):
-    if '<@' in user:
+    if "<@" in user:
         try:
-            member_converted = await (discord.ext.commands.MemberConverter()).convert(
+            member_converted = await discord.ext.commands.MemberConverter().convert(
                 ctx, user
             )
             if member_converted:
                 bl_user_data = await bot.bloxlink.find_roblox(member_converted.id)
                 # print(bl_user_data)
-                roblox_user = await bot.bloxlink.get_roblox_info(bl_user_data['robloxID'])
+                roblox_user = await bot.bloxlink.get_roblox_info(
+                    bl_user_data["robloxID"]
+                )
                 return roblox_user
         except KeyError:
-            return {
-                "errors": ["Member could not be found in Discord."]
-            }
+            return {"errors": ["Member could not be found in Discord."]}
 
     client = roblox.Client()
     roblox_user = await client.get_user_by_username(user)
     if not roblox_user:
-        return {
-            "errors": [
-                "Could not find user"
-            ]
-        }
+        return {"errors": ["Could not find user"]}
     else:
         return await bot.bloxlink.get_roblox_info(roblox_user.id)
-
 
 
 async def staff_check(bot_obj, guild, member):
@@ -118,9 +116,13 @@ async def staff_check(bot_obj, guild, member):
                         role.id for role in member.roles
                     ]:
                         return True
-    if member.guild_permissions.manage_messages or member.guild_permissions.administrator:
+    if (
+        member.guild_permissions.manage_messages
+        or member.guild_permissions.administrator
+    ):
         return True
     return False
+
 
 def time_converter(parameter: str) -> int:
     conversions = {
@@ -128,16 +130,16 @@ def time_converter(parameter: str) -> int:
         ("m", "minute", "minutes", " minutes"): 60,
         ("h", "hour", "hours", " hours"): 60 * 60,
         ("d", "day", "days", " days"): 24 * 60 * 60,
-        ("w", "week", " weeks"): 7 * 24 * 60 * 60
+        ("w", "week", " weeks"): 7 * 24 * 60 * 60,
     }
 
     for aliases, multiplier in conversions.items():
         parameter = parameter.strip()
         for alias in aliases:
-            if parameter[(len(parameter) - len(alias)):].lower() == alias.lower():
-                alias_found = parameter[(len(parameter) - len(alias)):]
+            if parameter[(len(parameter) - len(alias)) :].lower() == alias.lower():
+                alias_found = parameter[(len(parameter) - len(alias)) :]
                 number = parameter.split(alias_found)[0]
-                number = number.replace("-", "") # prevent those negative times!
+                number = number.replace("-", "")  # prevent those negative times!
                 if not number.strip()[-1].isdigit():
                     continue
                 return int(number.strip()) * multiplier
@@ -174,41 +176,47 @@ async def update_ics(bot, ctx, channel, return_val: dict, ics_id: int):
         queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
         players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
     except prc_api.ResponseFailure:
-        return return_val # fuck knows why
+        return return_val  # fuck knows why
     mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-    admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
-    total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
+    admins: int = len(
+        list(filter(lambda x: x.permission == "Server Administrator", players))
+    )
+    total_staff: int = len(list(filter(lambda x: x.permission != "Normal", players)))
 
-    if await bot.ics.db.count_documents({'_id': ics_id}):
-        await bot.ics.db.update_one({
-            '_id': ics_id,
-            "guild": ctx.guild.id
-        }, {'$set': {
-            'data': {
-                'join_code': status.join_key,
-                'players': status.current_players,
-                'max_players': status.max_players,
-                'queue': queue,
-                'staff': total_staff,
-                'admins': admins,
-                'mods': mods
-            }
-        }})
-    else:
-        await bot.ics.insert({
-            '_id': ics_id,
-            "guild": ctx.guild.id,
-            'data': {
-                'join_code': status.join_key,
-                'players': status.current_players,
-                'max_players': status.max_players,
-                'queue': queue,
-                'staff': total_staff,
-                'admins': admins,
-                'mods': mods
+    if await bot.ics.db.count_documents({"_id": ics_id}):
+        await bot.ics.db.update_one(
+            {"_id": ics_id, "guild": ctx.guild.id},
+            {
+                "$set": {
+                    "data": {
+                        "join_code": status.join_key,
+                        "players": status.current_players,
+                        "max_players": status.max_players,
+                        "queue": queue,
+                        "staff": total_staff,
+                        "admins": admins,
+                        "mods": mods,
+                    }
+                }
             },
-            'associated_messages': []
-        })
+        )
+    else:
+        await bot.ics.insert(
+            {
+                "_id": ics_id,
+                "guild": ctx.guild.id,
+                "data": {
+                    "join_code": status.join_key,
+                    "players": status.current_players,
+                    "max_players": status.max_players,
+                    "queue": queue,
+                    "staff": total_staff,
+                    "admins": admins,
+                    "mods": mods,
+                },
+                "associated_messages": [],
+            }
+        )
 
     return return_val
 
@@ -237,10 +245,13 @@ async def interpret_embed(bot, ctx, channel, embed: dict, ics_id: int):
     except AttributeError:
         pass
     for index, i in enumerate(embed.fields):
-        embed.set_field_at(index, name=await sub_vars(bot, ctx, channel, i.name),
-                           value=await sub_vars(bot, ctx, channel, i.value))
+        embed.set_field_at(
+            index,
+            name=await sub_vars(bot, ctx, channel, i.name),
+            value=await sub_vars(bot, ctx, channel, i.value),
+        )
 
-    if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
+    if await bot.server_keys.db.count_documents({"_id": ctx.guild.id}) == 0:
         return embed
 
     return await update_ics(bot, ctx, channel, embed, ics_id)
@@ -256,20 +267,27 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
         string = string.replace("{user}", ctx.author.mention)
         string = string.replace("{username}", ctx.author.name)
         string = string.replace("{display_name}", ctx.author.display_name)
-        string = string.replace("{time}", f"<t:{int(datetime.datetime.now().timestamp())}>")
+        string = string.replace(
+            "{time}", f"<t:{int(datetime.datetime.now().timestamp())}>"
+        )
         string = string.replace("{server}", ctx.guild.name)
         string = string.replace("{channel}", channel.mention)
         string = string.replace("{prefix}", list(await get_prefix(bot, ctx))[-1])
 
-        onduty: int = len([i async for i in bot.shift_management.shifts.db.find({
-            "Guild": ctx.guild.id, "EndEpoch": 0
-        })])
+        onduty: int = len(
+            [
+                i
+                async for i in bot.shift_management.shifts.db.find(
+                    {"Guild": ctx.guild.id, "EndEpoch": 0}
+                )
+            ]
+        )
 
         string = string.replace("{onduty}", str(onduty))
 
         #### CUSTOM ER:LC VARS
         # Fetch whether they should even be allowed to use ER:LC vars
-        if await bot.server_keys.db.count_documents({'_id': ctx.guild.id}) == 0:
+        if await bot.server_keys.db.count_documents({"_id": ctx.guild.id}) == 0:
             return string  # end here no point
 
         status: ServerStatus = await bot.prc_api.get_server_status(ctx.guild.id)
@@ -277,9 +295,15 @@ async def sub_vars(bot, ctx: commands.Context, channel, string, **kwargs):
             return string  # Invalid key
         queue: int = await bot.prc_api.get_server_queue(ctx.guild.id, minimal=True)
         players: list[Player] = await bot.prc_api.get_server_players(ctx.guild.id)
-        mods: int = len(list(filter(lambda x: x.permission == "Server Moderator", players)))
-        admins: int = len(list(filter(lambda x: x.permission == "Server Administrator", players)))
-        total_staff: int = len(list(filter(lambda x: x.permission != 'Normal', players)))
+        mods: int = len(
+            list(filter(lambda x: x.permission == "Server Moderator", players))
+        )
+        admins: int = len(
+            list(filter(lambda x: x.permission == "Server Administrator", players))
+        )
+        total_staff: int = len(
+            list(filter(lambda x: x.permission != "Normal", players))
+        )
 
         string = string.replace("{join_code}", status.join_key)
         string = string.replace("{players}", str(status.current_players))
@@ -299,34 +323,38 @@ def get_elapsed_time(document):
 
     if isinstance(document, ShiftItem):
         new_document = {
-            "Breaks": [{'StartEpoch': item.start_epoch, 'EndEpoch': item.end_epoch} for item in document.breaks],
+            "Breaks": [
+                {"StartEpoch": item.start_epoch, "EndEpoch": item.end_epoch}
+                for item in document.breaks
+            ],
             "StartEpoch": document.start_epoch,
             "EndEpoch": document.end_epoch,
             "AddedTime": document.added_time,
-            "RemovedTime": document.removed_time
+            "RemovedTime": document.removed_time,
         }
         document = new_document
     total_seconds = 0
     break_seconds = 0
     for br in document["Breaks"]:
-        if br['EndEpoch'] != 0:
+        if br["EndEpoch"] != 0:
             break_seconds += int(br["EndEpoch"]) - int(br["StartEpoch"])
         else:
-            break_seconds += int(datetime.datetime.now(tz=pytz.UTC).timestamp() - int(br["StartEpoch"]))
+            break_seconds += int(
+                datetime.datetime.now(tz=pytz.UTC).timestamp() - int(br["StartEpoch"])
+            )
 
     total_seconds += (
-            (int(
-                (
-                    document["EndEpoch"]
-                    if document["EndEpoch"] != 0
-                    else datetime.datetime.now(tz=pytz.UTC).timestamp()
-                )
+        int(
+            (
+                document["EndEpoch"]
+                if document["EndEpoch"] != 0
+                else datetime.datetime.now(tz=pytz.UTC).timestamp()
             )
-             - int(document["StartEpoch"])
-             + document["AddedTime"]
-             - document["RemovedTime"])
-            - break_seconds
-    )
+        )
+        - int(document["StartEpoch"])
+        + document["AddedTime"]
+        - document["RemovedTime"]
+    ) - break_seconds
 
     return total_seconds
 
@@ -344,91 +372,6 @@ async def get_prefix(bot, message):
     return commands.when_mentioned_or(prefix)(bot, message)
 
 
-async def end_break(bot, shift, shift_type, configItem, ctx, msg, member, manage: bool):
-    for item in shift["Breaks"]:
-        if item["EndEpoch"] == 0:
-            item["EndEpoch"] = ctx.message.created_at.timestamp()
-
-    try:
-        url_var = config("BASE_API_URL")
-        if url_var in ["", None]:
-            return
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                    f"{url_var}/Internal/SyncEndBreak/{shift['_id']}", headers={
-                        "Authorization": config('INTERNAL_API_AUTH')
-                    }):
-                pass
-    except ValueError:
-        pass
-
-    await bot.shift_management.shifts.update_by_id(shift)
-
-    if manage:
-        await msg.edit(
-            embed=None,
-            view=None,
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've ended your break.",
-        )
-    else:
-        await msg.edit(
-            embed=None,
-            view=None,
-            content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, I've ended **{member.name}**'s break.",
-        )
-
-    nickname_prefix = None
-    changed_nick = False
-    role = None
-
-    if shift_type:
-        if shift_type.get("nickname"):
-            nickname_prefix = shift_type.get("nickname")
-    else:
-        if configItem["shift_management"].get("nickname_prefix"):
-            nickname_prefix = configItem["shift_management"].get("nickname_prefix")
-
-    if nickname_prefix:
-        current_name = member.nick if member.nick else member.name
-        new_name = "{}{}".format(nickname_prefix, current_name)
-
-        try:
-            await member.edit(nick=new_name)
-            changed_nick = True
-        except Exception as e:
-            # # # print(e)
-            pass
-
-    if shift_type:
-        if shift_type.get("role"):
-            role = [
-                discord.utils.get(ctx.guild.roles, id=role)
-                for role in shift_type.get("role")
-            ]
-    else:
-        if configItem["shift_management"]["role"]:
-            if not isinstance(configItem["shift_management"]["role"], list):
-                role = [
-                    discord.utils.get(
-                        ctx.guild.roles,
-                        id=configItem["shift_management"]["role"],
-                    )
-                ]
-            else:
-                role = [
-                    discord.utils.get(ctx.guild.roles, id=role)
-                    for role in configItem["shift_management"]["role"]
-                ]
-
-    if role:
-        for rl in role:
-            if not rl in member.roles and rl is not None:
-                try:
-                    await member.add_roles(rl)
-                except discord.HTTPException:
-                    await failure_embed(ctx, f"could not add {rl} to {member.mention}")
-
-
 async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.Message:
     msg = await ctx.send(
         content=f"<:ERMCheck:1111089850720976906>  **{ctx.author.name}**, {content}",
@@ -438,7 +381,7 @@ async def invis_embed(ctx: commands.Context, content: str, **kwargs) -> discord.
 
 
 async def failure_embed(
-        ctx: commands.Context, content: str, **kwargs
+    ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     msg = await ctx.send(
         content=f"<:ERMClose:1111101633389146223>  **{ctx.author.name}**, {content}",
@@ -448,14 +391,10 @@ async def failure_embed(
 
 
 async def new_failure_embed(
-        ctx: commands.Context, title: str, description: str, **kwargs
+    ctx: commands.Context, title: str, description: str, **kwargs
 ) -> discord.Message:
     msg = await ctx.send(
-        embed=discord.Embed(
-            title=title,
-            description=description,
-            color=BLANK_COLOR
-        )
+        embed=discord.Embed(title=title, description=description, color=BLANK_COLOR)
     )
     return msg
 
@@ -465,7 +404,7 @@ async def get_player_avatar_url(player_id):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             data = await response.json()
-            return data['data'][0]['imageUrl']
+            return data["data"][0]["imageUrl"]
 
 
 async def run_command(bot, guild_id, username, message):
@@ -476,7 +415,7 @@ async def run_command(bot, guild_id, username, message):
             logging.info(f"Sent PM to {username} in guild {guild_id}")
             break
         elif command_response[0] == 429:
-            retry_after = int(command_response[1].get('Retry-After', 5))
+            retry_after = int(command_response[1].get("Retry-After", 5))
             logging.warning(f"Rate limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
@@ -485,18 +424,21 @@ async def run_command(bot, guild_id, username, message):
 
 
 def is_whitelisted(vehicle_name, whitelisted_vehicle):
-    vehicle_year_match = re.search(r'\d{4}$', vehicle_name)
-    whitelisted_year_match = re.search(r'\d{4}$', whitelisted_vehicle)
+    vehicle_year_match = re.search(r"\d{4}$", vehicle_name)
+    whitelisted_year_match = re.search(r"\d{4}$", whitelisted_vehicle)
     if vehicle_year_match and whitelisted_year_match:
         vehicle_year = vehicle_year_match.group()
         whitelisted_year = whitelisted_year_match.group()
         if vehicle_year != whitelisted_year:
             return False
-        vehicle_name_base = vehicle_name[:vehicle_year_match.start()].strip()
-        whitelisted_vehicle_base = whitelisted_vehicle[:whitelisted_year_match.start()].strip()
-        return fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+        vehicle_name_base = vehicle_name[: vehicle_year_match.start()].strip()
+        whitelisted_vehicle_base = whitelisted_vehicle[
+            : whitelisted_year_match.start()
+        ].strip()
+        return (
+            fuzz.ratio(vehicle_name_base.lower(), whitelisted_vehicle_base.lower()) > 80
+        )
     return False
-
 
 
 async def int_failure_embed(interaction, content, **kwargs):
@@ -526,7 +468,7 @@ async def int_pending_embed(interaction, content, **kwargs):
 
 
 async def pending_embed(
-        ctx: commands.Context, content: str, **kwargs
+    ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     msg = await ctx.send(
         content=f"<:ERMPending:1111097561588183121>  **{ctx.author.name}**, {content}",
@@ -549,7 +491,7 @@ async def int_invis_embed(interaction, content, **kwargs):
 
 
 async def coloured_embed(
-        ctx: commands.Context, content: str, **kwargs
+    ctx: commands.Context, content: str, **kwargs
 ) -> discord.Message:
     embed = Embed(color=0xED4348, description=f"{content}")
     msg = await ctx.send(embed=embed, **kwargs)
@@ -573,7 +515,7 @@ async def request_response(bot, ctx, question, **kwargs):
         response = await bot.wait_for(
             "message",
             check=lambda message: message.author == ctx.author
-                                  and message.guild.id == ctx.guild.id,
+            and message.guild.id == ctx.guild.id,
             timeout=300,
         )
     except asyncio.TimeoutError:
@@ -626,10 +568,10 @@ async def log_command_usage(bot, guild, member, command_name):
     settings = await bot.settings.find_by_id(guild.id)
     if not settings:
         return
-    if not settings.get('staff_management', {}).get('erm_log_channel'):
+    if not settings.get("staff_management", {}).get("erm_log_channel"):
         return
     try:
-        log_channel_id = settings.get('staff_management', {}).get('erm_log_channel')
+        log_channel_id = settings.get("staff_management", {}).get("erm_log_channel")
     except (ValueError, TypeError):
         return
     log_channel = guild.get_channel(log_channel_id)
@@ -640,7 +582,7 @@ async def log_command_usage(bot, guild, member, command_name):
     embed = discord.Embed(
         title="ERM Command Log",
         description=f"Command `{command_name}` used by {member.mention}",
-        color=BLANK_COLOR
+        color=BLANK_COLOR,
     )
     embed.set_footer(text=f"User ID: {member.id}")
     embed.set_author(name=member.name, icon_url=member.display_avatar.url)
@@ -652,10 +594,10 @@ async def config_change_log(bot, guild, member, data):
     setting = await bot.settings.find_by_id(guild.id)
     if not setting:
         return
-    if not setting.get('staff_management', {}).get('erm_log_channel'):
+    if not setting.get("staff_management", {}).get("erm_log_channel"):
         return
     try:
-        log_channel_id = setting.get('staff_management', {}).get('erm_log_channel')
+        log_channel_id = setting.get("staff_management", {}).get("erm_log_channel")
     except (ValueError, TypeError) as e:
         return
     log_channel = guild.get_channel(log_channel_id)
@@ -666,7 +608,7 @@ async def config_change_log(bot, guild, member, data):
     embed = discord.Embed(
         title="ERM Config Change Log",
         description=f"Configuration change made by {member.mention}",
-        color=BLANK_COLOR
+        color=BLANK_COLOR,
     ).add_field(name="Configuration Change", value=data)
     embed.set_footer(text=f"User ID: {member.id}")
     embed.set_author(name=member.name, icon_url=member.display_avatar.url)
@@ -674,10 +616,16 @@ async def config_change_log(bot, guild, member, data):
     await log_channel.send(embed=embed)
 
 
-async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Literal['Message', 'Hint', 'Command'],
-                         command_string: str, attempted: bool = False):
+async def secure_logging(
+    bot,
+    guild_id,
+    author_id,
+    interpret_type: typing.Literal["Message", "Hint", "Command"],
+    command_string: str,
+    attempted: bool = False,
+):
     settings = await bot.settings.find_by_id(guild_id)
-    channel = ((settings or {}).get('game_security', {}) or {}).get('channel')
+    channel = ((settings or {}).get("game_security", {}) or {}).get("channel")
     try:
         channel = await (await bot.fetch_guild(guild_id)).fetch_channel(channel)
     except discord.HTTPException:
@@ -687,15 +635,18 @@ async def secure_logging(bot, guild_id, author_id, interpret_type: typing.Litera
     server_status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
     if channel is not None:
         if not attempted:
-            await channel.send(embed=discord.Embed(
-                title="Remote Server Logs",
-                description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                color=RED_COLOR
-            ).set_footer(text=f"Private Server: {server_status.join_key}"))
+            await channel.send(
+                embed=discord.Embed(
+                    title="Remote Server Logs",
+                    description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) used a command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                    color=RED_COLOR,
+                ).set_footer(text=f"Private Server: {server_status.join_key}")
+            )
         else:
-            await channel.send(embed=discord.Embed(
-                title="Attempted Command Execution",
-                description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
-                color=RED_COLOR
-            ).set_footer(text=f"Private Server: {server_status.join_key}")
-                               )
+            await channel.send(
+                embed=discord.Embed(
+                    title="Attempted Command Execution",
+                    description=f"[{(await bot.bloxlink.get_roblox_info(bloxlink_user['robloxID']))['name']}:{bloxlink_user['robloxID']}](https://roblox.com/users/{bloxlink_user['robloxID']}/profile) attempted to use the command: {'`:m {}`'.format(command_string) if interpret_type == 'Message' else ('`:h {}`'.format(command_string) if interpret_type == 'Hint' else '`{}`'.format(command_string))}",
+                    color=RED_COLOR,
+                ).set_footer(text=f"Private Server: {server_status.join_key}")
+            )

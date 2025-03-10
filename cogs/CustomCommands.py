@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from erm import is_management,is_admin
+from erm import is_management, is_admin
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from utils.utils import generator
 from menus import (
@@ -12,8 +12,11 @@ from menus import (
     EmbedCustomisation,
     MessageCustomisation,
     RemoveCustomCommand,
-    YesNoColourMenu, CustomCommandOptionSelect, CustomCommandModification,
-    CounterButton, ViewVotersButton
+    YesNoColourMenu,
+    CustomCommandOptionSelect,
+    CustomCommandModification,
+    CounterButton,
+    ViewVotersButton,
 )
 from utils.autocompletes import command_autocomplete
 from utils.utils import (
@@ -44,41 +47,36 @@ class CustomCommands(commands.Cog):
     async def custom_manage(self, ctx):
         bot = self.bot
         Data = await bot.custom_commands.find_by_id(ctx.guild.id)
-        await log_command_usage(self.bot,ctx.guild, ctx.author, f"Custom Manage")
+        await log_command_usage(self.bot, ctx.guild, ctx.author, f"Custom Manage")
         if Data is None:
             Data = {"_id": ctx.guild.id, "commands": []}
 
         embeds = []
-        current_embed = discord.Embed(
-            title="Custom Commands",
-            color=BLANK_COLOR
-        ).set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        ).set_thumbnail(
-            url=ctx.guild.icon
+        current_embed = (
+            discord.Embed(title="Custom Commands", color=BLANK_COLOR)
+            .set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+            .set_thumbnail(url=ctx.guild.icon)
         )
 
         for item in Data["commands"]:
             if len(current_embed.fields) >= 10:
                 embeds.append(current_embed)
                 current_embed = discord.Embed(
-                    title="Custom Commands (cont.)",
-                    color=BLANK_COLOR
+                    title="Custom Commands (cont.)", color=BLANK_COLOR
                 )
 
             current_embed.add_field(
                 name=f"{item['name']}",
                 value=f"> **Name:** {item['name']}\n"
-                      f"> **Command ID:** `{item['id']}`\n"
-                      f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else '1')}",
+                f"> **Command ID:** `{item['id']}`\n"
+                f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else '1')}",
                 inline=False,
             )
 
         if len(current_embed.fields) == 0:
             current_embed.add_field(
                 name="No Custom Commands",
-                value=f"> No Custom Commands were found to be associated with this server."
+                value=f"> No Custom Commands were found to be associated with this server.",
             )
 
         embeds.append(current_embed)
@@ -100,24 +98,27 @@ class CustomCommands(commands.Cog):
                 "name": name,
                 "id": next(generator),
                 "message": None,
-                "author": ctx.author.id
+                "author": ctx.author.id,
             }
             view = CustomCommandModification(ctx.author.id, data)
             # timeout = await view.wait()
             # if timeout:
             #     return
-            await new_msg.edit(view=view, embed=discord.Embed(
-                title="Custom Commands",
-                description=(
-                    "**Command Information**\n"
-                    f"> **Command ID:** `{data['id']}`\n"
-                    f"> **Command Name:** {data['name']}\n"
-                    f"> **Creator:** <@{data['author']}>\n"
-                    f"\n**Message:**\n"
-                    f"View the message below by clicking 'View Message'."
+            await new_msg.edit(
+                view=view,
+                embed=discord.Embed(
+                    title="Custom Commands",
+                    description=(
+                        "**Command Information**\n"
+                        f"> **Command ID:** `{data['id']}`\n"
+                        f"> **Command Name:** {data['name']}\n"
+                        f"> **Creator:** <@{data['author']}>\n"
+                        f"\n**Message:**\n"
+                        f"View the message below by clicking 'View Message'."
+                    ),
+                    color=BLANK_COLOR,
                 ),
-                color=BLANK_COLOR
-            ))
+            )
             await view.wait()
             data = view.command_data
 
@@ -127,30 +128,26 @@ class CustomCommands(commands.Cog):
                         embed=discord.Embed(
                             title="Command Mismatch",
                             description="This custom command already exists.",
-                            color=BLANK_COLOR
+                            color=BLANK_COLOR,
                         )
                     )
 
             custom_command_data = {
                 "_id": ctx.guild.id,
-                "commands": [
-                    data
-                ],
+                "commands": [data],
             }
 
             if Data:
-                Data["commands"].append(
-                    data
-                )
+                Data["commands"].append(data)
             else:
                 Data = custom_command_data
 
             await bot.custom_commands.upsert(Data)
             await new_msg.edit(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Command Created",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Created",
                     description="This custom command has been successfully created",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 ),
                 view=None,
             )
@@ -168,7 +165,7 @@ class CustomCommands(commands.Cog):
                     embed=discord.Embed(
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
                 status = False
@@ -183,7 +180,7 @@ class CustomCommands(commands.Cog):
                     embed=discord.Embed(
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
                 status = False
@@ -193,20 +190,21 @@ class CustomCommands(commands.Cog):
                     "name": name,
                     "id": existing_command_data["id"],
                     "message": existing_command_data["message"],
-                    "author": existing_command_data.get("author", "1")
+                    "author": existing_command_data.get("author", "1"),
                 }
             except KeyError:
                 await new_msg.edit(
                     embed=discord.Embed(
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
                 status = False
             view = CustomCommandModification(ctx.author.id, data)
             if status == True:
-                await new_msg.edit(view=view,
+                await new_msg.edit(
+                    view=view,
                     embed=discord.Embed(
                         title="Custom Commands",
                         description=(
@@ -217,8 +215,8 @@ class CustomCommands(commands.Cog):
                             f"\n**Message:**\n"
                             f"View the message below by clicking 'View Message'."
                         ),
-                        color=BLANK_COLOR
-                    )
+                        color=BLANK_COLOR,
+                    ),
                 )
                 await view.wait()
                 data = view.command_data
@@ -230,13 +228,13 @@ class CustomCommands(commands.Cog):
                 await bot.custom_commands.upsert(Data)
                 return await new_msg.edit(
                     embed=discord.Embed(
-                        title="<:success:1163149118366040106> Command Edited",
+                        title=f"{self.bot.emoji_controller.get_emoji('success')} Command Edited",
                         description="This custom command has been successfully edited",
-                        color=GREEN_COLOR
+                        color=GREEN_COLOR,
                     ),
                     view=None,
                 )
-        
+
         elif view.value == "delete":
             identifier = view.modal.name.value
 
@@ -250,20 +248,19 @@ class CustomCommands(commands.Cog):
                     embed=discord.Embed(
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
 
             return await new_msg.edit(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Deleted Command",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Deleted Command",
                     description="This custom command has been successfully deleted",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 ),
                 view=None,
             )
-
 
     @custom.command(
         name="run",
@@ -283,7 +280,7 @@ class CustomCommands(commands.Cog):
             return await ctx.reply(
                 embed=discord.Embed(
                     title="No Commands",
-                    description="There are no custom commands in this server."
+                    description="There are no custom commands in this server.",
                 )
             )
 
@@ -303,7 +300,7 @@ class CustomCommands(commands.Cog):
                 embed=discord.Embed(
                     title="Command Mismatch",
                     description="This custom command doesn't exist.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -322,45 +319,53 @@ class CustomCommands(commands.Cog):
         embeds = []
         if selected["message"]["embeds"] is not None:
             for embed in selected["message"]["embeds"]:
-                embeds.append(await interpret_embed(bot, ctx, channel, embed, selected['id']))
+                embeds.append(
+                    await interpret_embed(bot, ctx, channel, embed, selected["id"])
+                )
         elif selected["message"]["embeds"] is None:
             pass
 
         view = discord.ui.View()
-        for item in selected.get('buttons', []):
-            if item['label'] == "0" and 'row' in item:
-                counter_button = CounterButton(row=item['row'])
-                view_voters_button = ViewVotersButton(row=item['row'], counter_button=counter_button)
+        for item in selected.get("buttons", []):
+            if item["label"] == "0" and "row" in item:
+                counter_button = CounterButton(row=item["row"])
+                view_voters_button = ViewVotersButton(
+                    row=item["row"], counter_button=counter_button
+                )
                 view.add_item(counter_button)
                 view.add_item(view_voters_button)
             else:
-                view.add_item(discord.ui.Button(
-                    label=item['label'],
-                    url=item['url'],
-                    row=item['row'],
-                    style=discord.ButtonStyle.url
-                ))
-
+                view.add_item(
+                    discord.ui.Button(
+                        label=item["label"],
+                        url=item["url"],
+                        row=item["row"],
+                        style=discord.ButtonStyle.url,
+                    )
+                )
 
         if ctx.interaction:
-            if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
+            if (
+                selected["message"]["content"] in [None, ""]
+                and len(selected["message"]["embeds"]) == 0
+            ):
                 return await ctx.interaction.followup.send(
                     embed=discord.Embed(
-                        title='Empty Command',
-                        description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
-                        color=BLANK_COLOR
+                        title="Empty Command",
+                        description="Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.",
+                        color=BLANK_COLOR,
                     )
                 )
             await ctx.interaction.followup.send(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Command Ran",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Ran",
                     description=f"I've just ran the custom command in {channel.mention}.",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
             msg = await channel.send(
                 content=await interpret_content(
-                    bot, ctx, channel, selected["message"]["content"], selected['id']
+                    bot, ctx, channel, selected["message"]["content"], selected["id"]
                 ),
                 embeds=embeds,
                 view=view,
@@ -370,32 +375,39 @@ class CustomCommands(commands.Cog):
             )
 
             # Fetch ICS entry
-            doc = await bot.ics.find_by_id(selected['id']) or {}
+            doc = await bot.ics.find_by_id(selected["id"]) or {}
             if doc is None:
                 return
-            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
-            doc['_id'] = [ctx.guild.id]
+            doc["associated_messages"] = (
+                [(channel.id, msg.id)]
+                if not doc.get("associated_messages")
+                else doc["associated_messages"] + [(channel.id, msg.id)]
+            )
+            doc["_id"] = [ctx.guild.id]
             await bot.ics.update_by_id(doc)
         else:
-            if selected['message']['content'] in [None, ""] and len(selected['message']['embeds']) == 0:
+            if (
+                selected["message"]["content"] in [None, ""]
+                and len(selected["message"]["embeds"]) == 0
+            ):
                 return await ctx.reply(
                     embed=discord.Embed(
-                        title='Empty Command',
-                        description='Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.',
-                        color=BLANK_COLOR
+                        title="Empty Command",
+                        description="Due to Discord limitations, I am unable to send your reminder. Your message is most likely empty.",
+                        color=BLANK_COLOR,
                     )
                 )
             await ctx.reply(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Command Ran",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Ran",
                     description=f"I've just ran the custom command in {channel.mention}.",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
 
             msg = await channel.send(
                 content=await interpret_content(
-                    bot, ctx, channel, selected["message"]["content"], selected['id']
+                    bot, ctx, channel, selected["message"]["content"], selected["id"]
                 ),
                 embeds=embeds,
                 view=view,
@@ -405,11 +417,15 @@ class CustomCommands(commands.Cog):
             )
 
             # Fetch ICS entry
-            doc = await bot.ics.find_by_id(selected['id']) or {}
+            doc = await bot.ics.find_by_id(selected["id"]) or {}
             if doc is None:
                 return
-            doc['associated_messages'] = [(channel.id, msg.id)] if not doc.get('associated_messages') else doc['associated_messages'] + [(channel.id, msg.id)]
-            doc['_id'] = doc.get('_id') or selected['id']
+            doc["associated_messages"] = (
+                [(channel.id, msg.id)]
+                if not doc.get("associated_messages")
+                else doc["associated_messages"] + [(channel.id, msg.id)]
+            )
+            doc["_id"] = doc.get("_id") or selected["id"]
             await bot.ics.update_by_id(doc)
 
 

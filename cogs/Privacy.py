@@ -35,33 +35,24 @@ class Privacy(commands.Cog):
                 else True
             )
             automatic_shifts_enabled = (
-                document.get('automatic_shifts')
-                if document.get('automatic_shifts') is not None else True
+                document.get("automatic_shifts")
+                if document.get("automatic_shifts") is not None
+                else True
             )
             selected = document
-        embed = discord.Embed(
-            title="User Settings",
-            color=BLANK_COLOR
-        )
+        embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
         embed.add_field(
             name="Configurations",
             value=(
-                f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+                f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
             ),
-            inline=False
+            inline=False,
         )
-        embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        )
-        embed.set_thumbnail(
-            url=ctx.author.display_avatar.url
-        )
-        embed.set_footer(
-            text="User Settings"
-        )
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_footer(text="User Settings")
         embed.timestamp = datetime.datetime.now()
 
         custom_view = discord.ui.View()
@@ -89,9 +80,7 @@ class Privacy(commands.Cog):
                     ],
                 )
 
-                await interaction.message.edit(
-                    view=view
-                )
+                await interaction.message.edit(view=view)
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
@@ -100,38 +89,27 @@ class Privacy(commands.Cog):
                         )
                     else:
                         selected["punishments"] = True
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
                         await bot.consent.update_by_id(selected)
                     punishments_enabled = True
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
-
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.success
                     await interaction.message.edit(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
@@ -143,49 +121,40 @@ class Privacy(commands.Cog):
                         )
                     else:
                         selected["punishments"] = False
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
                         await bot.consent.update_by_id(selected)
                     punishments_enabled = False
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.danger
 
                     await interaction.message.edit(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
             else:
-                await interaction.response.send_message(embed=discord.Embed(
-                    title="Not Permitted",
-                    description="You are not permitted to interact with these buttons.",
-                    color=BLANK_COLOR
-                ), ephemeral=True)
-
-
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="You are not permitted to interact with these buttons.",
+                        color=BLANK_COLOR,
+                    ),
+                    ephemeral=True,
+                )
 
         async def shift_reports(
             interaction: discord.Interaction, button: discord.ui.Button
@@ -210,50 +179,36 @@ class Privacy(commands.Cog):
                     ],
                 )
 
-                await interaction.message.edit(
-                    view=view
-                )
+                await interaction.message.edit(view=view)
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
                         selected = {"_id": ctx.author.id, "shift_reports": True}
-                        await bot.consent.insert(
-                            selected
-                        )
+                        await bot.consent.insert(selected)
                     else:
                         selected["shift_reports"] = True
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
                         await bot.consent.update_by_id(selected)
                     shift_reports_enabled = True
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.success
 
                     await interaction.edit_original_response(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
@@ -261,52 +216,43 @@ class Privacy(commands.Cog):
                 elif view.value == "disable":
                     if selected is None:
                         selected = {"_id": ctx.author.id, "shift_reports": False}
-                        await bot.consent.insert(
-                            selected
-                        )
+                        await bot.consent.insert(selected)
                     else:
                         selected["shift_reports"] = False
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
 
                         await bot.consent.update_by_id(selected)
                     shift_reports_enabled = False
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.danger
                     await interaction.message.edit(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
             else:
-                await interaction.response.send_message(embed=discord.Embed(
-                    title="Not Permitted",
-                    description="You are not permitted to interact with these buttons.",
-                    color=BLANK_COLOR
-                ), ephemeral=True)
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="You are not permitted to interact with these buttons.",
+                        color=BLANK_COLOR,
+                    ),
+                    ephemeral=True,
+                )
 
         async def automatic_shifts(
             interaction: discord.Interaction, button: discord.ui.Button
@@ -331,51 +277,36 @@ class Privacy(commands.Cog):
                     ],
                 )
 
-                await interaction.message.edit(
-                    view=view
-                )
+                await interaction.message.edit(view=view)
                 await view.wait()
                 if view.value == "enable":
                     if selected is None:
                         selected = {"_id": ctx.author.id, "automatic_shifts": True}
-                        await bot.consent.insert(
-                            selected
-                        )
+                        await bot.consent.insert(selected)
                     else:
                         selected["automatic_shifts"] = True
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
                         await bot.consent.update_by_id(selected)
                     automatic_shifts_enabled = True
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
-
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.success
 
                     await interaction.edit_original_response(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
@@ -383,73 +314,75 @@ class Privacy(commands.Cog):
                 elif view.value == "disable":
                     if selected is None:
                         selected = {"_id": ctx.author.id, "automatic_shifts": False}
-                        await bot.consent.insert(
-                            selected
-                        )
+                        await bot.consent.insert(selected)
                     else:
                         selected["automatic_shifts"] = False
-                        if not selected.get('_id'):
-                            selected['_id'] = ctx.author.id
+                        if not selected.get("_id"):
+                            selected["_id"] = ctx.author.id
 
                         await bot.consent.update_by_id(selected)
                     automatic_shifts_enabled = False
-                    embed = discord.Embed(
-                        title="User Settings",
-                        color=BLANK_COLOR
-                    )
+                    embed = discord.Embed(title="User Settings", color=BLANK_COLOR)
                     embed.add_field(
                         name="Configurations",
                         value=(
-                            f"> **Punishment Alerts:** {'<:check:1163142000271429662>' if punishments_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Shift Reports:** {'<:check:1163142000271429662>' if shift_reports_enabled is True else '<:xmark:1166139967920164915>'}\n"
-                            f"> **Automatic Shifts:** {'<:check:1163142000271429662>' if automatic_shifts_enabled is True else '<:xmark:1166139967920164915>'}"
-
+                            f"> **Punishment Alerts:** {bot.emoji_controller.get_emoji('check') if punishments_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Reports:** {bot.emoji_controller.get_emoji('check') if shift_reports_enabled is True else bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Automatic Shifts:** {bot.emoji_controller.get_emoji('check') if automatic_shifts_enabled is True else bot.emoji_controller.get_emoji('xmark')}"
                         ),
-                        inline=False
+                        inline=False,
                     )
-                    embed.set_author(
-                        name=ctx.guild.name,
-                        icon_url=ctx.guild.icon
-                    )
-                    embed.set_thumbnail(
-                        url=ctx.author.display_avatar.url
-                    )
-                    embed.set_footer(
-                        text="User Settings"
-                    )
+                    embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
+                    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+                    embed.set_footer(text="User Settings")
                     embed.timestamp = datetime.datetime.now()
                     button.style = discord.ButtonStyle.danger
                     await interaction.message.edit(
-                        content='',
+                        content="",
                         embed=embed,
                         view=button.view,
                     )
             else:
-                await interaction.response.send_message(embed=discord.Embed(
-                    title="Not Permitted",
-                    description="You are not permitted to interact with these buttons.",
-                    color=BLANK_COLOR
-                ), ephemeral=True)
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="You are not permitted to interact with these buttons.",
+                        color=BLANK_COLOR,
+                    ),
+                    ephemeral=True,
+                )
 
         buttons = [
             CustomExecutionButton(
                 ctx.author.id,
                 label="Punishment Alerts",
-                style=discord.ButtonStyle.danger if not punishments_enabled else discord.ButtonStyle.success,
+                style=(
+                    discord.ButtonStyle.danger
+                    if not punishments_enabled
+                    else discord.ButtonStyle.success
+                ),
                 func=punishment_alerts,
             ),
             CustomExecutionButton(
                 ctx.author.id,
                 label="Shift Reports",
-                style=discord.ButtonStyle.danger if not shift_reports_enabled else discord.ButtonStyle.success,
+                style=(
+                    discord.ButtonStyle.danger
+                    if not shift_reports_enabled
+                    else discord.ButtonStyle.success
+                ),
                 func=shift_reports,
             ),
             CustomExecutionButton(
                 ctx.author.id,
                 label="Automatic Shifts",
-                style=discord.ButtonStyle.danger if not automatic_shifts_enabled else discord.ButtonStyle.success,
+                style=(
+                    discord.ButtonStyle.danger
+                    if not automatic_shifts_enabled
+                    else discord.ButtonStyle.success
+                ),
                 func=automatic_shifts,
-            )
+            ),
         ]
 
         for child in buttons:

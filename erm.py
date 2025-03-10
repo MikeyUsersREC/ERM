@@ -122,7 +122,7 @@ class Bot(commands.AutoShardedBot):
         # Else fall back to the original
         if user.id == 1165311055728226444:
             return True
-        
+
         if environment != "CUSTOM":
             return await super().is_owner(user)
         else:
@@ -146,7 +146,7 @@ class Bot(commands.AutoShardedBot):
             elif environment == "PRODUCTION":
                 self.db = self.mongo["erm"]
             elif environment == "ALPHA":
-                self.db = self.mongo['alpha']
+                self.db = self.mongo["alpha"]
             elif environment == "CUSTOM":
                 self.db = self.mongo["erm"]
             else:
@@ -161,8 +161,10 @@ class Bot(commands.AutoShardedBot):
             self.log_tracker = LogTracker(self)
             self.scheduled_pm_queue = asyncio.Queue()
             self.pm_counter = {}
-            self.team_restrictions_infractions = {}  # Guild ID => [ { Username: Count } ]
-            
+            self.team_restrictions_infractions = (
+                {}
+            )  # Guild ID => [ { Username: Count } ]
+
             self.shift_management = ShiftManagement(self.db, "shift_management")
             self.errors = Errors(self.db, "errors")
             self.loas = ActivityNotices(self.db, "leave_of_absences")
@@ -184,19 +186,27 @@ class Bot(commands.AutoShardedBot):
             self.mc_keys = MapleKeys(self.maple_county, "Auth")
 
             self.staff_connections = StaffConnections(self.db, "staff_connections")
-            self.ics = IntegrationCommandStorage(self.db, 'logged_command_data')
+            self.ics = IntegrationCommandStorage(self.db, "logged_command_data")
             self.actions = Actions(self.db, "actions")
             self.prohibited = ProhibitedUseKeys(self.db, "prohibited_keys")
             self.saved_logs = SavedLogs(self.db, "saved_logs")
-            self.whitelabel = Whitelabel(self.mongo['ERMProcessing'], "Instances")
+            self.whitelabel = Whitelabel(self.mongo["ERMProcessing"], "Instances")
 
             self.pending_oauth2 = PendingOAuth2(self.db, "pending_oauth2")
             self.oauth2_users = OAuth2Users(self.db, "oauth2")
 
             self.roblox = roblox.Client()
-            self.prc_api = PRCApiClient(self, base_url=config('PRC_API_URL', default='https://api.policeroleplay.community/v1'), api_key=config('PRC_API_KEY', default='default_api_key'))
-            self.mc_api = MCApiClient(self, base_url=config("MC_API_URL"), api_key=config("MC_API_KEY"))
-            self.bloxlink = Bloxlink(self, config('BLOXLINK_API_KEY'))
+            self.prc_api = PRCApiClient(
+                self,
+                base_url=config(
+                    "PRC_API_URL", default="https://api.policeroleplay.community/v1"
+                ),
+                api_key=config("PRC_API_KEY", default="default_api_key"),
+            )
+            self.mc_api = MCApiClient(
+                self, base_url=config("MC_API_URL"), api_key=config("MC_API_KEY")
+            )
+            self.bloxlink = Bloxlink(self, config("BLOXLINK_API_KEY"))
 
             Extensions = [m.name for m in iter_modules(["cogs"], prefix="cogs.")]
             Events = [m.name for m in iter_modules(["events"], prefix="events.")]
@@ -204,7 +214,9 @@ class Bot(commands.AutoShardedBot):
             EXTERNAL_EXT = ["utils.api"]
             [Extensions.append(i) for i in EXTERNAL_EXT]
 
-            self.emoji_controller = EmojiController(environment, self)
+            # used for checking whether this is WL!
+            self.environment = environment
+            self.emoji_controller = EmojiController(self)
 
             await self.emoji_controller.prefetch_emojis()
 
@@ -239,25 +251,26 @@ class Bot(commands.AutoShardedBot):
                 pass
                 # await bot.tree.sync(guild=discord.Object(id=987798554972143728))
             elif environment == "CUSTOM":
-                await self.tree.sync()
+                pass  # TEMPORARY!
+                # await self.tree.sync()
                 # Prevent auto syncing
                 # await bot.tree.sync()
                 # guild specific: leave blank if global (global registration can take 1-24 hours)
             bot.is_synced = True
-            
+
             # we do this so the bot can get a cache of things before we spam discord with fetches
             asyncio.create_task(self.start_tasks())
-            
+
             async for document in self.views.db.find({}):
                 if document["view_type"] == "LOAMenu":
                     for index, item in enumerate(document["args"]):
                         if item == "SELF":
                             document["args"][index] = self
-                    loa_id = document['args'][3]
+                    loa_id = document["args"][3]
                     if isinstance(loa_id, dict):
-                        loa_expiry = loa_id['expiry']
+                        loa_expiry = loa_id["expiry"]
                         if loa_expiry < datetime.datetime.now().timestamp():
-                            await self.views.delete_by_id(document['_id'])
+                            await self.views.delete_by_id(document["_id"])
                             continue
                     self.add_view(
                         LOAMenu(*document["args"]), message_id=document["message_id"]
@@ -266,7 +279,7 @@ class Bot(commands.AutoShardedBot):
 
     async def start_tasks(self):
         logging.info("Starting tasks after 10 minute delay...")
-        await asyncio.sleep(600)  # 10 mins
+        # await asyncio.sleep(600)  # 10 mins
         check_reminders.start(bot)
         check_loa.start(bot)
         iterate_ics.start(bot)
@@ -302,6 +315,7 @@ bot.bloxlink_api_key = bloxlink_api_key
 environment = config("ENVIRONMENT", default="DEVELOPMENT")
 internal_command_storage = {}
 
+
 def running():
     if bot:
         if bot._ready != MISSING:
@@ -310,6 +324,7 @@ def running():
             return -1
     else:
         return -1
+
 
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
@@ -320,9 +335,9 @@ async def AutoDefer(ctx: commands.Context):
                     embed=discord.Embed(
                         title="Not Permitted",
                         description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    ephemeral=True
+                    ephemeral=True,
                 )
                 raise Exception(f"Guild not permitted to use this bot: {ctx.guild.id}")
 
@@ -331,7 +346,7 @@ async def AutoDefer(ctx: commands.Context):
     if doc:
         # must be a whitelabel instance. are we the whitelabel instance?
         if environment == "CUSTOM" and int(config("CUSTOM_GUILD_ID")) == guild_id:
-            pass # we are the whitelabel instance, we're fine.
+            pass  # we are the whitelabel instance, we're fine.
         else:
             # we aren't the whitelabel instance!
             if ctx.interaction:
@@ -339,9 +354,9 @@ async def AutoDefer(ctx: commands.Context):
                     embed=discord.Embed(
                         title="Not Permitted",
                         description="There is a whitelabel bot already i",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    ephemeral=True
+                    ephemeral=True,
                 )
             raise Exception("Whitelabel bot already in use")
 
@@ -360,16 +375,30 @@ async def loggingCommandExecution(ctx: commands.Context):
     if ctx in internal_command_storage:
         command_name = ctx.command.qualified_name
 
-        duration = float(datetime.datetime.now(tz=pytz.UTC).timestamp() - internal_command_storage[ctx])
-        logging.info(f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds")
-        shard_info = f"Shard ID ::: {ctx.guild.shard_id}" if ctx.guild else "Shard ID ::: -1, Direct Messages"
+        duration = float(
+            datetime.datetime.now(tz=pytz.UTC).timestamp()
+            - internal_command_storage[ctx]
+        )
+        logging.info(
+            f"Command {command_name} was run by {ctx.author.name} ({ctx.author.id}) and lasted {duration} seconds"
+        )
+        shard_info = (
+            f"Shard ID ::: {ctx.guild.shard_id}"
+            if ctx.guild
+            else "Shard ID ::: -1, Direct Messages"
+        )
         logging.info(shard_info)
     else:
-        logging.info("Command could not be found in internal context storage. Please report.")
+        logging.info(
+            "Command could not be found in internal context storage. Please report."
+        )
     del internal_command_storage[ctx]
 
+
 @bot.event
-async def on_message(message): # DO NOT COG - process commands does not work as intended whilst in cogs
+async def on_message(
+    message,
+):  # DO NOT COG - process commands does not work as intended whilst in cogs
     if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
         if message.guild.id != int(config("CUSTOM_GUILD_ID")):
             ctx = await bot.get_context(message)
@@ -378,7 +407,7 @@ async def on_message(message): # DO NOT COG - process commands does not work as 
                     embed=discord.Embed(
                         title="Not Permitted",
                         description="This bot is not permitted to be used in this server. You can change this in the **Whitelabel Bot Dashboard**.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
                 return
@@ -429,6 +458,7 @@ async def management_check(bot_obj, guild, member):
         return True
     return False
 
+
 async def admin_check(bot_obj, guild, member):
     guild_settings = await bot_obj.settings.find_by_id(guild.id)
     if guild_settings:
@@ -439,16 +469,24 @@ async def admin_check(bot_obj, guild, member):
                         if role in [role.id for role in member.roles]:
                             return True
                 elif isinstance(guild_settings["staff_management"]["admin_role"], int):
-                    if guild_settings["staff_management"]["admin_role"] in [role.id for role in member.roles]:
+                    if guild_settings["staff_management"]["admin_role"] in [
+                        role.id for role in member.roles
+                    ]:
                         return True
         if "management_role" in guild_settings["staff_management"].keys():
             if guild_settings["staff_management"]["management_role"] != "":
-                if isinstance(guild_settings["staff_management"]["management_role"], list):
+                if isinstance(
+                    guild_settings["staff_management"]["management_role"], list
+                ):
                     for role in guild_settings["staff_management"]["management_role"]:
                         if role in [role.id for role in member.roles]:
                             return True
-                elif isinstance(guild_settings["staff_management"]["management_role"], int):
-                    if guild_settings["staff_management"]["management_role"] in [role.id for role in member.roles]:
+                elif isinstance(
+                    guild_settings["staff_management"]["management_role"], int
+                ):
+                    if guild_settings["staff_management"]["management_role"] in [
+                        role.id for role in member.roles
+                    ]:
                         return True
     if member.guild_permissions.administrator:
         return True
@@ -465,14 +503,17 @@ async def staff_predicate(ctx):
 def is_staff():
     return commands.check(staff_predicate)
 
+
 async def admin_predicate(ctx):
     if ctx.guild is None:
         return True
     else:
         return await admin_check(ctx.bot, ctx.guild, ctx.author)
-    
+
+
 def is_admin():
     return commands.check(admin_predicate)
+
 
 async def management_predicate(ctx):
     if ctx.guild is None:
@@ -533,17 +574,6 @@ bot.erm_team = {
     "1friendlydoge": "Data Scientist - a friendly doge",
 }
 
-
-async def staff_field(bot: Bot, embed, query):
-    flag = await bot.flags.find_by_id(query)
-    embed.add_field(
-        name="<:ERMAdmin:1111100635736187011> Flags",
-        value=f"<:Space:1100877460289101954><:ERMArrow:1111091707841359912>{flag['rank']}",
-        inline=False,
-    )
-    return embed
-
-
 bot.warning_json_to_mongo = warning_json_to_mongo
 
 # include environment variables
@@ -558,10 +588,10 @@ elif environment == "DEVELOPMENT":
     logging.info("Using development token...")
 elif environment == "ALPHA":
     try:
-        bot_token = config('ALPHA_BOT_TOKEN')
+        bot_token = config("ALPHA_BOT_TOKEN")
     except decouple.UndefinedValueError:
         bot_token = ""
-    logging.info('Using ERM V4 Alpha token...')
+    logging.info("Using ERM V4 Alpha token...")
 elif environment == "CUSTOM":
     bot_token = config("CUSTOM_BOT_TOKEN")
     logging.info("Using custom bot token...")
@@ -571,7 +601,6 @@ try:
     mongo_url = config("MONGO_URL", default=None)
 except decouple.UndefinedValueError:
     mongo_url = ""
-
 
 
 intents = discord.Intents.default()
@@ -599,6 +628,7 @@ credentials_dict = {
     "client_x509_cert_url": config("CLIENT_X509_CERT_URL", default=""),
 }
 
+
 def run():
     sentry_sdk.init(
         dsn=sentry_url,
@@ -612,7 +642,7 @@ def run():
     try:
         bot.run(bot_token)
     except Exception as e:
-        raise e # sentry got ratelimited guys
+        raise e  # sentry got ratelimited guys
 
         # with sentry_sdk.isolation_scope() as scope:
         #     scope.level = "error"

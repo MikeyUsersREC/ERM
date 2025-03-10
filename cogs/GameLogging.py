@@ -21,15 +21,15 @@ class GameLogging(commands.Cog):
         if not settings:
             return False
 
-        if not settings.get('game_logging'):
+        if not settings.get("game_logging"):
             return False
 
-        if not settings.get('game_logging').get(section):
+        if not settings.get("game_logging").get(section):
             return False
 
-        if not settings.get('game_logging').get(section).get('enabled'):
+        if not settings.get("game_logging").get(section).get("enabled"):
             return False
-        if not settings.get('game_logging').get(section).get('channel'):
+        if not settings.get("game_logging").get(section).get("channel"):
             return False
 
         return True
@@ -38,7 +38,7 @@ class GameLogging(commands.Cog):
     @commands.hybrid_group(
         name="staff",
         description="Request more staff to be in-game!",
-        extras={"category": "Game Logging"}
+        extras={"category": "Game Logging"},
     )
     async def staff(self, ctx: commands.Context):
         pass
@@ -46,11 +46,9 @@ class GameLogging(commands.Cog):
     @staff.command(
         name="request",
         description="Send a Staff Request to get more staff in-game!",
-        extras={"category": "Game Logging"}
+        extras={"category": "Game Logging"},
     )
-    @app_commands.describe(
-        reason="Reason for your Staff Request!"
-    )
+    @app_commands.describe(reason="Reason for your Staff Request!")
     @require_settings()
     async def staff_request(self, ctx: commands.Context, reason: str):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
@@ -60,7 +58,7 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Not Configured",
                     description="Game Logging is not configured within this server.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -70,7 +68,7 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Not Configured",
                     description="Staff Requests is not configured within this server.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
         enabled = staff_requests.get("enabled", False)
@@ -79,7 +77,7 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Not Enabled",
                     description="Staff Requests are not enabled within this server.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -105,43 +103,60 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Not Permitted",
                     description=f"You are missing the **{ {1: 'Staff', 2: 'Management', 3: 'Admin'}.get(permission_level) }** permission to make a Staff Request.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
-        last_submitted_staff_request = [i async for i in self.bot.staff_requests.db.find({"user_id": ctx.author.id, "guild_id": ctx.guild.id}).sort({"_id": -1}).limit(1)]
+        last_submitted_staff_request = [
+            i
+            async for i in self.bot.staff_requests.db.find(
+                {"user_id": ctx.author.id, "guild_id": ctx.guild.id}
+            )
+            .sort({"_id": -1})
+            .limit(1)
+        ]
         if len(last_submitted_staff_request) != 0:
             last_submitted_staff_request = last_submitted_staff_request[0]
             document_id: ObjectId = last_submitted_staff_request["_id"]
             timestamp = document_id.generation_time.timestamp()
-            if timestamp + staff_requests.get("cooldown", 0) > datetime.datetime.now(tz=pytz.UTC).timestamp():
+            if (
+                timestamp + staff_requests.get("cooldown", 0)
+                > datetime.datetime.now(tz=pytz.UTC).timestamp()
+            ):
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Cooldown",
                         description="You are on cooldown from making Staff Requests.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
-
-        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents({"EndEpoch": 0, "Guild": ctx.guild.id})
-        if staff_requests.get("min_staff") is not None and staff_requests.get("min_staff") > 0:
+        staff_clocked_in = await self.bot.shift_management.shifts.db.count_documents(
+            {"EndEpoch": 0, "Guild": ctx.guild.id}
+        )
+        if (
+            staff_requests.get("min_staff") is not None
+            and staff_requests.get("min_staff") > 0
+        ):
             if staff_clocked_in <= staff_requests.get("min_staff", 0):
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Minimum Staff",
                         description=f"**{staff_requests.get('min_staff')}** members of staff are required to be in-game for a Staff Request!",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
-        if staff_requests.get("max_staff") is not None and staff_requests.get("max_staff") > 0:
+        if (
+            staff_requests.get("max_staff") is not None
+            and staff_requests.get("max_staff") > 0
+        ):
             if staff_clocked_in > staff_requests.get("max_staff", 0):
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Maximum Staff",
                         description="There are more than the maximum number of staff online for a Staff Request!",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
@@ -153,19 +168,18 @@ class GameLogging(commands.Cog):
             "reason": reason,
             "active": True,
             "created_at": datetime.datetime.now(tz=pytz.UTC),
-            "acked": []
+            "acked": [],
         }
         result = await self.bot.staff_requests.db.insert_one(document)
         o_id = result.inserted_id
         self.bot.dispatch("staff_request_send", o_id)
         await ctx.send(
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Sent Staff Request",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Sent Staff Request",
                 description="Your Staff Request has been sent successfully.",
-                color=GREEN_COLOR
+                color=GREEN_COLOR,
             )
         )
-        
 
     @commands.guild_only()
     @commands.hybrid_group(
@@ -189,13 +203,13 @@ class GameLogging(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
 
-        check_settings = self.check_missing(configItem, 'message')
+        check_settings = self.check_missing(configItem, "message")
         if check_settings is False:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Not Configured",
                     description="Game Announcement Logging is not configured.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -207,7 +221,7 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Invalid Channel",
                     description="The Game Announcement logging channel is invalid.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -216,10 +230,7 @@ class GameLogging(commands.Cog):
             color=BLANK_COLOR,
         )
 
-        embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        )
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
 
         embed.add_field(
             name="Announcement Information",
@@ -235,9 +246,9 @@ class GameLogging(commands.Cog):
         await channel.send(embed=embed)
         await ctx.send(
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Logged Announcement",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Announcement",
                 description="Your Game Announcement has been successfully logged!",
-                color=GREEN_COLOR
+                color=GREEN_COLOR,
             )
         )
 
@@ -251,13 +262,13 @@ class GameLogging(commands.Cog):
         bot = self.bot
         configItem = await bot.settings.find_by_id(ctx.guild.id)
 
-        settings_value = self.check_missing(configItem, 'sts')
+        settings_value = self.check_missing(configItem, "sts")
         if not settings_value:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Not Configured",
                     description="Game STS Logging is not configured.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -267,7 +278,7 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Invalid Channel",
                     description="The Game STS logging channel is invalid.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
         view = UserSelect(ctx.author.id)
@@ -276,7 +287,7 @@ class GameLogging(commands.Cog):
             embed=discord.Embed(
                 title="Participants",
                 description="What staff members took part in this STS?",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             ),
             view=view,
         )
@@ -300,10 +311,7 @@ class GameLogging(commands.Cog):
             name="Staff Members",
             value="\n".join(
                 [
-                    (
-                            f"**{index+1}.** "
-                            + member.mention
-                    )
+                    (f"**{index+1}.** " + member.mention)
                     for index, member in enumerate(members)
                 ]
             ),
@@ -317,15 +325,13 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Invalid Time",
                     description="This is an invalid duration format.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
-
         embed.add_field(
             name="STS Information",
-            value=
-            (
+            value=(
                 f"> **Host:** {ctx.author.mention}\n"
                 f"> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
                 f"> **Hosted At:** <t:{int(ctx.message.created_at.timestamp())}>\n"
@@ -340,9 +346,9 @@ class GameLogging(commands.Cog):
 
         await sts_msg.edit(
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Logged STS",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged STS",
                 description="I have successfully logged your STS!",
-                color=GREEN_COLOR
+                color=GREEN_COLOR,
             ),
             view=None,
         )
@@ -364,17 +370,19 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Not Configured",
                     description="Game Priority Logging is not configured.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
-        channel = ctx.guild.get_channel(configItem["game_logging"]["priority"]["channel"])
+        channel = ctx.guild.get_channel(
+            configItem["game_logging"]["priority"]["channel"]
+        )
         if not channel:
             return await ctx.reply(
                 embed=discord.Embed(
                     title="Invalid Channel",
                     description="The Game Priority logging channel is invalid.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
@@ -400,7 +408,7 @@ class GameLogging(commands.Cog):
             embed=discord.Embed(
                 title="Users Involved",
                 description="What users are going to be involved with this priority?",
-                color=BLANK_COLOR
+                color=BLANK_COLOR,
             ),
             view=view,
         )
@@ -415,7 +423,6 @@ class GameLogging(commands.Cog):
 
         users = users.split("\n")
 
-
         embed = discord.Embed(
             title="Priority Logged",
             color=BLANK_COLOR,
@@ -426,12 +433,7 @@ class GameLogging(commands.Cog):
         embed.add_field(
             name="Players",
             value="\n".join(
-                [
-                    (
-                            f'**{index+1}.** ' + player
-                    )
-                    for index, player in enumerate(users)
-                ]
+                [(f"**{index+1}.** " + player) for index, player in enumerate(users)]
             ),
             inline=False,
         )
@@ -443,14 +445,13 @@ class GameLogging(commands.Cog):
                 embed=discord.Embed(
                     title="Invalid Time",
                     description="This time is not a valid duration.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
         embed.add_field(
             name="Priority Information",
-            value=
-            (
+            value=(
                 f"> **Staff:** {ctx.author.mention}\n"
                 f"> **Duration:** {td_format(datetime.timedelta(seconds=duration))}\n"
                 f"> **Reason:** {reason}\n"
@@ -467,10 +468,10 @@ class GameLogging(commands.Cog):
         await prio_msg.edit(
             view=None,
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Logged Priority",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Priority",
                 description="I have successfully logged the priority request.",
-                color=GREEN_COLOR
-            )
+                color=GREEN_COLOR,
+            ),
         )
 
 

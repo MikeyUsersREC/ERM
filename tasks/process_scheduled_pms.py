@@ -3,6 +3,7 @@ from discord.ext import tasks, commands
 import logging
 from utils import prc_api
 
+
 @tasks.loop(seconds=10)
 async def process_scheduled_pms(bot):
     try:
@@ -15,7 +16,9 @@ async def process_scheduled_pms(bot):
                 await bot.prc_api.run_command(guild_id, f":pm {usernames} {message}")
             except prc_api.ResponseFailure as e:
                 if e.status_code == 429:
-                    logging.info("429 for last item in scheduled PM, putting back into queue.")
+                    logging.info(
+                        "429 for last item in scheduled PM, putting back into queue."
+                    )
                     await bot.scheduled_pm_queue.put(pm_data)
     except Exception as e:
         logging.error(f"Error in process_scheduled_pms: {e}")

@@ -14,7 +14,13 @@ from reactionmenu.abc import _PageController
 import pytz
 from datamodels.Settings import Settings
 from datamodels.Warnings import WarningItem
-from erm import admin_predicate, generator, is_management, is_staff, management_predicate
+from erm import (
+    admin_predicate,
+    generator,
+    is_management,
+    is_staff,
+    management_predicate,
+)
 from menus import (
     ChannelSelect,
     CustomisePunishmentType,
@@ -25,7 +31,12 @@ from menus import (
     RequestDataView,
     CustomExecutionButton,
     UserSelect,
-    YesNoMenu, ManagementOptions, ManageTypesView, PunishmentTypeCreator, PunishmentModifier, CustomModal,
+    YesNoMenu,
+    ManagementOptions,
+    ManageTypesView,
+    PunishmentTypeCreator,
+    PunishmentModifier,
+    CustomModal,
 )
 from utils.AI import AI
 from utils.autocompletes import punishment_autocomplete, user_autocomplete
@@ -35,7 +46,10 @@ from utils.utils import (
     failure_embed,
     removesuffix,
     get_roblox_by_username,
-    failure_embed, require_settings, new_failure_embed, time_converter,
+    failure_embed,
+    require_settings,
+    new_failure_embed,
+    time_converter,
 )
 from utils.timestamp import td_format
 
@@ -43,7 +57,6 @@ from utils.timestamp import td_format
 class Punishments(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
 
     @commands.guild_only()
     @commands.hybrid_command(
@@ -72,26 +85,25 @@ class Punishments(commands.Cog):
                 embed=discord.Embed(
                     title="Not Setup",
                     description="Your server is not setup.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
 
-        if not (settings.get('punishments') or {}).get('enabled', False):
+        if not (settings.get("punishments") or {}).get("enabled", False):
             return await ctx.send(
                 embed=discord.Embed(
-                    title="Not Enabled", 
+                    title="Not Enabled",
                     description="Your server has punishments disabled.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
         flags = []
         if "--kick" in reason.lower():
-            flags.append('autokick')
+            flags.append("autokick")
             reason = reason.replace("--kick", "")
         elif "--ban" in reason.lower():
-            flags.append('autoban')
+            flags.append("autoban")
             reason = reason.replace("--ban", "")
-
 
         if self.bot.punishments_disabled is True:
             return await new_failure_embed(
@@ -100,38 +112,44 @@ class Punishments(commands.Cog):
                 "This command is currently disabled as ERM is currently undergoing maintenance updates. This command will be turned off briefly to ensure that no data is lost during the maintenance.",
             )
 
-
         roblox_user = await get_roblox_by_username(user, self.bot, ctx)
         roblox_client = roblox.client.Client()
-        if not roblox_user or roblox_user.get('errors') is not None:
-            return await ctx.send(embed=discord.Embed(
-                title="Could not find player",
-                description="I could not find a Roblox player with that username.",
-                color=BLANK_COLOR
-            ))
+        if not roblox_user or roblox_user.get("errors") is not None:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find player",
+                    description="I could not find a Roblox player with that username.",
+                    color=BLANK_COLOR,
+                )
+            )
 
-        roblox_player = await roblox_client.get_user(roblox_user['id'])
-        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_player], type=roblox.thumbnails.AvatarThumbnailType.headshot)
+        roblox_player = await roblox_client.get_user(roblox_user["id"])
+        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], type=roblox.thumbnails.AvatarThumbnailType.headshot
+        )
         thumbnail = thumbnails[0].image_url
 
         # Get and verify punishment type
-        punishment_types = await self.bot.punishment_types.get_punishment_types(ctx.guild.id)
-        types = (punishment_types or {}).get('types', [])
+        punishment_types = await self.bot.punishment_types.get_punishment_types(
+            ctx.guild.id
+        )
+        types = (punishment_types or {}).get("types", [])
         preset_types = ["Warning", "Kick", "Ban", "BOLO"]
         actual_types = []
-        for item in preset_types+types:
+        for item in preset_types + types:
             if isinstance(item, str):
                 actual_types.append(item)
             else:
-                actual_types.append(item['name'])
+                actual_types.append(item["name"])
 
         if type.lower().strip() not in [i.lower().strip() for i in actual_types]:
-            return await ctx.send(embed=discord.Embed(
-                title="Incorrect Type",
-                description="The punishment type you provided is invalid.",
-                color=BLANK_COLOR
-            ))
-
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Incorrect Type",
+                    description="The punishment type you provided is invalid.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         # agent = AI(config('AI_API_URL'), config('AI_API_AUTH'))
         # punishment = await agent.recommended_punishment(reason, None)
@@ -139,19 +157,19 @@ class Punishments(commands.Cog):
         # consent_item = await self.bot.consent.find(ctx.author.id) or {}
         # ai_predictions = consent_item.get('ai_predictions', True)
         # if type.lower() in ["warning", "kick", "ban", "bolo"]:
-            # if punishment.prediction.lower() !=  type.lower():
-                # if ai_predictions:
-                   # msg = await ctx.send(
-                       # embed=discord.Embed(
-                           # title="Recommended Punishment",
-                           # description="ERM AI thinks that the punishment associated with this reason is not preferable. It suggests that you should **{}** for this punishment, rather than {}. Do you want to change the punishment type?".format(punishment.prediction, type),
-                           # color=BLANK_COLOR
-                        # ),
-                        # view=(view := YesNoMenu(ctx.author.id))
-                    # )
-                    # await view.wait()
-                    # if view.value is True:
-                        # type = punishment.prediction
+        # if punishment.prediction.lower() !=  type.lower():
+        # if ai_predictions:
+        # msg = await ctx.send(
+        # embed=discord.Embed(
+        # title="Recommended Punishment",
+        # description="ERM AI thinks that the punishment associated with this reason is not preferable. It suggests that you should **{}** for this punishment, rather than {}. Do you want to change the punishment type?".format(punishment.prediction, type),
+        # color=BLANK_COLOR
+        # ),
+        # view=(view := YesNoMenu(ctx.author.id))
+        # )
+        # await view.wait()
+        # if view.value is True:
+        # type = punishment.prediction
 
         for item in actual_types:
             safe_item = item.lower().split()
@@ -159,19 +177,22 @@ class Punishments(commands.Cog):
                 actual_type = item
                 break
         else:
-            return await ctx.send(embed=discord.Embed(
-                title="Incorrect Type",
-                description="The punishment type you provided is invalid.",
-                color=BLANK_COLOR
-            ))
-
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Incorrect Type",
+                    description="The punishment type you provided is invalid.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         if type.lower() in ["tempban", "temporary ban"]:
-            return await ctx.send(embed=discord.Embed(
-                title="Not Supported",
-                description="Temporary Bans are not supported.",
-                color=BLANK_COLOR
-            ))
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Not Supported",
+                    description="Temporary Bans are not supported.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         oid = await self.bot.punishments.insert_warning(
             ctx.author.id,
@@ -181,47 +202,46 @@ class Punishments(commands.Cog):
             ctx.guild.id,
             reason,
             actual_type,
-            datetime.datetime.now(tz=pytz.UTC).timestamp()
+            datetime.datetime.now(tz=pytz.UTC).timestamp(),
         )
 
-        current_shift = await self.bot.shift_management.get_current_shift(ctx.author, ctx.guild.id)
+        current_shift = await self.bot.shift_management.get_current_shift(
+            ctx.author, ctx.guild.id
+        )
         is_online = bool(current_shift)
         if is_online:
             await self.bot.shift_management.shifts.db.update_one(
-                {
-                    "_id": current_shift["_id"]
-                },
-                {
-                    "$push": {
-                        "Moderations": oid
-                    }
-                }
+                {"_id": current_shift["_id"]}, {"$push": {"Moderations": oid}}
             )
 
-
-        self.bot.dispatch('punishment', oid)
+        self.bot.dispatch("punishment", oid)
 
         warning: WarningItem = await self.bot.punishments.fetch_warning(oid)
-        newline = '\n'
+        newline = "\n"
         if msg is not None:
-            if 'autoban' in flags:
+            if "autoban" in flags:
                 try:
-                    await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.username))
+                    await self.bot.prc_api.run_command(
+                        ctx.guild.id, ":ban {}".format(warning.username)
+                    )
                 except:
                     pass
-            elif 'autokick' in flags:
+            elif "autokick" in flags:
                 try:
-                    await self.bot.prc_api.run_command(ctx.guild.id, ":kick {}".format(warning.username))
+                    await self.bot.prc_api.run_command(
+                        ctx.guild.id, ":kick {}".format(warning.username)
+                    )
                 except:
                     pass
             return await msg.edit(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Logged Punishment",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Punishment",
                     description=(
                         "I have successfully logged the following punishment!"
                     ),
-                    color=GREEN_COLOR
-                ).add_field(
+                    color=GREEN_COLOR,
+                )
+                .add_field(
                     name="Punishment",
                     value=(
                         f"> **Player:** {warning.username}\n"
@@ -233,20 +253,18 @@ class Punishments(commands.Cog):
                         f"> **ID:** `{warning.snowflake}`"
                         f"> **Custom Flags:** {'`N/A`' if len(flags) == 0 else '`{}`'.format(', '.join(flags))}"
                     ),
-                    inline=False
-                ).set_thumbnail(
-                    url=thumbnail
-                ),
-                view=None
+                    inline=False,
+                )
+                .set_thumbnail(url=thumbnail),
+                view=None,
             )
         await ctx.send(
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Logged Punishment",
-                description=(
-                    "I have successfully logged the following punishment!"
-                ),
-                color=GREEN_COLOR
-            ).add_field(
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Punishment",
+                description=("I have successfully logged the following punishment!"),
+                color=GREEN_COLOR,
+            )
+            .add_field(
                 name="Punishment",
                 value=(
                     f"> **Player:** {warning.username}\n"
@@ -258,30 +276,31 @@ class Punishments(commands.Cog):
                     f"> **ID:** `{warning.snowflake}`\n"
                     f"> **Custom Flags:** {'`N/A`' if len(flags) == 0 else '{}'.format(', '.join(flags))}"
                 ),
-                inline=False
-            ).set_thumbnail(
-                url=thumbnail
+                inline=False,
             )
+            .set_thumbnail(url=thumbnail)
         )
 
-        if 'autoban' in flags:
+        if "autoban" in flags:
             try:
-                await self.bot.prc_api.run_command(ctx.guild.id, ":ban {}".format(warning.user_id))
+                await self.bot.prc_api.run_command(
+                    ctx.guild.id, ":ban {}".format(warning.user_id)
+                )
             except:
                 pass
-        elif 'autokick' in flags:
+        elif "autokick" in flags:
             try:
-                await self.bot.prc_api.run_command(ctx.guild.id, ":kick {}".format(warning.username))
+                await self.bot.prc_api.run_command(
+                    ctx.guild.id, ":kick {}".format(warning.username)
+                )
             except:
                 pass
-
-
 
     @commands.hybrid_group(
         name="punishment",
         description="Punishment commands",
         extras={"category": "Punishments"},
-        aliases=["pm"]
+        aliases=["pm"],
     )
     async def punishments(self, ctx: commands.Context):
         await ctx.invoke(self.bot.get_command("punishment manage"))
@@ -300,12 +319,9 @@ class Punishments(commands.Cog):
         embed = discord.Embed(
             title="Staff Options",
             description="Using this menu, you can **Manage Punishment Types** as well as **Modify Punishment**.",
-            color=BLANK_COLOR
+            color=BLANK_COLOR,
         )
-        embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon
-        )
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
         view = ManagementOptions(ctx.author.id)
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
 
@@ -320,40 +336,48 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="Invalid Punishment ID",
                         description="This punishment ID is invalid.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
 
-            punishment = await self.bot.punishments.find_warning_by_spec(snowflake=punishment_id, guild_id=ctx.guild.id)
+            punishment = await self.bot.punishments.find_warning_by_spec(
+                snowflake=punishment_id, guild_id=ctx.guild.id
+            )
             if not punishment:
                 return await msg.edit(
                     embed=discord.Embed(
                         title="Invalid Punishment ID",
                         description="This punishment ID is invalid.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
-            
-            if punishment['ModeratorID'] != ctx.author.id and not await management_predicate(ctx) and not await admin_predicate(ctx):
+
+            if (
+                punishment["ModeratorID"] != ctx.author.id
+                and not await management_predicate(ctx)
+                and not await admin_predicate(ctx)
+            ):
                 return await msg.edit(
                     embed=discord.Embed(
                         title="Access Denied",
                         description="You are unable to edit other people's punishments as you only have the Staff permission.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
             view = PunishmentModifier(self.bot, ctx.author.id, punishment)
             await view.refresh_ui(msg)
             await view.wait()
-            await msg.edit(embed=discord.Embed(
-                title="<:success:1163149118366040106> Successfully modified",
-                description="Successfully modified this punishment!",
-                color=GREEN_COLOR
-            ), view=None)
-
+            await msg.edit(
+                embed=discord.Embed(
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Modified!",
+                    description="Successfully modified this punishment!",
+                    color=GREEN_COLOR,
+                ),
+                view=None,
+            )
 
         elif view.value == "types":
             if not await management_predicate(ctx):
@@ -361,25 +385,21 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="Not Permitted",
                         description="You are not permitted to access this panel.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
-            punishment_types = await self.bot.punishment_types.get_punishment_types(ctx.guild.id)
+            punishment_types = await self.bot.punishment_types.get_punishment_types(
+                ctx.guild.id
+            )
             if not punishment_types:
-                punishment_types = {'types': []}
+                punishment_types = {"types": []}
 
-            punishment_types = punishment_types['types']
+            punishment_types = punishment_types["types"]
 
             def setup_embed() -> discord.Embed:
-                embed = discord.Embed(
-                    title="Punishment Types",
-                    color=BLANK_COLOR
-                )
-                embed.set_author(
-                    name=ctx.guild.name,
-                    icon_url=ctx.guild.icon
-                )
+                embed = discord.Embed(title="Punishment Types", color=BLANK_COLOR)
+                embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
                 return embed
 
             filtered = list(filter(lambda x: isinstance(x, dict), punishment_types))
@@ -394,32 +414,32 @@ class Punishments(commands.Cog):
                     embeds[-1].add_field(
                         name="Limitation",
                         value="You cannot have more than 15 custom punishment types.",
-                        inline=False
+                        inline=False,
                     )
                     break
 
                 embeds[-1].add_field(
-                    name=item['name'],
+                    name=item["name"],
                     value=(
                         f"> **Name:** {item['name']}\n"
                         f"> **ID:** {item.get('id', (temporary_id := next(generator)))}\n"
                         f"> **Channel:** <#{item['channel']}>"
                     ),
-                    inline=False
+                    inline=False,
                 )
                 associations[temporary_id] = item
             if len(embeds[0].fields) == 0:
                 embeds[0].add_field(
                     name="No Punishment Types",
                     value="There are no custom punishment types in this server.",
-                    inline=False
+                    inline=False,
                 )
             manage_types_view = ManageTypesView(self.bot, ctx.author.id)
             await msg.edit(embed=embeds[0], view=manage_types_view)
             await manage_types_view.wait()
             if manage_types_view.value == "create":
                 data = {
-                    'id': next(generator),
+                    "id": next(generator),
                     "name": manage_types_view.name_for_creation,
                     "channel": None,
                 }
@@ -430,7 +450,7 @@ class Punishments(commands.Cog):
                         f"> **ID:** {data['id']}\n"
                         f"> **Punishment Channel:** {'<#{}>'.format(data.get('channel', None)) if data.get('channel', None) is not None else 'Not set'}\n"
                     ),
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
 
                 view = PunishmentTypeCreator(ctx.author.id, data)
@@ -439,21 +459,18 @@ class Punishments(commands.Cog):
                 if view.cancelled is True:
                     return
 
-                punishment_types.append(
-                    view.dataset
-                )
+                punishment_types.append(view.dataset)
 
-                await self.bot.punishment_types.upsert({
-                    '_id': ctx.guild.id,
-                    "types": punishment_types
-                })
+                await self.bot.punishment_types.upsert(
+                    {"_id": ctx.guild.id, "types": punishment_types}
+                )
                 await msg.edit(
                     embed=discord.Embed(
-                        title="<:success:1163149118366040106> Punishment Type Created",
+                        title=f"{self.bot.emoji_controller.get_emoji('success')} Type Created",
                         description="Your punishment type has been created!",
-                        color=GREEN_COLOR
+                        color=GREEN_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
             elif manage_types_view.value == "delete":
                 if not await management_predicate(ctx):
@@ -461,9 +478,9 @@ class Punishments(commands.Cog):
                         embed=discord.Embed(
                             title="Not Permitted",
                             description="You are not permitted to access this panel.",
-                            color=BLANK_COLOR
+                            color=BLANK_COLOR,
+                        )
                     )
-                )
                 try:
                     type_id = int(manage_types_view.selected_for_deletion.strip())
                 except ValueError:
@@ -471,46 +488,44 @@ class Punishments(commands.Cog):
                         embed=discord.Embed(
                             title="Invalid Punishment Type",
                             description="The ID you have provided is not associated with a punishment type.",
-                            color=BLANK_COLOR
+                            color=BLANK_COLOR,
                         ),
-                        view=None
+                        view=None,
                     )
                 if len(punishment_types) == 0:
                     return await msg.edit(
                         embed=discord.Embed(
                             title="Invalid Punishment Type",
                             description="The ID you have provided is not associated with a punishment type.",
-                            color=BLANK_COLOR
+                            color=BLANK_COLOR,
                         ),
-                        view=None
+                        view=None,
                     )
-                if type_id not in [t.get('id') for t in list(filtered)]:
+                if type_id not in [t.get("id") for t in list(filtered)]:
                     if not associations.get(type_id):
                         return await msg.edit(
                             embed=discord.Embed(
                                 title="Invalid Punishment Type",
                                 description="The ID you have provided is not associated with a punishment type.",
-                                color=BLANK_COLOR
+                                color=BLANK_COLOR,
                             ),
-                            view=None
+                            view=None,
                         )
                 for item in filtered:
-                    if item.get('id') == type_id or item == associations.get(type_id):
+                    if item.get("id") == type_id or item == associations.get(type_id):
                         punishment_types.remove(item)
                         break
 
-
-                await self.bot.punishment_types.upsert({
-                    '_id': ctx.guild.id,
-                    "types": punishment_types
-                })
+                await self.bot.punishment_types.upsert(
+                    {"_id": ctx.guild.id, "types": punishment_types}
+                )
                 await msg.edit(
                     embed=discord.Embed(
-                        title="<:success:1163149118366040106> Punishment Type Deleted",
+                        title=f"{self.bot.emoji_controller.get_emoji('success')} Type Deleted",
                         description="Your Punishment Type has been deleted!",
-                        color=GREEN_COLOR
+                        color=GREEN_COLOR,
                     ),
-                    view=None
+                    view=None,
                 )
 
     @commands.hybrid_group(
@@ -546,10 +561,7 @@ class Punishments(commands.Cog):
                         ),
                     )
                 ],
-                {
-                    "ephemeral": True,
-                    "thinking": True
-                }
+                {"ephemeral": True, "thinking": True},
             )
 
             await interaction.response.send_modal(modal)
@@ -563,20 +575,29 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="Invalid Identifier",
                         description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
-            matching_docs = list(filter(lambda x: x is not None, [
-                await bot.punishments.find_warning_by_spec(snowflake=id, warning_type="BOLO",
-                                                           guild_id=interaction.guild.id)]))
+            matching_docs = list(
+                filter(
+                    lambda x: x is not None,
+                    [
+                        await bot.punishments.find_warning_by_spec(
+                            snowflake=id,
+                            warning_type="BOLO",
+                            guild_id=interaction.guild.id,
+                        )
+                    ],
+                )
+            )
 
             if len(matching_docs) == 0:
                 return await modal.interaction.followup.send(
                     embed=discord.Embed(
                         title="Invalid Identifier",
                         description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
@@ -597,9 +618,9 @@ class Punishments(commands.Cog):
 
             await modal.interaction.followup.send(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Completed BOLO",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Completed BOLO",
                     description="This BOLO has been marked as complete successfully.",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
             return
@@ -616,10 +637,7 @@ class Punishments(commands.Cog):
                         ),
                     )
                 ],
-                {
-                    "ephemeral": True,
-                    "thinking": True
-                }
+                {"ephemeral": True, "thinking": True},
             )
 
             await interaction.response.send_modal(modal)
@@ -633,21 +651,30 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="Invalid Identifier",
                         description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
             # bro i just realised someone could use this to erase a non-bolo...
-            matching_docs = list(filter(lambda x: x is not None, [
-                await bot.punishments.find_warning_by_spec(snowflake=id, warning_type="BOLO",
-                                                           guild_id=interaction.guild.id)]))
+            matching_docs = list(
+                filter(
+                    lambda x: x is not None,
+                    [
+                        await bot.punishments.find_warning_by_spec(
+                            snowflake=id,
+                            warning_type="BOLO",
+                            guild_id=interaction.guild.id,
+                        )
+                    ],
+                )
+            )
 
             if len(matching_docs) == 0:
                 return await modal.interaction.followup.send(
                     embed=discord.Embed(
                         title="Invalid Identifier",
                         description="I could not find a BOLO associating with that ID. Please ensure you have entered the correct ID.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
@@ -657,9 +684,9 @@ class Punishments(commands.Cog):
 
             await modal.interaction.followup.send(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Denied BOLO",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Denied BOLO",
                     description="This BOLO has been marked as denied successfully.\nIt has been erased from the active BOLO list.",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
             return
@@ -679,7 +706,7 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="No Entries",
                         description="There are no active BOLOs in this server.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
             embeds = []
@@ -694,7 +721,9 @@ class Punishments(commands.Cog):
                 icon_url=ctx.guild.icon,
             )
 
-            embed.set_footer(text="Click 'Mark as Complete' or 'Deny BOLO' and enter the BOLO ID.")
+            embed.set_footer(
+                text="Click 'Mark as Complete' or 'Deny BOLO' and enter the BOLO ID."
+            )
 
             embeds.append(embed)
 
@@ -712,7 +741,7 @@ class Punishments(commands.Cog):
 
                     embeds.append(new_embed)
 
-                warning: WarningItem = await bot.punishments.fetch_warning(entry['_id'])
+                warning: WarningItem = await bot.punishments.fetch_warning(entry["_id"])
 
                 embeds[-1].add_field(
                     name=f"{warning.username} ({warning.user_id})",
@@ -722,9 +751,8 @@ class Punishments(commands.Cog):
                         f"> **Reason:** {warning.reason}\n"
                         f"> **At:** <t:{int(warning.time_epoch)}>\n"
                         f"> **ID:** `{warning.snowflake}`"
-                    )
+                    ),
                 )
-
 
             for embed in embeds:
                 embed.title += " [{}]".format(len(bolos))
@@ -735,7 +763,7 @@ class Punishments(commands.Cog):
                     ctx.author.id,
                     "Mark as Complete",
                     discord.ButtonStyle.secondary,
-                    func=task
+                    func=task,
                 )
             )
             view.add_item(
@@ -743,37 +771,41 @@ class Punishments(commands.Cog):
                     ctx.author.id,
                     "Deny BOLO",
                     discord.ButtonStyle.danger,
-                    func=deny_task
+                    func=deny_task,
                 )
             )
 
-            paginator = SelectPagination(ctx.author.id, [
-                CustomPage(embeds=[embed], view=view, identifier=str(index+1)) for index, embed in enumerate(embeds)
-            ])
+            paginator = SelectPagination(
+                self.bot,
+                ctx.author.id,
+                [
+                    CustomPage(embeds=[embed], view=view, identifier=str(index + 1))
+                    for index, embed in enumerate(embeds)
+                ],
+            )
             current_page = paginator.get_current_view()
 
-
-
-            msg = await ctx.reply(
-                embed=embeds[0],
-                view=current_page
-            )
+            msg = await ctx.reply(embed=embeds[0], view=current_page)
 
         else:
             roblox_user = await get_roblox_by_username(user, bot, ctx)
             if roblox_user is None:
-                return await ctx.send(embed=discord.Embed(
-                    title="Could not find player",
-                    description="I could not find a Roblox player with that username.",
-                    color=BLANK_COLOR
-                ))
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Could not find player",
+                        description="I could not find a Roblox player with that username.",
+                        color=BLANK_COLOR,
+                    )
+                )
 
             if roblox_user.get("errors") is not None:
-                return await ctx.send(embed=discord.Embed(
-                    title="Could not find player",
-                    description="I could not find a Roblox player with that username.",
-                    color=BLANK_COLOR
-                ))
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Could not find player",
+                        description="I could not find a Roblox player with that username.",
+                        color=BLANK_COLOR,
+                    )
+                )
 
             user = [
                 i
@@ -788,7 +820,7 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="No Entries",
                         description="There are no active BOLOs for this user in this server.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
@@ -797,12 +829,11 @@ class Punishments(commands.Cog):
                     embed=discord.Embed(
                         title="No Entries",
                         description="There are no active BOLOs for this user in this server.",
-                        color=BLANK_COLOR
+                        color=BLANK_COLOR,
                     )
                 )
 
             embeds = []
-
 
             embed = discord.Embed(
                 title="Active Ban BOLOs",
@@ -814,7 +845,9 @@ class Punishments(commands.Cog):
                 icon_url=ctx.guild.icon,
             )
 
-            embed.set_footer(text="Click 'Mark as Complete' or 'Deny BOLO' and enter the BOLO ID.")
+            embed.set_footer(
+                text="Click 'Mark as Complete' or 'Deny BOLO' and enter the BOLO ID."
+            )
 
             embeds.append(embed)
 
@@ -832,7 +865,7 @@ class Punishments(commands.Cog):
 
                     embeds.append(new_embed)
 
-                warning: WarningItem = await bot.punishments.fetch_warning(entry['_id'])
+                warning: WarningItem = await bot.punishments.fetch_warning(entry["_id"])
 
                 embeds[-1].add_field(
                     name=f"{warning.username} ({warning.user_id})",
@@ -842,9 +875,8 @@ class Punishments(commands.Cog):
                         f"> **Reason:** {warning.reason}\n"
                         f"> **At:** <t:{int(warning.time_epoch)}>\n"
                         f"> **ID:** `{warning.snowflake}`"
-                    )
+                    ),
                 )
-
 
             for embed in embeds:
                 embed.title += " [{}]".format(len(bolos))
@@ -855,7 +887,7 @@ class Punishments(commands.Cog):
                     ctx.author.id,
                     "Mark as Complete",
                     discord.ButtonStyle.secondary,
-                    func=task
+                    func=task,
                 )
             )
             view.add_item(
@@ -863,19 +895,21 @@ class Punishments(commands.Cog):
                     ctx.author.id,
                     "Deny BOLO",
                     discord.ButtonStyle.danger,
-                    func=deny_task
+                    func=deny_task,
                 )
             )
 
-            paginator = SelectPagination(ctx.author.id, [
-                CustomPage(embeds=[embed], view=view, identifier=str(index+1)) for index, embed in enumerate(embeds)
-            ])
+            paginator = SelectPagination(
+                self.bot,
+                ctx.author.id,
+                [
+                    CustomPage(embeds=[embed], view=view, identifier=str(index + 1))
+                    for index, embed in enumerate(embeds)
+                ],
+            )
             current_page = paginator.get_current_view()
 
-            msg = await ctx.reply(
-                embed=embeds[0],
-                view=current_page
-            )
+            msg = await ctx.reply(embed=embeds[0], view=current_page)
 
     @commands.guild_only()
     @commands.hybrid_command(
@@ -901,24 +935,29 @@ class Punishments(commands.Cog):
         try:
             amount = time_converter(time)
         except ValueError:
-            return await ctx.send(embed=discord.Embed(
-                title="Invalid Time",
-                description="The time provided is invalid.",
-                color=BLANK_COLOR
-            ))
-
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Invalid Time",
+                    description="The time provided is invalid.",
+                    color=BLANK_COLOR,
+                )
+            )
 
         roblox_user = await get_roblox_by_username(user, self.bot, ctx)
         roblox_client = roblox.client.Client()
-        if not roblox_user or roblox_user.get('errors') is not None:
-            return await ctx.send(embed=discord.Embed(
-                title="Could not find player",
-                description="I could not find a Roblox player with that username.",
-                color=BLANK_COLOR
-            ))
+        if not roblox_user or roblox_user.get("errors") is not None:
+            return await ctx.send(
+                embed=discord.Embed(
+                    title="Could not find player",
+                    description="I could not find a Roblox player with that username.",
+                    color=BLANK_COLOR,
+                )
+            )
 
-        roblox_player = await roblox_client.get_user(roblox_user['id'])
-        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails([roblox_player], type=roblox.thumbnails.AvatarThumbnailType.headshot)
+        roblox_player = await roblox_client.get_user(roblox_user["id"])
+        thumbnails = await roblox_client.thumbnails.get_user_avatar_thumbnails(
+            [roblox_player], type=roblox.thumbnails.AvatarThumbnailType.headshot
+        )
         thumbnail = thumbnails[0].image_url
 
         oid = await self.bot.punishments.insert_warning(
@@ -930,21 +969,20 @@ class Punishments(commands.Cog):
             reason,
             "Temporary Ban",
             datetime.datetime.now(tz=pytz.UTC).timestamp(),
-            datetime.datetime.now(tz=pytz.UTC).timestamp() + amount
+            datetime.datetime.now(tz=pytz.UTC).timestamp() + amount,
         )
 
-        self.bot.dispatch('punishment', oid)
+        self.bot.dispatch("punishment", oid)
 
         warning: WarningItem = await self.bot.punishments.fetch_warning(oid)
-        newline = '\n'
+        newline = "\n"
         await ctx.send(
             embed=discord.Embed(
-                title="<:success:1163149118366040106> Logged Punishment",
-                description=(
-                    "I have successfully logged the following punishment!"
-                ),
-                color=GREEN_COLOR
-            ).add_field(
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Punishment",
+                description=("I have successfully logged the following punishment!"),
+                color=GREEN_COLOR,
+            )
+            .add_field(
                 name="Punishment",
                 value=(
                     f"> **Player:** {warning.username}\n"
@@ -954,11 +992,11 @@ class Punishments(commands.Cog):
                     f'{"> **Until:** <t:{}>{}".format(int(warning.until_epoch), newline) if warning.until_epoch is not None else ""}'
                     f"> **ID:** `{warning.snowflake}`"
                 ),
-                inline=False
-            ).set_thumbnail(
-                url=thumbnail
+                inline=False,
             )
+            .set_thumbnail(url=thumbnail)
         )
+
 
 async def setup(bot):
     await bot.add_cog(Punishments(bot))

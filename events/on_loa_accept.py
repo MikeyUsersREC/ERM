@@ -18,17 +18,24 @@ class OnLOAAccept(commands.Cog):
         try:
             await user.send(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Activity Notice Accepted",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Activity Notice Accepted",
                     description=f"Your {s_loa['type']} request in **{guild.name}** was accepted!",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
         except:
             pass
 
-    
         settings = await self.bot.settings.find_by_id(guild.id)
-        loa_roles = list(filter(lambda x: x is not None, [discord.utils.get(guild.roles, id=identifier) for identifier in role_ids]))
+        loa_roles = list(
+            filter(
+                lambda x: x is not None,
+                [
+                    discord.utils.get(guild.roles, id=identifier)
+                    for identifier in role_ids
+                ],
+            )
+        )
         for rl in loa_roles:
             if rl not in user.roles:
                 try:
@@ -40,7 +47,9 @@ class OnLOAAccept(commands.Cog):
         loa_channel_id = settings.get("staff_management", {}).get("channel", 0)
         if not loa_channel_id:
             return
-        loa_channel = guild.get_channel(loa_channel_id) or await guild.fetch_channel(loa_channel_id)
+        loa_channel = guild.get_channel(loa_channel_id) or await guild.fetch_channel(
+            loa_channel_id
+        )
         messg = None
         try:
             messg = await loa_channel.fetch_message(msg)
@@ -48,28 +57,29 @@ class OnLOAAccept(commands.Cog):
             pass
         if not messg:
             return
-                
+
         embed = messg.embeds[0]
         embed.title = (
-            f"<:success:1163149118366040106> {s_loa['type']} Accepted"
+            f"{self.bot.emoji_controller.get_emoji('success')} {s_loa['type']} Accepted"
         )
         embed.colour = GREEN_COLOR
         try:
-            accepted_by_user = guild.get_member(accepted_by) or await guild.fetch_member(accepted_by)
+            accepted_by_user = guild.get_member(
+                accepted_by
+            ) or await guild.fetch_member(accepted_by)
         except:
             pass
 
-        embed.set_footer(text=f"Accepted by {accepted_by_user.name if accepted_by_user else 'n/a'}")
-
-        await messg.edit(
-            embed=embed,
-            view=None
+        embed.set_footer(
+            text=f"Accepted by {accepted_by_user.name if accepted_by_user else 'n/a'}"
         )
+
+        await messg.edit(embed=embed, view=None)
 
         view_item = await self.bot.views.db.find_one({"message_id": messg.id})
 
         await self.bot.views.delete_by_id(view_item["_id"])
-        
+
 
 async def setup(bot):
     await bot.add_cog(OnLOAAccept(bot))
