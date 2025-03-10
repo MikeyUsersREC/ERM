@@ -299,14 +299,14 @@ class Punishments(commands.Cog):
     async def punishment_manage(self, ctx: commands.Context):
         embed = discord.Embed(
             title="Staff Options",
-            description="Using this menu, you can **Manage Punishment Types** as well as **Modify Punishment**.",
+            description="Using this menu, you can **Manage Punishment Types** as well as **Modify Punishment** and **Toggle Default Punishments**.",
             color=BLANK_COLOR
         )
         embed.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon
         )
-        view = ManagementOptions(ctx.author.id)
+        view = ManagementOptions(ctx.author.id, self.bot)
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
 
         msg = await ctx.send(embed=embed, view=view)
