@@ -156,10 +156,13 @@ async def punishment_autocomplete(
 ) -> typing.List[app_commands.Choice[str]]:
     bot = interaction.client
     Data = await bot.punishment_types.find_by_id(interaction.guild.id)
+    settings = await bot.settings.find_by_id(interaction.guild.id)
+    punishment_toggle = settings.get("punishment_toggle",{}).get("enabled", False)
+
     if Data is None:
         return [
             app_commands.Choice(name=item, value=item)
-            for item in ["Warning", "Kick", "Ban", "BOLO"]
+            for item in ["Warning", "Kick", "Ban", "BOLO"] if not punishment_toggle
         ]
     else:
         ndt = []
@@ -170,7 +173,7 @@ async def punishment_autocomplete(
             app_commands.Choice(
                 name=(item_identifier := item if isinstance(item, str) else item['name']),
                 value=item_identifier
-            ) for item in ndt + ["Warning", "Kick", "Ban", "BOLO"]
+            ) for item in ndt + (["Warning", "Kick", "Ban", "BOLO"] if not punishment_toggle else [])
         ]
 
 async def user_autocomplete(

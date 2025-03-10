@@ -9994,9 +9994,10 @@ class ShiftLoggingManagement(discord.ui.View):
         })
 
 class ManagementOptions(discord.ui.View):
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, bot: commands.Bot):
         super().__init__(timeout=900.0)
         self.user_id = user_id
+        self.bot = bot
         self.value = None
 
     async def interaction_check(self, interaction: Interaction, /) -> bool:
@@ -10046,6 +10047,42 @@ class ManagementOptions(discord.ui.View):
 
         self.value = "modify"
         self.stop()
+
+    @discord.ui.button(
+        label="Toggle Default Punishments"
+    )
+    async def toggle_punishments(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if not val:
+            return
+
+        sett = await self.bot.settings.find_by_id(interaction.guild.id)
+        if 'punishment_toggle' not in sett:
+            sett['punishment_toggle'] = {'enabled': False}
+
+        if sett['punishment_toggle'].get('enabled'):
+            sett['punishment_toggle']['enabled'] = False
+            await self.bot.settings.update_by_id(sett)
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Default Punishments Disabled",
+                    description="Default punishments have been disabled.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+        else:
+            sett['punishment_toggle']['enabled'] = True
+            await self.bot.settings.update_by_id(sett)
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Default Punishments Enabled",
+                    description="Default punishments have been enabled.",
+                    color=GREEN_COLOR
+                ),
+                ephemeral=True
+            )
+        
 
 class ManageTypesView(discord.ui.View):
     def __init__(self, bot: commands.Bot, user_id: int):
