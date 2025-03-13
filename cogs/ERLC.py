@@ -4,6 +4,7 @@ import re
 import discord
 import roblox
 from discord.ext import commands
+from utils.autocompletes import erlc_players_autocomplete
 from roblox.thumbnails import AvatarThumbnailType  # Add this import
 
 import logging
@@ -343,6 +344,55 @@ class ERLC(commands.Cog):
             )
 
         await ctx.send(embed=embed2)
+
+    @server.command(
+        name="pm",
+        description="Send a PM to players in your ER:LC server!",
+        aliases=["private", "sendpm", "send"]
+    )
+    @app_commands.autocomplete(target=erlc_players_autocomplete)
+    @app_commands.describe(
+        target="Who would you like to send this message to?",
+        message="What would you like to send?"
+    )
+    async def erlc_pm(self, ctx: commands.Context, target: str, *, message: str):
+        guild_id = ctx.guild.id
+        special_selections = ["moderators", "admins", "players", "staff"]
+        selected = []
+        if target in special_selections:
+            players = await self.bot.prc_api.get_server_players(guild_id)
+            for item in players:
+                if item.permission == "Normal" and target.lower() == "players":
+                    selected.append(item.username)
+                elif item.permission != "Normal" and target.lower() == "staff":
+                    selected.append(item.username)
+                elif item.permission == "Server Moderator" and target.lower() == "moderators":
+                    selected.append(item.username)
+                elif item.permission == "Server Administrator" and target.lower() == "admins":
+                    selected.append(item.username)
+        else:
+            selected = [target]
+
+
+        command_response = await self.bot.prc_api.run_command(guild_id, f":pm {players.split(',')} {message}")
+        if command_response[0] == 200:
+            await ctx.send(
+                embed=discord.Embed(
+                    title="<:success:1163149118366040106> Successfully Sent",
+                    description="This PM has been sent to the server!",
+                    color=GREEN_COLOR
+                )
+            )
+            await self.secure_logging(guild_id, ctx.author.id, 'Private Message', message)
+        else:
+            await ctx.send(
+                embed=discord.Embed(
+                    title="Not Executed",
+                    description="This PM has not been sent to the server successfully.",
+                    color=BLANK_COLOR
+                )
+            )
+            await self.secure_logging(guild_id, ctx.author.id, 'Private Message', message)
 
     @server.command(
         name="message", description="Send a Message to your ER:LC server with ERM!"
