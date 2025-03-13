@@ -945,20 +945,26 @@ class ERLC(commands.Cog):
         class SpecificUserSelect(discord.ui.Select):
             def __init__(self, bot, risky_users):
                 self.bot = bot
-                self.risky_users = risky_users
+                self.risky_users = risky_users[:25]
                 options = [
                     discord.SelectOption(label=user.username, value=str(user.id))
                     for user in risky_users
                 ]
-                super().__init__(placeholder="Select a user to ban", options=options)
+                super().__init__(placeholder="Select a user to ban", options=options, max_values=len(options),
+                                 min_values=1)
 
             async def callback(self, interaction: discord.Interaction):
-                user_id = int(self.values[0])
-                ban_command = f":ban {user_id} Banned for having a risky username."
-                await self.bot.prc_api.run_command(interaction.guild.id, ban_command)
-                await interaction.response.send_message(
+                await interaction.response.defer()
+
+                # Iterate over all selected users
+                for user_id in self.values:
+                    user_id = int(user_id)
+                    ban_command = f":ban {user_id} Banned for having a risky username."
+                    await self.bot.prc_api.run_command(interaction.guild.id, ban_command)
+
+                await interaction.followup.send(
                     embed=discord.Embed(
-                        title="<:success:1163149118366040106> Player Banned",
+                        title="<:success:1163149118366040106> Players Banned",
                         description=f"The selected players have been banned from the server.",
                         color=GREEN_COLOR
                     ), ephemeral=True
@@ -967,7 +973,7 @@ class ERLC(commands.Cog):
         class BanOptions(discord.ui.Select):
             def __init__(self, bot, risky_users):
                 self.bot = bot
-                self.risky_users = risky_users
+                self.risky_users = risky_users[:25]
                 options = [
                     discord.SelectOption(label="Ban All Risk Users", description="Ban all detected risk users"),
                     discord.SelectOption(label="Ban Specific User", description="Specify a user to ban")
@@ -975,10 +981,11 @@ class ERLC(commands.Cog):
                 super().__init__(placeholder="Actions", options=options)
 
             async def callback(self, interaction: discord.Interaction):
+                await interaction.response.defer()
                 if self.values[0] == "Ban All Risk Users":
                     # Ban all risky users
                     for user in self.risky_users:
-                        ban_command = f":ban {user.id} Banned for having a risky username."
+                        ban_command = f":ban {user.id}"
                         await self.bot.prc_api.run_command(guild_id, ban_command)
                     await interaction.response.send_message(
                         embed=discord.Embed(
