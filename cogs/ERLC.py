@@ -972,7 +972,7 @@ class ERLC(commands.Cog):
                         ban_command = f":ban {user.id} Banned for having a risky username."
                         await self.bot.prc_api.run_command(guild_id, ban_command)
                     await interaction.response.send_message(embed=discord.Embed(
-                        title="<:success:1348059483028459572> Players Banned",
+                        title="<:success:1163149118366040106> Players Banned",
                         description="All risk players have been banned from the server.",
                         color=GREEN_COLOR
                     ), ephemeral=True)
@@ -1004,7 +1004,7 @@ class ERLC(commands.Cog):
                 ban_command = f":ban {username}"
                 await self.bot.prc_api.run_command(guild_id, ban_command)
                 await interaction.response.send_message(embed=discord.Embed(
-                    title="<:success:1348059483028459572> Player Banned",
+                    title="<:success:1163149118366040106> Player Banned",
                     description="The user has been banned from the server.",
                     color=GREEN_COLOR
                 ), ephemeral=True)
