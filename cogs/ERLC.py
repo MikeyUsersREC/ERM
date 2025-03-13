@@ -873,6 +873,145 @@ class ERLC(commands.Cog):
         else:
             await ctx.send(embed=embeds[0])
 
+
+    @server.command(
+        name="security",
+        description="Search for Users with 'all' or 'others' in their username."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def security(self, ctx: commands.Context):
+        msg = await ctx.send(
+            embed=discord.Embed(
+                title="<:Clock:1348059418750881934> Checking...",
+                description="This may take a while.",
+                color=BLANK_COLOR
+            )
+        )
+        guild_id = ctx.guild.id
+        try:
+            players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+        except ResponseFailure:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="<:WarningIcon:1348059489785610320> PRC API Error",
+                    description="There was an error fetching players from the PRC API.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        if not players:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="No Players Found",
+                    description="There are no players in the server to check.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        embed = discord.Embed(
+            title="Users with Risky Usernames",
+            color=BLANK_COLOR,
+            description=""
+        )
+
+        risky_prefixes = ('all', 'others', 'ail', 'ali', 'aii', 'a1i', 'ai1', 'a1l', 'al1', 'aII', '0thers')
+        risky_users = []
+
+        for player in players:
+            if player.username.lower().startswith(risky_prefixes):
+                risky_users.append(player)
+
+        if not risky_users:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="No Risk Players Found",
+                    description="There are no risk players in the server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        else:
+            for user in risky_users:
+                embed.description += f"> [{user.username}](https://roblox.com/users/{user.id}/profile) \n"
+
+        embed.set_author(
+            name=ctx.guild.name,
+            icon_url=ctx.guild.icon if ctx.guild.icon else None
+        )
+
+
+        view = discord.ui.View()
+
+        await msg.edit(embed=embed, view=view)
+
+        class BanOptions(discord.ui.Select):
+            def __init__(self, bot, user_id):
+                self.bot = bot
+                self.user_id = user_id
+                options = [
+                    discord.SelectOption(label="Ban All Risk Users", description="Ban all detected risk users"),
+                    discord.SelectOption(label="Ban Specific User", description="Specify a user to ban")
+                ]
+                super().__init__(placeholder="Actions", options=options)
+
+            async def callback(self, interaction: discord.Interaction):
+                if interaction.user.id != self.user_id:
+
+                    return await interaction.response.send_message(
+                        embed=discord.Embed(
+                            title="Not Permitted",
+                            description="You are not permitted to interact with this.",
+                            color=BLANK_COLOR
+                        ),
+                        ephemeral=True
+                    )
+
+                if self.values[0] == "Ban All Risk Users":
+                    for user in risky_users:
+                        ban_command = f":ban {user.id} Banned for having a risky username."
+                        await self.bot.prc_api.run_command(guild_id, ban_command)
+                    await interaction.response.send_message(embed=discord.Embed(
+                        title="<:success:1348059483028459572> Players Banned",
+                        description="All risk players have been banned from the server.",
+                        color=GREEN_COLOR
+                    ), ephemeral=True)
+                elif self.values[0] == "Ban Specific User":
+                    modal = BanUserModal(self.bot)
+                    await interaction.response.send_modal(modal)
+
+        class BanUserModal(discord.ui.Modal, title="Ban Specific User"):
+            def __init__(self, bot):
+                super().__init__()
+                self.bot = bot
+                self.risky_usernames = risky_users
+                self.username = discord.ui.TextInput(label="Username", placeholder="Enter the username to ban")
+                self.add_item(self.username)
+
+            async def on_submit(self, interaction: discord.Interaction):
+                username = self.username.value
+                # Convert risky usernames to lowercase for case-insensitive comparison
+                risky_usernames_list = [user.username.lower() for user in self.risky_usernames]
+
+                if username.lower() not in risky_usernames_list:
+                    await interaction.response.send_message(embed=discord.Embed(
+                        title="Cannot Ban User",
+                        description="The username you specified is not a risky user.",
+                        color=BLANK_COLOR
+                    ), ephemeral=True)
+                    return
+
+                ban_command = f":ban {username}"
+                await self.bot.prc_api.run_command(guild_id, ban_command)
+                await interaction.response.send_message(embed=discord.Embed(
+                    title="<:success:1348059483028459572> Player Banned",
+                    description="The user has been banned from the server.",
+                    color=GREEN_COLOR
+                ), ephemeral=True)
+
+        view.add_item(BanOptions(self.bot, ctx.author.id))
+        await msg.edit(embed=embed, view=view)
+
     @server.command(name="players", description="See all players in the server.")
     @is_server_linked()
     async def server_players(
