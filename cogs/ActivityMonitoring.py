@@ -137,7 +137,7 @@ class ActivityMonitoring(commands.Cog):
 
         for index, (user_id, (seconds, quota)) in enumerate(sorted_staff.items()):
             # print(seconds, quota)
-            leaderboard_string += f"**{index+1}.** <@{user_id}> • {td_format(datetime.timedelta(seconds=seconds))} {self.bot.emoji_controller.get_emoji('success') if seconds > quota else self.bot.emoji_controller.get_emoji('xmark')}\n"
+            leaderboard_string += f"**{index+1}.** <@{user_id}> • {td_format(datetime.timedelta(seconds=seconds))} {await self.bot.emoji_controller.get_emoji('success') if seconds > quota else await self.bot.emoji_controller.get_emoji('xmark')}\n"
             if index == len(sorted_staff) - 1:
                 break
         else:
@@ -195,7 +195,7 @@ class ActivityMonitoring(commands.Cog):
                         value=(
                             f"> **Staff:** <@{item['user_id']}>\n"
                             f"> **Reason:** {item['reason']}\n"
-                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=find_shift_staff[0]))} {self.bot.emoji_controller.get_emoji('success') if seconds > find_shift_staff[1] else self.bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=find_shift_staff[0]))} {await self.bot.emoji_controller.get_emoji('success') if seconds > find_shift_staff[1] else await self.bot.emoji_controller.get_emoji('xmark')}\n"
                             f"> **Started At:** <t:{int(item['start_epoch'])}>\n"
                             f"> **Ended At:** <t:{int(item['expiry'])}>"
                         ),
@@ -207,7 +207,7 @@ class ActivityMonitoring(commands.Cog):
                         value=(
                             f"> **Staff:** <@{item['user_id']}>\n"
                             f"> **Reason:** {item['reason']}\n"
-                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=0))} {self.bot.emoji_controller.get_emoji('success') if seconds > 0 else self.bot.emoji_controller.get_emoji('xmark')}\n"
+                            f"> **Shift Time:** {td_format(datetime.timedelta(seconds=0))} {await self.bot.emoji_controller.get_emoji('success') if seconds > 0 else await self.bot.emoji_controller.get_emoji('xmark')}\n"
                             f"> **Started At:** <t:{int(item['start_epoch'])}>\n"
                             f"> **Ended At:** <t:{int(item['expiry'])}>"
                         ),

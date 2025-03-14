@@ -3314,7 +3314,9 @@ class ActionCreationToolkit(discord.ui.View):
             "ActionID": next(generator),
             "Triggers": 0,
             "Integrations": [],
+            "Conditions": [],
             "Guild": 0,
+            "LastExecuted": 0,
         }
 
         def return_correspondent_callback(item):

@@ -384,7 +384,7 @@ class Infractions(commands.Cog):
 
         await ctx.send(
             embed=discord.Embed(
-                title=f"{self.bot.emoji_controller.get_emoji('success')} Infraction Issued",
+                title=f"{await self.bot.emoji_controller.get_emoji('success')} Infraction Issued",
                 description="Successfully issued an infraction!",
                 color=discord.Color.green(),
             ).add_field(
@@ -474,7 +474,7 @@ class Infractions(commands.Cog):
 
             await ctx.send(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Infraction Revoked",
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Infraction Revoked",
                     description="Successfully revoked the infraction!",
                     color=discord.Color.green(),
                 )

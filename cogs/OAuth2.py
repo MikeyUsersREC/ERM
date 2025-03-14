@@ -69,7 +69,7 @@ class OAuth2(commands.Cog):
                 ):
                     await msg.edit(
                         embed=discord.Embed(
-                            title=f"{self.bot.emoji_controller.get_emoji('success')} Linked",
+                            title=f"{await self.bot.emoji_controller.get_emoji('success')} Linked",
                             description="Your Roblox account has been successfully linked to ERM.",
                             color=GREEN_COLOR,
                         )
@@ -82,7 +82,7 @@ class OAuth2(commands.Cog):
                     if item.get("last_updated", 0) > timestamp:
                         await msg.edit(
                             embed=discord.Embed(
-                                title=f"{self.bot.emoji_controller.get_emoji('success')} Linked",
+                                title=f"{await self.bot.emoji_controller.get_emoji('success')} Linked",
                                 description="Your Roblox account has been successfully linked to ERM.",
                                 color=GREEN_COLOR,
                             )

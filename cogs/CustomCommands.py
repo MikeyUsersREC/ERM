@@ -145,7 +145,7 @@ class CustomCommands(commands.Cog):
             await bot.custom_commands.upsert(Data)
             await new_msg.edit(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Created",
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Command Created",
                     description="This custom command has been successfully created",
                     color=GREEN_COLOR,
                 ),
@@ -228,7 +228,7 @@ class CustomCommands(commands.Cog):
                 await bot.custom_commands.upsert(Data)
                 return await new_msg.edit(
                     embed=discord.Embed(
-                        title=f"{self.bot.emoji_controller.get_emoji('success')} Command Edited",
+                        title=f"{await self.bot.emoji_controller.get_emoji('success')} Command Edited",
                         description="This custom command has been successfully edited",
                         color=GREEN_COLOR,
                     ),
@@ -255,7 +255,7 @@ class CustomCommands(commands.Cog):
 
             return await new_msg.edit(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Deleted Command",
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Deleted Command",
                     description="This custom command has been successfully deleted",
                     color=GREEN_COLOR,
                 ),
@@ -358,7 +358,7 @@ class CustomCommands(commands.Cog):
                 )
             await ctx.interaction.followup.send(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Ran",
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Command Ran",
                     description=f"I've just ran the custom command in {channel.mention}.",
                     color=GREEN_COLOR,
                 )
@@ -399,7 +399,7 @@ class CustomCommands(commands.Cog):
                 )
             await ctx.reply(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Ran",
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Command Ran",
                     description=f"I've just ran the custom command in {channel.mention}.",
                     color=GREEN_COLOR,
                 )

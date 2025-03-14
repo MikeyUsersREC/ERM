@@ -8,6 +8,8 @@ import typing
 from erm import Bot
 from menus import CustomSelectMenu
 from utils.constants import blank_color
+import asyncio
+import nest_asyncio
 
 
 class CustomPage:
@@ -37,7 +39,7 @@ class SelectPagination(discord.ui.View):
             if isinstance(button, discord.ui.Button):
                 if button.emoji is not None:
                     button.emoji = discord.PartialEmoji.from_str(
-                        bot.emoji_controller.get_emoji(names_to_emojis[button.label])
+                        asyncio.run(bot.emoji_controller.get_emoji(names_to_emojis[button.label]))
                     )
                     button.label = ""
 
