@@ -875,30 +875,22 @@ class ERLC(commands.Cog):
 
 
     @server.command(
-        name="security",
+        name="risk",
         description="Search for Users with 'all' or 'others' in their username."
     )
     @is_staff()
     @is_server_linked()
-    async def security(self, ctx: commands.Context):
+    async def risk(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
-                title="<:Clock:1035308064305332224> Checking...",
+                title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Checking...",
                 description="This may take a while.",
                 color=BLANK_COLOR
             )
         )
         guild_id = ctx.guild.id
-        try:
-            players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
-        except ResponseFailure:
-            return await msg.edit(
-                embed=discord.Embed(
-                    title="<:WarningIcon:1035258528149033090> PRC API Error",
-                    description="There was an error fetching players from the PRC API.",
-                    color=BLANK_COLOR
-                )
-            )
+
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
 
         if not players:
             return await msg.edit(
@@ -916,11 +908,7 @@ class ERLC(commands.Cog):
         )
 
         risky_prefixes = ('all', 'others', 'ail', 'ali', 'aii', 'a1i', 'ai1', 'a1l', 'al1')
-        risky_users = []
-
-        for player in players:
-            if player.username.lower().startswith(risky_prefixes):
-                risky_users.append(player)
+        risky_users = [player for player in players if player.username.lower().startswith(risky_prefixes)]
 
         if not risky_users:
             return await msg.edit(
@@ -931,84 +919,16 @@ class ERLC(commands.Cog):
                 )
             )
 
-        else:
-            for user in risky_users:
-                embed.description += f"> [{user.username}](https://roblox.com/users/{user.id}/profile) \n"
+        for user in risky_users:
+            embed.description += f"> [{user.username}](https://roblox.com/users/{user.id}/profile) \n"
 
         embed.set_author(
             name=ctx.guild.name,
             icon_url=ctx.guild.icon if ctx.guild.icon else None
         )
 
-        view = discord.ui.View()
+        view = RiskyUsersMenu(self.bot, guild_id, risky_users, ctx.author.id)
 
-        class SpecificUserSelect(discord.ui.Select):
-            def __init__(self, bot, risky_users):
-                self.bot = bot
-                self.risky_users = risky_users[:25]
-                options = [
-                    discord.SelectOption(label=user.username, value=str(user.id))
-                    for user in risky_users
-                ]
-                super().__init__(placeholder="Select a user to ban", options=options, max_values=len(options),
-                                 min_values=1)
-
-            async def callback(self, interaction: discord.Interaction):
-                await interaction.response.defer()
-
-                # Iterate over all selected users
-                for user_id in self.values:
-                    user_id = int(user_id)
-                    ban_command = f":ban {user_id} Banned for having a risky username."
-                    await self.bot.prc_api.run_command(interaction.guild.id, ban_command)
-
-                await interaction.followup.send(
-                    embed=discord.Embed(
-                        title="<:success:1163149118366040106> Players Banned",
-                        description=f"The selected players have been banned from the server.",
-                        color=GREEN_COLOR
-                    ), ephemeral=True
-                )
-
-        class BanOptions(discord.ui.Select):
-            def __init__(self, bot, risky_users):
-                self.bot = bot
-                self.risky_users = risky_users[:25]
-                options = [
-                    discord.SelectOption(label="Ban All Risk Users", description="Ban all detected risk users"),
-                    discord.SelectOption(label="Ban Specific User", description="Specify a user to ban")
-                ]
-                super().__init__(placeholder="Actions", options=options)
-
-            async def callback(self, interaction: discord.Interaction):
-                await interaction.response.defer()
-                if self.values[0] == "Ban All Risk Users":
-                    # Ban all risky users
-                    for user in self.risky_users:
-                        ban_command = f":ban {user.id}"
-                        await self.bot.prc_api.run_command(guild_id, ban_command)
-                    await interaction.response.send_message(
-                        embed=discord.Embed(
-                            title="<:success:1163149118366040106> Players Banned",
-                            description="All risk players have been banned from the server.",
-                            color=GREEN_COLOR
-                        ), ephemeral=True
-                    )
-
-                elif self.values[0] == "Ban Specific User":
-                    select_view = discord.ui.View()
-                    select_view.add_item(SpecificUserSelect(self.bot, self.risky_users))
-                    await interaction.response.send_message(
-                        embed=discord.Embed(
-                            title="Select a User to Ban",
-                            description="Please select a user from the dropdown below.",
-                            color=BLANK_COLOR
-                        ),
-                        ephemeral=True,
-                        view=select_view
-                    )
-
-        view.add_item(BanOptions(self.bot, risky_users))
         await msg.edit(embed=embed, view=view)
         
     @server.command(name="players", description="See all players in the server.")
