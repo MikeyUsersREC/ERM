@@ -50,7 +50,7 @@ class GameLogging(commands.Cog):
     )
     @app_commands.describe(reason="Reason for your Staff Request!")
     @require_settings()
-    async def staff_request(self, ctx: commands.Context, reason: str):
+    async def staff_request(self, ctx: commands.Context, *, reason: str):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         game_logging = settings.get("game_logging", {})
         if game_logging == {}:
