@@ -288,7 +288,8 @@ class Bot(commands.AutoShardedBot):
         # statistics_check.start(bot)
         tempban_checks.start(bot)
         check_whitelisted_car.start(bot)
-        change_status.start(bot)
+        if self.environment != "CUSTOM":
+            change_status.start(bot)
         process_scheduled_pms.start(bot)
         sync_weather.start(bot)
         iterate_conditions.start(bot)
