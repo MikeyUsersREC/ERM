@@ -20,7 +20,7 @@ async def check_infractions(bot):
             else {
                 "guild_id": {
                     "$nin": [
-                        int(item["GuildID"])
+                        int(item["GuildID"] or 0)
                         async for item in bot.whitelabel.db.find({})
                     ]
                 }

@@ -26,7 +26,7 @@ async def iterate_prc_logs(bot):
         "_": {
             "_id": {
                 "$nin": [
-                    int(item["GuildID"]) async for item in bot.whitelabel.db.find({})
+                    int(item["GuildID"] or 0) async for item in bot.whitelabel.db.find({})
                 ]
             }
         },
@@ -84,7 +84,7 @@ async def iterate_prc_logs(bot):
                             "_": {
                                 "_id": {
                                     "$nin": [
-                                        int(item["GuildID"])
+                                        int(item["GuildID"] or 0)
                                         async for item in bot.whitelabel.db.find({})
                                     ]
                                 }

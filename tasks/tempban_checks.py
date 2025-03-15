@@ -36,7 +36,7 @@ async def tempban_checks(bot):
         else {
             "Guild": {
                 "$nin": [
-                    int(item["GuildID"]) async for item in bot.whitelabel.db.find({})
+                    int(item["GuildID"] or 0) async for item in bot.whitelabel.db.find({})
                 ]
             }
         }

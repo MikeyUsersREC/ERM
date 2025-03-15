@@ -23,7 +23,7 @@ async def check_whitelisted_car(bot):
         else {
             "_id": {
                 "$nin": [
-                    int(item["GuildID"]) async for item in bot.whitelabel.db.find({})
+                    int(item["GuildID"] or 0) async for item in bot.whitelabel.db.find({})
                 ]
             }
         }
