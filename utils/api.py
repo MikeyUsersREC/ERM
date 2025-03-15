@@ -1916,7 +1916,7 @@ class APIRoutes:
                             "username": member.name,
                             "discriminator": member.discriminator,
                             "global_name": member.global_name,
-                            "avatar": str(member.avatar.url) if member.avatar else None,
+                            "avatar": str(member.display_avatar.url),
                         },
                         "nick": member.nick,
                         "roles": [str(role.id) for role in member.roles],

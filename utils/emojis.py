@@ -1,4 +1,8 @@
 import os
+import asyncio
+import nest_asyncio
+
+nest_asyncio.apply() # dangerous!
 
 default_emojis = {
     "check": 1163142000271429662,
@@ -41,11 +45,11 @@ class EmojiController:
         for emoji in new_application_emojis:
             self.emojis[emoji.name] = emoji.id
 
-    async def get_emoji(self, emoji_name):
+    def get_emoji(self, emoji_name):
         if self.environment == "PRODUCTION":
             return "<:{}:{}>".format(emoji_name, default_emojis[emoji_name])
 
         if not self.emojis:
-            await self.prefetch_emojis()
+            asyncio.run(self.prefetch_emojis())
 
-        return "<:{}:{}>".format(emoji_name, default_emojis[emoji_name])
+        return "<:{}:{}>".format(emoji_name, self.emojis[emoji_name])

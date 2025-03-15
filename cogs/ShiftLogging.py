@@ -1420,7 +1420,7 @@ class ShiftLogging(commands.Cog):
             ).set_footer(
                 text=f"Shift Type: {shift_type_item['name']}"
             ).set_thumbnail(
-                url=user.avatar.url if user.avatar else user.default_avatar.url
+                url=user.display_avatar.url
             )
             embeds.append(embed)
 

@@ -164,7 +164,7 @@ class GameLogging(commands.Cog):
             "user_id": ctx.author.id,
             "guild_id": ctx.guild.id,
             "username": ctx.author.name,
-            "avatar": ctx.author.avatar.url.split("/")[-1].split(".")[0],
+            "avatar": ctx.author.display_avatar.url.split("/")[-1].split(".")[0],
             "reason": reason,
             "active": True,
             "created_at": datetime.datetime.now(tz=pytz.UTC),
@@ -175,7 +175,7 @@ class GameLogging(commands.Cog):
         self.bot.dispatch("staff_request_send", o_id)
         await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Sent Staff Request",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Sent Staff Request",
                 description="Your Staff Request has been sent successfully.",
                 color=GREEN_COLOR,
             )
@@ -246,7 +246,7 @@ class GameLogging(commands.Cog):
         await channel.send(embed=embed)
         await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Logged Announcement",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Announcement",
                 description="Your Game Announcement has been successfully logged!",
                 color=GREEN_COLOR,
             )
@@ -346,7 +346,7 @@ class GameLogging(commands.Cog):
 
         await sts_msg.edit(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Logged STS",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged STS",
                 description="I have successfully logged your STS!",
                 color=GREEN_COLOR,
             ),
@@ -468,7 +468,7 @@ class GameLogging(commands.Cog):
         await prio_msg.edit(
             view=None,
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Logged Priority",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Logged Priority",
                 description="I have successfully logged the priority request.",
                 color=GREEN_COLOR,
             ),

@@ -112,7 +112,7 @@ class ERLC(commands.Cog):
 
         await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Server Linked",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Server Linked",
                 description=f"Your server has been linked with the name `{server_name}`.",
                 color=GREEN_COLOR,
             )
@@ -406,7 +406,7 @@ class ERLC(commands.Cog):
         if command_response[0] == 200:
             await ctx.send(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Successfully Sent",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Sent",
                     description="This message has been sent to the server!",
                     color=GREEN_COLOR,
                 )
@@ -436,7 +436,7 @@ class ERLC(commands.Cog):
         if command_response[0] == 200:
             return await ctx.send(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Successfully Sent",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Sent",
                     description="This Hint has been sent to the server!",
                     color=GREEN_COLOR,
                 )
@@ -484,7 +484,7 @@ class ERLC(commands.Cog):
                 else ctx.interaction.response.send_message
             )(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Successfully Changed",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Changed",
                     description="I have changed the Server Key successfully. You can now run ER:LC commands on your server.",
                     color=GREEN_COLOR,
                 ),
@@ -552,7 +552,7 @@ class ERLC(commands.Cog):
         if command_response[0] == 200:
             await ctx.send(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Successfully Ran",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Ran",
                     description="This command should have now been executed in your server.",
                     color=GREEN_COLOR,
                 )
@@ -1082,7 +1082,7 @@ class ERLC(commands.Cog):
     async def check(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Checking...",
+                title=f"{self.bot.emoji_controller.get_emoji('Clock')} Checking...",
                 description="This may take a while.",
                 color=BLANK_COLOR,
             )
@@ -1093,7 +1093,7 @@ class ERLC(commands.Cog):
         except ResponseFailure:
             return await msg.edit(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('WarningIcon')} PRC API Error",
+                    title=f"{self.bot.emoji_controller.get_emoji('WarningIcon')} PRC API Error",
                     description="There was an error fetching players from the PRC API.",
                     color=BLANK_COLOR,
                 )
@@ -1232,7 +1232,7 @@ class ERLC(commands.Cog):
         if command_response[0] == 200:
             await msg.edit(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Successfully Refreshed",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Refreshed",
                     description=f"Successfully refreshed {username} in-game.",
                     color=GREEN_COLOR,
                 ),

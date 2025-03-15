@@ -128,7 +128,7 @@ class Actions(commands.Cog):
 
         msg = await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('success')} Running Action",
+                title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
                 description=f"**(0/{len(action_obj['Integrations'])})** I am currently running your action!",
                 color=GREEN_COLOR,
             )
@@ -148,7 +148,7 @@ class Actions(commands.Cog):
                 returns.append(await func(self.bot, ctx.guild.id, ctx, param))
             await msg.edit(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Running Action",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
                     description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{' `{}`'.format(returns) if verbose else ''}",
                     color=GREEN_COLOR,
                 )

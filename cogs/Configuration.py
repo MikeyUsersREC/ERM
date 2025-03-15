@@ -319,7 +319,7 @@ class Configuration(commands.Cog):
 
         await msg.edit(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('loa')} LOA Requests",
+                title=f"{self.bot.emoji_controller.get_emoji('loa')} LOA Requests",
                 description=(
                     "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
                     "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
@@ -369,7 +369,7 @@ class Configuration(commands.Cog):
 
         await msg.edit(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('loa')} RA Requests",
+                title=f"{self.bot.emoji_controller.get_emoji('loa')} RA Requests",
                 description=(
                     "**What are RA Requests?** RA Requests, also called Reduced Activity Requests, are a form of Leave of Absence where the staff member isn't required to complete the full quota, but expects that they will be able to complete it partially.\n\n"
                     "**RA Role:** This role is given to those who are on Reduced Activity, and is removed when they go off Reduced Activity.\n\n"
@@ -430,7 +430,7 @@ class Configuration(commands.Cog):
 
         await msg.edit(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('log')} ROBLOX Punishments",
+                title=f"{self.bot.emoji_controller.get_emoji('log')} ROBLOX Punishments",
                 description=(
                     "**What is the ROBLOX Punishments module?** The ROBLOX Punishments module allows for members of your Staff Team to log punishments against a ROBLOX player using ERM! You can specify custom types of punishments, where they will go, as well as manage and search individual punishments.\n\n"
                     "**Enabled:** This setting toggles the ROBLOX Punishments module. When enabled, staff members will be able to use `/punish`, and management members will be able to additionally use `/punishment manage`.\n\n"
@@ -511,7 +511,7 @@ class Configuration(commands.Cog):
 
         await msg.edit(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('shift')} Shift Management",
+                title=f"{self.bot.emoji_controller.get_emoji('shift')} Shift Management",
                 description=(
                     "**What is Shift Management?** The Shift Management module allows for staff members to log how much time they were in-game, or moderating, or on as a staff member. It allows for a comprehensive guide of who is the most active in your staff team.\n\n"
                     "**Enabled:** When enabled, staff members will be able to run `/duty` commands to manage their shift, see how much time they have, as well as see how much time other people have. Management members will be able to administrate people's shifts, add time, remove time, and clear people's shifts.\n\n"
@@ -549,7 +549,7 @@ class Configuration(commands.Cog):
         await bot.settings.upsert(new_configuration)
         await msg.edit(
             embed=discord.Embed(
-                title=f'{await self.bot.emoji_controller.get_emoji("success")} Success!',
+                title=f'{self.bot.emoji_controller.get_emoji("success")} Success!',
                 description="You are now setup with ERM, and have finished the Setup Wizard! You should now be able to use ERM in your staff team. If you'd like to change any of these settings, use `/config`!\n\n**ERM has lots more modules than what's mentioned here! You can enable them by going into `/config`!**",
                 color=0x1FD373,
             ),

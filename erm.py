@@ -20,6 +20,7 @@ from tasks.statistics_check import statistics_check
 from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
+from tasks.iterate_conditions import iterate_conditions
 from utils.emojis import EmojiController
 
 from utils.log_tracker import LogTracker
@@ -291,6 +292,7 @@ class Bot(commands.AutoShardedBot):
         change_status.start(bot)
         process_scheduled_pms.start(bot)
         sync_weather.start(bot)
+        iterate_conditions.start(bot)
         check_infractions.start(bot)
         logging.info("All tasks are now running!")
 
@@ -399,6 +401,10 @@ async def loggingCommandExecution(ctx: commands.Context):
 async def on_message(
     message,
 ):  # DO NOT COG - process commands does not work as intended whilst in cogs
+
+    if not message.guild:
+        return
+
     if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
         if message.guild.id != int(config("CUSTOM_GUILD_ID")):
             ctx = await bot.get_context(message)

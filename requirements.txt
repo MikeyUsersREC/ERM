@@ -27,3 +27,4 @@ fuzzywuzzy
 python-Levenshtein
 newrelic
 pycryptodome
+nest_asyncio

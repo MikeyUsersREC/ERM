@@ -47,6 +47,7 @@ async def erlc_players_autocomplete(
         if len(incomplete) > 2:
             if incomplete.lower() in player.username:
                 defaults.append(discord.app_commands.Choice(name=player.username, value=player.username))
+                continue
             else:
                 continue
         defaults.append(discord.app_commands.Choice(name=player.username, value=player.username))

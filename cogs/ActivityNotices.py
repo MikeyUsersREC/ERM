@@ -285,7 +285,7 @@ class ActivityCoreCommands:
                 )
                 return await respond(
                     embed=discord.Embed(
-                        title=f"{await self.bot.emoji_controller.get_emoji('success')} Request Sent",
+                        title=f"{self.bot.emoji_controller.get_emoji('success')} Request Sent",
                         description=f"This {request_type_object.upper()} Request has been sent successfully.",
                         color=GREEN_COLOR,
                     )
@@ -372,7 +372,7 @@ class ActivityCoreCommands:
             await self.bot.loas.delete_by_id(current_notice["_id"])
             return await respond(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Notice Deleted",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Notice Deleted",
                     description=f"This {request_type_object.upper()} Request has been deleted.",
                     color=GREEN_COLOR,
                 )
@@ -404,7 +404,7 @@ class ActivityCoreCommands:
 
             return await respond(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Notice Ended Early",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Notice Ended Early",
                     description=f"{victim.mention}'s {request_type_object.upper()} has been ended early.",
                     color=GREEN_COLOR,
                 )
@@ -423,7 +423,7 @@ class ActivityCoreCommands:
             if not current_notice:
                 return await respond(
                     embed=discord.Embed(
-                        title=f"{await self.bot.emoji_controller.get_emoji('error')} No Active Notice",
+                        title=f"{self.bot.emoji_controller.get_emoji('error')} No Active Notice",
                         description="This staff member has no active notice.",
                     )
                 )
@@ -432,7 +432,7 @@ class ActivityCoreCommands:
             if duration is None:
                 return await respond(
                     embed=discord.Embed(
-                        title=f"{await self.bot.emoji_controller.get_emoji('WarningIcon')} Cancelled",
+                        title=f"{self.bot.emoji_controller.get_emoji('WarningIcon')} Cancelled",
                         description="You did not provide a duration.",
                         color=BLANK_COLOR,
                     )
@@ -443,7 +443,7 @@ class ActivityCoreCommands:
             except ValueError:
                 return await respond(
                     embed=discord.Embed(
-                        title=f"{await self.bot.emoji_controller.get_emoji('WarningIcon')} Invalid Time",
+                        title=f"{self.bot.emoji_controller.get_emoji('WarningIcon')} Invalid Time",
                         description="You did not provide a valid time format.",
                         color=BLANK_COLOR,
                     )
@@ -456,7 +456,7 @@ class ActivityCoreCommands:
 
             return await respond(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Notice Extended",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Notice Extended",
                     description=f"{victim.mention}'s {request_type_object.upper()} has been extended by {duration}.",
                     color=GREEN_COLOR,
                 )
@@ -575,7 +575,7 @@ class ActivityCoreCommands:
         if return_bypass is None:
             await ctx.send(
                 embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Request Sent",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Request Sent",
                     description=f"Your {request_type_object.upper()} has been sent successfully.",
                     color=GREEN_COLOR,
                 )

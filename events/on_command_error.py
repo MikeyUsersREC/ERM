@@ -252,7 +252,7 @@ class OnCommandError(commands.Cog):
         ):
             await ctx.send(
                 embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Failure",
+                    title=f"{self.bot.emoji_controller.get_emoji('error')} Command Failure",
                     description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
                     color=RED_COLOR,
                 ).add_field(name="Error ID", value=f"`{error_id}`", inline=False),
