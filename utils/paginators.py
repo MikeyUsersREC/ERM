@@ -39,7 +39,7 @@ class SelectPagination(discord.ui.View):
             if isinstance(button, discord.ui.Button):
                 if button.emoji is not None:
                     button.emoji = discord.PartialEmoji.from_str(
-                        asyncio.run(bot.emoji_controller.get_emoji(names_to_emojis[button.label]))
+                        bot.emoji_controller.get_emoji(names_to_emojis[button.label])
                     )
                     button.label = ""
 
