@@ -1032,6 +1032,7 @@ class ShiftLogging(commands.Cog):
         my_data = None
         member_list = await ctx.guild.chunk()
         members = {m.id: m for m in member_list}  # Cache guild members
+        total_seconds = 0
 
         for index, i in enumerate(sorted_staff):
             member = members.get(i["id"])
@@ -1039,7 +1040,7 @@ class ShiftLogging(commands.Cog):
                 if member.id == ctx.author.id:
                     i["index"] = index
                     my_data = i
-
+                total_seconds += i["total_seconds"]
                 time_str = td_format(datetime.timedelta(seconds=i["total_seconds"]))
 
                 if buffer is None:
@@ -1077,12 +1078,6 @@ class ShiftLogging(commands.Cog):
                         embeds[-1].description += line
 
         staff_roles = []
-        ordinal = lambda n: "%d%s" % (
-            n,
-            "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4],
-        )  # NOQA: E731
-        ordinal_formatted = None
-        quota_seconds = 0
 
         if configItem["staff_management"].get("role"):
             if isinstance(configItem["staff_management"]["role"], int):
@@ -1255,6 +1250,7 @@ class ShiftLogging(commands.Cog):
                     scope,
                     combined,
                     config("DUTY_LEADERBOARD_ID"),
+                    total_seconds,
                 )
             else:
                 view = None
@@ -1272,6 +1268,7 @@ class ShiftLogging(commands.Cog):
                     scope,
                     combined,
                     config("DUTY_LEADERBOARD_ID"),
+                    total_seconds,
                 )
             else:
                 view = None

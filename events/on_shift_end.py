@@ -37,6 +37,7 @@ class OnShiftEnd(commands.Cog):
                     custom_shift_type = item
 
         assigned_roles = []
+        break_roles = []
         if custom_shift_type is None:
             try:
                 channel = await guild.fetch_channel(
@@ -48,6 +49,7 @@ class OnShiftEnd(commands.Cog):
                 "nickname_prefix", None
             )
             assigned_roles = guild_settings.get("shift_management").get("role", [])
+            break_roles = guild_settings.get("shift_management").get("break_roles", [])
         else:
             try:
                 channel = await guild.fetch_channel(custom_shift_type.get("channel", 0))
@@ -60,6 +62,7 @@ class OnShiftEnd(commands.Cog):
                     channel = None
             nickname_prefix = custom_shift_type.get("nickname", None)
             assigned_roles = custom_shift_type.get("role", [])
+            break_roles = custom_shift_type.get("break_roles", [])
 
         try:
             staff_member: discord.Member = await guild.fetch_member(shift.user_id)
@@ -69,6 +72,15 @@ class OnShiftEnd(commands.Cog):
         if not staff_member:
             return
         for role in assigned_roles or []:
+            discord_role: discord.Role = guild.get_role(role)
+            if discord_role is None:
+                continue
+            try:
+                await staff_member.remove_roles(discord_role, atomic=True)
+            except discord.HTTPException:
+                pass
+
+        for role in break_roles or []:
             discord_role: discord.Role = guild.get_role(role)
             if discord_role is None:
                 continue
@@ -87,10 +99,12 @@ class OnShiftEnd(commands.Cog):
 
         moderation_counts = {}
         for entry in shift.moderations:
-            if entry["type"] in moderation_counts:
-                moderation_counts[entry["type"]] += entry["count"]
+            entry = await self.bot.punishments.fetch_warning(str(entry))
+
+            if entry.type in moderation_counts:
+                moderation_counts[entry.type] += 1
             else:
-                moderation_counts[entry["type"]] = entry["count"]
+                moderation_counts[entry.type] = 1
 
         if channel is not None:
             await channel.send(

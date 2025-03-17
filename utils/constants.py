@@ -80,7 +80,14 @@ SERVER_CONDITIONS = {
     "In-Game Queue": "ERLC_Queue",
     "On Duty Staff": "OnDuty",
     "On Break Staff": "OnBreak",
-    "If ... is in-game": "ERLC_X_InGame"
+    "Players on Police": "ERLC_Police",
+    "Players on Sheriff": "ERLC_Sheriff",
+    "Players on Fire": "ERLC_Fire",
+    "Players on DOT": "ERLC_DOT",
+    "Players on Civilian": "ERLC_Civilian",
+    "Players on Jail": "ERLC_Jail",
+    "Vehicles Spawned": "ERLC_Vehicles",
+    "If ... is in-game": "ERLC_X_InGame",
 }
 
 RELEVANT_DESCRIPTIONS = [
@@ -92,7 +99,14 @@ RELEVANT_DESCRIPTIONS = [
     "Number of players in the queue.",
     "All staff members currently on duty.",
     "All staff members currently on break.",
-    "If a specific user is in-game."
+    "Number of players on the Police team.",
+    "Number of players on the Sheriff team.",
+    "Number of players on the Fire team.",
+    "Number of players on the DOT team.",
+    "Number of players on the Civilian team.",
+    "Number of players on the Jail team.",
+    "Number of vehicles spawned in-game.",
+    "If a specific user is in-game.",
 ]
 
 CONDITION_OPTIONS = {
@@ -101,7 +115,7 @@ CONDITION_OPTIONS = {
     "Less Than or Equals To": "<=",
     "Not Equals To": "!=",
     "More Than": ">",
-    "More Than or Equals To": ">="
+    "More Than or Equals To": ">=",
 }
 
 OPTION_DESCRIPTIONS = [
@@ -110,5 +124,5 @@ OPTION_DESCRIPTIONS = [
     "If the value is less than or equal to the specified value.",
     "If the value is not equal to the specified value.",
     "If the value is more than the specified value.",
-    "If the value is more than or equal to the specified value."
+    "If the value is more than or equal to the specified value.",
 ]

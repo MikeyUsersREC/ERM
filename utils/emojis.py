@@ -2,7 +2,7 @@ import os
 import asyncio
 import nest_asyncio
 
-nest_asyncio.apply() # dangerous!
+nest_asyncio.apply()  # dangerous!
 
 default_emojis = {
     "check": 1163142000271429662,

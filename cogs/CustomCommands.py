@@ -69,7 +69,8 @@ class CustomCommands(commands.Cog):
                 name=f"{item['name']}",
                 value=f"> **Name:** {item['name']}\n"
                 f"> **Command ID:** `{item['id']}`\n"
-                f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else '1')}",
+                f"> **Creator:** {'<@{}>'.format(item.get('author') if item.get('author') is not None else '1')}\n"
+                f"> **Default Channel:** {'<#{}>'.format(item.get('channel')) if item.get('channel') is not None else 'None selected'}",
                 inline=False,
             )
 
@@ -112,7 +113,8 @@ class CustomCommands(commands.Cog):
                         "**Command Information**\n"
                         f"> **Command ID:** `{data['id']}`\n"
                         f"> **Command Name:** {data['name']}\n"
-                        f"> **Creator:** <@{data['author']}>\n"
+                        f"> **Creator:** <@{data.get('author', '0')}>\n"  # this is just to be sure that author actually exists!
+                        f"> **Default Channel:** {'<#{}>'.format(data.get('channel')) if data.get('channel') is not None else 'None selected'}\n"
                         f"\n**Message:**\n"
                         f"View the message below by clicking 'View Message'."
                     ),
@@ -152,12 +154,23 @@ class CustomCommands(commands.Cog):
                 view=None,
             )
         elif view.value == "edit":
-            name = view.modal.name.value
+            try:
+                id_var = int(view.modal.id.value)
+            except ValueError:
+                return await new_msg.edit(
+                    embed=discord.Embed(
+                        title="Invalid Format",
+                        description="A Custom Command ID may only contain numbers, not letters.",
+                        color=BLANK_COLOR,
+                    ),
+                    view=None,
+                )
             command_id = None
-            status = True
+            existing_command_data = None
             for item in Data["commands"]:
-                if item["name"] == name:
+                if item["id"] == id_var:
                     command_id = item["id"]
+                    existing_command_data = item
                     break
 
             if command_id is None:
@@ -166,14 +179,10 @@ class CustomCommands(commands.Cog):
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
                         color=BLANK_COLOR,
-                    )
+                    ),
+                    view=None,
                 )
-                status = False
-            existing_command_data = None
-            for item in Data["commands"]:
-                if item["id"] == command_id:
-                    existing_command_data = item
-                    break
+                return
 
             if existing_command_data is None:
                 await new_msg.edit(
@@ -181,17 +190,14 @@ class CustomCommands(commands.Cog):
                         title="Command Mismatch",
                         description="This custom command doesn't exist.",
                         color=BLANK_COLOR,
-                    )
+                    ),
+                    view=None,
                 )
-                status = False
+                return
+
             data = {}
             try:
-                data = {
-                    "name": name,
-                    "id": existing_command_data["id"],
-                    "message": existing_command_data["message"],
-                    "author": existing_command_data.get("author", "1"),
-                }
+                data = existing_command_data
             except KeyError:
                 await new_msg.edit(
                     embed=discord.Embed(
@@ -200,41 +206,39 @@ class CustomCommands(commands.Cog):
                         color=BLANK_COLOR,
                     )
                 )
-                status = False
+                return
             view = CustomCommandModification(ctx.author.id, data)
-            if status == True:
-                await new_msg.edit(
-                    view=view,
-                    embed=discord.Embed(
-                        title="Custom Commands",
-                        description=(
-                            "**Command Information**\n"
-                            f"> **Command ID:** `{data['id']}`\n"
-                            f"> **Command Name:** {data['name']}\n"
-                            f"> **Creator:** <@{data['author']}>\n"
-                            f"\n**Message:**\n"
-                            f"View the message below by clicking 'View Message'."
-                        ),
-                        color=BLANK_COLOR,
+            await new_msg.edit(
+                view=view,
+                embed=discord.Embed(
+                    title="Custom Commands",
+                    description=(
+                        "**Command Information**\n"
+                        f"> **Command ID:** `{data['id']}`\n"
+                        f"> **Command Name:** {data['name']}\n"
+                        f"> **Creator:** <@{data['author']}>\n"
+                        f"> **Default Channel:** {'<#{}>'.format(data.get('channel')) if data.get('channel') is not None else 'None selected'}\n"
+                        f"\n**Message:**\n"
+                        f"View the message below by clicking 'View Message'."
                     ),
-                )
-                await view.wait()
-                data = view.command_data
-                for index, item in enumerate(Data["commands"]):
-                    if item["id"] == command_id:
-                        Data["commands"][index] = data
-                        break
-
-                await bot.custom_commands.upsert(Data)
-                return await new_msg.edit(
-                    embed=discord.Embed(
-                        title=f"{self.bot.emoji_controller.get_emoji('success')} Command Edited",
-                        description="This custom command has been successfully edited",
-                        color=GREEN_COLOR,
-                    ),
-                    view=None,
-                )
-
+                    color=BLANK_COLOR,
+                ),
+            )
+            await view.wait()
+            data = view.command_data
+            for index, item in enumerate(Data["commands"]):
+                if item["id"] == command_id:
+                    Data["commands"][index] = data
+                    break
+            await bot.custom_commands.upsert(Data)
+            return await new_msg.edit(
+                embed=discord.Embed(
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Command Edited",
+                    description="This custom command has been successfully edited",
+                    color=GREEN_COLOR,
+                ),
+                view=None,
+            )
         elif view.value == "delete":
             identifier = view.modal.name.value
 
@@ -286,14 +290,13 @@ class CustomCommands(commands.Cog):
 
         is_command = False
         selected = None
-        if "commands" in Data.keys():
-            if isinstance(Data["commands"], list):
-                for cmd in Data["commands"]:
-                    if cmd["name"].lower().replace(" ", "") == command.lower().replace(
-                        " ", ""
-                    ):
-                        is_command = True
-                        selected = cmd
+        if isinstance(Data.get("commands"), list):
+            for cmd in Data["commands"]:
+                if cmd["name"].lower().replace(" ", "") == command.lower().replace(
+                    " ", ""
+                ):
+                    is_command = True
+                    selected = cmd
 
         if not is_command:
             return await ctx.reply(
@@ -304,18 +307,17 @@ class CustomCommands(commands.Cog):
                 )
             )
 
-        if not channel:
-            if selected.get("channel") is None:
+        if selected.get("channel") and channel is None:
+            try:
+                channel = await ctx.guild.fetch_channel(selected["channel"])
+            except discord.HTTPException:
+                channel = None
+
+            if channel is None:  # Channel doesn't exist
                 channel = ctx.channel
-            else:
-                channel = (
-                    discord.utils.get(ctx.guild.text_channels, id=selected["channel"])
-                    if discord.utils.get(
-                        ctx.guild.text_channels, id=selected["channel"]
-                    )
-                    is not None
-                    else ctx.channel
-                )
+        elif channel is None:
+            channel = ctx.channel
+
         embeds = []
         if selected["message"]["embeds"] is not None:
             for embed in selected["message"]["embeds"]:

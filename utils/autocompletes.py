@@ -31,29 +31,37 @@ async def shift_type_autocomplete(
 
 
 async def erlc_players_autocomplete(
-        interaction: discord.Interaction, incomplete: str
+    interaction: discord.Interaction, incomplete: str
 ) -> typing.List[app_commands.Choice[str]]:
     bot: Bot = (await Context.from_interaction(interaction)).bot
-    defaults = [discord.app_commands.Choice(name="Staff", value="staff"),
-                discord.app_commands.Choice(name="Moderators", value="moderators"),
-                discord.app_commands.Choice(name="Admins", value="admins"),
-                discord.app_commands.Choice(name="Players", value="players")]
+    defaults = [
+        discord.app_commands.Choice(name="Staff", value="staff"),
+        discord.app_commands.Choice(name="Moderators", value="moderators"),
+        discord.app_commands.Choice(name="Admins", value="admins"),
+        discord.app_commands.Choice(name="Players", value="players"),
+    ]
     try:
         data = await bot.prc_api.get_server_players(interaction.guild.id)
     except utils.prc_api.ResponseFailure:
         return defaults
-    
+
     for player in data:
         if len(incomplete) > 2:
             if incomplete.lower() in player.username:
-                defaults.append(discord.app_commands.Choice(name=player.username, value=player.username))
+                defaults.append(
+                    discord.app_commands.Choice(
+                        name=player.username, value=player.username
+                    )
+                )
                 continue
             else:
                 continue
-        defaults.append(discord.app_commands.Choice(name=player.username, value=player.username))
+        defaults.append(
+            discord.app_commands.Choice(name=player.username, value=player.username)
+        )
 
     return defaults
-    
+
 
 async def all_shift_type_autocomplete(
     interaction: discord.Interaction, _: str

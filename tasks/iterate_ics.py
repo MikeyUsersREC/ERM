@@ -18,7 +18,8 @@ async def iterate_ics(bot):
         else {
             "guild": {
                 "$nin": [
-                    int(item["GuildID"] or 0) async for item in bot.whitelabel.db.find({})
+                    int(item["GuildID"] or 0)
+                    async for item in bot.whitelabel.db.find({})
                 ]
             }
         }

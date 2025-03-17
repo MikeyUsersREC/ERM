@@ -166,12 +166,17 @@ class Search(commands.Cog):
 
             moderator_id = user.id if user else ctx.author.id
 
-            moderations = [
-                await bot.punishments.fetch_warning(i["_id"])
-                async for i in bot.punishments.db.find(
-                    {"ModeratorID": moderator_id, "Guild": guild_id}
+            moderations = list(
+                filter(
+                    lambda x: x is not None,
+                    [
+                        await bot.punishments.fetch_warning(i["_id"])
+                        async for i in bot.punishments.db.find(
+                            {"ModeratorID": moderator_id, "Guild": guild_id}
+                        )
+                    ],
                 )
-            ]
+            )
 
             embed_list[0].add_field(
                 name="Staff Information",
@@ -507,7 +512,6 @@ class Search(commands.Cog):
                 f"> **Username:** {roblox_player.name}\n"
                 f"> **Display Name:** {roblox_player.display_name}\n"
                 f"> **User ID:** `{roblox_player.id}`\n"
-                f"> **Presence:** { {0: 'Offline', 1: 'Online', 2: 'In Game', 3: 'In Studio'}[presence.user_presence_type.value] if (presence := await roblox_player.get_presence()) is not None else 'Offline'}\n"
                 f"> **Created At:** <t:{int(roblox_player.created.timestamp())}>"
             ),
             inline=False,

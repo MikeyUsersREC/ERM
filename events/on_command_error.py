@@ -23,6 +23,7 @@ class OnCommandError(commands.Cog):
 
     @commands.Cog.listener("on_command_error")
     async def on_command_error(self, ctx, error):
+        do_not_send = getattr(ctx, "dnr", False)
         bot = self.bot
         error_id = error_gen()
 
@@ -31,12 +32,16 @@ class OnCommandError(commands.Cog):
             return await self.on_command_error(ctx, error)
 
         if isinstance(error, commands.CommandOnCooldown):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Cooldown",
-                    description=f"This command is on cooldown. Please try again in {error.retry_after:.2f} seconds.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Cooldown",
+                        description=f"This command is on cooldown. Please try again in {error.retry_after:.2f} seconds.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if (
@@ -52,41 +57,54 @@ class OnCommandError(commands.Cog):
         ) and "RemoteProtocolError: Server disconnected without sending a response." in str(
             error
         ):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Connection Error",
-                    description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Connection Error",
+                        description="The server disconnected without sending a response. Your issue will be fixed if you try again.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if isinstance(error, httpcore.ConnectTimeout):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="HTTP Error",
-                    description="I could not connect to the ROBLOX API. Please try again later.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="HTTP Error",
+                        description="I could not connect to the ROBLOX API. Please try again later.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if isinstance(error, ResponseFailure):
-            await ctx.reply(
-                embed=discord.Embed(
-                    title=f"PRC Response Failure ({error.status_code})",
-                    description=(
-                        "Your server seems to be offline. If this is incorrect, PRC's API may be down."
-                        if error.status_code == 422
-                        else "There seems to be issues with the PRC API. Stand by and wait a few minutes before trying again."
-                    ),
-                    color=BLANK_COLOR,
+            (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title=f"PRC Response Failure ({error.status_code})",
+                        description=(
+                            "Your server seems to be offline. If this is incorrect, PRC's API may be down."
+                            if error.status_code == 422
+                            else "There seems to be issues with the PRC API. Stand by and wait a few minutes before trying again."
+                        ),
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
-            channel = await self.bot.fetch_channel(1213731821330894938)
+
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
                 scope.set_tag("guild_id", ctx.guild.id)
                 scope.set_tag("user_id", ctx.author.id)
-                scope.set_tag("shard_id", ctx.guild.shard_id)
+                if isinstance(ctx.bot, commands.AutoShardedBot):
+                    scope.set_tag("shard_id", ctx.guild.shard_id)
                 scope.set_level("error")
                 await bot.errors.insert(
                     {
@@ -101,34 +119,45 @@ class OnCommandError(commands.Cog):
                 )
 
                 capture_exception(error)
-            await channel.send(f"`{error_id}` {str(error)}")
             return
 
         if isinstance(error, commands.BadArgument):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Invalid Argument",
-                    description="You provided an invalid argument to this command.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Invalid Argument",
+                        description="You provided an invalid argument to this command.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if "Invalid username" in str(error):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Player not found",
-                    description="I could not find a ROBLOX player with that corresponding username.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Player not found",
+                        description="I could not find a ROBLOX player with that corresponding username.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if isinstance(error, roblox.UserNotFound):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Player not found",
-                    description="I could not find a ROBLOX player with that corresponding username.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Player not found",
+                        description="I could not find a ROBLOX player with that corresponding username.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if isinstance(error, discord.Forbidden):
@@ -142,16 +171,21 @@ class OnCommandError(commands.Cog):
                 f"but I can't do that in DMs. Please use me in a server.",
                 color=BLANK_COLOR,
             )
-            await ctx.send(embed=embed)
+            if not do_not_send:
+                await ctx.send(embed=embed)
             return
 
         if isinstance(error, GuildCheckFailure):
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Not Setup",
-                    description="This command requires for the bot to be configured before this command is ran. Please use `/setup` first.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Not Setup",
+                        description="This command requires for the bot to be configured before this command is ran. Please use `/setup` first.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
 
         if isinstance(error, commands.CommandNotFound):
@@ -162,7 +196,7 @@ class OnCommandError(commands.Cog):
                 "mc": "Maple County",
                 "erlc": "ER:LC",
             }
-            if error.code == 9999:
+            if error.code == 9999 and not do_not_send:
                 await ctx.send(
                     embed=discord.Embed(
                         title="API Versioning Change",
@@ -170,7 +204,7 @@ class OnCommandError(commands.Cog):
                         color=BLANK_COLOR,
                     ).set_footer(text=f"{error.code} | {error_id}")
                 )
-            elif error.code in [2000, 2001, 2002, 401]:
+            elif error.code in [2000, 2001, 2002, 401] and not do_not_send:
                 await ctx.send(
                     embed=discord.Embed(
                         title="Not Linked",
@@ -179,18 +213,20 @@ class OnCommandError(commands.Cog):
                     ).set_footer(text=error_id)
                 )
             else:
-                await ctx.send(
-                    embed=discord.Embed(
-                        title="API Fatal Error",
-                        description=f"The {aliases[error.platform]} API encountered a fatal error which has resulted in us being unable to fetch {aliases[error.platform]} data.",
-                        color=BLANK_COLOR,
-                    ).set_footer(text=f"{error.code} | {error_id}")
-                )
+                if not do_not_send:
+                    await ctx.send(
+                        embed=discord.Embed(
+                            title="API Fatal Error",
+                            description=f"The {aliases[error.platform]} API encountered a fatal error which has resulted in us being unable to fetch {aliases[error.platform]} data.",
+                            color=BLANK_COLOR,
+                        ).set_footer(text=f"{error.code} | {error_id}")
+                    )
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
                 scope.set_tag("guild_id", ctx.guild.id)
                 scope.set_tag("user_id", ctx.author.id)
-                scope.set_tag("shard_id", ctx.guild.shard_id)
+                if isinstance(ctx.bot, commands.AutoShardedBot):
+                    scope.set_tag("shard_id", ctx.guild.shard_id)
                 scope.set_level("error")
                 await bot.errors.insert(
                     {
@@ -208,39 +244,42 @@ class OnCommandError(commands.Cog):
             return
 
         if isinstance(error, commands.CheckFailure):
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Not Permitted",
-                    description="You are not permitted to run this command.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Not Permitted",
+                        description="You are not permitted to run this command.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
         if isinstance(error, OverflowError):
-            return await ctx.reply(
-                embed=discord.Embed(
-                    title="Overflow Error",
-                    description="A user has inputted an arbitrary time amount of time into ERM and we were unable to display the requested data because of this. Please find the source of this, and remove the excess amount of time.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.reply(
+                    embed=discord.Embed(
+                        title="Overflow Error",
+                        description="A user has inputted an arbitrary time amount of time into ERM and we were unable to display the requested data because of this. Please find the source of this, and remove the excess amount of time.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
         if isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Missing Argument",
-                    description="You are missing a required argument to run this command.",
-                    color=BLANK_COLOR,
+            return (
+                await ctx.send(
+                    embed=discord.Embed(
+                        title="Missing Argument",
+                        description="You are missing a required argument to run this command.",
+                        color=BLANK_COLOR,
+                    )
                 )
+                if not do_not_send
+                else None
             )
-        embed = discord.Embed(
-            color=0xED4348,
-        )
 
-        embed.add_field(
-            name="Support Server",
-            value="[Click here](https://discord.gg/FAC629TzBy)",
-            inline=False,
-        )
-        embed.add_field(name="Error ID", value=f"`{error_id}`", inline=False)
         if not isinstance(
             error,
             (
@@ -250,26 +289,28 @@ class OnCommandError(commands.Cog):
                 discord.Forbidden,
             ),
         ):
-            await ctx.send(
-                embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('error')} Command Failure",
-                    description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
-                    color=RED_COLOR,
-                ).add_field(name="Error ID", value=f"`{error_id}`", inline=False),
-                view=View().add_item(
-                    Button(
-                        label="Contact ERM Support",
-                        style=discord.ButtonStyle.link,
-                        url="https://discord.gg/FAC629TzBy",
-                    )
-                ),
-            )
+            if not do_not_send:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title=f"{self.bot.emoji_controller.get_emoji('error')} Command Failure",
+                        description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
+                        color=RED_COLOR,
+                    ).add_field(name="Error ID", value=f"`{error_id}`", inline=False),
+                    view=View().add_item(
+                        Button(
+                            label="Contact ERM Support",
+                            style=discord.ButtonStyle.link,
+                            url="https://discord.gg/FAC629TzBy",
+                        )
+                    ),
+                )
 
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
                 scope.set_tag("guild_id", ctx.guild.id)
                 scope.set_tag("user_id", ctx.author.id)
-                scope.set_tag("shard_id", ctx.guild.shard_id)
+                if isinstance(ctx.bot, commands.AutoShardedBot):
+                    scope.set_tag("shard_id", ctx.guild.shard_id)
                 scope.set_level("error")
                 await bot.errors.insert(
                     {

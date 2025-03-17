@@ -27,6 +27,7 @@ class OnBreakEnd(commands.Cog):
 
         shift_type = shift.type
         custom_shift_type = None
+        break_roles = []
         if shift_type != "Default":
             total_shift_types = guild_settings.get("shift_types", {"types": []})
             for item in total_shift_types["types"]:
@@ -44,6 +45,7 @@ class OnBreakEnd(commands.Cog):
                 "nickname_prefix", None
             )
             assigned_roles = guild_settings.get("shift_management").get("role", [])
+            break_roles = guild_settings.get("shift_management").get("break_roles", [])
         else:
             try:
                 channel = await guild.fetch_channel(custom_shift_type.get("channel", 0))
@@ -56,6 +58,7 @@ class OnBreakEnd(commands.Cog):
                     channel = None
             nickname_prefix = custom_shift_type.get("nickname", None)
             assigned_roles = custom_shift_type.get("role", [])
+            break_roles = custom_shift_type.get("break_roles", [])
 
         try:
             staff_member: discord.Member = await guild.fetch_member(shift.user_id)
@@ -70,6 +73,15 @@ class OnBreakEnd(commands.Cog):
                 continue
             try:
                 await staff_member.add_roles(discord_role, atomic=True)
+            except discord.HTTPException:
+                pass
+
+        for role in break_roles or []:
+            discord_role: discord.Role = guild.get_role(role)
+            if discord_role is None:
+                continue
+            try:
+                await staff_member.remove_roles(discord_role, atomic=True)
             except discord.HTTPException:
                 pass
 

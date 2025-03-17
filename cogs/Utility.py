@@ -84,13 +84,13 @@ class Utility(commands.Cog):
                 f"> **Latency:** `{latency}ms`\n"
                 f"> **Uptime:** <t:{int(self.bot.start_time)}:R>\n"
                 f"> **Database Connection:** {status}\n"
-                f"> **Shards:** `{self.bot.shard_count-1}`\n"
+                f"> **Shards:** `{self.bot.shard_count-1 if isinstance(self.bot, commands.AutoShardedBot) else 0}`\n"
             ),
             inline=False,
         )
 
         embed.set_footer(
-            text=f"Shard {ctx.guild.shard_id if ctx.guild else 0}/{self.bot.shard_count-1}"
+            text=f"Shard {ctx.guild.shard_id if ctx.guild and isinstance(self.bot, commands.AutoShardedBot) else 0}/{self.bot.shard_count-1 if isinstance(self.bot, commands.AutoShardedBot) else 0}"
         )
         embed.timestamp = datetime.datetime.utcnow()
         embed.set_thumbnail(url=ctx.guild.icon)

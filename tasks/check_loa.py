@@ -15,7 +15,8 @@ async def check_loa(bot):
         else {
             "guild_id": {
                 "$nin": [
-                    int(item["GuildID"] or 0) async for item in bot.whitelabel.db.find({})
+                    int(item["GuildID"] or 0)
+                    async for item in bot.whitelabel.db.find({})
                 ]
             }
         }

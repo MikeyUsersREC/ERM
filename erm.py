@@ -330,7 +330,11 @@ def running():
 
 @bot.before_invoke
 async def AutoDefer(ctx: commands.Context):
-    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+    if (
+        environment == "CUSTOM"
+        and config("CUSTOM_GUILD_ID", default=None) != 0
+        and not getattr(ctx.bot, "whitelist_disabled", False)
+    ):
         if ctx.guild.id != int(config("CUSTOM_GUILD_ID")):
             if ctx.interaction:
                 await ctx.interaction.response.send_message(
@@ -355,7 +359,7 @@ async def AutoDefer(ctx: commands.Context):
                 await ctx.interaction.response.send_message(
                     embed=discord.Embed(
                         title="Not Permitted",
-                        description="There is a whitelabel bot already i",
+                        description="There is a whitelabel bot already in this server.",
                         color=BLANK_COLOR,
                     ),
                     ephemeral=True,
@@ -405,10 +409,17 @@ async def on_message(
     if not message.guild:
         return
 
-    if environment == "CUSTOM" and config("CUSTOM_GUILD_ID", default=None) != 0:
+    if (
+        environment == "CUSTOM"
+        and config("CUSTOM_GUILD_ID", default=None) != 0
+        and not getattr(bot, "whitelist_disabled", False)
+    ):
         if message.guild.id != int(config("CUSTOM_GUILD_ID")):
             ctx = await bot.get_context(message)
             if ctx.command:
+                if "jishaku" in ctx.command.full_parent_name:
+                    await bot.process_commands(message)
+                    return
                 await message.reply(
                     embed=discord.Embed(
                         title="Not Permitted",

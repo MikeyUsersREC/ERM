@@ -5,7 +5,7 @@ import datetime
 import pytz
 from erm import is_management, is_staff, is_admin
 from utils.constants import BLANK_COLOR, GREEN_COLOR
-from menus import ManageActions
+from menus import ManageActions, CounterButton, ViewVotersButton
 from discord import app_commands
 from utils.autocompletes import action_autocomplete
 from utils.utils import interpret_content, interpret_embed, log_command_usage
@@ -70,9 +70,15 @@ class Actions(commands.Cog):
     async def action_execute(self, ctx: commands.Context, *, action: str):
 
         verbose = False
+        dnr = False
         if "--verbose" in action:
             action = action.replace(" --verbose", "")
             verbose = True
+        try:
+            dnr = getattr(ctx, "dnr")  # prevent privilege bypassing! no black hats
+        except Exception as _:
+            dnr = False
+
         ctx.verbose = verbose
 
         actions = [
@@ -83,7 +89,7 @@ class Actions(commands.Cog):
             if item["ActionName"] == action:
                 action_obj = item
                 break
-        if not action_obj:
+        if not action_obj and not dnr:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Invalid Action Name",
@@ -93,9 +99,12 @@ class Actions(commands.Cog):
             )
 
         if action_obj.get("AccessRoles"):
-            if not any(
-                [discord.utils.get(ctx.guild.roles, id=i) in ctx.author.roles]
-                for i in action_obj.get("AccessRoles")
+            if (
+                not any(
+                    [discord.utils.get(ctx.guild.roles, id=i) in ctx.author.roles]
+                    for i in action_obj.get("AccessRoles")
+                )
+                and not dnr
             ):
                 return await ctx.send(
                     embed=discord.Embed(
@@ -126,13 +135,14 @@ class Actions(commands.Cog):
             self.remove_role,
         ]
 
-        msg = await ctx.send(
-            embed=discord.Embed(
-                title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
-                description=f"**(0/{len(action_obj['Integrations'])})** I am currently running your action!",
-                color=GREEN_COLOR,
+        if not dnr:
+            msg = await ctx.send(
+                embed=discord.Embed(
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
+                    description=f"**(0/{len(action_obj['Integrations'])})** I am currently running your action!",
+                    color=GREEN_COLOR,
+                )
             )
-        )
 
         chosen_funcs = []
         for item in action_obj["Integrations"]:
@@ -141,18 +151,26 @@ class Actions(commands.Cog):
             )
 
         returns = []
+        if dnr:
+            chosen_funcs = list(
+                filter(
+                    lambda x: x not in [self.add_role, self.remove_role], chosen_funcs
+                )
+            )
+
         for func, param in chosen_funcs:
             if param is None:
                 returns.append(await func(self.bot, ctx.guild.id, ctx))
             else:
                 returns.append(await func(self.bot, ctx.guild.id, ctx, param))
-            await msg.edit(
-                embed=discord.Embed(
-                    title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
-                    description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{' `{}`'.format(returns) if verbose else ''}",
-                    color=GREEN_COLOR,
+            if not dnr:
+                await msg.edit(
+                    embed=discord.Embed(
+                        title=f"{self.bot.emoji_controller.get_emoji('success')} Running Action",
+                        description=f"**({len(list(filter(lambda x: x == 0, returns)))}/{len(action_obj['Integrations'])})** I am currently running your action!{' `{}`'.format(returns) if verbose else ''}",
+                        color=GREEN_COLOR,
+                    )
                 )
-            )
 
     @staticmethod
     async def add_role(bot: commands.Bot, guild_id: int, context, role_id: int):
@@ -228,14 +246,22 @@ class Actions(commands.Cog):
 
         view = discord.ui.View()
         for item in selected.get("buttons", []):
-            view.add_item(
-                discord.ui.Button(
-                    label=item["label"],
-                    url=item["url"],
-                    row=item["row"],
-                    style=discord.ButtonStyle.url,
+            if item["label"] == "0" and "row" in item:
+                counter_button = CounterButton(row=item["row"])
+                view_voters_button = ViewVotersButton(
+                    row=item["row"], counter_button=counter_button
                 )
-            )
+                view.add_item(counter_button)
+                view.add_item(view_voters_button)
+            else:
+                view.add_item(
+                    discord.ui.Button(
+                        label=item["label"],
+                        url=item["url"],
+                        row=item["row"],
+                        style=discord.ButtonStyle.url,
+                    )
+                )
 
         if (
             selected["message"]["content"] in [None, ""]
@@ -244,7 +270,7 @@ class Actions(commands.Cog):
             return 1
 
         msg = await channel.send(
-            content=await interpret_content(
+            await interpret_content(
                 bot, context, channel, selected["message"]["content"], selected["id"]
             ),
             embeds=embeds,
