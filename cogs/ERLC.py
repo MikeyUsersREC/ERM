@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import re
@@ -11,7 +12,7 @@ import logging
 from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
-from menus import ReloadView, RefreshConfirmation
+from menus import ReloadView, RefreshConfirmation, RiskyUsersMenu
 import copy
 from utils.constants import *
 from utils.prc_api import (
@@ -166,7 +167,10 @@ class ERLC(commands.Cog):
 
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_serverinfo, [None, guild_id]
+                    self.bot,
+                    ctx.author.id,
+                    operate_and_reload_serverinfo,
+                    [None, guild_id],
                 )
                 msg = await ctx.send(embed=embed1, view=view)
                 view.message = msg
@@ -207,7 +211,10 @@ class ERLC(commands.Cog):
 
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_commandlogs, [None, guild_id]
+                    self.bot,
+                    ctx.author.id,
+                    operate_and_reload_commandlogs,
+                    [None, guild_id],
                 )
                 msg = await ctx.send(embed=embed, view=view)
                 view.message = msg
@@ -348,12 +355,12 @@ class ERLC(commands.Cog):
     @server.command(
         name="pm",
         description="Send a PM to players in your ER:LC server!",
-        aliases=["private", "sendpm", "send"]
+        aliases=["private", "sendpm", "send"],
     )
     @app_commands.autocomplete(target=erlc_players_autocomplete)
     @app_commands.describe(
         target="Who would you like to send this message to?",
-        message="What would you like to send?"
+        message="What would you like to send?",
     )
     async def erlc_pm(self, ctx: commands.Context, target: str, *, message: str):
         guild_id = ctx.guild.id
@@ -366,33 +373,44 @@ class ERLC(commands.Cog):
                     selected.append(item.username)
                 elif item.permission != "Normal" and target.lower() == "staff":
                     selected.append(item.username)
-                elif item.permission == "Server Moderator" and target.lower() == "moderators":
+                elif (
+                    item.permission == "Server Moderator"
+                    and target.lower() == "moderators"
+                ):
                     selected.append(item.username)
-                elif item.permission == "Server Administrator" and target.lower() == "admins":
+                elif (
+                    item.permission == "Server Administrator"
+                    and target.lower() == "admins"
+                ):
                     selected.append(item.username)
         else:
             selected = [target]
 
-
-        command_response = await self.bot.prc_api.run_command(guild_id, f":pm {players.split(',')} {message}")
+        command_response = await self.bot.prc_api.run_command(
+            guild_id, f":pm {','.join(selected)} {message}"
+        )
         if command_response[0] == 200:
             await ctx.send(
                 embed=discord.Embed(
                     title="<:success:1163149118366040106> Successfully Sent",
                     description="This PM has been sent to the server!",
-                    color=GREEN_COLOR
+                    color=GREEN_COLOR,
                 )
             )
-            await self.secure_logging(guild_id, ctx.author.id, 'Private Message', message)
+            await self.secure_logging(
+                guild_id, ctx.author.id, "Private Message", message
+            )
         else:
             await ctx.send(
                 embed=discord.Embed(
                     title="Not Executed",
                     description="This PM has not been sent to the server successfully.",
-                    color=BLANK_COLOR
+                    color=BLANK_COLOR,
                 )
             )
-            await self.secure_logging(guild_id, ctx.author.id, 'Private Message', message)
+            await self.secure_logging(
+                guild_id, ctx.author.id, "Private Message", message
+            )
 
     @server.command(
         name="message", description="Send a Message to your ER:LC server with ERM!"
@@ -624,7 +642,10 @@ class ERLC(commands.Cog):
 
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_serverinfo, [None, guild_id]
+                    self.bot,
+                    ctx.author.id,
+                    operate_and_reload_serverinfo,
+                    [None, guild_id],
                 )
                 msg = await ctx.send(embed=embed1, view=view)
                 view.message = msg
@@ -712,7 +733,7 @@ class ERLC(commands.Cog):
             #                   text="Last updated 5 seconds ago")
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_kills, [None, guild_id]
+                    self.bot, ctx.author.id, operate_and_reload_kills, [None, guild_id]
                 )
                 msg = await ctx.send(embed=embed, view=view)
                 view.message = msg
@@ -757,7 +778,10 @@ class ERLC(commands.Cog):
             #                   text="Last updated 5 seconds ago")
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_playerlogs, [None, guild_id]
+                    self.bot,
+                    ctx.author.id,
+                    operate_and_reload_playerlogs,
+                    [None, guild_id],
                 )
                 msg = await ctx.send(embed=embed, view=view)
                 view.message = msg
@@ -800,7 +824,10 @@ class ERLC(commands.Cog):
             #                   text="Last updated 5 seconds ago")
             if msg is None:
                 view = ReloadView(
-                    bot, ctx.author.id, operate_and_reload_commandlogs, [None, guild_id]
+                    self.bot,
+                    ctx.author.id,
+                    operate_and_reload_commandlogs,
+                    [None, guild_id],
                 )
                 msg = await ctx.send(embed=embed, view=view)
                 view.message = msg
@@ -873,7 +900,6 @@ class ERLC(commands.Cog):
         else:
             await ctx.send(embed=embeds[0])
 
-
     @server.command(
         name="risk",
         description="Search for Users with 'all' or 'others' in their username."
@@ -928,9 +954,32 @@ class ERLC(commands.Cog):
         )
 
         view = RiskyUsersMenu(self.bot, guild_id, risky_users, ctx.author.id)
-
         await msg.edit(embed=embed, view=view)
-        
+        await view.wait()
+
+        if view.value == "all":
+            response = await ctx.send(
+                embed=discord.Embed(
+                    title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Banning users",
+                    description="We are banning all the risk users in your server. Please wait...",
+                    color=BLANK_COLOR
+                )
+            )
+
+            for user in risky_users:
+                ban_command = f":ban {user.id}"
+                await self.bot.prc_api.run_command(guild_id, ban_command)
+
+                await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
+
+            await response.edit(
+                embed=discord.Embed(
+                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Players Banned",
+                    description="All risk players have been banned from the server.",
+                    color=GREEN_COLOR
+                )
+            )
+
     @server.command(name="players", description="See all players in the server.")
     @is_server_linked()
     async def server_players(
