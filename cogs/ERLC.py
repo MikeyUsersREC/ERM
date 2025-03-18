@@ -915,7 +915,6 @@ class ERLC(commands.Cog):
             )
         )
         guild_id = ctx.guild.id
-
         players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
 
         if not players:
@@ -926,12 +925,6 @@ class ERLC(commands.Cog):
                     color=BLANK_COLOR
                 )
             )
-
-        embed = discord.Embed(
-            title="Users with Risky Usernames",
-            color=BLANK_COLOR,
-            description=""
-        )
 
         risky_prefixes = ('all', 'others', 'ail', 'ali', 'aii', 'a1i', 'ai1', 'a1l', 'al1')
         risky_users = [player for player in players if player.username.lower().startswith(risky_prefixes)]
@@ -945,41 +938,16 @@ class ERLC(commands.Cog):
                 )
             )
 
-        for user in risky_users:
-            embed.description += f"> [{user.username}](https://roblox.com/users/{user.id}/profile) \n"
-
-        embed.set_author(
-            name=ctx.guild.name,
-            icon_url=ctx.guild.icon if ctx.guild.icon else None
+        embed = discord.Embed(
+            title="Users with Risky Usernames",
+            color=BLANK_COLOR,
+            description="\n".join(
+                f"> [{user.username}](https://roblox.com/users/{user.id}/profile)" for user in risky_users)
         )
-
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon if ctx.guild.icon else None)
         view = RiskyUsersMenu(self.bot, guild_id, risky_users, ctx.author.id)
         await msg.edit(embed=embed, view=view)
-        await view.wait()
-
-        if view.value == "all":
-            response = await ctx.send(
-                embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Banning users",
-                    description="We are banning all the risk users in your server. Please wait...",
-                    color=BLANK_COLOR
-                )
-            )
-
-            for user in risky_users:
-                ban_command = f":ban {user.id}"
-                await self.bot.prc_api.run_command(guild_id, ban_command)
-
-                await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
-
-            await response.edit(
-                embed=discord.Embed(
-                    title=f"{await self.bot.emoji_controller.get_emoji('success')} Players Banned",
-                    description="All risk players have been banned from the server.",
-                    color=GREEN_COLOR
-                )
-            )
-
+        
     @server.command(name="players", description="See all players in the server.")
     @is_server_linked()
     async def server_players(
