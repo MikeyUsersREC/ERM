@@ -6,7 +6,6 @@ from discord.ext import commands
 from datamodels.ShiftManagement import ShiftItem
 from utils.constants import BLANK_COLOR
 from utils.timestamp import td_format
-from collections import Counter
 
 
 class OnShiftEnd(commands.Cog):
@@ -98,10 +97,14 @@ class OnShiftEnd(commands.Cog):
             except discord.HTTPException:
                 pass
 
-        moderation_counts = Counter()
-        for entry_id in shift.moderations:
-            entry = await self.bot.punishments.fetch_warning(str(entry_id))
-            moderation_counts[entry.type] += 1
+        moderation_counts = {}
+        for entry in shift.moderations:
+            entry = await self.bot.punishments.fetch_warning(str(entry))
+
+            if entry.type in moderation_counts:
+                moderation_counts[entry.type] += 1
+            else:
+                moderation_counts[entry.type] = 1
 
         if channel is not None:
             await channel.send(
@@ -127,10 +130,14 @@ class OnShiftEnd(commands.Cog):
                 .add_field(
                     name="Moderation Details:",
                     value=(
-                    "\n".join(
-                        f"> **{moderation_type.capitalize()}:** {count}"
-                        for moderation_type, count in moderation_counts.items()
-                    ) if moderation_counts else "> No Moderations Found"
+                        "\n".join(
+                            [
+                                f"> **{moderation_type.capitalize()}s:** {count}"
+                                for moderation_type, count in moderation_counts.items()
+                            ]
+                        )
+                        if moderation_counts
+                        else "> No Moderations Found"
                     ),
                     inline=False,
                 )
@@ -162,10 +169,14 @@ class OnShiftEnd(commands.Cog):
                 .add_field(
                     name="Total Moderations:",
                     value=(
-                    "\n".join(
-                        f"> **{moderation_type.capitalize()}s:** {count}"
-                        for moderation_type, count in moderation_counts.items()
-                    ) if moderation_counts else "> No Moderations Found"
+                        "\n".join(
+                            [
+                                f"> **{moderation_type.capitalize()}s:** {count}"
+                                for moderation_type, count in moderation_counts.items()
+                            ]
+                        )
+                        if moderation_counts
+                        else "> No Moderations Found"
                     ),
                     inline=False,
                 )
