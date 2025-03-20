@@ -11571,6 +11571,16 @@ class BanOptions(discord.ui.Select):
             for user in self.risky_users:
                 ban_command = f":ban {user.id}"
                 await self.bot.prc_api.run_command(self.guild_id, ban_command)
+                await self.bot.punishments.insert_warning(
+                    staff_id=978662093408591912, # erm id
+                    staff_name="ERM Systems", #erm name
+                    user_id=int(user.id),
+                    user_name=user.username,
+                    guild_id= interaction.guild.id,
+                    moderation_type="Ban",
+                    reason="Having a user with all or others.",
+                    time_epoch= datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                )
                 await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
             await interaction.followup.send(
                 embed=discord.Embed(
@@ -11628,6 +11638,18 @@ class SpecificUserSelect(discord.ui.Select):
             user_id = int(user_id)
             ban_command = f":ban {user_id}"
             await self.bot.prc_api.run_command(self.guild_id, ban_command)
+            user = next((u for u in self.risky_users if u.id == user_id), None)
+            if user:
+                await self.bot.punishments.insert_warning(
+                    staff_id=978662093408591912,  # erm id
+                    staff_name="ERM Systems",  # erm name
+                    user_id=int(user.id),
+                    user_name=user.username,
+                    guild_id=interaction.guild.id,
+                    moderation_type="Ban",
+                    reason="Having a user with all or others.",
+                    time_epoch=datetime.datetime.now(tz=pytz.UTC).timestamp(),
+                )
             await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
         await interaction.followup.send(
             embed=discord.Embed(
