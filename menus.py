@@ -11572,8 +11572,8 @@ class BanOptions(discord.ui.Select):
                 ban_command = f":ban {user.id}"
                 await self.bot.prc_api.run_command(self.guild_id, ban_command)
                 await self.bot.punishments.insert_warning(
-                    staff_id=978662093408591912, # erm id
-                    staff_name="ERM Systems", #erm name
+                    staff_id=int(interaction.user.id), # interaction id
+                    staff_name= interaction.user.name, #interaction usr name
                     user_id=int(user.id),
                     user_name=user.username,
                     guild_id= interaction.guild.id,
@@ -11641,8 +11641,8 @@ class SpecificUserSelect(discord.ui.Select):
             user = next((u for u in self.risky_users if u.id == user_id), None)
             if user:
                 await self.bot.punishments.insert_warning(
-                    staff_id=978662093408591912,  # erm id
-                    staff_name="ERM Systems",  # erm name
+                    staff_id=interaction.user.id,  # usr id
+                    staff_name= interaction.user.name,  # interaction usr
                     user_id=int(user.id),
                     user_name=user.username,
                     guild_id=interaction.guild.id,
