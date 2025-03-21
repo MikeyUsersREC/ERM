@@ -404,10 +404,10 @@ async def loggingCommandExecution(ctx: commands.Context):
 @bot.event
 async def on_message(
     message,
-):  # DO NOT COG - process commands does not work as intended whilst in cogs
+):  # DO NOT COG
 
-    if not message.guild:
-        return
+    if environment == "CUSTOM" and not message.guild:
+        return await bot.process_commands(message)
 
     if (
         environment == "CUSTOM"
@@ -428,6 +428,15 @@ async def on_message(
                     )
                 )
                 return
+
+    filter_map = [
+        int(item["GuildID"] or 0)
+        async for item in bot.whitelabel.db.find({})
+    ]
+
+    if message.guild.id in filter_map and environment == "PRODUCTION":
+        return # handle ERM responses to prefix commands
+
     await bot.process_commands(message)
 
 
