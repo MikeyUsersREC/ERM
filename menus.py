@@ -3471,6 +3471,66 @@ class ConditionCreationToolkit(discord.ui.View):
 
     @discord.ui.button(label="Finish", style=discord.ButtonStyle.green, row=4)
     async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        condition_data = {}
+        if self.constant != 0:
+            condition_data["Value"] = self.constant
+            self.constant = 0
+
+        for select in list(
+            filter(lambda x: isinstance(x, discord.ui.Select), self.children)
+        ):
+            if len(select.values) == 0:
+                return await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="Invalid Condition",
+                        description="You must select all required values to populate a condition.",
+                        color=BLANK_COLOR,
+                    ),
+                    ephemeral=True,
+                )  # this shouldnt be possible, but its good measure
+
+            def set_default(option):
+                option.default = False
+                return True  # keep the option!
+
+            select.options = list(filter(set_default, select.options))
+
+            if select.values[0] in condition_options.values():
+                print("op")
+                condition_data["Operation"] = select.values[0]
+                continue
+
+            if select.values[0] in ["and", "or"]:
+                print("logic")
+                condition_data["LogicGate"] = select.values[0]
+                continue
+
+            if (
+                select.values[0] in server_conditions.values()
+                and condition_data.get("Variable") is None
+            ):
+                if "X" in select.values[0]:  # requires dynamic argument
+                    condition_data["Variable"] = (
+                        select.values[0] + f" {self.select_data.get(select)}"
+                    )
+                    continue
+                print("var")
+                condition_data["Variable"] = select.values[0]
+                continue
+            else:
+                if (
+                    condition_data.get("Value") is None
+                ):  # check for preoccupied constant :)
+                    if "X" in select.values[0]:  # requires dynamic argument
+                        condition_data["Value"] = (
+                            select.values[0] + f" {self.select_data.get(select)}"
+                        )
+                        continue
+                    print("val")
+                    condition_data["Value"] = select.values[0]
+                    continue
+
+        self.conditions.append(condition_data)
         await interaction.response.defer(thinking=False)
         await interaction.delete_original_response()
         self.stop()
