@@ -233,7 +233,7 @@ class ActivityMonitoring(commands.Cog):
             extra_view.add_item(button)
 
         view = SelectPagination(
-            bot,
+            self.bot,
             ctx.author.id,
             [
                 CustomPage(embeds=[embed], view=extra_view, identifier=str(index + 1))
