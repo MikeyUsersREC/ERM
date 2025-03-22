@@ -18,220 +18,51 @@ from utils.constants import BLANK_COLOR, GREEN_COLOR, RED_COLOR
 from menus import AvatarCheckView
 from utils.username_check import UsernameChecker
 
+global_aggregate = [
+    {
+        "$match": {
+            "ERLC": {"$exists": True},
+            "$or": [
+                {"ERLC.rdm_channel": {"$type": "long", "$ne": 0}},
+                {"ERLC.kill_logs": {"$type": "long", "$ne": 0}},
+                {"ERLC.player_logs": {"$type": "long", "$ne": 0}},
+                {"ERLC.welcome_message": {"$exists": True}},
+                {"ERLC.automatic_shifts.enabled": {"$eq": True}},
+                {"ERLC.team_restrictions": {"$exists": True}},
+            ],
+        }
+    },
+    {
+        "$lookup": {
+            "from": "server_keys",
+            "localField": "_id",
+            "foreignField": "_id",
+            "as": "server_key",
+        }
+    },
+    {"$match": {"server_key": {"$ne": []}}},
+]
 
-@tasks.loop(minutes=7, reconnect=True)
-async def iterate_prc_logs(bot):
-    chosen_filter = {
-        "CUSTOM": {"_id": int(config("CUSTOM_GUILD_ID", default=0))},
-        "_": {
-            "_id": {
-                "$nin": [
-                    int(item["GuildID"] or 0)
-                    async for item in bot.whitelabel.db.find({})
-                ]
-            }
-        },
-    }["CUSTOM" if config("ENVIRONMENT") == "CUSTOM" else "_"]
+count_aggregate = global_aggregate + [{"$count": "total"}]
+
+
+async def iterate_prc_logs_global(bot):
     try:
-        server_count = await bot.settings.db.aggregate(
-            [
-                {
-                    "$match": {
-                        "ERLC": {"$exists": True},
-                        "$or": [
-                            {"ERLC.rdm_channel": {"$type": "long", "$ne": 0}},
-                            {"ERLC.kill_logs": {"$type": "long", "$ne": 0}},
-                            {"ERLC.player_logs": {"$type": "long", "$ne": 0}},
-                            {"ERLC.welcome_message": {"$exists": True}},
-                            {"ERLC.automatic_shifts.enabled": {"$eq": True}},
-                            {"ERLC.team_restrictions": {"$exists": True}},
-                        ],
-                        **chosen_filter,
-                    }
-                },
-                {
-                    "$lookup": {
-                        "from": "server_keys",
-                        "localField": "_id",
-                        "foreignField": "_id",
-                        "as": "server_key",
-                    }
-                },
-                {"$match": {"server_key": {"$ne": []}}},
-                {"$count": "total"},
-            ]
-        ).to_list(1)
+        server_count = await bot.settings.db.aggregate(count_aggregate).to_list(1)
         server_count = server_count[0]["total"] if server_count else 0
 
         logging.warning(f"[ITERATE] Starting iteration for {server_count} servers")
         processed = 0
         start_time = time.time()
 
-        pipeline = [
-            {
-                "$match": {
-                    "ERLC": {"$exists": True},
-                    "$or": [
-                        {"ERLC.rdm_channel": {"$type": "long", "$ne": 0}},
-                        {"ERLC.kill_logs": {"$type": "long", "$ne": 0}},
-                        {"ERLC.player_logs": {"$type": "long", "$ne": 0}},
-                        {"ERLC.welcome_message": {"$exists": True}},
-                        {"ERLC.automatic_shifts.enabled": {"$eq": True}},
-                        {"ERLC.team_restrictions": {"$exists": True}},
-                    ],
-                    **(
-                        {
-                            "CUSTOM": {"_id": config("CUSTOM_GUILD_ID", default=0)},
-                            "_": {
-                                "_id": {
-                                    "$nin": [
-                                        int(item["GuildID"] or 0)
-                                        async for item in bot.whitelabel.db.find({})
-                                    ]
-                                }
-                            },
-                        }["CUSTOM" if config("ENVIRONMENT") == "CUSTOM" else "_"]
-                    ),
-                }
-            },
-            {
-                "$lookup": {
-                    "from": "server_keys",
-                    "localField": "_id",
-                    "foreignField": "_id",
-                    "as": "server_key",
-                }
-            },
-            {"$match": {"server_key": {"$ne": []}}},
-        ]
+        pipeline = global_aggregate
 
         semaphore = asyncio.Semaphore(10)
         tasks = []
 
-        async def process_guild(items):
-            async with semaphore:
-                await asyncio.sleep(
-                    0.25
-                )  # we need to slow things down a bit for discord
-                try:
-                    if config("ENVIRONMENT") == "CUSTOM":
-                        if items["_id"] != config("CUSTOM_GUILD_ID", default=0):
-                            return
-                    guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(
-                        items["_id"]
-                    )
-                    settings = await bot.settings.find_by_id(guild.id)
-                    erlc_settings = settings.get("ERLC", {})
-
-                    channels = {
-                        "kill_logs": erlc_settings.get("kill_logs"),
-                        "player_logs": erlc_settings.get("player_logs"),
-                    }
-
-                    channels = {
-                        k: await fetch_get_channel(guild, v)
-                        for k, v in channels.items()
-                        if v
-                    }
-                    has_welcome_message = bool(
-                        erlc_settings.get("welcome_message", False)
-                    )
-                    has_team_restrictions = bool(erlc_settings.get("team_restrictions"))
-                    has_automatic_shifts = bool(
-                        erlc_settings.get("automatic_shifts", {})
-                    )
-
-                    if (
-                        not channels
-                        and not has_welcome_message
-                        and not has_team_restrictions
-                        and not has_automatic_shifts
-                    ):
-                        return
-
-                    kill_logs, player_logs, command_logs = await fetch_logs_with_retry(
-                        guild.id, bot
-                    )
-                    current_time = int(time.time())
-
-                    if command_logs:
-                        await save_new_logs(bot, guild.id, command_logs, current_time)
-
-                    subtasks = []
-
-                    if has_welcome_message:
-                        last_timestamp = bot.log_tracker.get_last_timestamp(
-                            guild.id, "welcome_message"
-                        )
-                        latest_timestamp = await send_welcome_message(
-                            bot, settings, guild.id, player_logs, last_timestamp
-                        )
-                        bot.log_tracker.update_timestamp(
-                            guild.id, "welcome_message", latest_timestamp
-                        )
-
-                    if has_team_restrictions:
-                        await check_team_restrictions(
-                            bot,
-                            settings,
-                            guild.id,
-                            await bot.prc_api.get_server_players(guild.id),
-                        )
-
-                    if has_automatic_shifts:
-                        last_timestamp = bot.log_tracker.get_last_timestamp(
-                            guild.id, "automatic_shifts"
-                        )
-                        latest_timestamp = await check_automatic_shifts(
-                            bot, settings, guild.id, player_logs, last_timestamp
-                        )
-                        bot.log_tracker.update_timestamp(
-                            guild.id, "automatic_shifts", latest_timestamp
-                        )
-
-                    if "kill_logs" in channels and kill_logs:
-                        last_timestamp = bot.log_tracker.get_last_timestamp(
-                            guild.id, "kill_logs"
-                        )
-                        embeds, latest_timestamp = process_kill_logs(
-                            kill_logs, last_timestamp
-                        )
-                        if embeds:
-                            subtasks.append(
-                                send_log_batch(channels["kill_logs"], embeds)
-                            )
-                            bot.log_tracker.update_timestamp(
-                                guild.id, "kill_logs", latest_timestamp
-                            )
-
-                    if "player_logs" in channels and player_logs:
-                        last_timestamp = bot.log_tracker.get_last_timestamp(
-                            guild.id, "player_logs"
-                        )
-                        embeds, latest_timestamp = await process_player_logs(
-                            bot, settings, guild.id, player_logs, last_timestamp
-                        )
-                        if embeds:
-                            subtasks.append(
-                                send_log_batch(channels["player_logs"], embeds)
-                            )
-                            bot.log_tracker.update_timestamp(
-                                guild.id, "player_logs", latest_timestamp
-                            )
-
-                    if erlc_settings.get("kick_timer", {}).get("enabled", False):
-                        await handle_kick_timer(
-                            bot, settings, guild.id, player_logs, command_logs
-                        )
-
-                    if subtasks:
-                        await asyncio.gather(*subtasks, return_exceptions=True)
-
-                except Exception as e:
-                    logging.warning(f"error processing guild: {e}")
 
         async for items in bot.settings.db.aggregate(pipeline):
-            tasks.append(process_guild(items))
+            tasks.append(process_guild(bot, items, semaphore))
             processed += 1
             if processed % 10 == 0:
                 logging.warning(f"[ITERATE] Queued {processed}/{server_count} servers")
@@ -246,6 +77,154 @@ async def iterate_prc_logs(bot):
         logging.error(f"[ITERATE] Error in iteration: {str(e)}", exc_info=True)
 
 
+
+async def iterate_prc_logs_custom(bot):
+    guild_id = config("CUSTOM_GUILD_ID")
+    if not guild_id:
+        logging.error("No custom guild ID provided for custom environment")
+        return
+
+    try:
+        await unprimitive_guild_process({"_id": int(guild_id)}, bot)
+    except Exception as e:
+        logging.error(f"error processing guild: {e}")
+
+async def unprimitive_guild_process(items, bot):
+    guild = bot.get_guild(items["_id"]) or await bot.fetch_guild(
+        items["_id"]
+    )
+    settings = await bot.settings.find_by_id(guild.id)
+    erlc_settings = settings.get("ERLC", {})
+
+    if await bot.whitelabel.db.find_one({"GuildID": guild.id}) and not config("CUSTOM_GUILD_ID") == str(guild.id):
+        logging.warning("Not handling {} due to whitelabel instance existing")
+        return
+
+    channels = {
+        "kill_logs": erlc_settings.get("kill_logs"),
+        "player_logs": erlc_settings.get("player_logs"),
+    }
+
+    channels = {
+        k: await fetch_get_channel(guild, v)
+        for k, v in channels.items()
+        if v
+    }
+    has_welcome_message = bool(
+        erlc_settings.get("welcome_message", False)
+    )
+    has_team_restrictions = bool(erlc_settings.get("team_restrictions"))
+    has_automatic_shifts = bool(
+        erlc_settings.get("automatic_shifts", {})
+    )
+
+    if (
+            not channels
+            and not has_welcome_message
+            and not has_team_restrictions
+            and not has_automatic_shifts
+    ):
+        return
+
+    kill_logs, player_logs, command_logs = await fetch_logs_with_retry(
+        guild.id, bot
+    )
+    current_time = int(time.time())
+
+    if command_logs:
+        await save_new_logs(bot, guild.id, command_logs, current_time)
+
+    subtasks = []
+
+    if has_welcome_message:
+        last_timestamp = bot.log_tracker.get_last_timestamp(
+            guild.id, "welcome_message"
+        )
+        latest_timestamp = await send_welcome_message(
+            bot, settings, guild.id, player_logs, last_timestamp
+        )
+        bot.log_tracker.update_timestamp(
+            guild.id, "welcome_message", latest_timestamp
+        )
+
+    if has_team_restrictions:
+        await check_team_restrictions(
+            bot,
+            settings,
+            guild.id,
+            await bot.prc_api.get_server_players(guild.id),
+        )
+
+    if has_automatic_shifts:
+        last_timestamp = bot.log_tracker.get_last_timestamp(
+            guild.id, "automatic_shifts"
+        )
+        latest_timestamp = await check_automatic_shifts(
+            bot, settings, guild.id, player_logs, last_timestamp
+        )
+        bot.log_tracker.update_timestamp(
+            guild.id, "automatic_shifts", latest_timestamp
+        )
+
+    if "kill_logs" in channels and kill_logs:
+        last_timestamp = bot.log_tracker.get_last_timestamp(
+            guild.id, "kill_logs"
+        )
+        embeds, latest_timestamp = process_kill_logs(
+            kill_logs, last_timestamp
+        )
+        if embeds:
+            subtasks.append(
+                send_log_batch(channels["kill_logs"], embeds)
+            )
+            bot.log_tracker.update_timestamp(
+                guild.id, "kill_logs", latest_timestamp
+            )
+
+    if "player_logs" in channels and player_logs:
+        last_timestamp = bot.log_tracker.get_last_timestamp(
+            guild.id, "player_logs"
+        )
+        embeds, latest_timestamp = await process_player_logs(
+            bot, settings, guild.id, player_logs, last_timestamp
+        )
+        if embeds:
+            subtasks.append(
+                send_log_batch(channels["player_logs"], embeds)
+            )
+            bot.log_tracker.update_timestamp(
+                guild.id, "player_logs", latest_timestamp
+            )
+
+    if erlc_settings.get("kick_timer", {}).get("enabled", False):
+        await handle_kick_timer(
+            bot, settings, guild.id, player_logs, command_logs
+        )
+
+    if subtasks:
+        await asyncio.gather(*subtasks, return_exceptions=True)
+
+async def process_guild(bot, items, semaphore):
+    async with semaphore:
+        await asyncio.sleep(
+            0.25
+        )  # we need to slow things down a bit for discord
+        try:
+            await unprimitive_guild_process(items, bot)
+        except Exception as e:
+            logging.warning(f"error processing guild: {e}")
+
+
+@tasks.loop(minutes=7, reconnect=True)
+async def iterate_prc_logs(bot):
+    if bot.environment == "PRODUCTION":
+        await iterate_prc_logs_global(bot)
+    else:
+        await iterate_prc_logs_custom(
+            bot
+        )
+
+
 async def fetch_logs_with_retry(guild_id, bot, retries=3):
     """Helper function to fetch logs with retry logic"""
     for attempt in range(retries):
@@ -256,7 +235,7 @@ async def fetch_logs_with_retry(guild_id, bot, retries=3):
             return kill_logs, player_logs, command_logs
         except prc_api.ResponseFailure as e:
             if e.status_code == 429 and attempt < retries - 1:
-                retry_after = float(e.response.get("retry_after", 5))
+                retry_after = float(e.json_data.get("retry_after", 5))
                 await asyncio.sleep(retry_after)
                 continue
             raise
@@ -309,7 +288,7 @@ async def send_log_batch(channel, embeds):
         return
     # Split embeds into chunks of 10 (Discord's limit)
     for i in range(0, len(embeds), 10):
-        chunk = embeds[i : i + 10]
+        chunk = embeds[i: i + 10]
         try:
             await channel.send(embeds=chunk)
         except discord.HTTPException as e:
@@ -375,8 +354,8 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                     embed.add_field(
                         name="Player Information",
                         value=f"> **Username:** [{log.username}](https://roblox.com/users/{log.user_id}/profile)\n"
-                        f"> **User ID:** {log.user_id}\n"
-                        f"> **Reason:** Username appears to use confusing character patterns",
+                              f"> **User ID:** {log.user_id}\n"
+                              f"> **Reason:** Username appears to use confusing character patterns",
                     )
                     if avatar_url:
                         embed.set_thumbnail(url=avatar_url)
@@ -415,9 +394,9 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                    config("AVATAR_CHECK_URL"),
-                    json={"robloxIds": new_join_ids},
-                    timeout=10,
+                        config("AVATAR_CHECK_URL"),
+                        json={"robloxIds": new_join_ids},
+                        timeout=10,
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
@@ -445,7 +424,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
 
                                     for item in current_items:
                                         if str(item["id"]) in map(
-                                            str, blacklisted_items
+                                                str, blacklisted_items
                                         ):
                                             has_blacklisted_items = True
                                             blacklisted_reasons.append(
@@ -472,7 +451,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                     )
 
                                     reasons = (
-                                        result.get("reasons", []) + blacklisted_reasons
+                                            result.get("reasons", []) + blacklisted_reasons
                                     )
 
                                     channel_id = settings["ERLC"]["avatar_check"][
@@ -510,8 +489,8 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                                 [
                                                     f"<@&{role}>"
                                                     for role in settings["ERLC"][
-                                                        "avatar_check"
-                                                    ].get("mentioned_roles", [])
+                                                    "avatar_check"
+                                                ].get("mentioned_roles", [])
                                                 ]
                                             ),
                                             embed=discord.Embed(
@@ -529,7 +508,7 @@ async def process_player_logs(bot, settings, guild_id, player_logs, last_timesta
                                         )
 
                                         if settings["ERLC"]["avatar_check"].get(
-                                            "message"
+                                                "message"
                                         ):
                                             await bot.scheduled_pm_queue.put(
                                                 (
@@ -551,13 +530,13 @@ async def is_username_found(username: str, members: list[discord.Member]) -> boo
     member_found = False
     for member in members:
         if (
-            pattern.search(member.name)
-            or pattern.search(member.display_name)
-            or (
+                pattern.search(member.name)
+                or pattern.search(member.display_name)
+                or (
                 hasattr(member, "global_name")
                 and member.global_name
                 and pattern.search(member.global_name)
-            )
+        )
         ):
             member_found = True
             break
@@ -565,7 +544,7 @@ async def is_username_found(username: str, members: list[discord.Member]) -> boo
 
 
 async def send_welcome_message(
-    bot, settings, guild_id, player_logs, last_timestamp
+        bot, settings, guild_id, player_logs, last_timestamp
 ) -> int:
     """Send welcome messages to new players"""
     welcome_message = settings["ERLC"].get("welcome_message", "")
@@ -778,7 +757,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                             pm_against[restriction["warning_message"]] = [plr.username]
                     if restriction["notification_channel"] != 0:
                         if not isinstance(
-                            send_to.get(restriction["notification_channel"]), list
+                                send_to.get(restriction["notification_channel"]), list
                         ):
                             send_to[restriction["notification_channel"]] = [
                                 [plr.username, plr.team]
@@ -790,7 +769,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                     if restriction["kick_after_infractions"] != 0:
                         if bot.team_restrictions_infractions.get(guild_id) is not None:
                             if not bot.team_restrictions_infractions[guild_id].get(
-                                plr.username
+                                    plr.username
                             ):
                                 bot.team_restrictions_infractions[guild_id][
                                     plr.username
@@ -804,8 +783,8 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                                 plr.username: 1
                             }
                         if (
-                            bot.team_restrictions_infractions[guild_id][plr.username]
-                            >= restriction["kick_after_infractions"]
+                                bot.team_restrictions_infractions[guild_id][plr.username]
+                                >= restriction["kick_after_infractions"]
                         ):
                             kick_against.append(plr.username)
                             bot.team_restrictions_infractions[guild_id][
@@ -872,7 +851,7 @@ async def check_team_restrictions(bot, settings, guild_id, players):
                     if user.lower() not in total_users:
                         total_users.append(user.lower())
             if (
-                item.lower() in total_users
+                    item.lower() in total_users
             ):  # This whole thing is entirely overengineered, and I should've just used
                 # ','.join(list) but I didn't realise this before writing this whole
                 # algorithm :skull:
