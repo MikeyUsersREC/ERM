@@ -3898,7 +3898,9 @@ class ActionCreationToolkit(discord.ui.View):
                 embed=discord.Embed(
                     title="Unable To Remove",
                     description="I was unable to remove the last integration from this action. It may be that there are no integrations.",
-                )
+                    color=BLANK_COLOR
+                ),
+                ephemeral=True
             )
         self.action_data["Integrations"].pop(-1)
         message = interaction.message
