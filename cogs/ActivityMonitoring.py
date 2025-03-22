@@ -217,7 +217,7 @@ class ActivityMonitoring(commands.Cog):
                 CustomPage(embeds=[embed], identifier=str(index + 1))
                 for index, embed in enumerate(embeds)
             ]
-            paginator = SelectPagination(bot, ctx.author.id, pages=pages)
+            paginator = SelectPagination(self.bot, ctx.author.id, pages=pages)
             await interaction.response.send_message(
                 embed=embeds[0], view=paginator, ephemeral=True
             )
@@ -233,7 +233,7 @@ class ActivityMonitoring(commands.Cog):
             extra_view.add_item(button)
 
         view = SelectPagination(
-            bot,
+            self.bot,
             ctx.author.id,
             [
                 CustomPage(embeds=[embed], view=extra_view, identifier=str(index + 1))

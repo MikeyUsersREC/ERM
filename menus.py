@@ -7861,7 +7861,7 @@ class GameLoggingConfiguration(AssociationConfigurationView):
         await interaction.response.send_message(view=new_view, ephemeral=True)
 
 
-class ExtendedERLCConfiguration(AssociationConfigurationView):
+class RDMERLCConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -7925,73 +7925,6 @@ class ExtendedERLCConfiguration(AssociationConfigurationView):
             interaction.user,
             f"RDM Alert Channel Set: <#{select.values[0].id}>",
         )
-
-    @discord.ui.select(
-        placeholder="PM on Warning",
-        row=2,
-        options=[
-            discord.SelectOption(
-                label="Enabled",
-                value="enabled",
-                description="PM on Warning is enabled.",
-            ),
-            discord.SelectOption(
-                label="Disabled",
-                value="disabled",
-                description="PM on Warning is disabled.",
-            ),
-        ],
-    )
-    async def message_on_warning(
-        self, interaction: discord.Interaction, select: discord.ui.Select
-    ):
-        value = await self.interaction_check(interaction)
-        if not value:
-            return
-
-        await interaction.response.defer()
-        guild_id = interaction.guild.id
-
-        bot = self.bot
-        sett = await bot.settings.find_by_id(guild_id)
-        if not sett.get("ERLC"):
-            sett["ERLC"] = {}
-        sett["ERLC"]["message_on_warning"] = bool(select.values[0].lower() == "enabled")
-        await bot.settings.update_by_id(sett)
-        await config_change_log(
-            self.bot,
-            interaction.guild,
-            interaction.user,
-            f"PM on Warning set: {select.values[0]}",
-        )
-
-    @discord.ui.button(label="Welcome Messaging", row=3)
-    async def welcome_messaging(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
-        val = await self.interaction_check(interaction)
-        if val is False:
-            return
-
-        settings = await self.bot.settings.find_by_id(interaction.guild.id)
-        welcome_message = (settings.get("ERLC") or {}).get("welcome_message") or ""
-
-        embed = discord.Embed(
-            title="Welcome Messaging",
-            description="*This module allows for a message to appear to players of your server when they initially join your server.*\n\n",
-            color=BLANK_COLOR,
-        )
-        embed.description += f"**Welcome Message:** {welcome_message if welcome_message != '' else 'None'}\n"
-
-        embed.set_author(
-            name=interaction.guild.name,
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else "",
-        )
-        view = WelcomeMessagingConfiguration(self.bot, interaction, welcome_message)
-
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-
 class AutomaticShiftConfiguration(discord.ui.View):
     def __init__(
         self,
@@ -8659,15 +8592,15 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
             f"Kill Logs Channel Set: <#{select.values[0].id}>",
         )
 
-    @discord.ui.button(label="More Options", row=3)
-    async def more_options(
+    @discord.ui.button(label="RDM Alerts", row=3)
+    async def rdm_alerts(
         self, interaction: discord.Interaction, button: discord.Button
     ):
         val = await self.interaction_check(interaction)
         if val is False:
             return
         sett = await self.bot.settings.find_by_id(interaction.guild.id)
-        new_view = ExtendedERLCConfiguration(
+        new_view = RDMERLCConfiguration(
             self.bot,
             interaction.user.id,
             [
@@ -8751,7 +8684,95 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
 
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="Vehicle Restrictions", row=3)
+    @discord.ui.button(label="More Options", row=3)
+    async def more_options(self, interaction: discord.Interaction, button: discord.ui.Button):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        view = MoreERLCConfiguration(self.bot)
+        embed = discord.Embed(
+            title="More ERLC Options",
+            description="",
+            color=BLANK_COLOR
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=view,
+            ephemeral=True
+        )
+
+class MoreERLCConfiguration(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.select(
+        placeholder="PM on Warning",
+        row=0,
+        options=[
+            discord.SelectOption(
+                label="Enabled",
+                value="enabled",
+                description="PM on Warning is enabled.",
+            ),
+            discord.SelectOption(
+                label="Disabled",
+                value="disabled",
+                description="PM on Warning is disabled.",
+            ),
+        ],
+    )
+    async def message_on_warning(
+        self, interaction: discord.Interaction, select: discord.ui.Select
+    ):
+        value = await self.interaction_check(interaction)
+        if not value:
+            return
+
+        await interaction.response.defer()
+        guild_id = interaction.guild.id
+
+        bot = self.bot
+        sett = await bot.settings.find_by_id(guild_id)
+        if not sett.get("ERLC"):
+            sett["ERLC"] = {}
+        sett["ERLC"]["message_on_warning"] = bool(select.values[0].lower() == "enabled")
+        await bot.settings.update_by_id(sett)
+        await config_change_log(
+            self.bot,
+            interaction.guild,
+            interaction.user,
+            f"PM on Warning set: {select.values[0]}",
+        )
+
+    @discord.ui.button(label="Welcome Messaging", row=1)
+    async def welcome_messaging(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        settings = await self.bot.settings.find_by_id(interaction.guild.id)
+        welcome_message = (settings.get("ERLC") or {}).get("welcome_message") or ""
+
+        embed = discord.Embed(
+            title="Welcome Messaging",
+            description="*This module allows for a message to appear to players of your server when they initially join your server.*\n\n",
+            color=BLANK_COLOR,
+        )
+        embed.description += f"**Welcome Message:** {welcome_message if welcome_message != '' else 'None'}\n"
+
+        embed.set_author(
+            name=interaction.guild.name,
+            icon_url=interaction.guild.icon.url if interaction.guild.icon else "",
+        )
+        view = WelcomeMessagingConfiguration(self.bot, interaction, welcome_message)
+
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @discord.ui.button(label="Vehicle Restrictions", row=1)
     async def vehicle_restrictions(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -8846,7 +8867,7 @@ class ERLCIntegrationConfiguration(AssociationConfigurationView):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="ER:LC Statistics", row=3, disabled=False)
+    @discord.ui.button(label="ER:LC Statistics", row=1, disabled=False)
     async def erlc_statistics(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
