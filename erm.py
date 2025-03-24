@@ -434,6 +434,9 @@ async def on_message(
         async for item in bot.whitelabel.db.find({})
     ]
 
+    if message.guild is None:
+        return await bot.process_commands(message)
+        
     if message.guild.id in filter_map and environment == "PRODUCTION":
         return # handle ERM responses to prefix commands
 
