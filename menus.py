@@ -12425,10 +12425,10 @@ class SpecificUserSelect(discord.ui.Select):
                 color=BLANK_COLOR
             ), ephemeral=True
         )
+        ban_string = ":ban "
         for user_id in self.values:
             user_id = int(user_id)
-            ban_command = f":ban {user_id}"
-            await self.bot.prc_api.run_command(self.guild_id, ban_command)
+            ban_string += f"{user_id}, "
             user = next((u for u in self.risky_users if u.id == user_id), None)
             if user:
                 await self.bot.punishments.insert_warning(
@@ -12441,11 +12441,31 @@ class SpecificUserSelect(discord.ui.Select):
                     reason="Having a user with all or others.",
                     time_epoch=datetime.datetime.now(tz=pytz.UTC).timestamp(),
                 )
-            await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
+        await self.bot.prc_api.run_command(self.guild_id, ban_string[:-2])
         await interaction.followup.send(
             embed=discord.Embed(
                 title=f"{await self.bot.emoji_controller.get_emoji('success')} Players Banned",
                 description="The selected players have been banned from the server.",
                 color=GREEN_COLOR
             ), ephemeral=True
+        )
+
+class DefaultPunishmentToggle(discord.ui.View):
+    def __init__(self, bot, user_id: int, sett):
+        self.bot = bot
+        self.user_id = user_id
+        self.sett = sett
+        super().__init__()
+
+    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
+        if interaction.user.id == self.user_id:
+            return True #Most probably I'm not gonna use it but yea :)
+
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                title="Not Permitted",
+                description="You are not permitted to interact with these buttons.",
+                color=blank_color,
+            ),
+            ephemeral=True,
         )
