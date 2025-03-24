@@ -12425,10 +12425,10 @@ class SpecificUserSelect(discord.ui.Select):
                 color=BLANK_COLOR
             ), ephemeral=True
         )
-        ban_string = ":ban "
         for user_id in self.values:
             user_id = int(user_id)
-            ban_string += f"{user_id}, "
+            ban_command = f":ban {user_id}"
+            await self.bot.prc_api.run_command(self.guild_id, ban_command)
             user = next((u for u in self.risky_users if u.id == user_id), None)
             if user:
                 await self.bot.punishments.insert_warning(
@@ -12441,7 +12441,7 @@ class SpecificUserSelect(discord.ui.Select):
                     reason="Having a user with all or others.",
                     time_epoch=datetime.datetime.now(tz=pytz.UTC).timestamp(),
                 )
-        await self.bot.prc_api.run_command(self.guild_id, ban_string[:-2])
+            await asyncio.sleep(5)  # Rate limit: 1 command every 5 seconds
         await interaction.followup.send(
             embed=discord.Embed(
                 title=f"{await self.bot.emoji_controller.get_emoji('success')} Players Banned",
