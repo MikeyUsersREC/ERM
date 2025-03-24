@@ -108,7 +108,7 @@ async def action_autocomplete(
     commandList = []
     for command in action_list:
         commandList.append(discord.app_commands.Choice(name=command, value=command))
-    return commandList
+    return commandList[:24]
 
 
 async def command_autocomplete(

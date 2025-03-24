@@ -169,7 +169,7 @@ class Reminders(commands.Cog):
                         f"> **ID:** {dataset['id']}\n"
                         f"> **Channel:** {'<#{}>'.format(dataset.get('channel', None)) if dataset.get('channel', None) is not None else 'Not set'}\n"
                         f"> **Completion Ability:** {dataset.get('completion_ability') or 'Not set'}\n"
-                        f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in dataset.get('role', [])]) or 'Not set'}\n"
+                        f"> **Mentioned Roles:** {', '.join(['<@&{}>'.format(r) for r in (dataset.get('role') or [])]) or 'Not set'}\n"
                         f"> **Interval:** {td_format(datetime.timedelta(seconds=dataset.get('interval', 0))) or 'Not set'}\n"
                         f"> **ER:LC Integration Enabled:** {dataset.get('integration') is not None}"
                         f"\n\n**Content:**\n{dataset['message']}"

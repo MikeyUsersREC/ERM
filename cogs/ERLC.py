@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import re
@@ -11,7 +12,7 @@ import logging
 from typing import List
 from erm import is_staff, is_management
 from utils.paginators import CustomPage, SelectPagination
-from menus import ReloadView, RefreshConfirmation
+from menus import ReloadView, RefreshConfirmation, RiskyUsersMenu
 import copy
 from utils.constants import *
 from utils.prc_api import (
@@ -899,6 +900,54 @@ class ERLC(commands.Cog):
         else:
             await ctx.send(embed=embeds[0])
 
+    @server.command(
+        name="risk",
+        description="Search for Users with 'all' or 'others' in their username."
+    )
+    @is_staff()
+    @is_server_linked()
+    async def risk(self, ctx: commands.Context):
+        msg = await ctx.send(
+            embed=discord.Embed(
+                title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Checking...",
+                description="This may take a while.",
+                color=BLANK_COLOR
+            )
+        )
+        guild_id = ctx.guild.id
+        players: list[Player] = await self.bot.prc_api.get_server_players(guild_id)
+
+        if not players:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="No Players Found",
+                    description="There are no players in the server to check.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        risky_prefixes = ('all', 'others', 'ail', 'ali', 'aii', 'a1i', 'ai1', 'a1l', 'al1')
+        risky_users = [player for player in players if player.username.lower().startswith(risky_prefixes)]
+
+        if not risky_users:
+            return await msg.edit(
+                embed=discord.Embed(
+                    title="No Risk Players Found",
+                    description="There are no risk players in the server.",
+                    color=BLANK_COLOR
+                )
+            )
+
+        embed = discord.Embed(
+            title="Users with Risky Usernames",
+            color=BLANK_COLOR,
+            description="\n".join(
+                f"> [{user.username}](https://roblox.com/users/{user.id}/profile)" for user in risky_users)
+        )
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon if ctx.guild.icon else None)
+        view = RiskyUsersMenu(self.bot, guild_id, risky_users, ctx.author.id)
+        await msg.edit(embed=embed, view=view)
+        
     @server.command(name="players", description="See all players in the server.")
     @is_server_linked()
     async def server_players(
