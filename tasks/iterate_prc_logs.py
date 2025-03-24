@@ -910,6 +910,12 @@ async def handle_kick_timer(bot, settings, guild_id, player_logs, command_logs):
 
     rejoined_users = []
     current_time = int(time.time())
+    if guild_id in bot.kicked_users:
+        bot.kicked_users[guild_id] = {
+            username: timestamp 
+            for username, timestamp in bot.kicked_users[guild_id].items()
+            if (current_time - timestamp) <= time_limit
+        }
 
     for log in player_logs:
         if log.type == "join":
