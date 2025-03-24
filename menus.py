@@ -12389,23 +12389,3 @@ class SpecificUserSelect(discord.ui.Select):
                 color=GREEN_COLOR
             ), ephemeral=True
         )
-
-class DefaultPunishmentToggle(discord.ui.View):
-    def __init__(self, bot, user_id: int, sett):
-        self.bot = bot
-        self.user_id = user_id
-        self.sett = sett
-        super().__init__()
-
-    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
-        if interaction.user.id == self.user_id:
-            return True #Most probably I'm not gonna use it but yea :)
-
-        await interaction.response.send_message(
-            embed=discord.Embed(
-                title="Not Permitted",
-                description="You are not permitted to interact with these buttons.",
-                color=blank_color,
-            ),
-            ephemeral=True,
-        )
