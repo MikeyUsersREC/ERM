@@ -362,6 +362,7 @@ class ERLC(commands.Cog):
         target="Who would you like to send this message to?",
         message="What would you like to send?",
     )
+    @is_staff()
     async def erlc_pm(self, ctx: commands.Context, target: str, *, message: str):
         guild_id = ctx.guild.id
         special_selections = ["moderators", "admins", "players", "staff"]
