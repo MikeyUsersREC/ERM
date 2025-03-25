@@ -47,14 +47,14 @@ class ShiftLogging(commands.Cog):
     @commands.guild_only()
     @duty.command(
         name="time",
-        description="Allows for you to check your shift time, as well as your past data.",
+        description="Allows you to check your shift time, as well as past data.",
         extras={"category": "Shift Management"},
         with_app_command=True,
     )
     @is_staff()
     @require_settings()
-    async def duty_time(self, ctx, member: discord.Member = None):
-        if self.bot.shift_management_disabled is True:
+    async def duty_time(self, ctx, member: discord.Member = None, *, shift_type: str = None):
+        if self.bot.shift_management_disabled:
             return await new_failure_embed(
                 ctx,
                 "Maintenance",
@@ -66,89 +66,88 @@ class ShiftLogging(commands.Cog):
             member = ctx.author
 
         configItem = await bot.settings.find_by_id(ctx.guild.id)
+        if not configItem.get("shift_management", {}).get("enabled", False):
+            return await new_failure_embed(ctx, "Not Enabled", "Shift Logging is not enabled on this server.")
 
-        if not configItem["shift_management"]["enabled"]:
-            return await new_failure_embed(
-                ctx, "Not Enabled", "Shift Logging is not enabled on this server."
-            )
+        shift_types = configItem.get("shift_types", {}).get("types", [])
+        selected_shift_type = None
+        shift_type_value = (shift_type or "").lower()
+
+        msg = None  
+
+        if shift_types and len(shift_types) > 1:
+            if shift_type_value not in [st["name"].lower() for st in shift_types] and shift_type_value != "all":
+                view = CustomSelectMenu(
+                    ctx.author.id,
+                    [
+                        discord.SelectOption(label=st["name"], value=st["name"]) for st in shift_types
+                    ] + [
+                        discord.SelectOption(label="All", value="all", description="All shift types")
+                    ],
+                )
+                msg = await ctx.reply(
+                    embed=discord.Embed(title="Incorrect Shift Type",
+                                        description="The shift type provided is not valid.",
+                                        color=BLANK_COLOR),
+                    view=view,
+                )
+                timeout = await view.wait()
+                if timeout:
+                    return
+                shift_type_value = view.value.lower()
+
+        if shift_type_value == "all":
+            selected_shift_type = None
+        else:
+            selected_shift_type = next((st for st in shift_types if st["name"].lower() == shift_type_value), None)
+            if not selected_shift_type:
+                return await new_failure_embed(ctx, "Error", "Invalid shift type selected.")
+
+        total_seconds = 0
+        active_shift = await bot.shift_management.get_current_shift(member, ctx.guild.id)
+        shifts = []
+        query = {"UserID": member.id, "Guild": ctx.guild.id}
+        if selected_shift_type:
+            query["Type"] = selected_shift_type["name"]
+
+        storage_item = [i async for i in bot.shift_management.shifts.db.find(query)]
+        for s in storage_item:
+            if s["EndEpoch"] != 0:
+                shifts.append(s)
+                total_seconds += get_elapsed_time(s)
+
+        selected_quota = configItem.get("shift_management", {}).get("quota", 0)
+        for role in sorted(member.roles, key=lambda r: r.position, reverse=True):
+            role_quota = next(
+                (r for r in configItem.get("shift_management", {}).get("role_quotas", []) if r["role"] == role.id),
+                None)
+            if role_quota:
+                selected_quota = role_quota["quota"]
+                break
+
+        met_quota = total_seconds >= selected_quota if selected_quota > 0 else None
 
         embed = discord.Embed(
-            title=(
-                f"Total Shifts"
-                if member == ctx.author
-                else f"{member.name}'s Total Shifts"
-            ),
+            title=(f"Total Shifts" if member == ctx.author else f"{member.name}'s Total Shifts"),
             color=BLANK_COLOR,
         )
         embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
 
-        # Get current shift
-        shift = None
-        shift_data = await bot.shift_management.get_current_shift(member, ctx.guild.id)
-        if shift_data:
-            if shift_data["Guild"] == ctx.guild.id:
-                shift = shift_data
+        if active_shift:
+            embed.add_field(name="Ongoing Shift",
+                            value=td_format(datetime.timedelta(seconds=get_elapsed_time(active_shift))), inline=False)
 
-        # Get all past shifts
-        shifts = []
-        storage_item = [
-            i
-            async for i in bot.shift_management.shifts.db.find(
-                {"UserID": member.id, "Guild": ctx.guild.id}
-            )
-        ]
-
-        for s in storage_item:
-            if s["EndEpoch"] != 0:
-                shifts.append(s)
-
-        total_seconds = sum([get_elapsed_time(i) for i in shifts])
-        sorted_roles = sorted(member.roles, key=lambda x: x.position)
-        selected_quota = 0
-        specified_quota_roles = configItem.get("shift_management", {}).get(
-            "role_quotas", []
-        )
-        for role in sorted_roles:
-            # print(role)
-            # print(specified_quota_roles)
-            if role.id in [t["role"] for t in specified_quota_roles]:
-                found_item = [t for t in specified_quota_roles if t["role"] == role.id][
-                    0
-                ]
-                selected_quota = found_item["quota"]
-
-        if selected_quota == 0:
-            selected_quota = configItem.get("shift_management").get("quota", 0)
-
-        met_quota = None
-        if selected_quota != 0:
-            met_quota = bool(total_seconds > selected_quota)
-
-        try:
-            if shift:
-                embed.add_field(
-                    name="Ongoing Shift",
-                    value=f"{td_format(datetime.timedelta(seconds=get_elapsed_time(shift)))}",
-                    inline=False,
-                )
-        except OverflowError:
-            if shift:
-                embed.add_field(
-                    name="Ongoing Shift",
-                    value="Could not display current shift time.",
-                    inline=False,
-                )
-
-        newline = "\n"
         embed.add_field(
             name=f"Shift Time [{len(shifts)}]",
-            value=f"{td_format(datetime.timedelta(seconds=total_seconds))} {'{0}*{1}*'.format(newline, 'Met Quota' if met_quota is True else 'Not Met Quota') if met_quota is not None else ''}",
+            value=f"{td_format(datetime.timedelta(seconds=total_seconds))} {'\n*Met Quota*' if met_quota else '\n*Not Met Quota*' if met_quota is not None else ''}",
         )
 
         embed.set_thumbnail(url=member.display_avatar.url)
-        await ctx.reply(
-            embed=embed,
-        )
+
+        if msg:
+            await msg.edit(embed=embed, view=None)
+        else:
+            await ctx.reply(embed=embed)
 
     @duty.command(
         name="admin",
