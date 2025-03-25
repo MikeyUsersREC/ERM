@@ -40,10 +40,6 @@ class ShiftLogging(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_group(name="duty")
-    async def duty(self, ctx):
-        pass
-
     @commands.guild_only()
     @duty.command(
         name="time",
@@ -53,7 +49,8 @@ class ShiftLogging(commands.Cog):
     )
     @is_staff()
     @require_settings()
-    async def duty_time(self, ctx, member: discord.Member = None, *, shift_type: str = None):
+    @app_commands.describe(member = "The staff member to view shifts for.", shift_type="The type of shift to view.")
+    async def duty_time(self, ctx, member: discord.Member = None, shift_type: str = None):
         if self.bot.shift_management_disabled:
             return await new_failure_embed(
                 ctx,
@@ -73,10 +70,10 @@ class ShiftLogging(commands.Cog):
         selected_shift_type = None
         shift_type_value = (shift_type or "").lower()
 
-        msg = None  
+        msg = None
 
         if shift_types and len(shift_types) > 1:
-            if shift_type_value not in [st["name"].lower() for st in shift_types] and shift_type_value != "all":
+            if shift_type_value != "all" and shift_type_value not in [st["name"].lower() for st in shift_types]:
                 view = CustomSelectMenu(
                     ctx.author.id,
                     [
