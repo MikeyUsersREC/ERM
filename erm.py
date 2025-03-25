@@ -286,7 +286,7 @@ class Bot(commands.AutoShardedBot):
         # GDPR.start()
         iterate_prc_logs.start(bot)
         # statistics_check.start(bot)
-        # tempban_checks.start(bot)
+        tempban_checks.start(bot)
         check_whitelisted_car.start(bot)
         if self.environment != "CUSTOM":
             change_status.start(bot)
