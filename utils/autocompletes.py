@@ -183,11 +183,11 @@ async def punishment_autocomplete(
             for p in enabled_punishments
             if p.get("enabled", False)
         }
-        print(enabled_defaults)
+        #print(enabled_defaults)
         filtered_punishments = [
             name.capitalize() for name in ["warning", "kick", "ban", "bolo"] if name in enabled_defaults
         ]
-        print(filtered_punishments)
+        #print(filtered_punishments)
         return [
             app_commands.Choice(
                 name=(
