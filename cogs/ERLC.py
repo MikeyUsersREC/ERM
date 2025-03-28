@@ -910,7 +910,7 @@ class ERLC(commands.Cog):
     async def risk(self, ctx: commands.Context):
         msg = await ctx.send(
             embed=discord.Embed(
-                title=f"{await self.bot.emoji_controller.get_emoji('Clock')} Checking...",
+                title=f"{self.bot.emoji_controller.get_emoji('Clock')} Checking...",
                 description="This may take a while.",
                 color=BLANK_COLOR
             )
