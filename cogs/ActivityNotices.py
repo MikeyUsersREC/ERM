@@ -543,20 +543,9 @@ class ActivityCoreCommands:
             )
 
         current_timestamp = int(datetime.datetime.now().timestamp())
-
-        try: 
-            if starting:
-                start_after_seconds = time_converter(starting)
-                current_timestamp += start_after_seconds
-        except ValueError:
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Incorrect Time",
-                    description=f"The start time you provided was incorrect.",
-                    color=BLANK_COLOR,
-                )
-            )
-                
+        if starting:
+            start_after_seconds = time_converter(starting)
+            current_timestamp += start_after_seconds
 
         expiry_timestamp = current_timestamp + duration_seconds
 
