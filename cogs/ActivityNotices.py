@@ -552,7 +552,7 @@ class ActivityCoreCommands:
             return await ctx.send(
                 embed=discord.Embed(
                     title="Incorrect Time",
-                    description=f"The time you provided was incorrect.",
+                    description=f"The start time you provided was incorrect.",
                     color=BLANK_COLOR,
                 )
             )
