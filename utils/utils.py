@@ -352,7 +352,7 @@ def get_elapsed_time(document):
             )
         )
         - int(document["StartEpoch"])
-        + document["AddedTime"]
+        + document.get("AddedTime", 0)
         - document["RemovedTime"]
     ) - break_seconds
 
