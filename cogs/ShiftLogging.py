@@ -40,6 +40,13 @@ class ShiftLogging(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @bot.hybrid_group(
+        name="duty"
+    ) # hey, maybe dont delete this next time noagonzales.
+    async def duty(self, ctx):
+        pass
+    
+
     @commands.guild_only()
     @duty.command(
         name="time",
