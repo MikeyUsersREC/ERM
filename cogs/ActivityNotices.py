@@ -63,6 +63,16 @@ class ActivityCoreCommands:
         management_roles = settings.get("staff_management").get("management_role")
         loa_roles = settings.get("staff_management").get(f"{request_type.lower()}_role")
 
+        mention_config = settings["staff_management"].get("loa_mention")
+        if isinstance(mention_config, list):
+            loa_mentionables = [discord.utils.get(guild.roles, id=i) for i in mention_config]
+        elif isinstance(mention_config, int):
+            loa_mentionables = [discord.utils.get(guild.roles, id=mention_config)]
+        else:
+            loa_mentionables = []
+
+        mention_str = " ".join([r.mention for r in loa_mentionables if r])
+
         embed = discord.Embed(title=f"{request_type} Request", color=BLANK_COLOR)
         embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else "")
 
@@ -124,7 +134,13 @@ class ActivityCoreCommands:
             (code := system_code_gen()),
         )
 
-        msg = await staff_channel.send(embed=embed, view=view)
+        msg = await staff_channel.send(
+            content=mention_str or None,
+            embed=embed,
+            view=view,
+            allowed_mentions=discord.AllowedMentions(roles=True)
+        )
+
         schema["message_id"] = msg.id
         await self.upload_to_views(
             code, msg.id, "SELF", management_roles, loa_roles, schema, author.id, code

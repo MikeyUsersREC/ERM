@@ -5803,6 +5803,30 @@ class LOAConfiguration(AssociationConfigurationView):
             f"LOA Channel has been set to <#{select.values[0].id}>.",
         )
 
+        @discord.ui.select(
+            cls=discord.ui.RoleSelect, placeholder="LOA Mentionables", row=3, max_values=25, min_values=0
+        )
+        async def loa_mention_select(
+                self, interaction: discord.Interaction, select: discord.ui.RoleSelect
+        ):
+            value = await self.interaction_check(interaction)
+            if not value:
+                return
+
+            await interaction.response.defer()
+            guild_id = interaction.guild.id
+
+            bot = self.bot
+            sett = await bot.settings.find_by_id(guild_id)
+            sett["staff_management"]["loa_mention"] = [i.id for i in select.values]
+            await bot.settings.update_by_id(sett)
+            await config_change_log(
+                bot,
+                interaction.guild,
+                interaction.user,
+                f"LOA Mentionables has been set to {', '.join([f'<@&{i.id}>' for i in select.values])}.",
+            )
+
     @discord.ui.select(
         placeholder="LOA Requests",
         row=0,

@@ -324,6 +324,7 @@ class Configuration(commands.Cog):
                     "**Enabled:** This setting enables or disables the LOA Requests module. When enabled, this allows your staff members to fill out Leave of Absence requests for your management members to approve.\n\n"
                     "**LOA Role:** This role is given to those who are on Leave of Absence, and is removed when they go off Leave of Absence.\n\n"
                     "**LOA Channel:** This channel will be where Leave of Absence requests will be logged, and where they will be accepted or denied. Make sure this is a channel that Management members can see, so that they can approve LOA requests."
+                    "**LOA Mentionables:** This role will be pinged when a staff member submits an LOA Request."
                 ),
                 color=blank_color,
             ),
@@ -346,6 +347,8 @@ class Configuration(commands.Cog):
                         ]
                     elif item.placeholder == "LOA Channel":
                         modifications["staff_management"]["channel"] = item.values[0].id
+                    elif item.placeholder == "LOA Mentionables":
+                        modifications['staff_management']['loa_mention'] = [r.id for r in item.values]
                     elif item.placeholder == "LOA Requests":
                         modifications["staff_management"]["enabled"] = bool(
                             item.values[0] == "enabled"
@@ -683,9 +686,53 @@ class Configuration(commands.Cog):
                             else "Disabled"
                         ),
                     ],
-                ),
-            ],
-        )
+                    'Enabled' if settings['staff_management'].get('enabled') is True else 'Disabled'
+                ]
+            ),
+            (
+                'LOA Role',
+                loa_roles
+            ),
+            (
+                'LOA Channel',
+                [
+                    discord.utils.get(ctx.guild.channels, id=channel) if (channel := settings['staff_management'].get('channel')) else 0
+                ]
+            ),
+            (
+                'LOA Mentionables',
+                loa_mentionables
+            )
+        ])
+
+        shift_management_view = ShiftConfiguration(bot, ctx.author.id, [
+            (
+                'On-Duty Role',
+                [
+                    discord.utils.get(ctx.guild.roles, id=role) for role in (settings['shift_management'].get('role') or [0])
+                ]
+            ),
+            (
+                'Shift Channel',
+                [
+                    discord.utils.get(
+                        ctx.guild.channels,
+                        id=channel
+                    ) if (channel := settings['shift_management'].get('channel')) else 0
+                ]
+            ),
+            (
+                'Shift Management',
+                [
+                    ['CUSTOM_CONF',
+                        {
+                            '_FIND_BY_LABEL': True
+                        }
+                     ],
+                    'Enabled' if settings['shift_management'].get('enabled') is True else 'Disabled'
+                ],
+            )
+        ])
 
         ra_config = settings["staff_management"].get("ra_role")
         if isinstance(ra_config, list):
@@ -1182,7 +1229,7 @@ class Configuration(commands.Cog):
             discord.Embed(
                 title="Shift Logging",
                 description=(
-                    'Shift Logging allow for an easy experience for staff members looking to log their active shift time using ERM. Staff members can run simple commands to go "on-duty", as well as go on break to signify unavailability. Once they are ready, they can go "off-duty" to signify that they are no longer available for any administrative action.\n\n'
+                    'Shift Logging allows for an easy experience for staff members looking to log their active shift time using ERM. Staff members can run simple commands to go "on-duty", as well as go on break to signify unavailability. Once they are ready, they can go "off-duty" to signify that they are no longer available for any administrative action.\n\n'
                     "Using this panel, you can **Erase All Shifts**, as well as utilise **Erase Past Shifts** and **Erase Active Shifts**. You can also **Erase Shifts By Type**."
                 ),
                 color=BLANK_COLOR,
