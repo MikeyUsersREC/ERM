@@ -1346,8 +1346,8 @@ class ShiftLogging(commands.Cog):
         shift_types = configItem.get("shift_types", {}).get("types", [])
         msg = None
         shift_type_item = None
-        if shift_types:
-            if type.lower() not in [t["name"].lower() for t in shift_types]:
+        if shift_types and len(shift_types) >= 1:
+            if type.lower() not in [ i["name"].lower() for i in shift_types ]:
                 msg = await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
@@ -1380,13 +1380,10 @@ class ShiftLogging(commands.Cog):
                     shift_type_item = item
 
         if not shift_type_item:
-            return await ctx.send(
-                embed=discord.Embed(
-                    title="Incorrect Shift Type",
-                    description="The shift type provided is not valid.",
-                    color=BLANK_COLOR,
-                )
-            )
+            if type.lower() == "default":
+                shift_type_item = {"name": "Default"}
+            else:
+                shift_type_item = None
 
         shift_cursor = self.bot.shift_management.shifts.db.find(
             {"UserID": user.id, "Guild": ctx.guild.id, "Type": shift_type_item["name"]}
