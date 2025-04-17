@@ -302,6 +302,7 @@ class Punishments(commands.Cog):
         extras={"category": "Punishments"},
         aliases=["pm"],
     )
+    @is_staff()
     async def punishments(self, ctx: commands.Context):
         await ctx.invoke(self.bot.get_command("punishment manage"))
 
