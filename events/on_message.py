@@ -29,6 +29,10 @@ class OnMessage(commands.Cog):
         bot = self.bot
         bypass_role = None
 
+        if self.bot.environment == "CUSTOM":
+            await bot.process_commands(message)
+            return
+
         if not hasattr(bot, "settings"):
             return
 
