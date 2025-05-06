@@ -9821,6 +9821,7 @@ class CheckMark(discord.ui.View):
 
 class CompleteReminder(discord.ui.View):
     def __init__(self, bot):
+        self.bot = bot
         super().__init__(timeout=1200.0)
 
     # When the confirm button is pressed, set the inner value to `True` and
