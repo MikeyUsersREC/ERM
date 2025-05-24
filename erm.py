@@ -437,9 +437,6 @@ async def on_message(
     if message.guild is None:
         return await bot.process_commands(message)
         
-    if message.guild.id in filter_map and environment == "PRODUCTION":
-        return # handle ERM responses to prefix commands
-
     await bot.process_commands(message)
 
 
